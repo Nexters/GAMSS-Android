@@ -6,3 +6,4 @@ build/
 local.properties
 */build/
 .worktree-*
+app/google-services.json
