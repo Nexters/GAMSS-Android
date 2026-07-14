@@ -17,3 +17,7 @@ dependencyResolutionManagement {
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
 rootProject.name = "GAMSS-Android"
+
+include(":core")
+include(":domain")
+include(":data")
