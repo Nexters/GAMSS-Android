@@ -8,12 +8,14 @@ android {
 
     defaultConfig {
         minSdk = libs.versions.android.minSdk.get().toInt()
-    }
 
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
+
 }
 
 kotlin {
@@ -23,6 +25,6 @@ kotlin {
 }
 
 dependencies {
-    api(projects.domain)
-    implementation(projects.core)
+    implementation(projects.domain)
+    implementation(projects.core.common)
 }
