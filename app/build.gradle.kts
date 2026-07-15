@@ -41,9 +41,11 @@ kotlin {
 }
 
 dependencies {
-    implementation(projects.core)
+
     implementation(projects.domain)
     implementation(projects.data)
+    implementation(projects.core.common)
+    implementation(projects.core.ui)
 
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.ui)
