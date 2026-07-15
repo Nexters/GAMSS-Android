@@ -19,6 +19,9 @@ enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 rootProject.name = "GAMSS-Android"
 
 include(":app")
-include(":core")
+
 include(":domain")
 include(":data")
+
+include(":core:common")
+include(":core:ui")

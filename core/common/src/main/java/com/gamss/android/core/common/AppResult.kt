@@ -1,4 +1,4 @@
-package com.gamss.android.core
+package com.gamss.android.core.common
 
 sealed interface AppResult<out T> {
     data class Success<T>(val data: T) : AppResult<T>
