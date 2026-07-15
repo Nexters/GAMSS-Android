@@ -1,0 +1,34 @@
+name: 기능 요청
+description: 새로운 기능이나 개선 사항을 제안합니다
+title: "[Feature] "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: 배경 / 문제 상황
+      description: 어떤 불편함이나 필요에서 이 기능이 나왔는지
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: 제안하는 기능
+      description: 원하는 동작이나 화면
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: 대안 / 참고 사항
+      description: 고려한 다른 방법이나 참고 자료가 있다면
+    validations:
+      required: false
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: 작업 범위
+      options:
+        - label: UI/화면
+        - label: 기능/로직
+        - label: 인프라/빌드
