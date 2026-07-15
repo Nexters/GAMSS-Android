@@ -11,6 +11,7 @@ androidx-lifecycle = "2.9.4"
 compose-bom = "2026.04.01"
 navigation3 = "1.1.0-rc01"
 junit = "4.13.2"
+detekt = "1.23.8"
 
 [libraries]
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidx-activity" }
@@ -31,6 +32,8 @@ hilt-compiler = { module = "com.google.dagger:hilt-compiler", version.ref = "hil
 
 junit = { module = "junit:junit", version.ref = "junit" }
 
+detekt-formatting = { module = "io.gitlab.arturbosch.detekt:detekt-formatting", version.ref = "detekt" }
+
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
 androidLibrary = { id = "com.android.library", version.ref = "agp" }
@@ -39,3 +42,4 @@ composeCompiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "k
 kotlinSerialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 hilt = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
+detekt = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt" }

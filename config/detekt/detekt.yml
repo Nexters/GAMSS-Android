@@ -1,0 +1,50 @@
+build:
+  maxIssues: 0
+  excludeCorrectable: false
+
+config:
+  validation: true
+  warningsAsErrors: false
+
+# ktlint wrapper rules provided by the detekt-formatting plugin.
+# See https://detekt.dev/docs/rules/formatting
+formatting:
+  active: true
+  android: true
+  autoCorrect: false
+  Indentation:
+    active: true
+    indentSize: 4
+  MaximumLineLength:
+    active: true
+    maxLineLength: 120
+  FinalNewline:
+    active: true
+  NoWildcardImports:
+    active: true
+  NoTrailingSpaces:
+    active: true
+  NoUnusedImports:
+    active: true
+
+naming:
+  FunctionNaming:
+    active: true
+    # Jetpack Compose @Composable functions use PascalCase by convention.
+    ignoreAnnotated: ['Composable']
+
+complexity:
+  LongMethod:
+    active: true
+    threshold: 80
+  TooManyFunctions:
+    active: true
+    thresholdInFiles: 30
+    thresholdInClasses: 30
+
+style:
+  MaxLineLength:
+    active: true
+    maxLineLength: 120
+  MagicNumber:
+    active: false

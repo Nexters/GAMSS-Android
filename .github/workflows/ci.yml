@@ -1,0 +1,73 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [develop]
+  push:
+    branches: [develop, main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  security-events: write # upload detekt SARIF to code scanning
+
+jobs:
+  check:
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: detekt
+            task: detekt
+          - name: lint
+            task: lint
+          - name: test
+            task: test
+          - name: build
+            task: assembleRelease
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          validate-wrappers: true
+
+      - name: Run ${{ matrix.task }}
+        run: ./gradlew ${{ matrix.task }} --stacktrace
+
+      - name: Upload detekt SARIF to code scanning
+        # Runs even when detekt fails so findings still surface in the PR.
+        # continue-on-error: an upload failure (e.g. read-only token on a fork
+        # PR, or a transient code-scanning API error) must never fail the gate.
+        if: ${{ always() && matrix.name == 'detekt' }}
+        continue-on-error: true
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: build/reports/detekt/merged.sarif
+          category: detekt
+
+      - name: Upload reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.name }}-reports
+          path: |
+            **/build/reports/**
+            **/build/test-results/**
+          if-no-files-found: ignore
+          retention-days: 7
