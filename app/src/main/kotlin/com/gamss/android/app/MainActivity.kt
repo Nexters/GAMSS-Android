@@ -4,7 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import com.gamss.android.app.navigation.AppNavHost
+import com.gamss.android.app.navigation.GamssNavHost
 import com.gamss.android.app.ui.theme.GamssTheme
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -15,7 +15,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             GamssTheme {
-                AppNavHost()
+                GamssNavHost()
             }
         }
     }

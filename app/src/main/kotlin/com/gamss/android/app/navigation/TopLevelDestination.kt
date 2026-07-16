@@ -1,0 +1,22 @@
+package com.gamss.android.app.navigation
+
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.navigation3.runtime.NavKey
+import com.gamss.android.feature.home.navigation.HomeKey
+
+/**
+ * bottom bar에 표시되는 최상위 탭 목록.
+ *
+ * 새로운 feature 모듈이 하단 탭으로 추가될 때마다 이 목록에 항목을 더한다.
+ */
+data class TopLevelDestination(
+    val key: NavKey,
+    val icon: ImageVector,
+    val label: String,
+)
+
+val topLevelDestinations = listOf(
+    TopLevelDestination(key = HomeKey, icon = Icons.Filled.Home, label = "홈"),
+)
