@@ -19,7 +19,7 @@ class HomeViewModel @Inject constructor() : ViewModel(), ContainerHost<HomeState
     fun loadGreeting() = intent {
         reduce { state.copy(isLoading = true) }
 
-        // TODO: mock 데이터. 실제 UseCase/Repository 연동 시 교체한다.
+        // mock 데이터. 실제 UseCase/Repository 연동 시 교체한다.
         delay(500)
         val mockGreeting = "오늘 하루는 어땠나요?"
 

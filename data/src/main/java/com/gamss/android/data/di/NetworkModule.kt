@@ -47,7 +47,7 @@ object NetworkModule {
         json: Json
     ): Retrofit {
         return Retrofit.Builder()
-            // TODO: mock 주소. 실제 백엔드 API 주소가 확정되면 교체한다.
+            // mock 주소. 실제 백엔드 API 주소가 확정되면 교체한다.
             .baseUrl("https://api.gamss.example.com/")
             .client(okHttpClient)
             .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
