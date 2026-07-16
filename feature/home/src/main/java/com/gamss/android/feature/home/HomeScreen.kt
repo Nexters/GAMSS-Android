@@ -1,4 +1,4 @@
-package com.gamss.android.app.ui
+package com.gamss.android.feature.home
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
