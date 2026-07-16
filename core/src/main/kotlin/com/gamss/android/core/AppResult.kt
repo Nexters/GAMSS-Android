@@ -5,6 +5,7 @@ sealed interface AppResult<out T> {
     data class Failure(val throwable: Throwable) : AppResult<Nothing>
 
     companion object {
+        @Suppress("TooGenericExceptionCaught")
         inline fun <T> of(block: () -> T): AppResult<T> =
             try {
                 Success(block())

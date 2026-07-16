@@ -1,0 +1,44 @@
+build:
+  maxIssues: 0
+  excludeCorrectable: false
+
+config:
+  validation: true
+  warningsAsErrors: false
+
+formatting:
+  active: true
+  android: true
+  autoCorrect: false
+  Indentation:
+    active: true
+    indentSize: 4
+  MaximumLineLength:
+    active: true
+    maxLineLength: 120
+  FinalNewline:
+    active: true
+  NoWildcardImports:
+    active: true
+  NoTrailingSpaces:
+    active: true
+  NoUnusedImports:
+    active: true
+
+naming:
+  FunctionNaming:
+    active: true
+    ignoreAnnotated: ['Composable']
+
+complexity:
+  LongMethod:
+    active: true
+    threshold: 80
+  TooManyFunctions:
+    active: true
+    thresholdInFiles: 30
+    thresholdInClasses: 30
+
+style:
+  MagicNumber:
+    active: false
