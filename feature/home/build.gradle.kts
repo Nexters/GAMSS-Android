@@ -1,10 +1,11 @@
 plugins {
     alias(libs.plugins.androidLibrary)
     alias(libs.plugins.composeCompiler)
+    alias(libs.plugins.kotlinSerialization)
 }
 
 android {
-    namespace = "com.gamss.android.core.ui"
+    namespace = "com.gamss.android.feature.home"
     compileSdk = libs.versions.android.compileSdk.get().toInt()
 
     defaultConfig {
@@ -29,17 +30,21 @@ kotlin {
 }
 
 dependencies {
+    implementation(projects.core.ui)
+
     implementation(libs.androidx.core.ktx)
 
-    // compose
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.ui)
     implementation(libs.compose.ui.graphics)
     implementation(libs.compose.ui.tooling.preview)
     implementation(libs.compose.material3)
-    implementation(libs.compose.material.icons.core)
+
+    implementation(libs.navigation3.runtime)
+    implementation(libs.kotlinx.serialization.json)
+
     debugImplementation(libs.compose.ui.tooling)
 
-    // test
     testImplementation(libs.junit)
+    androidTestImplementation(libs.androidx.junit)
 }
