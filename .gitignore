@@ -3,6 +3,7 @@
 .idea/
 .kotlin/
 build/
+bin/
 local.properties
 */build/
 .worktree-*
