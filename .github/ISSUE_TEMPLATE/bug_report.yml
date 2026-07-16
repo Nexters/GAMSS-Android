@@ -1,0 +1,51 @@
+name: 버그 리포트
+description: 앱에서 발생한 버그를 제보합니다
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: 버그 설명
+      description: 어떤 문제가 발생했는지
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: 재현 절차
+      description: 버그를 재현하는 단계
+      placeholder: |
+        1. ... 화면 진입
+        2. ... 버튼 클릭
+        3. ... 오류 발생
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 기대 동작
+      description: 정상적으로 동작했다면 어떻게 되어야 하는지
+    validations:
+      required: true
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: 스크린샷 / 크래시 로그
+      description: 관련 이미지나 로그가 있다면
+    validations:
+      required: false
+  - type: input
+    id: device
+    attributes:
+      label: 디바이스 / OS 버전
+      placeholder: "예: Galaxy S24, Android 14"
+    validations:
+      required: false
+  - type: input
+    id: app-version
+    attributes:
+      label: 앱 버전 / 브랜치
+      placeholder: "예: 1.0.0 / develop"
+    validations:
+      required: false

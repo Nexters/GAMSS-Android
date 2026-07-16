@@ -13,6 +13,7 @@ lifecycle-viewmodel-navigation3 = "2.10.0"
 compose-bom = "2026.04.01"
 navigation3 = "1.1.0-rc01"
 junit = "4.13.2"
+detekt = "1.23.8"
 kotlinx-serialization = "1.11.0"
 orbit-mvi = "11.0.0"
 retrofit = "3.0.0"
@@ -54,6 +55,8 @@ hilt-android = { module = "com.google.dagger:hilt-android", version.ref = "hilt"
 hilt-compiler = { module = "com.google.dagger:hilt-compiler", version.ref = "hilt" }
 
 junit = { module = "junit:junit", version.ref = "junit" }
+
+detekt-formatting = { module = "io.gitlab.arturbosch.detekt:detekt-formatting", version.ref = "detekt" }
 
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
 
@@ -101,3 +104,4 @@ ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 hilt = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
 googleServices = { id = "com.google.gms.google-services", version.ref = "google-services" }
 firebaseCrashlytics = { id = "com.google.firebase.crashlytics", version.ref = "firebase-crashlytics-gradle" }
+detekt = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt" }

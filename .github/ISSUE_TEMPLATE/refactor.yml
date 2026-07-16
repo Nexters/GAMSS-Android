@@ -1,0 +1,33 @@
+name: 리팩토링
+description: 동작 변경 없이 코드 구조를 개선하는 작업을 등록합니다
+title: "[Refactor] "
+labels: ["refactor"]
+body:
+  - type: textarea
+    id: target
+    attributes:
+      label: 대상 코드 / 범위
+      description: 어떤 파일, 모듈, 컴포넌트를 개선할지
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: 현재 문제점
+      description: 지금 구조의 어떤 점이 개선이 필요한지 (중복, 가독성, 결합도 등)
+    validations:
+      required: true
+  - type: textarea
+    id: direction
+    attributes:
+      label: 개선 방향
+      description: 어떻게 바꾸려고 하는지
+    validations:
+      required: false
+  - type: checkboxes
+    id: no-behavior-change
+    attributes:
+      label: 확인 사항
+      options:
+        - label: 동작 변경 없이 구조만 개선하는 작업이다
+          required: true
