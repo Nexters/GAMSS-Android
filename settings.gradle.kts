@@ -25,3 +25,4 @@ include(":data")
 
 include(":core:common")
 include(":core:ui")
+include(":feature:home")
