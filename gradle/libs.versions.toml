@@ -7,6 +7,7 @@ android-compileSdk = "36"
 android-minSdk = "24"
 android-targetSdk = "36"
 androidx-activity = "1.11.0"
+androidx-hilt = "1.2.0"
 androidx-lifecycle = "2.9.4"
 lifecycle-viewmodel-navigation3 = "2.10.0"
 compose-bom = "2026.04.01"
@@ -32,7 +33,9 @@ runtime = "1.11.4"
 
 [libraries]
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidx-activity" }
+androidx-hilt-navigation-compose = { module = "androidx.hilt:hilt-navigation-compose", version.ref = "androidx-hilt" }
 androidx-lifecycle-runtime-ktx = { module = "androidx.lifecycle:lifecycle-runtime-ktx", version.ref = "androidx-lifecycle" }
+androidx-lifecycle-viewmodel-ktx = { module = "androidx.lifecycle:lifecycle-viewmodel-ktx", version.ref = "androidx-lifecycle" }
 androidx-lifecycle-viewmodel-navigation3 = { module = "androidx.lifecycle:lifecycle-viewmodel-navigation3-android", version.ref = "lifecycle-viewmodel-navigation3" }
 
 compose-bom = { module = "androidx.compose:compose-bom", version.ref = "compose-bom" }
