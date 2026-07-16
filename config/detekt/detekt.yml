@@ -6,8 +6,6 @@ config:
   validation: true
   warningsAsErrors: false
 
-# ktlint wrapper rules provided by the detekt-formatting plugin.
-# See https://detekt.dev/docs/rules/formatting
 formatting:
   active: true
   android: true
@@ -30,7 +28,6 @@ formatting:
 naming:
   FunctionNaming:
     active: true
-    # Jetpack Compose @Composable functions use PascalCase by convention.
     ignoreAnnotated: ['Composable']
 
 complexity:
@@ -43,8 +40,5 @@ complexity:
     thresholdInClasses: 30
 
 style:
-  MaxLineLength:
-    active: true
-    maxLineLength: 120
   MagicNumber:
     active: false

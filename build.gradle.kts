@@ -8,18 +8,15 @@ plugins {
     alias(libs.plugins.detekt)
 }
 
-// The type-safe `libs` accessor is not available inside `subprojects {}`,
-// so capture the dependency provider here in the root script scope.
+val detektPluginId = libs.plugins.detekt.get().pluginId
 val detektFormatting = libs.detekt.formatting
 
-// Merge every module's detekt SARIF into one file so CI can upload a single
-// report to GitHub code scanning.
 val detektReportMerge by tasks.registering(io.gitlab.arturbosch.detekt.report.ReportMergeTask::class) {
     output.set(rootProject.layout.buildDirectory.file("reports/detekt/merged.sarif"))
 }
 
 subprojects {
-    apply(plugin = "io.gitlab.arturbosch.detekt")
+    apply(plugin = detektPluginId)
 
     detekt {
         buildUponDefaultConfig = true
@@ -40,14 +37,9 @@ subprojects {
             txt.required.set(false)
             md.required.set(false)
         }
-        // Feed this task's SARIF into the merged report even when detekt fails,
-        // so findings still reach code scanning.
         finalizedBy(detektReportMerge)
     }
     detektReportMerge.configure {
         input.from(tasks.withType<io.gitlab.arturbosch.detekt.Detekt>().map { it.sarifReportFile })
-    }
-    tasks.withType<io.gitlab.arturbosch.detekt.DetektCreateBaselineTask>().configureEach {
-        jvmTarget = "17"
     }
 }

@@ -13,7 +13,7 @@ concurrency:
 
 permissions:
   contents: read
-  security-events: write # upload detekt SARIF to code scanning
+  security-events: write
 
 jobs:
   check:
@@ -51,9 +51,6 @@ jobs:
         run: ./gradlew ${{ matrix.task }} --stacktrace
 
       - name: Upload detekt SARIF to code scanning
-        # Runs even when detekt fails so findings still surface in the PR.
-        # continue-on-error: an upload failure (e.g. read-only token on a fork
-        # PR, or a transient code-scanning API error) must never fail the gate.
         if: ${{ always() && matrix.name == 'detekt' }}
         continue-on-error: true
         uses: github/codeql-action/upload-sarif@v3
