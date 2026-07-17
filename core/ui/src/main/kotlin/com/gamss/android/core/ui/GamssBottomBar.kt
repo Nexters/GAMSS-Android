@@ -5,14 +5,6 @@ import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.graphics.vector.ImageVector
-
-data class GamssBottomBarItem(
-    val icon: ImageVector,
-    val label: String,
-    val selected: Boolean,
-    val onClick: () -> Unit,
-)
 
 @Composable
 fun GamssBottomBar(items: List<GamssBottomBarItem>) {
