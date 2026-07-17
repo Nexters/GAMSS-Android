@@ -8,4 +8,3 @@ data class GamssBottomBarItem(
     val selected: Boolean,
     val onClick: () -> Unit,
 )
-
