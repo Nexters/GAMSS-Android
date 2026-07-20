@@ -1,10 +1,14 @@
 package com.gamss.android.app.navigation
 
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation3.runtime.NavKey
 import com.gamss.android.core.ui.GamssBottomBarItem
+import com.gamss.android.feature.calendar.navigation.CalendarKey
+import com.gamss.android.feature.chat.navigation.ChatKey
 import com.gamss.android.feature.home.navigation.HomeKey
 
 /**
@@ -20,6 +24,8 @@ data class TopLevelDestination(
 
 val topLevelDestinations = listOf(
     TopLevelDestination(key = HomeKey, icon = Icons.Filled.Home, label = "홈"),
+    TopLevelDestination(key = ChatKey, icon = Icons.Filled.Email, label = "대화"),
+    TopLevelDestination(key = CalendarKey, icon = Icons.Filled.DateRange, label = "달력"),
 )
 
 val topLevelDestinationKeys = topLevelDestinations.map { it.key }.toSet()

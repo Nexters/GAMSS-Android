@@ -51,6 +51,8 @@ dependencies {
     implementation(projects.core.common)
     implementation(projects.core.ui)
     implementation(projects.feature.home)
+    implementation(projects.feature.chat)
+    implementation(projects.feature.calendar)
 
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.ui)
