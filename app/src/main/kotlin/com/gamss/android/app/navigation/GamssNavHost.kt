@@ -25,11 +25,13 @@ fun GamssNavHost() {
 
     Scaffold(
         bottomBar = {
-            GamssBottomBar(
-                items = topLevelBottomBarItems,
-                selectedValue = navigationState.currentTopLevelKey,
-                onItemClick = navigator::navigate,
-            )
+            if (navigationState.currentKey == navigationState.currentTopLevelKey) {
+                GamssBottomBar(
+                    items = topLevelBottomBarItems,
+                    selectedValue = navigationState.currentTopLevelKey,
+                    onItemClick = navigator::navigate,
+                )
+            }
         },
     ) { innerPadding ->
         NavDisplay(
