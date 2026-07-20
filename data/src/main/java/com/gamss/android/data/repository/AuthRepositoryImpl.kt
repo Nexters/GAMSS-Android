@@ -1,5 +1,6 @@
 package com.gamss.android.data.repository
 
+import com.gamss.android.core.common.AppResult
 import com.gamss.android.data.remote.auth.AuthService
 import com.gamss.android.data.remote.auth.model.request.LoginRequest
 import com.gamss.android.domain.model.AuthResponse
@@ -10,6 +11,6 @@ class AuthRepositoryImpl @Inject constructor(
     private val authService: AuthService,
 ) : AuthRepository {
 
-    override suspend fun login(userId: String): AuthResponse =
-        authService.login(LoginRequest(userId = userId)).toDomain()
+    override suspend fun login(userId: String): AppResult<AuthResponse> =
+        AppResult.of { authService.login(LoginRequest(userId = userId)).toDomain() }
 }
