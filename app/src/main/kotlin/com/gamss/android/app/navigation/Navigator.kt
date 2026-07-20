@@ -28,11 +28,11 @@ class Navigator(val state: NavigationState) {
      * 현재 위치에서 뒤로 이동한다.
      *
      * 현재 탭의 root 화면에서는 이전에 방문한 탭으로 돌아가고, 상세 화면에서는 현재 탭의
-     * sub stack에서 한 단계 pop한다. startKey에서는 앱 종료를 상위 계층에서 처리해야 한다.
+     * sub stack에서 한 단계 pop한다.
      */
     fun goBack() {
         when (state.currentKey) {
-            state.startKey -> error("startKey에서는 Navigator.goBack()을 호출할 수 없습니다.")
+            state.startKey -> Unit
             state.currentTopLevelKey -> {
                 state.topLevelStack.removeLastOrNull()
             }

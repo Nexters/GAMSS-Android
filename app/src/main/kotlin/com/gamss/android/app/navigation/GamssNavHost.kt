@@ -41,7 +41,11 @@ fun GamssNavHost() {
                     entry<HomeKey> { HomeScreen() }
                 },
             ),
-            onBack = navigator::goBack,
+            onBack = {
+                if (navigationState.canGoBack) {
+                    navigator.goBack()
+                }
+            },
         )
     }
 }

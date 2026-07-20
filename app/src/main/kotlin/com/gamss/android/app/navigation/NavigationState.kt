@@ -59,6 +59,8 @@ class NavigationState(
             ?: error("현재 탭($currentTopLevelKey)에 해당하는 back stack이 없습니다.")
 
     val currentKey: NavKey by derivedStateOf { currentSubStack.last() }
+
+    val canGoBack: Boolean by derivedStateOf { currentKey != startKey }
 }
 
 /**
