@@ -7,7 +7,8 @@ import org.orbitmvi.orbit.viewmodel.container
 import javax.inject.Inject
 
 @HiltViewModel
-class CalendarViewModel @Inject constructor() : ViewModel(),
+class CalendarViewModel @Inject constructor() :
+    ViewModel(),
     ContainerHost<CalendarState, CalendarSideEffect> {
 
     override val container = container<CalendarState, CalendarSideEffect>(CalendarState())

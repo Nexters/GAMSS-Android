@@ -7,7 +7,8 @@ import org.orbitmvi.orbit.viewmodel.container
 import javax.inject.Inject
 
 @HiltViewModel
-class ChattingListViewModel @Inject constructor() : ViewModel(),
+class ChattingListViewModel @Inject constructor() :
+    ViewModel(),
     ContainerHost<ChattingListState, ChattingListSideEffect> {
 
     override val container = container<ChattingListState, ChattingListSideEffect>(ChattingListState())
