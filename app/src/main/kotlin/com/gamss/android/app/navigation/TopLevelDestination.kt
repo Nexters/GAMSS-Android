@@ -4,6 +4,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation3.runtime.NavKey
+import com.gamss.android.core.ui.GamssBottomBarItem
 import com.gamss.android.feature.home.navigation.HomeKey
 
 /**
@@ -20,3 +21,13 @@ data class TopLevelDestination(
 val topLevelDestinations = listOf(
     TopLevelDestination(key = HomeKey, icon = Icons.Filled.Home, label = "홈"),
 )
+
+val topLevelDestinationKeys = topLevelDestinations.map { it.key }.toSet()
+
+val topLevelBottomBarItems: List<GamssBottomBarItem<NavKey>> = topLevelDestinations.map { destination ->
+    GamssBottomBarItem(
+        value = destination.key,
+        icon = destination.icon,
+        label = destination.label,
+    )
+}

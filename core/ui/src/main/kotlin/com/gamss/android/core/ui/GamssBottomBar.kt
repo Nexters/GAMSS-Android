@@ -7,12 +7,16 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 
 @Composable
-fun GamssBottomBar(items: List<GamssBottomBarItem>) {
+fun <T> GamssBottomBar(
+    items: List<GamssBottomBarItem<T>>,
+    selectedValue: T,
+    onItemClick: (T) -> Unit,
+) {
     NavigationBar {
         items.forEach { item ->
             NavigationBarItem(
-                selected = item.selected,
-                onClick = item.onClick,
+                selected = item.value == selectedValue,
+                onClick = { onItemClick(item.value) },
                 icon = { Icon(imageVector = item.icon, contentDescription = item.label) },
                 label = { Text(text = item.label) },
             )

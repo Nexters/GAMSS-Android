@@ -8,7 +8,6 @@ import androidx.compose.ui.Modifier
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.ui.NavDisplay
 import com.gamss.android.core.ui.GamssBottomBar
-import com.gamss.android.core.ui.GamssBottomBarItem
 import com.gamss.android.feature.home.HomeScreen
 import com.gamss.android.feature.home.navigation.HomeKey
 
@@ -16,21 +15,16 @@ import com.gamss.android.feature.home.navigation.HomeKey
 fun GamssNavHost() {
     val navigationState = rememberNavigationState(
         startKey = HomeKey,
-        topLevelKeys = topLevelDestinations.map { it.key }.toSet(),
+        topLevelKeys = topLevelDestinationKeys,
     )
     val navigator = remember(navigationState) { Navigator(navigationState) }
 
     Scaffold(
         bottomBar = {
             GamssBottomBar(
-                items = topLevelDestinations.map { destination ->
-                    GamssBottomBarItem(
-                        icon = destination.icon,
-                        label = destination.label,
-                        selected = destination.key == navigationState.currentTopLevelKey,
-                        onClick = { navigator.navigate(destination.key) },
-                    )
-                },
+                items = topLevelBottomBarItems,
+                selectedValue = navigationState.currentTopLevelKey,
+                onItemClick = navigator::navigate,
             )
         },
     ) { innerPadding ->
