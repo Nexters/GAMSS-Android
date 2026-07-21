@@ -3,6 +3,8 @@
 .idea/
 .kotlin/
 build/
+bin/
 local.properties
 */build/
 .worktree-*
+app/google-services.json

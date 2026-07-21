@@ -7,7 +7,7 @@ kotlin {
 }
 
 dependencies {
-    api(projects.core)
+    implementation(projects.core.common)
 
     testImplementation(libs.junit)
 }

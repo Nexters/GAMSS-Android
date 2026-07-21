@@ -69,23 +69,31 @@ API 키 등 비밀 값이 필요한 경우에도 `local.properties`에 두고 �
 
 ## 프로젝트 구조
 
-멀티모듈 구조로 구성한다. 세부 모듈 구성은 진행 상황에 따라 확정한다.
+멀티모듈 구조로 구성한다. 새 feature나 데이터 소스를 추가할 때도 아래 구조와 의존성 방향을 따른다.
 
 ```
 GAMSS-Android/
-├─ app/           # 앱 진입점, DI 구성, 네비게이션 호스트 (예정)
-├─ core/          # 공통 유틸, 디자인 시스템, 네트워크/DB 기반 (예정)
-├─ feature/       # 화면 단위 기능 모듈 (예정)
-├─ data/          # 데이터 소스, 저장소 구현 (예정)
-└─ gradle/        # 버전 카탈로그, wrapper
+├─ app/                # 앱 진입점, Hilt DI 그래프 조립, Navigation3 호스트
+├─ domain/             # UseCase, Repository 인터페이스, 도메인 모델 (순수 Kotlin/JVM, Android 의존성 없음)
+├─ data/                # Repository 구현체, 원격(remote)·로컬 데이터 소스, DI 모듈(di)
+├─ core/
+│   ├─ common/         # 모듈 간 공유되는 순수 유틸 (AppResult 등)
+│   └─ ui/             # 공용 Compose UI 컴포넌트 (GamssBottomBar 등)
+├─ feature/
+│   └─ home/           # 화면 단위 기능 모듈. 화면별로 하나씩 추가한다
+└─ gradle/             # 버전 카탈로그, wrapper
 ```
 
-| 모듈 | 역할 |
-| --- | --- |
-| `app` | 앱 진입점, DI 그래프 구성, 네비게이션 호스트 |
-| `core` | 여러 기능에서 공유하는 공통 코드 (UI 컴포넌트, 네트워크·DB 기반, 유틸) |
-| `feature` | 화면 단위 기능 모듈 (기능별로 분리) |
-| `data` | 데이터 소스 및 저장소(Repository) 구현 |
+| 모듈 | 역할 | 의존하는 모듈 |
+| --- | --- | --- |
+| `app` | 앱 진입점, Hilt DI 그래프 조립, Navigation3 호스트 | `domain`, `data`, `core:common`, `core:ui`, `feature:*` |
+| `domain` | UseCase, Repository 인터페이스, 도메인 모델 | 없음 |
+| `data` | Repository 구현, 원격/로컬 데이터 소스, Hilt DI 모듈 | `domain`, `core:common` |
+| `core:common` | 여러 모듈이 공유하는 순수 유틸 | 없음 |
+| `core:ui` | 공용 Compose UI 컴포넌트 | 없음 |
+| `feature:*` | 화면 단위 기능 모듈 (기능별로 분리) | `core:ui` (필요 시 `domain`) |
+
+**의존성 규칙**: 안쪽 레이어(`domain`)는 바깥쪽 어떤 모듈도 참조하지 않는다. `data`, `feature`, `app`은 `domain`이 정의한 인터페이스(Repository, UseCase)에 의존하고, 구현은 바깥쪽(`data`)에 둔다. `app`은 조립부이므로 예외적으로 전체 모듈을 참조한다.
 
 ## 기술 스택
 
