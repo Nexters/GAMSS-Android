@@ -14,6 +14,16 @@ android {
         applicationId = "com.gamss.android"
         versionCode = 1
         versionName = "0.1.0"
+
+        // 감정 분류 온디바이스 네이티브(DJL 토크나이저 + libc++_shared.so)는 arm64 실기기 대상만 패키징
+        ndk {
+            abiFilters += "arm64-v8a"
+        }
+    }
+
+    androidResources {
+        // .tflite 를 비압축 저장해야 assets.openFd + FileChannel.map(mmap) 가능
+        noCompress += "tflite"
     }
 
     buildTypes {
@@ -31,6 +41,7 @@ dependencies {
     implementation(projects.feature.home)
     implementation(projects.feature.chat)
     implementation(projects.feature.calendar)
+    implementation(projects.feature.emotion)
 
     implementation(libs.compose.material.icons.core)
     implementation(libs.androidx.activity.compose)
@@ -43,4 +54,7 @@ dependencies {
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.crashlytics)
     implementation(libs.firebase.analytics)
+
+    androidTestImplementation(libs.junit)
+    androidTestImplementation(libs.androidx.junit)
 }
