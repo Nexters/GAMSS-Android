@@ -33,7 +33,9 @@ kotlin {
 }
 
 dependencies {
+    implementation(projects.core.common)
     implementation(projects.core.ui)
+    implementation(projects.domain)
 
     implementation(libs.androidx.core.ktx)
 

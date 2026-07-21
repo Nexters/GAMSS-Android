@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
 plugins {
     alias(libs.plugins.gamss.android.application)
     alias(libs.plugins.gamss.android.compose)
@@ -42,6 +44,7 @@ dependencies {
     implementation(projects.feature.chat)
     implementation(projects.feature.calendar)
     implementation(projects.feature.emotion)
+    implementation(projects.feature.login)
 
     implementation(libs.compose.material.icons.core)
     implementation(libs.androidx.activity.compose)
