@@ -8,3 +8,7 @@ local.properties
 */build/
 .worktree-*
 app/google-services.json
+
+# 온디바이스 모델/네이티브 바이너리는 커밋하지 않는다 (용량, LFS/CI 주입 대상)
+*.tflite
+*.so
