@@ -17,7 +17,8 @@ class LiteRtClassifier private constructor(
     private val labels: List<String>,
 ) : Closeable {
 
-    val artifactSizeBytes: Long get() = model.sizeBytes
+    // 입력 텐서 index → 토큰 역할. 이름 매칭을 load 시점에 1회 해결해 재export 시 즉시 실패하게 한다.
+    private val inputRoles: IntArray = resolveInputRoles(model.interpreter)
 
     fun classify(text: String): ClassificationResult {
         val interpreter = model.interpreter
@@ -25,11 +26,10 @@ class LiteRtClassifier private constructor(
 
         val inputs = Array<Any>(interpreter.inputTensorCount) { i ->
             val tensor = interpreter.getInputTensor(i)
-            val values = when {
-                tensor.name().contains("input_ids") -> encoded.ids
-                tensor.name().contains("attention_mask") -> encoded.attentionMask
-                tensor.name().contains("token_type") -> encoded.typeIds
-                else -> error("매핑되지 않은 입력 텐서: ${tensor.name()}")
+            val values = when (inputRoles[i]) {
+                ROLE_IDS -> encoded.ids
+                ROLE_MASK -> encoded.attentionMask
+                else -> encoded.typeIds
             }
             toInputBuffer(values, tensor.dataType(), tensor.numBytes())
         }
@@ -39,8 +39,11 @@ class LiteRtClassifier private constructor(
         require(classCount == labels.size) {
             "모델 출력 클래스 수($classCount) 와 라벨 수(${labels.size}) 가 다릅니다."
         }
+        require(outputTensor.dataType() == DataType.FLOAT32) {
+            "출력 텐서 타입이 FLOAT32 가 아닙니다: ${outputTensor.dataType()}"
+        }
         val output = ByteBuffer.allocateDirect(outputTensor.numBytes()).order(ByteOrder.nativeOrder())
-        interpreter.runForMultipleInputsOutputs(inputs, hashMapOf<Int, Any>(0 to output))
+        interpreter.runForMultipleInputsOutputs(inputs, mapOf<Int, Any>(0 to output))
 
         output.rewind()
         val probs = softmax(FloatArray(classCount) { output.float })
@@ -76,10 +79,25 @@ class LiteRtClassifier private constructor(
     }
 
     companion object {
+        private const val ROLE_IDS = 0
+        private const val ROLE_MASK = 1
+        private const val ROLE_TYPE = 2
+
         fun load(context: Context, spec: ClassifierSpec): LiteRtClassifier = LiteRtClassifier(
             model = LiteRtModel.load(context, spec.modelAsset),
             tokenizer = WordPieceTokenizer.load(context, spec.tokenizerAsset, spec.seqLen),
             labels = spec.labels,
         )
+
+        private fun resolveInputRoles(interpreter: org.tensorflow.lite.Interpreter): IntArray =
+            IntArray(interpreter.inputTensorCount) { i ->
+                val name = interpreter.getInputTensor(i).name()
+                when {
+                    name.contains("input_ids") -> ROLE_IDS
+                    name.contains("attention_mask") -> ROLE_MASK
+                    name.contains("token_type") -> ROLE_TYPE
+                    else -> error("매핑되지 않은 입력 텐서: $name")
+                }
+            }
     }
 }

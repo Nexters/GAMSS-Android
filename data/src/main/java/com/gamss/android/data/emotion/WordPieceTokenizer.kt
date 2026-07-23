@@ -13,7 +13,8 @@ class WordPieceTokenizer private constructor(
     private val seqLen: Int,
 ) : Closeable {
 
-    data class Encoded(
+    // LongArray 필드라 data class 의 참조기반 equals/hashCode 는 부적절 → 일반 class.
+    class Encoded(
         val ids: LongArray,
         val attentionMask: LongArray,
         val typeIds: LongArray,

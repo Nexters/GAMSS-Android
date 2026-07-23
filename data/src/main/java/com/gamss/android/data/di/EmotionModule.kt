@@ -6,13 +6,12 @@ import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
-import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
 internal abstract class EmotionModule {
 
+    // 구현체(AndroidEmotionClassifier)가 이미 @Singleton 이라 바인딩부에는 스코프를 붙이지 않는다.
     @Binds
-    @Singleton
     abstract fun bindEmotionClassifier(impl: AndroidEmotionClassifier): EmotionClassifier
 }

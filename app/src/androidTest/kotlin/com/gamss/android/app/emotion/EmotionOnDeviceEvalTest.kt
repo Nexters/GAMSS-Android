@@ -17,11 +17,6 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class EmotionOnDeviceEvalTest {
 
-    private val koToEn = mapOf(
-        "분노" to "angry", "불안" to "anxious", "당황" to "embarrassed",
-        "기쁨" to "happy", "상처" to "heartache", "슬픔" to "sad",
-    )
-
     @Test
     fun evaluateTestSetOnDevice() {
         val instr = InstrumentationRegistry.getInstrumentation()
@@ -42,7 +37,7 @@ class EmotionOnDeviceEvalTest {
                 val text = s.getString("text")
                 val gold = s.getString("label")
                 val result = classifier.classify(text)
-                val pred = koToEn[result.topLabel] ?: result.topLabel
+                val pred = EmotionModelSpec.LABEL_EN[result.topLabel] ?: result.topLabel
                 val conf = result.confidence
                 if (pred == gold) correct++
                 val bucket = perGold.getOrPut(gold) { IntArray(2) }
