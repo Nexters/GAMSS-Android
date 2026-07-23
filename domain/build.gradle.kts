@@ -4,6 +4,7 @@ plugins {
 
 dependencies {
     implementation(projects.core.common)
+    implementation(libs.javax.inject)
 
     implementation(libs.javax.inject)
 

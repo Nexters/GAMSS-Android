@@ -33,11 +33,14 @@ kotlin {
 }
 
 dependencies {
+    implementation(libs.google.googleid)
     implementation(projects.core.common)
     implementation(projects.core.ui)
     implementation(projects.domain)
 
     implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.credentials)
+    implementation(libs.androidx.credentials.play.services.auth)
 
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.ui)
