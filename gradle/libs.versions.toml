@@ -94,6 +94,12 @@ androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version
 material = { group = "com.google.android.material", name = "material", version.ref = "material" }
 androidx-runtime = { group = "androidx.compose.runtime", name = "runtime", version.ref = "runtime" }
 
+android-gradlePlugin = { module = "com.android.tools.build:gradle", version.ref = "agp" }
+kotlin-gradlePlugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
+compose-gradlePlugin = { module = "org.jetbrains.kotlin:compose-compiler-gradle-plugin", version.ref = "kotlin" }
+ksp-gradlePlugin = { module = "com.google.devtools.ksp:symbol-processing-gradle-plugin", version.ref = "ksp" }
+hilt-gradlePlugin = { module = "com.google.dagger:hilt-android-gradle-plugin", version.ref = "hilt" }
+
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
 androidLibrary = { id = "com.android.library", version.ref = "agp" }
@@ -105,3 +111,10 @@ hilt = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
 googleServices = { id = "com.google.gms.google-services", version.ref = "google-services" }
 firebaseCrashlytics = { id = "com.google.firebase.crashlytics", version.ref = "firebase-crashlytics-gradle" }
 detekt = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt" }
+
+gamss-android-application = { id = "gamss.android.application" }
+gamss-android-library = { id = "gamss.android.library" }
+gamss-android-compose = { id = "gamss.android.compose" }
+gamss-android-hilt = { id = "gamss.android.hilt" }
+gamss-android-feature = { id = "gamss.android.feature" }
+gamss-jvm-library = { id = "gamss.jvm.library" }
