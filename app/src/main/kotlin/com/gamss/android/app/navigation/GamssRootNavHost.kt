@@ -1,9 +1,11 @@
 package com.gamss.android.app.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
+import com.gamss.android.app.R
 import com.gamss.android.feature.login.LoginKey
 import com.gamss.android.feature.login.LoginScreen
 
@@ -22,6 +24,7 @@ fun GamssRootNavHost() {
             entryProvider {
                 entry<LoginKey> {
                     LoginScreen(
+                        googleWebClientId = stringResource(R.string.default_web_client_id),
                         onLoginSuccess = {
                             backStack.clear()
                             backStack.add(MainKey)

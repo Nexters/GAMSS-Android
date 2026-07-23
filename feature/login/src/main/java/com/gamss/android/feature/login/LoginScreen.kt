@@ -20,16 +20,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.gamss.android.feature.login.auth.rememberGoogleCredentialLauncher
 import org.orbitmvi.orbit.compose.collectAsState
 import org.orbitmvi.orbit.compose.collectSideEffect
 
 @Composable
 fun LoginScreen(
+    googleWebClientId: String,
     onLoginSuccess: () -> Unit,
     viewModel: LoginViewModel = hiltViewModel(),
 ) {
     val state by viewModel.collectAsState()
     val context = LocalContext.current
+    val googleCredentialLauncher = rememberGoogleCredentialLauncher(googleWebClientId)
 
     viewModel.collectSideEffect { sideEffect ->
         when (sideEffect) {
@@ -60,9 +63,14 @@ fun LoginScreen(
                 Spacer(modifier = Modifier.height(32.dp))
                 Button(
                     modifier = Modifier.fillMaxWidth(),
-                    onClick = viewModel::login,
+                    onClick = {
+                        googleCredentialLauncher.launch(
+                            onSuccess = viewModel::login,
+                            onFailure = viewModel::onGoogleSignInFailed,
+                        )
+                    },
                 ) {
-                    Text("구글로 로그인")
+                    Text("Google로 로그인")
                 }
             }
         }
