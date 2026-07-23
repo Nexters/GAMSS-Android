@@ -83,6 +83,10 @@ class LiteRtClassifier private constructor(
         private const val ROLE_MASK = 1
         private const val ROLE_TYPE = 2
 
+        private const val NAME_INPUT_IDS = "input_ids"
+        private const val NAME_ATTENTION_MASK = "attention_mask"
+        private const val NAME_TOKEN_TYPE = "token_type"
+
         fun load(context: Context, spec: ClassifierSpec): LiteRtClassifier = LiteRtClassifier(
             model = LiteRtModel.load(context, spec.modelAsset),
             tokenizer = WordPieceTokenizer.load(context, spec.tokenizerAsset, spec.seqLen),
@@ -93,9 +97,9 @@ class LiteRtClassifier private constructor(
             IntArray(interpreter.inputTensorCount) { i ->
                 val name = interpreter.getInputTensor(i).name()
                 when {
-                    name.contains("input_ids") -> ROLE_IDS
-                    name.contains("attention_mask") -> ROLE_MASK
-                    name.contains("token_type") -> ROLE_TYPE
+                    name.contains(NAME_INPUT_IDS) -> ROLE_IDS
+                    name.contains(NAME_ATTENTION_MASK) -> ROLE_MASK
+                    name.contains(NAME_TOKEN_TYPE) -> ROLE_TYPE
                     else -> error("매핑되지 않은 입력 텐서: $name")
                 }
             }
