@@ -18,10 +18,11 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.gamss.android.domain.emotion.ConversationEmotion
+import com.gamss.android.domain.emotion.EmotionResult
 import org.orbitmvi.orbit.compose.collectAsState
 import org.orbitmvi.orbit.compose.collectSideEffect
 
@@ -82,22 +83,23 @@ fun EmotionScreen(
 }
 
 @Composable
-private fun ResultCard(result: ConversationEmotion) {
+private fun ResultCard(result: EmotionResult) {
+    val emotion = result.emotion
+    val sortedScores = remember(result) { emotion.scores.entries.sortedByDescending { it.value } }
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             Text(
-                "대표 감정: ${result.emotion.topLabel} (${(result.emotion.confidence * PERCENT).toInt()}%)",
+                "대표 감정: ${emotion.topLabel} → 캐릭터: ${result.character.displayName} " +
+                    "(${(emotion.confidence * PERCENT).toInt()}%)",
                 style = MaterialTheme.typography.titleLarge,
             )
             Text("전체 점수", style = MaterialTheme.typography.titleSmall)
-            result.emotion.scores.entries
-                .sortedByDescending { it.value }
-                .forEach { (label, score) ->
-                    Text("· $label ${(score * PERCENT).toInt()}%", style = MaterialTheme.typography.bodyMedium)
-                }
+            sortedScores.forEach { (label, score) ->
+                Text("· $label ${(score * PERCENT).toInt()}%", style = MaterialTheme.typography.bodyMedium)
+            }
         }
     }
 }
