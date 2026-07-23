@@ -1,9 +1,5 @@
 plugins {
-    alias(libs.plugins.kotlinJvm)
-}
-
-kotlin {
-    jvmToolchain(17)
+    alias(libs.plugins.gamss.jvm.library)
 }
 
 dependencies {
