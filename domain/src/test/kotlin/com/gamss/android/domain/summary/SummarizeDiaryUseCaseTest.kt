@@ -2,27 +2,49 @@ package com.gamss.android.domain.summary
 
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class SummarizeDiaryUseCaseTest {
 
-    /** 입력 텍스트를 변환해 돌려주는 fake 요약기. */
-    private fun summarizerOf(transform: (String) -> String) =
-        object : DiarySummarizer {
-            override suspend fun summarize(text: String): String = transform(text)
+    /** 호출 여부를 기록하는 fake 요약기. */
+    private class RecordingSummarizer(val transform: (String) -> String) : DiarySummarizer {
+        var called = false
+            private set
+
+        override suspend fun summarize(text: String): String {
+            called = true
+            return transform(text)
         }
+    }
 
     @Test
-    fun 여러_발화를_공백으로_이어_요약한다() = runBlocking {
-        val useCase = SummarizeDiaryUseCase(summarizerOf { "요약<$it>" })
-        val result = useCase(listOf("오늘 회사에서", "   ", "너무 힘들었어"))
-        assertEquals("요약<오늘 회사에서 너무 힘들었어>", result)
+    fun 충분히_긴_입력은_발화를_이어_요약기를_호출한다() = runBlocking {
+        val summarizer = RecordingSummarizer { "요약<$it>" }
+        val useCase = SummarizeDiaryUseCase(summarizer)
+        val result = useCase(
+            listOf("오늘 회사에서 부장님한테 크게 혼났는데", "   ", "딱히 내 잘못도 아니어서 하루종일 억울하고 기분이 안 좋았다"),
+        )
+        assertTrue(summarizer.called)
+        assertEquals("요약<오늘 회사에서 부장님한테 크게 혼났는데 딱히 내 잘못도 아니어서 하루종일 억울하고 기분이 안 좋았다>", result)
+    }
+
+    @Test
+    fun 짧은_입력은_요약기를_호출하지_않고_원문을_그대로_돌려준다() = runBlocking {
+        val summarizer = RecordingSummarizer { "요약<$it>" }
+        val useCase = SummarizeDiaryUseCase(summarizer)
+        val result = useCase(listOf("오늘 억울한 일이 있었어", "그냥 쉬려고"))
+        assertFalse(summarizer.called)
+        assertEquals("오늘 억울한 일이 있었어 그냥 쉬려고", result)
     }
 
     @Test
     fun 공백_입력은_null() = runBlocking {
-        val useCase = SummarizeDiaryUseCase(summarizerOf { it })
+        val summarizer = RecordingSummarizer { it }
+        val useCase = SummarizeDiaryUseCase(summarizer)
         assertNull(useCase(listOf("", "   ")))
+        assertFalse(summarizer.called)
     }
 }

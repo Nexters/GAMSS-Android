@@ -12,4 +12,7 @@ internal object KobartSummarySpec {
     const val VOCAB_SIZE = 30_000
     const val MAX_INPUT_TOKENS = 512
     const val MAX_OUTPUT_TOKENS = 64
+
+    // 그리디 디코딩이 짧은/저정보 입력에서 반복 루프에 빠지지 않도록 반복 3-gram을 금지한다.
+    const val NO_REPEAT_NGRAM = 3
 }

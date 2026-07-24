@@ -55,6 +55,7 @@ internal class OnnxKobartSummarizer private constructor(
             repeat(KobartSummarySpec.MAX_OUTPUT_TOKENS) {
                 val idsTensor =
                     OnnxTensor.createTensor(env, LongBuffer.wrap(sequence), longArrayOf(1, sequence.size.toLong()))
+                val banned = bannedNgramTokens(sequence)
                 val next = try {
                     decoder.run(
                         mapOf(
@@ -64,7 +65,7 @@ internal class OnnxKobartSummarizer private constructor(
                         ),
                         setOf(OUT_LOGITS),
                     ).use { result ->
-                        argmaxLastRow(result.get(OUT_LOGITS).get() as OnnxTensor, sequence.size)
+                        argmaxLastRow(result.get(OUT_LOGITS).get() as OnnxTensor, sequence.size, banned)
                     }
                 } finally {
                     idsTensor.close()
@@ -79,8 +80,8 @@ internal class OnnxKobartSummarizer private constructor(
         return generated
     }
 
-    /** logits[0, seqLen-1, :] 의 argmax 토큰 id. shape 를 검증해 재export 시 조용한 오작동을 막는다. */
-    private fun argmaxLastRow(logits: OnnxTensor, seqLen: Int): Long {
+    /** logits[0, seqLen-1, :] 의 argmax 토큰 id. banned 토큰은 제외한다. shape 검증으로 재export 시 오작동 방지. */
+    private fun argmaxLastRow(logits: OnnxTensor, seqLen: Int, banned: Set<Long>): Long {
         val shape = logits.info.shape
         require(shape.size == 3 && shape[1].toInt() == seqLen && shape[2].toInt() == KobartSummarySpec.VOCAB_SIZE) {
             "예상치 못한 logits shape: ${shape.contentToString()} (seqLen=$seqLen)"
@@ -90,6 +91,7 @@ internal class OnnxKobartSummarizer private constructor(
         var bestIndex = 0
         var bestValue = Float.NEGATIVE_INFINITY
         for (v in 0 until KobartSummarySpec.VOCAB_SIZE) {
+            if (v.toLong() in banned) continue
             val value = buffer.get(offset + v)
             if (value > bestValue) {
                 bestValue = value
@@ -97,6 +99,25 @@ internal class OnnxKobartSummarizer private constructor(
             }
         }
         return bestIndex.toLong()
+    }
+
+    /** no_repeat_ngram: 직전 (n-1)개 토큰 뒤에 와서 이미 나온 n-gram 을 완성하는 토큰들을 금지한다. */
+    private fun bannedNgramTokens(sequence: LongArray): Set<Long> {
+        val n = KobartSummarySpec.NO_REPEAT_NGRAM
+        if (sequence.size < n) return emptySet()
+        val prefixStart = sequence.size - (n - 1)
+        val banned = HashSet<Long>()
+        for (i in 0..sequence.size - n) {
+            var match = true
+            for (j in 0 until n - 1) {
+                if (sequence[i + j] != sequence[prefixStart + j]) {
+                    match = false
+                    break
+                }
+            }
+            if (match) banned.add(sequence[i + n - 1])
+        }
+        return banned
     }
 
     override fun close() {

@@ -18,6 +18,16 @@ class SummarizeDiaryUseCase @Inject constructor(
             .map { it.trim() }
             .filter { it.isNotEmpty() }
             .joinToString(separator = " ")
-        return if (text.isEmpty()) null else summarizer.summarize(text)
+        // 이미 충분히 짧으면 요약할 게 없고, 짧은 캐주얼 입력은 요약 모델(긴 문서 학습)의 분포 밖이라
+        // 반복/할루시네이션을 유발한다. 이 경우 요약기를 호출하지 않고 원문을 그대로 쓴다.
+        return when {
+            text.isEmpty() -> null
+            text.length < MIN_CHARS_FOR_SUMMARY -> text
+            else -> summarizer.summarize(text)
+        }
+    }
+
+    private companion object {
+        const val MIN_CHARS_FOR_SUMMARY = 50
     }
 }
