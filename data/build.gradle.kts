@@ -28,4 +28,11 @@ dependencies {
     implementation(platform(libs.djl.bom))
     implementation(libs.djl.huggingface.tokenizers)
     runtimeOnly(libs.djl.android.tokenizer.native)
+
+    // 온디바이스 원문 요약(kobart INT8) — ONNX Runtime Mobile (토크나이저는 DJL 재사용)
+    implementation(libs.onnxruntime.android)
+
+    androidTestImplementation(libs.junit)
+    androidTestImplementation(libs.androidx.junit)
+    androidTestImplementation("androidx.test:runner:1.6.2")
 }
