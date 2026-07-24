@@ -1,21 +1,15 @@
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import java.util.Properties
-
-val localProperties = Properties().apply {
-    val localPropertiesFile = rootProject.file("local.properties")
-    check(localPropertiesFile.exists()) {
-        "local.properties 파일이 없습니다. 프로젝트 루트에 파일을 생성해 주세요."
-    }
-    localPropertiesFile.inputStream().use(::load)
-}
-
-val baseUrl = checkNotNull(localProperties.getProperty("BASE_URL")) {
-    "local.properties에 BASE_URL을 설정해 주세요."
-}
 
 plugins {
     alias(libs.plugins.gamss.android.library)
     alias(libs.plugins.gamss.android.hilt)
+}
+
+val localProperties = Properties().apply {
+    val localPropertiesFile = rootProject.file("local.properties")
+    if(localPropertiesFile.exists()) {
+        localPropertiesFile.inputStream().use(::load)
+    }
 }
 
 android {
@@ -23,6 +17,16 @@ android {
 
     buildFeatures {
         buildConfig = true
+    }
+
+    buildTypes {
+        debug {
+            // FIXME: 개발 서버 예정되어 있다면 추가 아니면 삭제 예정
+            buildConfigField("String", "BASE_URL", properties["BASE_URL"].toString())
+        }
+        release {
+            buildConfigField("String", "BASE_URL", properties["BASE_URL"].toString())
+        }
     }
 }
 
