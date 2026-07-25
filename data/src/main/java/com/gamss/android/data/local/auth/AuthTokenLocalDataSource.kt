@@ -13,17 +13,20 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 internal interface AuthTokenLocalDataSource {
+
     suspend fun saveTokens(tokens: StoredAuthTokens)
 
     suspend fun getTokens(): StoredAuthTokens
 
     suspend fun clearTokens()
+
 }
 
 @Singleton
 internal class EncryptedAuthTokenLocalDataSource @Inject constructor(
     @param:AuthTokenDataStore private val dataStore: DataStore<Preferences>,
     private val tokenCipher: TokenCipher,
+    private val tokenProvider: TokenProvider
 ) : AuthTokenLocalDataSource {
 
     private val mutex = Mutex()
@@ -41,13 +44,16 @@ internal class EncryptedAuthTokenLocalDataSource @Inject constructor(
                 preferences.setOrRemove(ACCESS_TOKEN_KEY, encryptedAccessToken)
                 preferences.setOrRemove(REFRESH_TOKEN_KEY, encryptedRefreshToken)
             }
+
+            // 캐시 갱신
+            tokenProvider.updateAccessToken(tokens.accessToken)
         }
     }
 
     override suspend fun getTokens(): StoredAuthTokens = mutex.withLock {
         val preferences = dataStore.data.first()
 
-        StoredAuthTokens(
+        val tokens = StoredAuthTokens(
             accessToken = preferences[ACCESS_TOKEN_KEY]?.let {
                 tokenCipher.decrypt(it, ACCESS_TOKEN_ASSOCIATED_DATA)
             },
@@ -55,6 +61,9 @@ internal class EncryptedAuthTokenLocalDataSource @Inject constructor(
                 tokenCipher.decrypt(it, REFRESH_TOKEN_ASSOCIATED_DATA)
             },
         )
+
+        tokenProvider.updateAccessToken(tokens.accessToken)
+        tokens
     }
 
     override suspend fun clearTokens() {
@@ -63,6 +72,7 @@ internal class EncryptedAuthTokenLocalDataSource @Inject constructor(
                 preferences.remove(ACCESS_TOKEN_KEY)
                 preferences.remove(REFRESH_TOKEN_KEY)
             }
+            tokenProvider.clear()
         }
     }
 

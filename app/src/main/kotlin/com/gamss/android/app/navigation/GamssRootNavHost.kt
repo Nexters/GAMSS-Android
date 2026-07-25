@@ -1,7 +1,11 @@
 package com.gamss.android.app.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.res.stringResource
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
@@ -16,8 +20,19 @@ import com.gamss.android.feature.login.LoginScreen
  * [LoginKey]와 [MainKey] 사이를 전환하는 별도의 root back stack을 관리한다.
  */
 @Composable
-fun GamssRootNavHost() {
+fun GamssRootNavHost(
+    rootViewModel: RootViewModel = hiltViewModel(),
+) {
     val backStack = rememberNavBackStack(LoginKey)
+    val shouldNavigateToLogin by rootViewModel.shouldNavigateToLogin.collectAsState()
+
+    LaunchedEffect(shouldNavigateToLogin) {
+        if (shouldNavigateToLogin) {
+            backStack.clear()
+            backStack.add(LoginKey)
+            rootViewModel.onNavigatedToLogin()
+        }
+    }
 
     NavDisplay(
         entries = backStack.map(

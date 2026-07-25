@@ -1,6 +1,5 @@
 package com.gamss.android.data.remote.auth.model.response
 
-import com.gamss.android.domain.model.AuthResponse
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -13,14 +12,17 @@ data class LoginResponse(
     @SerialName("error")
     val error: LoginError? = null,
 ) {
-    fun toDomain(): AuthResponse {
-        check(success) { error?.message ?: "로그인 요청에 실패했습니다." }
-        val loginData = checkNotNull(data) { "로그인 응답에 토큰이 없습니다." }
+    internal fun requireTokenData(): LoginData {
+        if (!success) {
+            throw AuthRequestException(
+                code = error?.code,
+                message = error?.message ?: "인증 요청에 실패했습니다.",
+            )
+        }
 
-        return AuthResponse(
-            accessToken = loginData.accessToken,
-            refreshToken = loginData.refreshToken,
-        )
+        return checkNotNull(data) {
+            "성공한 인증 응답에 토큰 데이터가 없습니다."
+        }
     }
 }
 
@@ -39,3 +41,8 @@ data class LoginError(
     @SerialName("message")
     val message: String,
 )
+
+internal class AuthRequestException(
+    val code: String?,
+    override val message: String,
+) : RuntimeException(message)

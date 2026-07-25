@@ -4,10 +4,9 @@ import com.gamss.android.core.common.AppResult
 import com.gamss.android.domain.repository.AuthRepository
 import javax.inject.Inject
 
-class LoginUseCase @Inject constructor(
+class LogoutUseCase @Inject constructor(
     private val authRepository: AuthRepository,
-) : UseCase<String, AppResult<Unit>> {
+) : NoParamUseCase<AppResult<Unit>> {
 
-    override suspend fun invoke(params: String): AppResult<Unit> =
-        authRepository.login(googleIdToken = params)
+    override suspend fun invoke(): AppResult<Unit> = authRepository.logout()
 }

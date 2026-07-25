@@ -1,6 +1,9 @@
 package com.gamss.android.data.di
 
+import android.util.Log
 import com.gamss.android.data.BuildConfig
+import com.gamss.android.data.network.TokenAuthenticator
+import com.gamss.android.data.network.TokenInterceptor
 import com.gamss.android.data.remote.auth.AuthService
 import dagger.Module
 import dagger.Provides
@@ -12,11 +15,12 @@ import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.kotlinx.serialization.asConverterFactory
+import java.util.concurrent.TimeUnit
 import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
-object NetworkModule {
+internal object NetworkModule {
 
     @Provides
     @Singleton
@@ -27,8 +31,14 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideOkHttpClient(): OkHttpClient {
-        val loggingInterceptor = HttpLoggingInterceptor().apply {
+    fun provideOkHttpClient(
+        tokenInterceptor: TokenInterceptor,
+        tokenAuthenticator: TokenAuthenticator,
+    ): OkHttpClient {
+        val loggingInterceptor = HttpLoggingInterceptor { message ->
+            Log.d(HTTP_LOG_TAG, message.redactTokenValues())
+        }.apply {
+            redactHeader(AUTHORIZATION_HEADER)
             level = if (BuildConfig.DEBUG) {
                 HttpLoggingInterceptor.Level.BODY
             } else {
@@ -36,7 +46,12 @@ object NetworkModule {
             }
         }
         return OkHttpClient.Builder()
+            .addInterceptor(tokenInterceptor)
+            .authenticator(tokenAuthenticator)
             .addInterceptor(loggingInterceptor)
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
+            .writeTimeout(30, TimeUnit.SECONDS)
             .build()
     }
 
@@ -57,4 +72,14 @@ object NetworkModule {
     @Singleton
     fun provideAuthService(retrofit: Retrofit): AuthService =
         retrofit.create(AuthService::class.java)
+
+    private fun String.redactTokenValues(): String =
+        TOKEN_JSON_PATTERN.replace(this) { matchResult ->
+            "${matchResult.groupValues[1]}<redacted>${matchResult.groupValues[2]}"
+        }
+
+    private const val HTTP_LOG_TAG = "GamssHttp"
+    private const val AUTHORIZATION_HEADER = "Authorization"
+    private val TOKEN_JSON_PATTERN =
+        Regex("(\"(?:idToken|accessToken|refreshToken)\"\\s*:\\s*\")[^\"]*(\")")
 }

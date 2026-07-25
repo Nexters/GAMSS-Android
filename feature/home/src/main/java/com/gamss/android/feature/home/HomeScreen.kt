@@ -55,6 +55,11 @@ fun HomeScreen(
                     Button(onClick = viewModel::loadGreeting) {
                         Text("새로고침")
                     }
+                    Spacer(modifier = Modifier.height(16.dp))
+                    // TODO: 임시 로그아웃 버튼. 정식 UI(설정 화면 등)가 생기면 그쪽으로 옮긴다.
+                    Button(onClick = viewModel::logout) {
+                        Text("로그아웃")
+                    }
                 }
             }
         }

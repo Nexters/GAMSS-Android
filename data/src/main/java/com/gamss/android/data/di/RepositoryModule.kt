@@ -1,16 +1,19 @@
 package com.gamss.android.data.di
 
+import com.gamss.android.data.network.AuthEventBus
+import com.gamss.android.data.network.AuthEventBusImpl
 import com.gamss.android.data.local.auth.AuthTokenLocalDataSource
 import com.gamss.android.data.local.auth.EncryptedAuthTokenLocalDataSource
 import com.gamss.android.data.local.auth.TinkTokenCipher
 import com.gamss.android.data.local.auth.TokenCipher
+import com.gamss.android.data.local.auth.TokenProvider
+import com.gamss.android.data.local.auth.TokenProviderImpl
 import com.gamss.android.data.repository.AuthRepositoryImpl
 import com.gamss.android.domain.repository.AuthRepository
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
-
 @Module
 @InstallIn(SingletonComponent::class)
 internal abstract class RepositoryModule {
@@ -29,4 +32,14 @@ internal abstract class RepositoryModule {
     abstract fun bindTokenCipher(
         tinkTokenCipher: TinkTokenCipher,
     ): TokenCipher
+
+    @Binds
+    abstract fun bindTokenProvider(
+        tokenProviderImpl: TokenProviderImpl,
+    ): TokenProvider
+
+    @Binds
+    abstract fun bindAuthEventBus(
+        authEventBusImpl: AuthEventBusImpl,
+    ): AuthEventBus
 }

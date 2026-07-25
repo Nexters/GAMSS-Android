@@ -1,15 +1,13 @@
 package com.gamss.android.feature.login
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import com.gamss.android.core.common.AppResult
+import com.gamss.android.domain.model.AuthException
 import com.gamss.android.domain.usecase.LoginUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import org.orbitmvi.orbit.ContainerHost
 import org.orbitmvi.orbit.viewmodel.container
 import javax.inject.Inject
-
-private const val LOGIN_LOG_TAG = "GamssLogin"
 
 @HiltViewModel
 class LoginViewModel @Inject constructor(
@@ -21,7 +19,7 @@ class LoginViewModel @Inject constructor(
     fun login(googleIdToken: String) = intent {
         reduce { state.copy(isLoading = true) }
 
-        when (loginUseCase(googleIdToken)) {
+        when (val result = loginUseCase(googleIdToken)) {
             is AppResult.Success -> {
                 reduce { state.copy(isLoading = false) }
                 postSideEffect(LoginSideEffect.NavigateToMain)
@@ -29,7 +27,7 @@ class LoginViewModel @Inject constructor(
 
             is AppResult.Failure -> {
                 reduce { state.copy(isLoading = false) }
-                postSideEffect(LoginSideEffect.ShowToast("로그인에 실패했어요"))
+                postSideEffect(LoginSideEffect.ShowToast(result.throwable.toLoginFailureMessage()))
             }
         }
     }
@@ -37,5 +35,12 @@ class LoginViewModel @Inject constructor(
     fun onGoogleSignInFailed() = intent {
         reduce { state.copy(isLoading = false) }
         postSideEffect(LoginSideEffect.ShowToast("Google 로그인에 실패했어요"))
+    }
+
+    private fun Throwable.toLoginFailureMessage(): String = when (this) {
+        is AuthException.InvalidCredentials -> "로그인 정보가 올바르지 않아요"
+        is AuthException.SessionExpired -> "세션이 만료되었어요. 다시 로그인해 주세요"
+        is AuthException.Network -> "네트워크 연결을 확인해 주세요"
+        else -> "로그인에 실패했어요"
     }
 }
