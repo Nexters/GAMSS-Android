@@ -53,6 +53,12 @@ jobs:
       - name: Write google-services.json
         run: echo "${{ secrets.GOOGLE_SERVICES_JSON }}" | base64 -d > app/google-services.json
 
+      - name: Write local.properties
+        shell: bash
+        run: |
+          printf 'DEV_BASE_URL=%s\n' "${{ secrets.DEV_BASE_URL }}" > local.properties
+          printf 'PROD_BASE_URL=%s\n' "${{ secrets.PROD_BASE_URL }}" >> local.properties
+
       - name: Run ${{ matrix.task }}
         run: ./gradlew ${{ matrix.task }} --stacktrace
 
