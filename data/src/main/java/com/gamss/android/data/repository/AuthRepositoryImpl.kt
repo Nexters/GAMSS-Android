@@ -83,8 +83,32 @@ internal class AuthRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun secession(): AppResult<Unit> {
+        val deleteResult = runCatchingAuth {
+            val response = authService.secessionUser()
+            if (!response.success) {
+                throw AuthRequestException(
+                    code = response.error?.code,
+                    message = response.error?.message ?: "secession failed",
+                )
+            }
+        }
+        return when (deleteResult) {
+            is AppResult.Success -> logout()
+            is AppResult.Failure -> deleteResult
+        }
+    }
+
     private suspend fun saveTokens(response: LoginResponse) {
-        val tokenData = response.requireTokenData()
+        if (!response.success) {
+            throw AuthRequestException(
+                code = response.error?.code,
+                message = response.error?.message ?: "auth request fail",
+            )
+        }
+        val tokenData = checkNotNull(response.data) {
+            "No available token data"
+        }
 
         authTokenLocalDataSource.saveTokens(
             StoredAuthTokens(

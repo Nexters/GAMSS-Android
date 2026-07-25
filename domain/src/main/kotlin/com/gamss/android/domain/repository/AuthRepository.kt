@@ -14,4 +14,6 @@ interface AuthRepository {
     suspend fun restoreSession(): AppResult<Unit>
 
     suspend fun logout(): AppResult<Unit>
+
+    suspend fun secession(): AppResult<Unit>
 }

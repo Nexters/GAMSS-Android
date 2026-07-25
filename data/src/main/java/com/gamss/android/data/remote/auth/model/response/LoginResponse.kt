@@ -11,20 +11,7 @@ data class LoginResponse(
     val data: LoginData? = null,
     @SerialName("error")
     val error: LoginError? = null,
-) {
-    internal fun requireTokenData(): LoginData {
-        if (!success) {
-            throw AuthRequestException(
-                code = error?.code,
-                message = error?.message ?: "인증 요청에 실패했습니다.",
-            )
-        }
-
-        return checkNotNull(data) {
-            "성공한 인증 응답에 토큰 데이터가 없습니다."
-        }
-    }
-}
+)
 
 @Serializable
 data class LoginData(
