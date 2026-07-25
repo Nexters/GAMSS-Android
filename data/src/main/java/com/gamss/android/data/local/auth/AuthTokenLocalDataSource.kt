@@ -19,7 +19,6 @@ internal interface AuthTokenLocalDataSource {
     suspend fun getTokens(): StoredAuthTokens
 
     suspend fun clearTokens()
-
 }
 
 @Singleton

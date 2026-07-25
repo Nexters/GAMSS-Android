@@ -10,8 +10,10 @@ import javax.inject.Inject
 private val NO_AUTH_HEADER_PATHS = setOf(LOGIN_PATH, REISSUE_TOKENS_PATH)
 
 class TokenInterceptor @Inject constructor(
-   private val tokenProvider: TokenProvider
-): Interceptor {
+    private val tokenProvider: TokenProvider,
+) : Interceptor {
+
+    @Suppress("ReturnCount")
     override fun intercept(chain: Interceptor.Chain): Response {
         val originalRequest = chain.request()
 

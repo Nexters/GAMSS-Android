@@ -10,7 +10,7 @@ interface TokenProvider {
 }
 
 @Singleton
- class TokenProviderImpl @Inject constructor() : TokenProvider {
+class TokenProviderImpl @Inject constructor() : TokenProvider {
 
     @Volatile
     private var accessToken: String? = null

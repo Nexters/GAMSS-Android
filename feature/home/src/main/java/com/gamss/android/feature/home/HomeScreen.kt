@@ -56,7 +56,7 @@ fun HomeScreen(
                         Text("새로고침")
                     }
                     Spacer(modifier = Modifier.height(16.dp))
-                    // TODO: 임시 로그아웃 버튼. 정식 UI(설정 화면 등)가 생기면 그쪽으로 옮긴다.
+                    // 정식 설정 화면이 추가되기 전까지 사용하는 임시 로그아웃 버튼
                     Button(onClick = viewModel::logout) {
                         Text("로그아웃")
                     }

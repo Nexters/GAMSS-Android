@@ -23,24 +23,28 @@ internal class TokenAuthenticator @Inject constructor(
     private val authEventBus: AuthEventBus,
 ) : Authenticator {
 
-    override fun authenticate(route: Route?, response: Response): Request? {
-        if (response.request.url.encodedPath == REISSUE_TOKENS_PATH) return null
-        if (responseCount(response) > MAX_RETRY_COUNT) return null
+    override fun authenticate(route: Route?, response: Response): Request? = when {
+        response.request.url.encodedPath == REISSUE_TOKENS_PATH -> null
+        responseCount(response) > MAX_RETRY_COUNT -> null
+        else -> synchronized(this) {
+            retryWithReissuedToken(response)
+        }
+    }
 
+    private fun retryWithReissuedToken(response: Response): Request? {
         val failedAccessToken = response.request.header(AUTHORIZATION_HEADER)
             ?.removePrefix(BEARER_PREFIX)
+        val cachedAccessToken = tokenProvider.getAccessToken()
 
-        synchronized(this) {
-            val cachedAccessToken = tokenProvider.getAccessToken()
-            if (cachedAccessToken != null && cachedAccessToken != failedAccessToken) {
-                // 다른 스레드가 이미 재발급을 완료했다면 그 토큰으로 재시도한다.
-                return response.request.withBearerToken(cachedAccessToken)
-            }
-
-            return when (val result = runBlocking { authRepository.get().reissueTokens() }) {
+        return if (cachedAccessToken != null && cachedAccessToken != failedAccessToken) {
+            // 다른 스레드가 이미 재발급을 완료했다면 그 토큰으로 재시도한다.
+            response.request.withBearerToken(cachedAccessToken)
+        } else {
+            when (runBlocking { authRepository.get().reissueTokens() }) {
                 is AppResult.Success -> {
-                    val newAccessToken = tokenProvider.getAccessToken() ?: return null
-                    response.request.withBearerToken(newAccessToken)
+                    tokenProvider.getAccessToken()?.let { accessToken ->
+                        response.request.withBearerToken(accessToken)
+                    }
                 }
 
                 is AppResult.Failure -> {
