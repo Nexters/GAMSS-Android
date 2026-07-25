@@ -3,14 +3,24 @@ import java.util.Properties
 plugins {
     alias(libs.plugins.gamss.android.library)
     alias(libs.plugins.gamss.android.hilt)
+    alias(libs.plugins.kotlinSerialization)
 }
 
 val localProperties = Properties().apply {
     val localPropertiesFile = rootProject.file("local.properties")
-    if(localPropertiesFile.exists()) {
-        localPropertiesFile.inputStream().use(::load)
+    check(localPropertiesFile.exists()) {
+        "local.properties not found. Create it in the project root."
     }
+    localPropertiesFile.inputStream().use(::load)
 }
+
+fun resolveBaseUrl(key: String): String =
+    checkNotNull(localProperties.getProperty(key)) {
+        "Missing $key in local.properties"
+    }.trim()
+
+val devBaseUrl = resolveBaseUrl("DEV_BASE_URL")
+val prodBaseUrl = resolveBaseUrl("PROD_BASE_URL")
 
 android {
     namespace = "com.gamss.android.data"
@@ -21,11 +31,10 @@ android {
 
     buildTypes {
         debug {
-            // FIXME: 개발 서버 예정되어 있다면 추가 아니면 삭제 예정
-            buildConfigField("String", "BASE_URL", properties["BASE_URL"].toString())
+            buildConfigField("String", "BASE_URL", "\"$devBaseUrl\"")
         }
         release {
-            buildConfigField("String", "BASE_URL", properties["BASE_URL"].toString())
+            buildConfigField("String", "BASE_URL", "\"$prodBaseUrl\"")
         }
     }
 }
