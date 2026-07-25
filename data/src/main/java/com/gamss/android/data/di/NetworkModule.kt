@@ -5,6 +5,7 @@ import com.gamss.android.data.BuildConfig
 import com.gamss.android.data.network.TokenAuthenticator
 import com.gamss.android.data.network.TokenInterceptor
 import com.gamss.android.data.remote.auth.AuthService
+import com.gamss.android.data.remote.user.UserService
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -72,6 +73,11 @@ internal object NetworkModule {
     @Singleton
     fun provideAuthService(retrofit: Retrofit): AuthService =
         retrofit.create(AuthService::class.java)
+
+    @Provides
+    @Singleton
+    fun provideUserService(retrofit: Retrofit): UserService =
+        retrofit.create(UserService::class.java)
 
     private fun String.redactTokenValues(): String =
         TOKEN_JSON_PATTERN.replace(this) { matchResult ->

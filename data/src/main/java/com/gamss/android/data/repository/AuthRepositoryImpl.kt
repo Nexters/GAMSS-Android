@@ -1,9 +1,9 @@
 package com.gamss.android.data.repository
 
 import com.gamss.android.core.common.AppResult
-import com.gamss.android.data.network.AuthEventBus
 import com.gamss.android.data.local.auth.AuthTokenLocalDataSource
 import com.gamss.android.data.local.auth.model.StoredAuthTokens
+import com.gamss.android.data.network.AuthEventBus
 import com.gamss.android.data.remote.auth.AuthService
 import com.gamss.android.data.remote.auth.model.request.LoginRequest
 import com.gamss.android.data.remote.auth.model.request.RefreshTokenRequest
@@ -16,8 +16,6 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.tasks.await
-import retrofit2.HttpException
-import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -32,7 +30,7 @@ internal class AuthRepositoryImpl @Inject constructor(
     override val authEvents: Flow<AuthEvent> = authEventBus.events
 
     override suspend fun login(googleIdToken: String): AppResult<Unit> {
-        return runCatchingAuth {
+        return runCatchingApiCall {
             val credential = GoogleAuthProvider.getCredential(googleIdToken, null)
 
             val authResult = firebaseAuth
@@ -49,7 +47,7 @@ internal class AuthRepositoryImpl @Inject constructor(
     }
 
     override suspend fun reissueTokens(): AppResult<Unit> {
-        return runCatchingAuth {
+        return runCatchingApiCall {
             val refreshToken = authTokenLocalDataSource.getTokens().refreshToken
                 ?: throw AuthException.SessionExpired()
 
@@ -77,14 +75,14 @@ internal class AuthRepositoryImpl @Inject constructor(
     }
 
     override suspend fun logout(): AppResult<Unit> {
-        return runCatchingAuth {
+        return runCatchingApiCall {
             authTokenLocalDataSource.clearTokens()
             authEventBus.notify(AuthEvent.LoggedOut)
         }
     }
 
     override suspend fun secession(): AppResult<Unit> {
-        val deleteResult = runCatchingAuth {
+        val deleteResult = runCatchingApiCall {
             val response = authService.secessionUser()
             if (!response.success) {
                 throw AuthRequestException(
@@ -116,32 +114,5 @@ internal class AuthRepositoryImpl @Inject constructor(
                 refreshToken = tokenData.refreshToken,
             ),
         )
-    }
-
-    @Suppress("TooGenericExceptionCaught")
-    private inline fun <T> runCatchingAuth(block: () -> T): AppResult<T> =
-        try {
-            AppResult.Success(block())
-        } catch (e: AuthException) {
-            AppResult.Failure(e)
-        } catch (e: AuthRequestException) {
-            AppResult.Failure(AuthException.InvalidCredentials(e.message, e))
-        } catch (e: HttpException) {
-            AppResult.Failure(
-                if (e.code() == HTTP_UNAUTHORIZED || e.code() == HTTP_FORBIDDEN) {
-                    AuthException.SessionExpired(e)
-                } else {
-                    AuthException.Network(e)
-                },
-            )
-        } catch (e: IOException) {
-            AppResult.Failure(AuthException.Network(e))
-        } catch (e: Throwable) {
-            AppResult.Failure(e)
-        }
-
-    private companion object {
-        const val HTTP_UNAUTHORIZED = 401
-        const val HTTP_FORBIDDEN = 403
     }
 }

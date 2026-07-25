@@ -2,13 +2,10 @@ package com.gamss.android.data.remote.auth
 
 import com.gamss.android.data.remote.auth.model.request.LoginRequest
 import com.gamss.android.data.remote.auth.model.request.RefreshTokenRequest
-import com.gamss.android.data.remote.auth.model.request.UpdateNicknameRequest
 import com.gamss.android.data.remote.auth.model.response.LoginResponse
 import com.gamss.android.data.remote.auth.model.response.SecessionUserResponse
-import com.gamss.android.data.remote.auth.model.response.UpdateNicknameResponse
 import retrofit2.http.Body
 import retrofit2.http.DELETE
-import retrofit2.http.PATCH
 import retrofit2.http.POST
 
 internal const val LOGIN_PATH = "/api/auth/login"
@@ -24,7 +21,4 @@ interface AuthService {
 
     @DELETE("/api/memebers/me")
     suspend fun secessionUser(): SecessionUserResponse
-
-    @PATCH("/api/memebers/me/nickname")
-    suspend fun updateNickname(@Body request: UpdateNicknameRequest): UpdateNicknameResponse
 }
