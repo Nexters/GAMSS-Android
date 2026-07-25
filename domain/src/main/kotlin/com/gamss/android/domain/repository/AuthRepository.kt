@@ -11,5 +11,7 @@ interface AuthRepository {
 
     suspend fun reissueTokens(): AppResult<Unit>
 
+    suspend fun restoreSession(): AppResult<Unit>
+
     suspend fun logout(): AppResult<Unit>
 }

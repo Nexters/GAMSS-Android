@@ -65,6 +65,17 @@ internal class AuthRepositoryImpl @Inject constructor(
         }
     }
 
+    @Suppress("TooGenericExceptionCaught")
+    override suspend fun restoreSession(): AppResult<Unit> {
+        val storedAccessToken = try {
+            authTokenLocalDataSource.getTokens().accessToken
+        } catch (e: Throwable) {
+            return AppResult.Failure(e)
+        }
+
+        return if (storedAccessToken != null) AppResult.Success(Unit) else reissueTokens()
+    }
+
     override suspend fun logout(): AppResult<Unit> {
         return runCatchingAuth {
             authTokenLocalDataSource.clearTokens()
