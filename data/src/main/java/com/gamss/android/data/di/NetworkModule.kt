@@ -2,8 +2,8 @@ package com.gamss.android.data.di
 
 import android.util.Log
 import com.gamss.android.data.BuildConfig
-import com.gamss.android.data.network.TokenAuthenticator
-import com.gamss.android.data.network.TokenInterceptor
+import com.gamss.android.data.auth.TokenAuthenticator
+import com.gamss.android.data.auth.TokenInterceptor
 import com.gamss.android.data.remote.auth.AuthService
 import com.gamss.android.data.remote.user.UserService
 import dagger.Module
@@ -50,7 +50,7 @@ internal object NetworkModule {
      */
     @Provides
     @Singleton
-    @AuthNetwork
+    @AuthApi
     fun provideAuthOkHttpClient(
         loggingInterceptor: HttpLoggingInterceptor,
     ): OkHttpClient {
@@ -81,9 +81,9 @@ internal object NetworkModule {
 
     @Provides
     @Singleton
-    @AuthNetwork
+    @AuthApi
     fun provideAuthRetrofit(
-        @AuthNetwork okHttpClient: OkHttpClient,
+        @AuthApi okHttpClient: OkHttpClient,
         json: Json,
     ): Retrofit {
         return Retrofit.Builder()
@@ -108,7 +108,7 @@ internal object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideAuthService(@AuthNetwork retrofit: Retrofit): AuthService =
+    fun provideAuthService(@AuthApi retrofit: Retrofit): AuthService =
         retrofit.create(AuthService::class.java)
 
     @Provides

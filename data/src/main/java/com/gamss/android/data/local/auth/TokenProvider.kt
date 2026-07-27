@@ -3,14 +3,14 @@ package com.gamss.android.data.local.auth
 import javax.inject.Inject
 import javax.inject.Singleton
 
-interface TokenProvider {
+internal interface TokenProvider {
     fun getAccessToken(): String?
     fun updateAccessToken(accessToken: String?)
     fun clear()
 }
 
 @Singleton
-class TokenProviderImpl @Inject constructor() : TokenProvider {
+internal class TokenProviderImpl @Inject constructor() : TokenProvider {
 
     @Volatile
     private var accessToken: String? = null

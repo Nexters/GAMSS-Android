@@ -1,9 +1,7 @@
-package com.gamss.android.data.network
+package com.gamss.android.data.auth
 
 import com.gamss.android.core.common.AppResult
 import com.gamss.android.data.local.auth.TokenProvider
-import com.gamss.android.data.remote.auth.REISSUE_TOKENS_PATH
-import com.gamss.android.domain.model.AuthEvent
 import com.gamss.android.domain.repository.AuthRepository
 import dagger.Lazy
 import kotlinx.coroutines.runBlocking
@@ -15,28 +13,21 @@ import javax.inject.Inject
 
 /**
  * accessToken 만료로 인한 401 응답을 감지해 refreshToken으로 재발급을 시도하고,
- * 실패하면 세션을 종료시킨다. 여러 요청이 동시에 401을 받아도 재발급은 한 번만 수행한다.
+ * 여러 요청이 동시에 401을 받아도 재발급은 한 번만 수행한다.
  */
 internal class TokenAuthenticator @Inject constructor(
     private val tokenProvider: TokenProvider,
     private val authRepository: Lazy<AuthRepository>,
-    private val authEventBus: AuthEventBus,
 ) : Authenticator {
 
-    override fun authenticate(route: Route?, response: Response): Request? = when {
-        response.request.url.encodedPath == REISSUE_TOKENS_PATH -> null
-
-        responseCount(response) > MAX_RETRY_COUNT -> {
-            // 재시도를 반복해도 인증이 회복되지 않는 상태이므로 세션을 강제로 종료한다.
-            runBlocking { authRepository.get().logout() }
-            authEventBus.notify(AuthEvent.SessionExpired)
+    override fun authenticate(route: Route?, response: Response): Request? =
+        if (responseCount(response) > MAX_RETRY_COUNT) {
             null
+        } else {
+            synchronized(this) {
+                retryWithReissuedToken(response)
+            }
         }
-
-        else -> synchronized(this) {
-            retryWithReissuedToken(response)
-        }
-    }
 
     private fun retryWithReissuedToken(response: Response): Request? {
         val failedAccessToken = response.request.header(AUTHORIZATION_HEADER)
@@ -55,8 +46,6 @@ internal class TokenAuthenticator @Inject constructor(
                 }
 
                 is AppResult.Failure -> {
-                    runBlocking { authRepository.get().logout() }
-                    authEventBus.notify(AuthEvent.SessionExpired)
                     null
                 }
             }

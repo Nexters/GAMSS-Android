@@ -2,6 +2,7 @@ package com.gamss.android.data.repository
 
 import com.gamss.android.core.common.AppResult
 import com.gamss.android.core.common.network.ApiException
+import com.gamss.android.data.remote.model.response.ApiError
 import com.gamss.android.domain.model.SessionExpiredException
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -9,13 +10,8 @@ import retrofit2.HttpException
 import java.io.IOException
 
 /**
- * API 호출 결과를 [AppResult]로 변환한다. 401/403은 어느 API에서 발생했든 세션이 깨졌다는
- * 뜻이므로 전역적으로 [SessionExpiredException]으로 통일하고, 그 외 실패는 전송 계층 형태
- * ([ApiException])로만 구분한다. 특정 기능에서만 의미가 달라지는 실패는
- * 각 리포지토리 호출부에서 별도로 해석한다.
- *
- * @param treatUnauthorizedAsSessionExpired 로그인처럼 애초에 세션(Authorization 헤더)이
- * 없는 상태로 호출하는 API는 401/403이 "자격 증명 거부"일 뿐 세션 만료가 아니므로 false로 둔다.
+ * API 호출 결과를 [AppResult]로 변환한다. 인증이 필요한 API의 401은 세션 만료로 보고,
+ * 로그인처럼 세션 없이 호출하는 API는 호출부에서 예외 처리한다.
  */
 @Suppress("TooGenericExceptionCaught")
 internal inline fun <T> runCatchingApiCall(
@@ -29,9 +25,7 @@ internal inline fun <T> runCatchingApiCall(
     } catch (e: HttpException) {
         val serverError = e.parseServerError()
         AppResult.Failure(
-            if (treatUnauthorizedAsSessionExpired &&
-                (e.code() == HTTP_UNAUTHORIZED || e.code() == HTTP_FORBIDDEN)
-            ) {
+            if (treatUnauthorizedAsSessionExpired && e.code() == HTTP_UNAUTHORIZED) {
                 SessionExpiredException(e)
             } else {
                 ApiException.Http(
@@ -56,7 +50,7 @@ internal inline fun <T> runCatchingApiCall(
  * (예: "HTTP 500 Internal Server Error")만 남는다.
  */
 @Suppress("SwallowedException", "TooGenericExceptionCaught")
-internal fun HttpException.parseServerError(): ServerErrorBody? =
+private fun HttpException.parseServerError(): ApiError? =
     try {
         response()?.errorBody()?.string()
             ?.let { errorBodyJson.decodeFromString<ServerErrorEnvelope>(it) }
@@ -66,17 +60,10 @@ internal fun HttpException.parseServerError(): ServerErrorBody? =
     }
 
 @Serializable
-internal data class ServerErrorEnvelope(
-    val error: ServerErrorBody? = null,
+private data class ServerErrorEnvelope(
+    val error: ApiError? = null,
 )
 
-@Serializable
-internal data class ServerErrorBody(
-    val code: String? = null,
-    val message: String? = null,
-)
-
-internal val errorBodyJson = Json { ignoreUnknownKeys = true }
+private val errorBodyJson = Json { ignoreUnknownKeys = true }
 
 private const val HTTP_UNAUTHORIZED = 401
-private const val HTTP_FORBIDDEN = 403

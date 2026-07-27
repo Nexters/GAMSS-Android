@@ -1,13 +1,12 @@
 package com.gamss.android.data.repository
 
 import com.gamss.android.core.common.AppResult
+import com.gamss.android.data.auth.AuthEventBus
 import com.gamss.android.data.local.auth.AuthTokenLocalDataSource
 import com.gamss.android.data.local.auth.model.StoredAuthTokens
-import com.gamss.android.data.network.AuthEventBus
 import com.gamss.android.data.remote.auth.AuthService
 import com.gamss.android.data.remote.auth.model.request.LoginRequest
 import com.gamss.android.data.remote.auth.model.request.RefreshTokenRequest
-import com.gamss.android.data.remote.auth.model.response.LoginResponse
 import com.gamss.android.domain.model.AuthEvent
 import com.gamss.android.domain.model.SessionExpiredException
 import com.gamss.android.domain.repository.AuthRepository
@@ -41,60 +40,77 @@ internal class AuthRepositoryImpl @Inject constructor(
             ) { "Firebase ID token을 발급받지 못했습니다." }
 
             val response = authService.login(LoginRequest(idToken = firebaseIdToken))
-            saveTokens(response)
+            val loginResponse = checkNotNull(response.data) { MISSING_TOKEN_DATA_MESSAGE }
+            check(loginResponse.accessToken.isNotBlank() && loginResponse.refreshToken.isNotBlank()) {
+                "Issued tokens must not be blank"
+            }
+            authTokenLocalDataSource.saveTokens(
+                StoredAuthTokens(
+                    accessToken = loginResponse.accessToken,
+                    refreshToken = loginResponse.refreshToken,
+                ),
+            )
         }
     }
 
     override suspend fun reissueTokens(): AppResult<Unit> {
-        return runCatchingApiCall {
+        val result = runCatchingApiCall {
             val refreshToken = authTokenLocalDataSource.getTokens().refreshToken
+                ?.takeIf(String::isNotBlank)
                 ?: throw SessionExpiredException()
 
-            // refreshToken이 거부되면 서버가 401/403으로 응답하므로,
-            // runCatchingApiCall의 기본 처리(401/403 -> SessionExpiredException)를 따른다.
             val response = authService.reissueTokens(
                 request = RefreshTokenRequest(refreshToken = refreshToken),
             )
-            saveTokens(response)
+            val loginResponse = checkNotNull(response.data) { MISSING_TOKEN_DATA_MESSAGE }
+            check(loginResponse.accessToken.isNotBlank() && loginResponse.refreshToken.isNotBlank()) {
+                "Issued tokens must not be blank"
+            }
+            authTokenLocalDataSource.saveTokens(
+                StoredAuthTokens(
+                    accessToken = loginResponse.accessToken,
+                    refreshToken = loginResponse.refreshToken,
+                ),
+            )
         }
+        if (result is AppResult.Failure && result.throwable is SessionExpiredException) {
+            invalidateSession()
+        }
+        return result
     }
 
     @Suppress("TooGenericExceptionCaught")
     override suspend fun restoreSession(): AppResult<Unit> {
-        val storedAccessToken = try {
-            authTokenLocalDataSource.getTokens().accessToken
+        return try {
+            restoreStoredSession()
         } catch (e: Throwable) {
-            return AppResult.Failure(e)
+            AppResult.Failure(e)
         }
-
-        if (storedAccessToken != null) return AppResult.Success(Unit)
-
-        val reissueResult = reissueTokens()
-        if (reissueResult is AppResult.Failure) {
-            // refreshToken이 만료/거부되어 세션을 복구할 수 없으므로 남아있는 토큰도 정리한다.
-            authTokenLocalDataSource.clearTokens()
-        }
-        return reissueResult
     }
 
-    override suspend fun logout(): AppResult<Unit> {
+    private suspend fun restoreStoredSession(): AppResult<Unit> {
+        val storedAccessToken = authTokenLocalDataSource.getTokens().accessToken
+        return if (storedAccessToken.isNullOrBlank()) {
+            reissueTokens()
+        } else {
+            AppResult.Success(Unit)
+        }
+    }
+
+    override suspend fun logout(): AppResult<Unit> = clearSession(AuthEvent.LoggedOut)
+
+    private suspend fun invalidateSession(): AppResult<Unit> =
+        clearSession(AuthEvent.SessionExpired)
+
+    private suspend fun clearSession(event: AuthEvent): AppResult<Unit> {
         firebaseAuth.signOut()
         return runCatchingApiCall {
             authTokenLocalDataSource.clearTokens()
-            authEventBus.notify(AuthEvent.LoggedOut)
+            authEventBus.notify(event)
         }
     }
 
-    private suspend fun saveTokens(response: LoginResponse) {
-        val tokenData = checkNotNull(response.data) {
-            "No available token data"
-        }
-
-        authTokenLocalDataSource.saveTokens(
-            StoredAuthTokens(
-                accessToken = tokenData.accessToken,
-                refreshToken = tokenData.refreshToken,
-            ),
-        )
+    private companion object {
+        const val MISSING_TOKEN_DATA_MESSAGE = "No available token data"
     }
 }

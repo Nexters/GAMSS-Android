@@ -6,8 +6,6 @@ import com.gamss.android.data.local.auth.TinkTokenCipher
 import com.gamss.android.data.local.auth.TokenCipher
 import com.gamss.android.data.local.auth.TokenProvider
 import com.gamss.android.data.local.auth.TokenProviderImpl
-import com.gamss.android.data.network.AuthEventBus
-import com.gamss.android.data.network.AuthEventBusImpl
 import com.gamss.android.data.repository.AuthRepositoryImpl
 import com.gamss.android.data.repository.UserRepositoryImpl
 import com.gamss.android.domain.repository.AuthRepository
@@ -39,11 +37,6 @@ internal abstract class RepositoryModule {
     abstract fun bindTokenProvider(
         tokenProviderImpl: TokenProviderImpl,
     ): TokenProvider
-
-    @Binds
-    abstract fun bindAuthEventBus(
-        authEventBusImpl: AuthEventBusImpl,
-    ): AuthEventBus
 
     @Binds
     abstract fun bindUserRepository(
