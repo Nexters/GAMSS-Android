@@ -8,7 +8,6 @@
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
-        android:usesCleartextTraffic="true"
         android:label="GAMSS"
         android:supportsRtl="true"
         android:theme="@style/Theme.GAMSS">
