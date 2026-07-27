@@ -12,6 +12,10 @@ plugins {
 android {
     namespace = "com.gamss.android.app"
 
+    buildFeatures {
+        resValues = true
+    }
+
     defaultConfig {
         applicationId = "com.gamss.android"
         versionCode = 1
@@ -29,6 +33,11 @@ android {
     }
 
     buildTypes {
+        getByName("debug") {
+            applicationIdSuffix = ".dev"
+            versionNameSuffix = "-dev"
+            resValue("string", "app_name", "GAMSS Dev")
+        }
         getByName("release") {
             isMinifyEnabled = false
         }
