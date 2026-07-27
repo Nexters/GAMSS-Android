@@ -1,7 +1,6 @@
 package com.gamss.android.data.repository
 
 import com.gamss.android.core.common.AppResult
-import com.gamss.android.data.remote.auth.model.response.AuthRequestException
 import com.gamss.android.data.remote.user.UserService
 import com.gamss.android.data.remote.user.model.request.UpdateNicknameRequest
 import com.gamss.android.domain.repository.UserRepository
@@ -16,12 +15,6 @@ internal class UserRepositoryImpl @Inject constructor(
     override suspend fun updateNickname(nickname: String): AppResult<String> {
         return runCatchingApiCall {
             val response = userService.updateNickname(UpdateNicknameRequest(nickname = nickname))
-            if (!response.success) {
-                throw AuthRequestException(
-                    code = response.error?.code,
-                    message = response.error?.message ?: "update nickname failed",
-                )
-            }
             checkNotNull(response.data) {
                 "No available nickname data"
             }

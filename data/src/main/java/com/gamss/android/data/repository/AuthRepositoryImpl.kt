@@ -7,10 +7,10 @@ import com.gamss.android.data.network.AuthEventBus
 import com.gamss.android.data.remote.auth.AuthService
 import com.gamss.android.data.remote.auth.model.request.LoginRequest
 import com.gamss.android.data.remote.auth.model.request.RefreshTokenRequest
-import com.gamss.android.data.remote.auth.model.response.AuthRequestException
 import com.gamss.android.data.remote.auth.model.response.LoginResponse
+import com.gamss.android.data.remote.user.UserService
 import com.gamss.android.domain.model.AuthEvent
-import com.gamss.android.domain.model.AuthException
+import com.gamss.android.domain.model.SessionExpiredException
 import com.gamss.android.domain.repository.AuthRepository
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
@@ -22,6 +22,7 @@ import javax.inject.Singleton
 @Singleton
 internal class AuthRepositoryImpl @Inject constructor(
     private val authService: AuthService,
+    private val userService: UserService,
     private val firebaseAuth: FirebaseAuth,
     private val authTokenLocalDataSource: AuthTokenLocalDataSource,
     private val authEventBus: AuthEventBus,
@@ -30,7 +31,7 @@ internal class AuthRepositoryImpl @Inject constructor(
     override val authEvents: Flow<AuthEvent> = authEventBus.events
 
     override suspend fun login(googleIdToken: String): AppResult<Unit> {
-        return runCatchingApiCall {
+        return runCatchingApiCall(treatUnauthorizedAsSessionExpired = false) {
             val credential = GoogleAuthProvider.getCredential(googleIdToken, null)
 
             val authResult = firebaseAuth
@@ -49,17 +50,14 @@ internal class AuthRepositoryImpl @Inject constructor(
     override suspend fun reissueTokens(): AppResult<Unit> {
         return runCatchingApiCall {
             val refreshToken = authTokenLocalDataSource.getTokens().refreshToken
-                ?: throw AuthException.SessionExpired()
+                ?: throw SessionExpiredException()
 
-            try {
-                val response = authService.reissueTokens(
-                    request = RefreshTokenRequest(refreshToken = refreshToken),
-                )
-                saveTokens(response)
-            } catch (e: AuthRequestException) {
-                // refreshToken 자체가 거부된 경우이므로 재로그인이 필요하다.
-                throw AuthException.SessionExpired(e)
-            }
+            // refreshToken이 거부되면 서버가 401/403으로 응답하므로,
+            // runCatchingApiCall의 기본 처리(401/403 -> SessionExpiredException)를 따른다.
+            val response = authService.reissueTokens(
+                request = RefreshTokenRequest(refreshToken = refreshToken),
+            )
+            saveTokens(response)
         }
     }
 
@@ -71,7 +69,14 @@ internal class AuthRepositoryImpl @Inject constructor(
             return AppResult.Failure(e)
         }
 
-        return if (storedAccessToken != null) AppResult.Success(Unit) else reissueTokens()
+        if (storedAccessToken != null) return AppResult.Success(Unit)
+
+        val reissueResult = reissueTokens()
+        if (reissueResult is AppResult.Failure) {
+            // refreshToken이 만료/거부되어 세션을 복구할 수 없으므로 남아있는 토큰도 정리한다.
+            authTokenLocalDataSource.clearTokens()
+        }
+        return reissueResult
     }
 
     override suspend fun logout(): AppResult<Unit> {
@@ -82,14 +87,10 @@ internal class AuthRepositoryImpl @Inject constructor(
     }
 
     override suspend fun secession(): AppResult<Unit> {
+        // 회원 탈퇴는 accessToken이 필요한 인증된 API이므로, TokenInterceptor/TokenAuthenticator가
+        // 붙어있는 일반 클라이언트(UserService)로 호출한다.
         val deleteResult = runCatchingApiCall {
-            val response = authService.secessionUser()
-            if (!response.success) {
-                throw AuthRequestException(
-                    code = response.error?.code,
-                    message = response.error?.message ?: "secession failed",
-                )
-            }
+            userService.secessionUser()
         }
         return when (deleteResult) {
             is AppResult.Success -> logout()
@@ -98,12 +99,6 @@ internal class AuthRepositoryImpl @Inject constructor(
     }
 
     private suspend fun saveTokens(response: LoginResponse) {
-        if (!response.success) {
-            throw AuthRequestException(
-                code = response.error?.code,
-                message = response.error?.message ?: "auth request fail",
-            )
-        }
         val tokenData = checkNotNull(response.data) {
             "No available token data"
         }

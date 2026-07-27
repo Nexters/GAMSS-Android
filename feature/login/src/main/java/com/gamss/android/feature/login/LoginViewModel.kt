@@ -2,7 +2,8 @@ package com.gamss.android.feature.login
 
 import androidx.lifecycle.ViewModel
 import com.gamss.android.core.common.AppResult
-import com.gamss.android.domain.model.AuthException
+import com.gamss.android.core.common.network.ApiException
+import com.gamss.android.domain.model.SessionExpiredException
 import com.gamss.android.domain.usecase.LoginUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import org.orbitmvi.orbit.ContainerHost
@@ -38,9 +39,9 @@ class LoginViewModel @Inject constructor(
     }
 
     private fun Throwable.toLoginFailureMessage(): String = when (this) {
-        is AuthException.InvalidCredentials -> "로그인 정보가 올바르지 않아요"
-        is AuthException.SessionExpired -> "세션이 만료되었어요. 다시 로그인해 주세요"
-        is AuthException.Network -> "네트워크 연결을 확인해 주세요"
+        is SessionExpiredException -> "세션이 만료되었어요. 다시 로그인해 주세요"
+        is ApiException.Network -> "네트워크 연결을 확인해 주세요"
+        is ApiException.Http -> message ?: "로그인에 실패했어요"
         else -> "로그인에 실패했어요"
     }
 }

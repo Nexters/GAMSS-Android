@@ -28,8 +28,3 @@ data class LoginError(
     @SerialName("message")
     val message: String,
 )
-
-internal class AuthRequestException(
-    val code: String?,
-    override val message: String,
-) : RuntimeException(message)
