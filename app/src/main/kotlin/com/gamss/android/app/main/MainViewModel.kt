@@ -1,4 +1,4 @@
-package com.gamss.android.app.navigation
+package com.gamss.android.app.main
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -20,16 +20,13 @@ sealed interface SessionState {
 }
 
 @HiltViewModel
-class RootViewModel @Inject constructor(
+class MainViewModel @Inject constructor(
     restoreSessionUseCase: RestoreSessionUseCase,
     observeAuthEventsUseCase: ObserveAuthEventsUseCase,
 ) : ViewModel() {
 
     private val _sessionState = MutableStateFlow<SessionState>(SessionState.Loading)
     val sessionState: StateFlow<SessionState> = _sessionState.asStateFlow()
-
-    private val _shouldNavigateToLogin = MutableStateFlow(false)
-    val shouldNavigateToLogin: StateFlow<Boolean> = _shouldNavigateToLogin.asStateFlow()
 
     init {
         viewModelScope.launch {
@@ -43,14 +40,14 @@ class RootViewModel @Inject constructor(
             observeAuthEventsUseCase().collect { event ->
                 when (event) {
                     is AuthEvent.SessionExpired, is AuthEvent.LoggedOut -> {
-                        _shouldNavigateToLogin.value = true
+                        _sessionState.value = SessionState.Unauthenticated
                     }
                 }
             }
         }
     }
 
-    fun onNavigatedToLogin() {
-        _shouldNavigateToLogin.value = false
+    fun onLoginSucceeded() {
+        _sessionState.value = SessionState.Authenticated
     }
 }

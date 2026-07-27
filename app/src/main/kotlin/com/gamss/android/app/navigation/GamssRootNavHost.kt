@@ -16,21 +16,23 @@ import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
 import com.gamss.android.app.R
-import com.gamss.android.feature.login.LoginKey
+import com.gamss.android.app.main.MainScreen
+import com.gamss.android.app.main.MainViewModel
+import com.gamss.android.app.main.SessionState
 import com.gamss.android.feature.login.LoginScreen
+import com.gamss.android.feature.login.navigation.LoginKey
 
 /**
  * 앱의 최상위 진입 지점.
  *
- * 로그인이 메인 영역([MainKey])보다 항상 선행되도록, 로그인 여부에 따라
- * [LoginKey]와 [MainKey] 사이를 전환하는 별도의 root back stack을 관리한다.
- * 앱 시작 시 저장된 세션을 확인하는 동안에는 로딩 인디케이터를 보여준다.
+ * 앱 시작 시 저장된 세션을 확인하고, 로그인 이전 흐름과
+ * Bottom Navigation 기반 메인 영역 사이의 root back stack을 관리한다.
  */
 @Composable
 fun GamssRootNavHost(
-    rootViewModel: RootViewModel = hiltViewModel(),
+    mainViewModel: MainViewModel = hiltViewModel(),
 ) {
-    val sessionState by rootViewModel.sessionState.collectAsState()
+    val sessionState by mainViewModel.sessionState.collectAsState()
 
     when (sessionState) {
         SessionState.Loading -> {
@@ -42,24 +44,36 @@ fun GamssRootNavHost(
             }
         }
 
-        SessionState.Authenticated -> RootBackStackNavDisplay(rootViewModel, startKey = MainKey)
-        SessionState.Unauthenticated -> RootBackStackNavDisplay(rootViewModel, startKey = LoginKey)
+        SessionState.Authenticated -> RootNavDisplay(
+            sessionState = sessionState,
+            initialKey = MainKey,
+            onLoginSucceeded = mainViewModel::onLoginSucceeded,
+        )
+        SessionState.Unauthenticated -> RootNavDisplay(
+            sessionState = sessionState,
+            initialKey = LoginKey,
+            onLoginSucceeded = mainViewModel::onLoginSucceeded,
+        )
     }
 }
 
 @Composable
-private fun RootBackStackNavDisplay(
-    rootViewModel: RootViewModel,
-    startKey: NavKey,
+private fun RootNavDisplay(
+    sessionState: SessionState,
+    initialKey: NavKey,
+    onLoginSucceeded: () -> Unit,
 ) {
-    val backStack = rememberNavBackStack(startKey)
-    val shouldNavigateToLogin by rootViewModel.shouldNavigateToLogin.collectAsState()
+    val backStack = rememberNavBackStack(initialKey)
 
-    LaunchedEffect(shouldNavigateToLogin) {
-        if (shouldNavigateToLogin) {
+    LaunchedEffect(sessionState) {
+        val destination = when (sessionState) {
+            SessionState.Authenticated -> MainKey
+            SessionState.Unauthenticated -> LoginKey
+            SessionState.Loading -> return@LaunchedEffect
+        }
+        if (backStack.lastOrNull() != destination) {
             backStack.clear()
-            backStack.add(LoginKey)
-            rootViewModel.onNavigatedToLogin()
+            backStack.add(destination)
         }
     }
 
@@ -69,17 +83,13 @@ private fun RootBackStackNavDisplay(
                 entry<LoginKey> {
                     LoginScreen(
                         googleWebClientId = stringResource(R.string.default_web_client_id),
-                        onLoginSuccess = {
-                            backStack.clear()
-                            backStack.add(MainKey)
-                        },
+                        onLoginSuccess = onLoginSucceeded,
                     )
                 }
-                entry<MainKey> { GamssNavHost() }
+                entry<MainKey> { MainScreen() }
             },
         ),
         onBack = {
-            // 로그인 이전 화면으로는 되돌아가지 않는다.
             if (backStack.size > 1) {
                 backStack.removeLastOrNull()
             }
