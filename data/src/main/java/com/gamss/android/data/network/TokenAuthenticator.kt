@@ -25,7 +25,14 @@ internal class TokenAuthenticator @Inject constructor(
 
     override fun authenticate(route: Route?, response: Response): Request? = when {
         response.request.url.encodedPath == REISSUE_TOKENS_PATH -> null
-        responseCount(response) > MAX_RETRY_COUNT -> null
+
+        responseCount(response) > MAX_RETRY_COUNT -> {
+            // 재시도를 반복해도 인증이 회복되지 않는 상태이므로 세션을 강제로 종료한다.
+            runBlocking { authRepository.get().logout() }
+            authEventBus.notify(AuthEvent.SessionExpired)
+            null
+        }
+
         else -> synchronized(this) {
             retryWithReissuedToken(response)
         }

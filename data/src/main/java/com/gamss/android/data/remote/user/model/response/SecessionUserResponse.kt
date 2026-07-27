@@ -1,4 +1,4 @@
-package com.gamss.android.data.remote.auth.model.response
+package com.gamss.android.data.remote.user.model.response
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable

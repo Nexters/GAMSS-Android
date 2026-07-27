@@ -20,4 +20,10 @@ internal class UserRepositoryImpl @Inject constructor(
             }
         }
     }
+
+    override suspend fun secession(): AppResult<Unit> {
+        return runCatchingApiCall {
+            userService.secessionUser()
+        }
+    }
 }

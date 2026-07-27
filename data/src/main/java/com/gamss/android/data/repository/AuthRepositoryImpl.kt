@@ -8,7 +8,6 @@ import com.gamss.android.data.remote.auth.AuthService
 import com.gamss.android.data.remote.auth.model.request.LoginRequest
 import com.gamss.android.data.remote.auth.model.request.RefreshTokenRequest
 import com.gamss.android.data.remote.auth.model.response.LoginResponse
-import com.gamss.android.data.remote.user.UserService
 import com.gamss.android.domain.model.AuthEvent
 import com.gamss.android.domain.model.SessionExpiredException
 import com.gamss.android.domain.repository.AuthRepository
@@ -22,7 +21,6 @@ import javax.inject.Singleton
 @Singleton
 internal class AuthRepositoryImpl @Inject constructor(
     private val authService: AuthService,
-    private val userService: UserService,
     private val firebaseAuth: FirebaseAuth,
     private val authTokenLocalDataSource: AuthTokenLocalDataSource,
     private val authEventBus: AuthEventBus,
@@ -83,18 +81,6 @@ internal class AuthRepositoryImpl @Inject constructor(
         return runCatchingApiCall {
             authTokenLocalDataSource.clearTokens()
             authEventBus.notify(AuthEvent.LoggedOut)
-        }
-    }
-
-    override suspend fun secession(): AppResult<Unit> {
-        // 회원 탈퇴는 accessToken이 필요한 인증된 API이므로, TokenInterceptor/TokenAuthenticator가
-        // 붙어있는 일반 클라이언트(UserService)로 호출한다.
-        val deleteResult = runCatchingApiCall {
-            userService.secessionUser()
-        }
-        return when (deleteResult) {
-            is AppResult.Success -> logout()
-            is AppResult.Failure -> deleteResult
         }
     }
 

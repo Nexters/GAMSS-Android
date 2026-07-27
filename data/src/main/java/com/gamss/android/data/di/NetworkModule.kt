@@ -32,11 +32,8 @@ internal object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideOkHttpClient(
-        tokenInterceptor: TokenInterceptor,
-        tokenAuthenticator: TokenAuthenticator,
-    ): OkHttpClient {
-        val loggingInterceptor = HttpLoggingInterceptor { message ->
+    fun provideLoggingInterceptor(): HttpLoggingInterceptor =
+        HttpLoggingInterceptor { message ->
             Log.d(HTTP_LOG_TAG, message.redactTokenValues())
         }.apply {
             redactHeader(AUTHORIZATION_HEADER)
@@ -46,6 +43,32 @@ internal object NetworkModule {
                 HttpLoggingInterceptor.Level.NONE
             }
         }
+
+    /**
+     * 로그인/토큰 재발급 전용 클라이언트. TokenAuthenticator를 통해 재발급되는 요청과
+     * 디스패처·커넥션 풀을 공유하지 않도록 별도로 둔다.
+     */
+    @Provides
+    @Singleton
+    @AuthNetwork
+    fun provideAuthOkHttpClient(
+        loggingInterceptor: HttpLoggingInterceptor,
+    ): OkHttpClient {
+        return OkHttpClient.Builder()
+            .addInterceptor(loggingInterceptor)
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
+            .writeTimeout(30, TimeUnit.SECONDS)
+            .build()
+    }
+
+    @Provides
+    @Singleton
+    fun provideOkHttpClient(
+        tokenInterceptor: TokenInterceptor,
+        tokenAuthenticator: TokenAuthenticator,
+        loggingInterceptor: HttpLoggingInterceptor,
+    ): OkHttpClient {
         return OkHttpClient.Builder()
             .addInterceptor(tokenInterceptor)
             .authenticator(tokenAuthenticator)
@@ -53,6 +76,20 @@ internal object NetworkModule {
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
             .writeTimeout(30, TimeUnit.SECONDS)
+            .build()
+    }
+
+    @Provides
+    @Singleton
+    @AuthNetwork
+    fun provideAuthRetrofit(
+        @AuthNetwork okHttpClient: OkHttpClient,
+        json: Json,
+    ): Retrofit {
+        return Retrofit.Builder()
+            .baseUrl(BuildConfig.BASE_URL)
+            .client(okHttpClient)
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
             .build()
     }
 
@@ -71,7 +108,7 @@ internal object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideAuthService(retrofit: Retrofit): AuthService =
+    fun provideAuthService(@AuthNetwork retrofit: Retrofit): AuthService =
         retrofit.create(AuthService::class.java)
 
     @Provides
