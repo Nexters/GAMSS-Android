@@ -12,6 +12,8 @@ import com.gamss.android.feature.calendar.CalendarScreen
 import com.gamss.android.feature.calendar.navigation.CalendarKey
 import com.gamss.android.feature.chat.ChattingListScreen
 import com.gamss.android.feature.chat.navigation.ChatKey
+import com.gamss.android.feature.emotion.EmotionScreen
+import com.gamss.android.feature.emotion.navigation.EmotionKey
 import com.gamss.android.feature.home.HomeScreen
 import com.gamss.android.feature.home.navigation.HomeKey
 
@@ -41,6 +43,7 @@ fun GamssNavHost() {
                     entry<HomeKey> { HomeScreen() }
                     entry<ChatKey> { ChattingListScreen() }
                     entry<CalendarKey> { CalendarScreen() }
+                    entry<EmotionKey> { EmotionScreen() }
                 },
             ),
             onBack = {

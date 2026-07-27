@@ -35,6 +35,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # 모델(.tflite)/네이티브(.so)가 필요한 build 잡에서만 LFS 다운로드 (대역폭 절약)
+          lfs: ${{ matrix.name == 'build' }}
 
       - name: Set up JDK 17
         uses: actions/setup-java@v5

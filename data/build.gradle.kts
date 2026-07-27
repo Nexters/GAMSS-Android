@@ -20,4 +20,12 @@ dependencies {
     implementation(libs.okhttp)
     implementation(libs.okhttp.logging.interceptor)
     implementation(libs.kotlinx.serialization.json)
+
+    implementation(libs.kotlinx.coroutines.android)
+
+    // 온디바이스 감정 분류(KoELECTRA INT8) — LiteRT 추론 + DJL WordPiece 토크나이저
+    implementation(libs.litert)
+    implementation(platform(libs.djl.bom))
+    implementation(libs.djl.huggingface.tokenizers)
+    runtimeOnly(libs.djl.android.tokenizer.native)
 }
