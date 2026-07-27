@@ -11,9 +11,9 @@ import javax.inject.Inject
 class EmotionViewModel @Inject constructor(
     private val classifyUserEmotion: ClassifyUserEmotionUseCase,
 ) : ViewModel(),
-    ContainerHost<EmotionState, EmotionSideEffect> {
+    ContainerHost<EmotionState, Nothing> {
 
-    override val container = container<EmotionState, EmotionSideEffect>(EmotionState())
+    override val container = container<EmotionState, Nothing>(EmotionState())
 
     fun onInputChange(text: String) = intent {
         reduce { state.copy(input = text) }

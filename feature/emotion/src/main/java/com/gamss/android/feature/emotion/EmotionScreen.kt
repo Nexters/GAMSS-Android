@@ -24,7 +24,6 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.gamss.android.domain.emotion.EmotionResult
 import org.orbitmvi.orbit.compose.collectAsState
-import org.orbitmvi.orbit.compose.collectSideEffect
 
 private const val MAX_DIARY_LEN = 140
 private const val PERCENT = 100
@@ -35,8 +34,6 @@ fun EmotionScreen(
     viewModel: EmotionViewModel = hiltViewModel(),
 ) {
     val state by viewModel.collectAsState()
-
-    viewModel.collectSideEffect { }
 
     Scaffold(
         topBar = { TopAppBar(title = { Text("오늘의 일기 감정") }) },
@@ -84,16 +81,16 @@ fun EmotionScreen(
 
 @Composable
 private fun ResultCard(result: EmotionResult) {
-    val emotion = result.emotion
-    val sortedScores = remember(result) { emotion.scores.entries.sortedByDescending { it.value } }
+    val distribution = result.distribution
+    val sortedScores = remember(result) { distribution.scores.entries.sortedByDescending { it.value } }
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             Text(
-                "대표 감정: ${emotion.topLabel} → 캐릭터: ${result.character.displayName} " +
-                    "(${(emotion.confidence * PERCENT).toInt()}%)",
+                "대표 감정: ${result.label.koLabel} → 캐릭터: ${result.character.displayName} " +
+                    "(${(distribution.confidence * PERCENT).toInt()}%)",
                 style = MaterialTheme.typography.titleLarge,
             )
             Text("전체 점수", style = MaterialTheme.typography.titleSmall)

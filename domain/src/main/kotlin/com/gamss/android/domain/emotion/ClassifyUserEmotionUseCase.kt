@@ -2,12 +2,6 @@ package com.gamss.android.domain.emotion
 
 import javax.inject.Inject
 
-/** 카드용 결과: 대표 감정과 그 감정을 대표하는 캐릭터. */
-data class EmotionResult(
-    val emotion: ClassificationResult,
-    val character: EmotionCharacter,
-)
-
 /**
  * USER 발화 목록 → 카드에 표시할 대표 감정 하나와 그 감정을 대표하는 캐릭터.
  *
@@ -33,9 +27,11 @@ class ClassifyUserEmotionUseCase @Inject constructor(
         val normalized = summed.mapValues { it.value / utterances.size }
         val top = normalized.maxByOrNull { it.value }
         return top?.let {
+            val label = EmotionLabel.fromKoLabel(it.key)
             EmotionResult(
-                emotion = ClassificationResult(it.key, it.value, normalized),
-                character = EmotionCharacter.fromEmotionLabel(it.key),
+                label = label,
+                character = EmotionCharacter.fromEmotionLabel(label),
+                distribution = ClassificationResult(it.key, it.value, normalized),
             )
         }
     }
