@@ -22,8 +22,10 @@ android {
     }
 
     androidResources {
-        // .tflite 를 비압축 저장해야 assets.openFd + FileChannel.map(mmap) 가능
+        // 모델을 비압축 저장해야 assets.openFd + FileChannel.map(mmap) 로 힙 복사 없이 로드 가능.
+        // (int8 모델은 고엔트로피라 비압축 저장에 따른 APK 크기 증가가 미미하다.)
         noCompress += "tflite"
+        noCompress += "onnx"
     }
 
     buildTypes {

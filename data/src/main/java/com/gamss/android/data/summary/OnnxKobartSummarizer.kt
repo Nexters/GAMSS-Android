@@ -5,7 +5,10 @@ import ai.onnxruntime.OrtEnvironment
 import ai.onnxruntime.OrtSession
 import android.content.Context
 import java.io.Closeable
+import java.io.FileInputStream
 import java.nio.LongBuffer
+import java.nio.MappedByteBuffer
+import java.nio.channels.FileChannel
 
 /**
  * kobart(BART) 요약 ONNX 추론 코어. 인코더 1회 실행 후 no-past 디코더를 반복하는
@@ -13,7 +16,7 @@ import java.nio.LongBuffer
  *
  * 이 export 의 merged KV-cache 디코더는 깨진 export 라 쓰지 않고, no-past 디코더 경로를 쓴다
  * (Python 레퍼런스로 코히런트한 한국어 요약 확인). int8 디코더는 HF fp32 no-past 디코더를
- * 동적 int8 양자화한 것이다. 모델을 byte[] 로 로드하므로 로드 시점 메모리 사용이 크다(지연 로드).
+ * 동적 int8 양자화한 것이다.
  */
 internal class OnnxKobartSummarizer private constructor(
     private val env: OrtEnvironment,
@@ -42,7 +45,6 @@ internal class OnnxKobartSummarizer private constructor(
         }
     }
 
-    /** decoder_start 토큰부터 EOS(또는 최대 길이)까지 argmax 로 한 토큰씩 생성한다. */
     private fun greedyDecode(attentionMask: LongArray, encoderHidden: OnnxTensor): List<Long> {
         val maskTensor = OnnxTensor.createTensor(
             env,
@@ -80,7 +82,7 @@ internal class OnnxKobartSummarizer private constructor(
         return generated
     }
 
-    /** logits[0, seqLen-1, :] 의 argmax 토큰 id. banned 토큰은 제외한다. shape 검증으로 재export 시 오작동 방지. */
+    /** shape require 로 디코더 재export 시의 출력 형태 변화를 조기에 잡는다. */
     private fun argmaxLastRow(logits: OnnxTensor, seqLen: Int, banned: Set<Long>): Long {
         val shape = logits.info.shape
         require(shape.size == 3 && shape[1].toInt() == seqLen && shape[2].toInt() == KobartSummarySpec.VOCAB_SIZE) {
@@ -136,8 +138,8 @@ internal class OnnxKobartSummarizer private constructor(
 
         fun load(context: Context): OnnxKobartSummarizer {
             val env = OrtEnvironment.getEnvironment()
-            val encoder = env.createSession(readAsset(context, KobartSummarySpec.ENCODER_ASSET))
-            val decoder = env.createSession(readAsset(context, KobartSummarySpec.DECODER_ASSET))
+            val encoder = env.createSession(mapAsset(context, KobartSummarySpec.ENCODER_ASSET))
+            val decoder = env.createSession(mapAsset(context, KobartSummarySpec.DECODER_ASSET))
             val tokenizer = KobartTokenizer.load(
                 context,
                 KobartSummarySpec.TOKENIZER_ASSET,
@@ -146,7 +148,15 @@ internal class OnnxKobartSummarizer private constructor(
             return OnnxKobartSummarizer(env, encoder, decoder, tokenizer)
         }
 
-        private fun readAsset(context: Context, name: String): ByteArray =
-            context.assets.open(name).use { it.readBytes() }
+        /**
+         * APK 내 비압축 .onnx 를 mmap 해 힙에 통째로 올리지 않고 로드한다(99MB 연속 힙 할당·2배 복사 회피).
+         * fd 를 닫아도 매핑은 유지되며 createSession 이 그래프를 네이티브로 역직렬화한다.
+         */
+        private fun mapAsset(context: Context, name: String): MappedByteBuffer =
+            context.assets.openFd(name).use { afd ->
+                FileInputStream(afd.fileDescriptor).use { fis ->
+                    fis.channel.map(FileChannel.MapMode.READ_ONLY, afd.startOffset, afd.declaredLength)
+                }
+            }
     }
 }

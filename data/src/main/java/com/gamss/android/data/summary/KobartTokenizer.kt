@@ -20,7 +20,7 @@ internal class KobartTokenizer private constructor(
         return Encoded(enc.ids, enc.attentionMask)
     }
 
-    /** 특수 토큰(</s>, pad 등)을 제거하고 문자열로 복원한다. */
+    /** decode 의 true = skipSpecialTokens: </s>·pad 등을 건너뛴다. */
     fun decode(ids: LongArray): String = tokenizer.decode(ids, true).trim()
 
     override fun close() = tokenizer.close()
