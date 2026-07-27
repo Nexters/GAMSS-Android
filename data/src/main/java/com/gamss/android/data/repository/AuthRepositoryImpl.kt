@@ -78,6 +78,7 @@ internal class AuthRepositoryImpl @Inject constructor(
     }
 
     override suspend fun logout(): AppResult<Unit> {
+        firebaseAuth.signOut()
         return runCatchingApiCall {
             authTokenLocalDataSource.clearTokens()
             authEventBus.notify(AuthEvent.LoggedOut)
