@@ -1,6 +1,5 @@
 package com.gamss.android.core.designsystem.theme
 
-import androidx.compose.runtime.Immutable
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
@@ -15,7 +14,6 @@ internal val pretendardFamily = FontFamily(
     Font(R.font.pretendard_regular, FontWeight.Normal),
 )
 
-@Immutable
 object GamssTypography {
     val display1 = TextStyle(
         fontFamily = pretendardFamily,
