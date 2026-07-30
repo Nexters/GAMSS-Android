@@ -8,9 +8,9 @@ import retrofit2.http.PATCH
 
 internal interface UserService {
 
-    @PATCH("/api/memebers/me/nickname")
+    @PATCH("/api/members/me/nickname")
     suspend fun updateNickname(@Body request: UpdateNicknameRequest): ApiResponse<String>
 
-    @DELETE("/api/memebers/me")
+    @DELETE("/api/members/me")
     suspend fun secessionUser(): ApiResponse<String>
 }
