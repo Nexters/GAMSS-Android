@@ -5,7 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import com.gamss.android.app.navigation.GamssNavHost
-import com.gamss.android.app.ui.theme.GamssTheme
+import com.gamss.android.core.designsystem.theme.GamssTheme
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
