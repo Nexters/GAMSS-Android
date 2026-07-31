@@ -6,6 +6,7 @@ import com.gamss.android.core.common.getOrNull
 import com.gamss.android.domain.card.CardAlreadyExistsException
 import com.gamss.android.domain.card.CreateCardUseCase
 import com.gamss.android.domain.conversation.CommentGenerationStatus
+import com.gamss.android.domain.conversation.CommentRevealPolicy
 import com.gamss.android.domain.conversation.EndConversationUseCase
 import com.gamss.android.domain.conversation.GetMessagesUseCase
 import com.gamss.android.domain.conversation.MAX_MESSAGE_LENGTH
@@ -15,6 +16,9 @@ import com.gamss.android.domain.conversation.SendMessageUseCase
 import com.gamss.android.domain.emotion.ConversationEmotionAccumulator
 import com.gamss.android.domain.summary.SummarizeDiaryUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.delay
 import org.orbitmvi.orbit.ContainerHost
 import org.orbitmvi.orbit.blockingIntent
 import org.orbitmvi.orbit.syntax.Syntax
@@ -37,6 +41,9 @@ class ChatRoomViewModel @Inject constructor(
     override val container = container<ChatRoomState, ChatRoomSideEffect>(ChatRoomState())
 
     private var started = false
+
+    /** 노출 중인 코루틴. 새 전송이나 종료가 오면 취소하고 남은 댓글을 즉시 붙인다. */
+    private var revealJob: Job? = null
 
     /** 화면 재구성으로 다시 호출돼도 재조회하지 않는다. */
     fun start(conversationId: Long?) {
@@ -83,6 +90,9 @@ class ChatRoomViewModel @Inject constructor(
     }
 
     fun onSend() = intent {
+        // 앞선 노출이 남아 있으면 순서가 뒤엉키므로 먼저 다 붙이고 시작한다.
+        flushPendingComments()
+
         // 연타 중복 전송을 막으려면 검사와 isSending 설정이 한 reduce 안에 있어야 한다.
         // reduce 는 CAS 재시도로 여러 번 실행되고 마지막 실행만 커밋되므로, 모든 경로에서 덮어쓴다.
         var pending: PendingSend? = null
@@ -111,12 +121,15 @@ class ChatRoomViewModel @Inject constructor(
                     state.copy(
                         isSending = false,
                         conversationId = sent.message.conversationId,
-                        messages = state.messages + sent.message + sent.comments,
+                        // 첫 댓글은 서버 왕복이 대기 시간이라 바로 붙이고, 나머지는 간격을 두고 노출한다.
+                        messages = state.messages + sent.message + sent.comments.take(1),
+                        pendingComments = sent.comments.drop(1),
                         // 전송하는 동안 새로 입력한 내용은 남긴다.
                         input = if (state.input == sending.content) "" else state.input,
                         replyTarget = state.replyTarget.takeIf { it?.messageId != sending.replyToMessageId },
                     )
                 }
+                startRevealing()
                 sent.commentStatus.toUserMessage()?.let { postSideEffect(ChatRoomSideEffect.ShowToast(it)) }
             }
             // 실패해도 입력은 지우지 않는다. 사용자가 쓴 내용을 잃지 않게.
@@ -163,6 +176,9 @@ class ChatRoomViewModel @Inject constructor(
         }
         if (!accepted) return@intent
 
+        // 카드를 만드는 동안 댓글이 하나씩 튀어나오면 어색하다.
+        flushPendingComments()
+
         val ended = endConversation(requireNotNull(state.conversationId))
         if (ended is AppResult.Failure) {
             reduce { state.copy(isFinishing = false) }
@@ -201,6 +217,42 @@ class ChatRoomViewModel @Inject constructor(
             postSideEffect(
                 ChatRoomSideEffect.ShowToast(if (alreadyExists) CARD_ALREADY_MADE else CARD_FAILED),
             )
+        }
+    }
+
+    /** 대기 중인 댓글을 간격을 두고 하나씩 노출한다. */
+    private fun startRevealing() {
+        revealJob = intent {
+            while (state.pendingComments.isNotEmpty()) {
+                delay(CommentRevealPolicy.nextGapMillis())
+                reduce {
+                    val next = state.pendingComments.firstOrNull()
+                    if (next == null) {
+                        state
+                    } else {
+                        state.copy(
+                            messages = state.messages + next,
+                            pendingComments = state.pendingComments.drop(1),
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    /** 남은 댓글을 기다리지 않고 한꺼번에 붙인다. */
+    private suspend fun ChatRoomSyntax.flushPendingComments() {
+        revealJob?.cancelAndJoin()
+        revealJob = null
+        reduce {
+            if (state.pendingComments.isEmpty()) {
+                state
+            } else {
+                state.copy(
+                    messages = state.messages + state.pendingComments,
+                    pendingComments = emptyList(),
+                )
+            }
         }
     }
 
