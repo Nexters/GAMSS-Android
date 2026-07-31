@@ -1,16 +1,13 @@
 package com.gamss.android.app.main
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import com.gamss.android.core.common.AppResult
 import com.gamss.android.domain.model.AuthEvent
 import com.gamss.android.domain.usecase.ObserveAuthEventsUseCase
 import com.gamss.android.domain.usecase.RestoreSessionUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
+import org.orbitmvi.orbit.ContainerHost
+import org.orbitmvi.orbit.viewmodel.container
 import javax.inject.Inject
 
 sealed interface SessionState {
@@ -21,33 +18,38 @@ sealed interface SessionState {
 
 @HiltViewModel
 class MainViewModel @Inject constructor(
-    restoreSessionUseCase: RestoreSessionUseCase,
-    observeAuthEventsUseCase: ObserveAuthEventsUseCase,
-) : ViewModel() {
+    private val restoreSessionUseCase: RestoreSessionUseCase,
+    private val observeAuthEventsUseCase: ObserveAuthEventsUseCase,
+) : ViewModel(), ContainerHost<SessionState, Unit> {
 
-    private val _sessionState = MutableStateFlow<SessionState>(SessionState.Loading)
-    val sessionState: StateFlow<SessionState> = _sessionState.asStateFlow()
+    override val container = container<SessionState, Unit>(SessionState.Loading)
 
     init {
-        viewModelScope.launch {
-            _sessionState.value = when (restoreSessionUseCase()) {
+        restoreSession()
+        observeAuthEvents()
+    }
+
+    private fun restoreSession() = intent {
+        val result = restoreSessionUseCase()
+        reduce {
+            when (result) {
                 is AppResult.Success -> SessionState.Authenticated
                 is AppResult.Failure -> SessionState.Unauthenticated
             }
         }
+    }
 
-        viewModelScope.launch {
-            observeAuthEventsUseCase().collect { event ->
-                when (event) {
-                    is AuthEvent.SessionExpired, is AuthEvent.LoggedOut -> {
-                        _sessionState.value = SessionState.Unauthenticated
-                    }
+    private fun observeAuthEvents() = intent {
+        observeAuthEventsUseCase().collect { event ->
+            when (event) {
+                is AuthEvent.SessionExpired, is AuthEvent.LoggedOut -> {
+                    reduce { SessionState.Unauthenticated }
                 }
             }
         }
     }
 
-    fun onLoginSucceeded() {
-        _sessionState.value = SessionState.Authenticated
+    fun onLoginSucceeded() = intent {
+        reduce { SessionState.Authenticated }
     }
 }

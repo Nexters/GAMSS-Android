@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -21,6 +20,7 @@ import com.gamss.android.app.main.MainViewModel
 import com.gamss.android.app.main.SessionState
 import com.gamss.android.feature.login.LoginScreen
 import com.gamss.android.feature.login.navigation.LoginKey
+import org.orbitmvi.orbit.compose.collectAsState
 
 /**
  * 앱의 최상위 진입 지점.
@@ -32,7 +32,7 @@ import com.gamss.android.feature.login.navigation.LoginKey
 fun GamssRootNavHost(
     mainViewModel: MainViewModel = hiltViewModel(),
 ) {
-    val sessionState by mainViewModel.sessionState.collectAsState()
+    val sessionState by mainViewModel.collectAsState()
 
     when (sessionState) {
         SessionState.Loading -> {
