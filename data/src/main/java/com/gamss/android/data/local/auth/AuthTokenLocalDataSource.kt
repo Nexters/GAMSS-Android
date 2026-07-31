@@ -6,9 +6,11 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.gamss.android.data.local.auth.model.StoredAuthTokens
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -30,7 +32,7 @@ internal class EncryptedAuthTokenLocalDataSource @Inject constructor(
 
     private val mutex = Mutex()
 
-    override suspend fun saveTokens(tokens: StoredAuthTokens) {
+    override suspend fun saveTokens(tokens: StoredAuthTokens) = withContext(Dispatchers.IO) {
         mutex.withLock {
             val encryptedAccessToken = tokens.accessToken?.let {
                 tokenCipher.encrypt(it, ACCESS_TOKEN_ASSOCIATED_DATA)
@@ -49,23 +51,25 @@ internal class EncryptedAuthTokenLocalDataSource @Inject constructor(
         }
     }
 
-    override suspend fun getTokens(): StoredAuthTokens = mutex.withLock {
-        val preferences = dataStore.data.first()
+    override suspend fun getTokens(): StoredAuthTokens = withContext(Dispatchers.IO) {
+        mutex.withLock {
+            val preferences = dataStore.data.first()
 
-        val tokens = StoredAuthTokens(
-            accessToken = preferences[ACCESS_TOKEN_KEY]?.let {
-                tokenCipher.decrypt(it, ACCESS_TOKEN_ASSOCIATED_DATA)
-            },
-            refreshToken = preferences[REFRESH_TOKEN_KEY]?.let {
-                tokenCipher.decrypt(it, REFRESH_TOKEN_ASSOCIATED_DATA)
-            },
-        )
+            val tokens = StoredAuthTokens(
+                accessToken = preferences[ACCESS_TOKEN_KEY]?.let {
+                    tokenCipher.decrypt(it, ACCESS_TOKEN_ASSOCIATED_DATA)
+                },
+                refreshToken = preferences[REFRESH_TOKEN_KEY]?.let {
+                    tokenCipher.decrypt(it, REFRESH_TOKEN_ASSOCIATED_DATA)
+                },
+            )
 
-        tokenProvider.updateAccessToken(tokens.accessToken)
-        tokens
+            tokenProvider.updateAccessToken(tokens.accessToken)
+            tokens
+        }
     }
 
-    override suspend fun clearTokens() {
+    override suspend fun clearTokens() = withContext(Dispatchers.IO) {
         mutex.withLock {
             dataStore.edit { preferences ->
                 preferences.remove(ACCESS_TOKEN_KEY)
