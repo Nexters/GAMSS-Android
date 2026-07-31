@@ -6,7 +6,7 @@ package com.gamss.android.data.emotion
  *
  * @param labels 인덱스가 곧 모델 출력 인덱스(id2label). 순서가 계약이다.
  */
-data class ClassifierSpec(
+internal data class ClassifierSpec(
     val modelAsset: String,
     val tokenizerAsset: String,
     val labels: List<String>,
