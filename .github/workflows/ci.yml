@@ -53,6 +53,14 @@ jobs:
       - name: Write google-services.json
         run: echo "${{ secrets.GOOGLE_SERVICES_JSON }}" | base64 -d > app/google-services.json
 
+      # :data 가 API 주소를 local.properties 에서만 읽고, 없으면 빌드를 멈춘다.
+      - name: Write local.properties
+        run: |
+          {
+            echo "DEV_BASE_URL=${{ secrets.DEV_BASE_URL }}"
+            echo "PROD_BASE_URL=${{ secrets.PROD_BASE_URL }}"
+          } > local.properties
+
       - name: Run ${{ matrix.task }}
         run: ./gradlew ${{ matrix.task }} --stacktrace
 
