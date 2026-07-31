@@ -1,7 +1,10 @@
 package com.gamss.android.data.di
 
 import com.gamss.android.data.BuildConfig
+import com.gamss.android.data.auth.DevTokenInterceptor
 import com.gamss.android.data.remote.auth.AuthService
+import com.gamss.android.data.remote.conversation.ConversationService
+import com.gamss.android.data.remote.gamssJson
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -16,19 +19,17 @@ import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
-object NetworkModule {
+internal object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideJson(): Json = Json {
-        ignoreUnknownKeys = true
-        coerceInputValues = true
-    }
+    fun provideJson(): Json = gamssJson
 
     @Provides
     @Singleton
     fun provideOkHttpClient(): OkHttpClient {
         val loggingInterceptor = HttpLoggingInterceptor().apply {
+            redactHeader(AUTHORIZATION_HEADER)
             level = if (BuildConfig.DEBUG) {
                 HttpLoggingInterceptor.Level.BODY
             } else {
@@ -36,6 +37,8 @@ object NetworkModule {
             }
         }
         return OkHttpClient.Builder()
+            // TODO(google-login 머지 시 삭제): TokenInterceptor·TokenAuthenticator 로 대체한다.
+            .addInterceptor(DevTokenInterceptor())
             .addInterceptor(loggingInterceptor)
             .build()
     }
@@ -47,8 +50,7 @@ object NetworkModule {
         json: Json
     ): Retrofit {
         return Retrofit.Builder()
-            // mock 주소. 실제 백엔드 API 주소가 확정되면 교체한다.
-            .baseUrl("https://api.gamss.example.com/")
+            .baseUrl(BuildConfig.BASE_URL)
             .client(okHttpClient)
             .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
             .build()
@@ -58,4 +60,11 @@ object NetworkModule {
     @Singleton
     fun provideAuthService(retrofit: Retrofit): AuthService =
         retrofit.create(AuthService::class.java)
+
+    @Provides
+    @Singleton
+    fun provideConversationService(retrofit: Retrofit): ConversationService =
+        retrofit.create(ConversationService::class.java)
+
+    private const val AUTHORIZATION_HEADER = "Authorization"
 }

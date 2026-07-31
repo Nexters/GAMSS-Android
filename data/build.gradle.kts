@@ -1,13 +1,54 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.gamss.android.library)
     alias(libs.plugins.gamss.android.hilt)
+    alias(libs.plugins.kotlinSerialization)
 }
+
+val localProperties = Properties().apply {
+    val localPropertiesFile = rootProject.file("local.properties")
+    check(localPropertiesFile.exists()) {
+        "local.properties 가 없습니다. 프로젝트 루트에 만들고 DEV_BASE_URL·PROD_BASE_URL 을 채우세요."
+    }
+    localPropertiesFile.inputStream().use(::load)
+}
+
+fun localProperty(key: String): String = localProperties.getProperty(key).orEmpty().trim()
+
+/** 주소는 기본값으로 떨어뜨리지 않는다 — 빠진 채로 빌드되면 잘못된 서버를 가리킨 앱이 나온다. */
+fun resolveBaseUrl(key: String): String {
+    val value = localProperty(key)
+    check(value.isNotEmpty()) { "local.properties 에 $key 이 없습니다. 예: https://dev-api.gamss.kr/" }
+    // Retrofit 은 '/' 로 끝나지 않는 baseUrl 을 거부한다.
+    return value.removeSuffix("/") + "/"
+}
+
+fun String.asBuildConfigString(): String =
+    "\"" + replace("\\", "\\\\").replace("\"", "\\\"") + "\""
+
+val devBaseUrl = resolveBaseUrl("DEV_BASE_URL")
+val prodBaseUrl = resolveBaseUrl("PROD_BASE_URL")
+
+// TODO(google-login 머지 시 삭제): 저장된 토큰을 쓰는 TokenInterceptor 로 대체한다.
+val devAccessToken = localProperty("DEV_ACCESS_TOKEN")
 
 android {
     namespace = "com.gamss.android.data"
 
     buildFeatures {
         buildConfig = true
+    }
+
+    buildTypes {
+        debug {
+            buildConfigField("String", "BASE_URL", devBaseUrl.asBuildConfigString())
+            buildConfigField("String", "DEV_ACCESS_TOKEN", devAccessToken.asBuildConfigString())
+        }
+        release {
+            buildConfigField("String", "BASE_URL", prodBaseUrl.asBuildConfigString())
+            buildConfigField("String", "DEV_ACCESS_TOKEN", "\"\"")
+        }
     }
 
     androidResources {
