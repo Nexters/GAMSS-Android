@@ -1,5 +1,6 @@
 package com.gamss.android.feature.chat
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -28,6 +29,7 @@ private val dummyChats = List(10) {
 
 @Composable
 fun ChattingListScreen(
+    onChatClick: () -> Unit,
     viewModel: ChattingListViewModel = hiltViewModel(),
 ) {
     val state by viewModel.collectAsState()
@@ -51,6 +53,7 @@ fun ChattingListScreen(
                     ListItem(
                         headlineContent = { Text(chat.name) },
                         supportingContent = { Text(chat.lastMessage) },
+                        modifier = Modifier.clickable(onClick = onChatClick),
                     )
                     Divider()
                 }
