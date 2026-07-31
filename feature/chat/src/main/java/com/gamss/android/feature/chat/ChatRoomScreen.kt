@@ -26,23 +26,30 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.gamss.android.domain.card.Card
 import com.gamss.android.domain.conversation.MAX_MESSAGE_LENGTH
 import com.gamss.android.domain.conversation.Message
 import com.gamss.android.domain.conversation.MessageSender
@@ -52,6 +59,7 @@ import org.orbitmvi.orbit.compose.collectSideEffect
 @Composable
 fun ChatRoomScreen(
     conversationId: Long?,
+    onCardClose: () -> Unit,
     viewModel: ChatRoomViewModel = hiltViewModel(),
 ) {
     val state by viewModel.collectAsState()
@@ -66,22 +74,96 @@ fun ChatRoomScreen(
         }
     }
 
-    ChatRoomContent(
-        state = state,
-        onInputChange = viewModel::onInputChange,
-        onSendClick = viewModel::onSend,
-        onCharacterMessageClick = viewModel::onReplyTargetSelect,
-        onReplyTargetClear = viewModel::onReplyTargetClear,
+    val actions = remember(viewModel) {
+        ChatRoomActions(
+            onInputChange = viewModel::onInputChange,
+            onSendClick = viewModel::onSend,
+            onCharacterMessageClick = viewModel::onReplyTargetSelect,
+            onReplyTargetClear = viewModel::onReplyTargetClear,
+            onEndClick = viewModel::onEndRequest,
+        )
+    }
+
+    ChatRoomContent(state = state, actions = actions)
+
+    if (state.showEndConfirm) {
+        EndConversationDialog(
+            onConfirm = viewModel::onEndConfirm,
+            onDismiss = viewModel::onEndCancel,
+        )
+    }
+
+    state.card?.let { card ->
+        CardBottomSheet(
+            card = card,
+            onDismiss = {
+                viewModel.onCardDismiss()
+                onCardClose()
+            },
+        )
+    }
+}
+
+@Composable
+private fun EndConversationDialog(
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("대화를 끝낼까요?") },
+        text = { Text("끝내면 이 대화에 메시지를 더 보낼 수 없고, 감정 카드가 만들어져요.") },
+        confirmButton = {
+            TextButton(onClick = onConfirm) { Text("끝내기") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("취소") }
+        },
     )
 }
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CardBottomSheet(
+    card: Card,
+    onDismiss: () -> Unit,
+) {
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 32.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text(
+                text = card.character.displayName,
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            Text(text = card.summary, style = MaterialTheme.typography.titleMedium)
+            Text(
+                text = card.message,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+/** 콜백 묶음. remember 로 잡아둬야 재구성에서 스킵이 유지된다. */
+private class ChatRoomActions(
+    val onInputChange: (String) -> Unit,
+    val onSendClick: () -> Unit,
+    val onCharacterMessageClick: (Message) -> Unit,
+    val onReplyTargetClear: () -> Unit,
+    val onEndClick: () -> Unit,
+)
 
 @Composable
 private fun ChatRoomContent(
     state: ChatRoomState,
-    onInputChange: (String) -> Unit,
-    onSendClick: () -> Unit,
-    onCharacterMessageClick: (Message) -> Unit,
-    onReplyTargetClear: () -> Unit,
+    actions: ChatRoomActions,
 ) {
     val listState = rememberLazyListState()
 
@@ -93,13 +175,7 @@ private fun ChatRoomContent(
     }
 
     Scaffold(
-        topBar = {
-            Text(
-                text = "대화",
-                style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier.padding(16.dp),
-            )
-        },
+        topBar = { ChatRoomTopBar(state = state, onEndClick = actions.onEndClick) },
         // 시스템 인셋은 GamssNavHost 의 Scaffold 가 이미 적용한다.
         contentWindowInsets = WindowInsets(0),
     ) { innerPadding ->
@@ -140,7 +216,7 @@ private fun ChatRoomContent(
                     MessageBubble(
                         message = message,
                         isReplyTarget = state.replyTarget?.messageId == message.id,
-                        onCharacterMessageClick = onCharacterMessageClick,
+                        onCharacterMessageClick = actions.onCharacterMessageClick,
                     )
                 }
                 if (state.isSending) {
@@ -150,18 +226,71 @@ private fun ChatRoomContent(
 
             HorizontalDivider()
 
-            state.replyTarget?.let { replyTarget ->
-                ReplyTargetBanner(replyTarget = replyTarget, onClear = onReplyTargetClear)
-            }
-
-            MessageInputBar(
-                input = state.input,
-                canSend = state.canSend,
-                onInputChange = onInputChange,
-                onSendClick = onSendClick,
-            )
+            ChatRoomInputSection(state = state, actions = actions)
         }
     }
+}
+
+@Composable
+private fun ChatRoomTopBar(
+    state: ChatRoomState,
+    onEndClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = 16.dp, end = 4.dp, top = 12.dp, bottom = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = "대화",
+            style = MaterialTheme.typography.titleLarge,
+            modifier = Modifier.weight(1f),
+        )
+        if (state.isFinishing) {
+            CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+        } else {
+            TextButton(onClick = onEndClick, enabled = state.canEnd) {
+                Text(
+                    when {
+                        state.endedButCardFailed -> "카드 다시 만들기"
+                        state.isEnded -> "끝난 대화"
+                        else -> "대화 끝내기"
+                    },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ChatRoomInputSection(
+    state: ChatRoomState,
+    actions: ChatRoomActions,
+) {
+    if (state.isEnded) {
+        Text(
+            text = "끝난 대화예요. 새 대화를 시작해 보세요.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+        )
+        return
+    }
+
+    state.replyTarget?.let { replyTarget ->
+        ReplyTargetBanner(replyTarget = replyTarget, onClear = actions.onReplyTargetClear)
+    }
+
+    MessageInputBar(
+        input = state.input,
+        canSend = state.canSend,
+        onInputChange = actions.onInputChange,
+        onSendClick = actions.onSendClick,
+    )
 }
 
 @Composable

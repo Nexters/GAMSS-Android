@@ -50,7 +50,10 @@ fun GamssNavHost() {
                         )
                     }
                     entry<ChatRoomKey> { key ->
-                        ChatRoomScreen(conversationId = key.conversationId)
+                        ChatRoomScreen(
+                            conversationId = key.conversationId,
+                            onCardClose = navigator::goBack,
+                        )
                     }
                     entry<CalendarKey> { CalendarScreen() }
                     entry<EmotionKey> { EmotionScreen() }
