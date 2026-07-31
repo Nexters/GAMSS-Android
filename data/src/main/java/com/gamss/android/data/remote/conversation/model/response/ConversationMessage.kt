@@ -1,9 +1,9 @@
 package com.gamss.android.data.remote.conversation.model.response
 
 import android.util.Log
+import com.gamss.android.data.remote.emotion.toEmotionCharacter
 import com.gamss.android.domain.conversation.Message
 import com.gamss.android.domain.conversation.MessageSender
-import com.gamss.android.domain.emotion.EmotionCharacter
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -55,20 +55,6 @@ private fun ConversationMessage.resolveSender(): MessageSender? = when (senderTy
     ConversationMessage.SENDER_CHARACTER -> emotionType.toEmotionCharacter()?.let(MessageSender::Character)
     else -> {
         Log.w(TAG, "Unknown senderType=$senderType (messageId=$id)")
-        null
-    }
-}
-
-/** 서버 문자열에 기대는 코드는 이 함수에만 둔다. */
-private fun String?.toEmotionCharacter(): EmotionCharacter? = when (this) {
-    "JOY" -> EmotionCharacter.JOY
-    "ANGER" -> EmotionCharacter.ANGER
-    "ANXIETY" -> EmotionCharacter.ANXIETY
-    "GRUMPY" -> EmotionCharacter.PRICKLY
-    "WARM" -> EmotionCharacter.WARM
-    "QUIRKY" -> EmotionCharacter.QUIRKY
-    else -> {
-        Log.w(TAG, "Unknown emotionType=$this")
         null
     }
 }

@@ -3,6 +3,7 @@ package com.gamss.android.data.di
 import com.gamss.android.data.BuildConfig
 import com.gamss.android.data.auth.DevTokenInterceptor
 import com.gamss.android.data.remote.auth.AuthService
+import com.gamss.android.data.remote.card.CardService
 import com.gamss.android.data.remote.conversation.ConversationService
 import com.gamss.android.data.remote.gamssJson
 import dagger.Module
@@ -65,6 +66,11 @@ internal object NetworkModule {
     @Singleton
     fun provideConversationService(retrofit: Retrofit): ConversationService =
         retrofit.create(ConversationService::class.java)
+
+    @Provides
+    @Singleton
+    fun provideCardService(retrofit: Retrofit): CardService =
+        retrofit.create(CardService::class.java)
 
     private const val AUTHORIZATION_HEADER = "Authorization"
 }

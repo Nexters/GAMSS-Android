@@ -47,4 +47,14 @@ class SummarizeDiaryUseCaseTest {
         assertNull(useCase(listOf("", "   ")))
         assertFalse(summarizer.called)
     }
+
+    @Test
+    fun 연달아_같은_발화는_한_번만_남긴다() = runBlocking {
+        val useCase = SummarizeDiaryUseCase(RecordingSummarizer { it })
+
+        val result = useCase(listOf("나 배고파", "배고파", "배고파", "그래서 뭐 먹지", "배고파"))
+
+        // 떨어져 있는 반복은 대화 맥락일 수 있어 남긴다.
+        assertEquals("나 배고파 배고파 그래서 뭐 먹지 배고파", result)
+    }
 }
