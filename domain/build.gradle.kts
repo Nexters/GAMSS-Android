@@ -3,7 +3,8 @@ plugins {
 }
 
 dependencies {
-    implementation(projects.core.common)
+    // AppResult 가 repository·usecase 반환 타입이라 domain 의 공개 API 표면이다.
+    api(projects.core.common)
 
     implementation(libs.javax.inject)
 

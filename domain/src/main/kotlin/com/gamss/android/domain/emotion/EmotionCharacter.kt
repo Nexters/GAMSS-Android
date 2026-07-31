@@ -3,8 +3,9 @@ package com.gamss.android.domain.emotion
 /**
  * 카드에서 사용자 감정을 대표하는 캐릭터.
  *
- * enum 이름(JOY 등)은 내부용이다. 서버 `emotionType` 문자열 대응은 현재 "JOY"/"ANGER" 만 확인됐고,
- * 나머지 넷은 서버 연동 시점에 확인해야 한다 — 지금은 서버 직렬화 문자열을 하드코딩하지 않는다.
+ * enum 이름(JOY 등)은 내부용이다. 서버 `emotionType` 문자열과의 대응은 API 문서로 확정됐고
+ * (이름이 다른 건 까칠=`GRUMPY` 하나), 그 매핑은 data 레이어의 응답 매퍼가 갖는다 —
+ * 서버 직렬화 문자열을 도메인에 하드코딩하지 않는다.
  */
 enum class EmotionCharacter(val displayName: String) {
     JOY("기쁨"),
