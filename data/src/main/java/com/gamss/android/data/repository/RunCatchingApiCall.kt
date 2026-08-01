@@ -4,6 +4,7 @@ import com.gamss.android.core.common.AppResult
 import com.gamss.android.core.common.network.ApiException
 import com.gamss.android.data.remote.model.response.ApiError
 import com.gamss.android.domain.model.SessionExpiredException
+import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import retrofit2.HttpException
@@ -20,6 +21,8 @@ internal inline fun <T> runCatchingApiCall(
 ): AppResult<T> =
     try {
         AppResult.Success(block())
+    } catch (e: CancellationException) {
+        throw e
     } catch (e: SessionExpiredException) {
         AppResult.Failure(e)
     } catch (e: HttpException) {

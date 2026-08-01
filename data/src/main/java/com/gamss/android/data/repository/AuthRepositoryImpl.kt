@@ -16,6 +16,7 @@ import com.gamss.android.domain.model.SessionExpiredException
 import com.gamss.android.domain.repository.AuthRepository
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
@@ -87,10 +88,13 @@ internal class AuthRepositoryImpl @Inject constructor(
     }
 
     @Suppress("TooGenericExceptionCaught")
-    override suspend fun restoreSession(): AppResult<Unit> {
+    override suspend fun restoreSession(): AppResult<Boolean> {
         return try {
             restoreStoredSession()
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Throwable) {
+            applicationScope.launch { invalidateSession() }
             AppResult.Failure(e)
         }
     }
