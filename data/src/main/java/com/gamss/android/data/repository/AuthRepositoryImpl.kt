@@ -1,6 +1,8 @@
 package com.gamss.android.data.repository
 
 import com.gamss.android.core.common.AppResult
+import com.gamss.android.core.common.map
+import com.gamss.android.core.common.network.ApiException
 import com.gamss.android.data.auth.AuthEventBus
 import com.gamss.android.data.di.ApplicationScope
 import com.gamss.android.data.local.auth.AuthTokenLocalDataSource
@@ -77,7 +79,7 @@ internal class AuthRepositoryImpl @Inject constructor(
                 ),
             )
         }
-        if (result is AppResult.Failure && result.throwable is SessionExpiredException) {
+        if (result is AppResult.Failure && result.throwable !is ApiException.Network) {
             applicationScope.launch { invalidateSession() }
         }
         return result
