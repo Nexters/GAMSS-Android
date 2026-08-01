@@ -2,6 +2,7 @@ package com.gamss.android.data.repository
 
 import com.gamss.android.core.common.AppResult
 import com.gamss.android.data.auth.AuthEventBus
+import com.gamss.android.data.di.ApplicationScope
 import com.gamss.android.data.local.auth.AuthTokenLocalDataSource
 import com.gamss.android.data.local.auth.model.StoredAuthTokens
 import com.gamss.android.data.remote.auth.AuthService
@@ -12,7 +13,9 @@ import com.gamss.android.domain.model.SessionExpiredException
 import com.gamss.android.domain.repository.AuthRepository
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -23,6 +26,7 @@ internal class AuthRepositoryImpl @Inject constructor(
     private val firebaseAuth: FirebaseAuth,
     private val authTokenLocalDataSource: AuthTokenLocalDataSource,
     private val authEventBus: AuthEventBus,
+    @ApplicationScope private val applicationScope: CoroutineScope,
 ) : AuthRepository {
 
     override val authEvents: Flow<AuthEvent> = authEventBus.events
@@ -74,7 +78,7 @@ internal class AuthRepositoryImpl @Inject constructor(
             )
         }
         if (result is AppResult.Failure && result.throwable is SessionExpiredException) {
-            invalidateSession()
+            applicationScope.launch { invalidateSession() }
         }
         return result
     }
@@ -103,9 +107,9 @@ internal class AuthRepositoryImpl @Inject constructor(
         clearSession(AuthEvent.SessionExpired)
 
     private suspend fun clearSession(event: AuthEvent): AppResult<Unit> {
-        firebaseAuth.signOut()
         return runCatchingApiCall {
             authTokenLocalDataSource.clearTokens()
+            firebaseAuth.signOut()
             authEventBus.notify(event)
         }
     }
