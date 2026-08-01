@@ -33,7 +33,13 @@ class MainViewModel @Inject constructor(
         val result = restoreSessionUseCase()
         reduce {
             when (result) {
-                is AppResult.Success -> SessionState.Authenticated
+                is AppResult.Success -> {
+                    if (result.data) {
+                        SessionState.Authenticated
+                    } else {
+                        SessionState.Unauthenticated
+                    }
+                }
                 is AppResult.Failure -> SessionState.Unauthenticated
             }
         }

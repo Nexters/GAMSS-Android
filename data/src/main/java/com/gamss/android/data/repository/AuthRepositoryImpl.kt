@@ -99,12 +99,19 @@ internal class AuthRepositoryImpl @Inject constructor(
         }
     }
 
-    private suspend fun restoreStoredSession(): AppResult<Unit> {
-        val storedAccessToken = authTokenLocalDataSource.getTokens().accessToken
-        return if (storedAccessToken.isNullOrBlank()) {
-            reissueTokens()
-        } else {
-            AppResult.Success(Unit)
+    private suspend fun restoreStoredSession(): AppResult<Boolean> {
+        val storedTokens = authTokenLocalDataSource.getTokens()
+        val accessToken = storedTokens.accessToken
+        val refreshToken = storedTokens.refreshToken
+
+        return when {
+            accessToken.isNullOrBlank() && refreshToken.isNullOrBlank() -> {
+                AppResult.Success(false)
+            }
+            accessToken.isNullOrBlank() -> {
+                reissueTokens().map { true }
+            }
+            else -> AppResult.Success(true)
         }
     }
 

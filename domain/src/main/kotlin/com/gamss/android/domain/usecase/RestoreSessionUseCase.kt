@@ -6,7 +6,7 @@ import javax.inject.Inject
 
 class RestoreSessionUseCase @Inject constructor(
     private val authRepository: AuthRepository,
-) : NoParamUseCase<AppResult<Unit>> {
+) : NoParamUseCase<AppResult<Boolean>> {
 
-    override suspend fun invoke(): AppResult<Unit> = authRepository.restoreSession()
+    override suspend fun invoke(): AppResult<Boolean> = authRepository.restoreSession()
 }
