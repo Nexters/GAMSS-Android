@@ -9,8 +9,8 @@ import com.gamss.android.data.local.auth.model.StoredAuthTokens
 import com.gamss.android.data.remote.auth.AuthService
 import com.gamss.android.data.remote.auth.model.request.LoginRequest
 import com.gamss.android.data.remote.auth.model.request.RefreshTokenRequest
-import com.gamss.android.domain.model.SessionState
 import com.gamss.android.domain.model.SessionExpiredException
+import com.gamss.android.domain.model.SessionState
 import com.gamss.android.domain.repository.AuthRepository
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider

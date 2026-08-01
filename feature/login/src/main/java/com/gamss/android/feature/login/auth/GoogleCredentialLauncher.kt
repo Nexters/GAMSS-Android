@@ -23,6 +23,7 @@ internal class GoogleCredentialLauncher(
     private val credentialRequest: GetCredentialRequest,
     private val coroutineScope: CoroutineScope,
 ) {
+    @Suppress("SwallowedException")
     fun launch(
         onSuccess: (idToken: String) -> Unit,
         onCancel: () -> Unit,
