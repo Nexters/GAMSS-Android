@@ -14,10 +14,11 @@ val localProperties = Properties().apply {
     localPropertiesFile.inputStream().use(::load)
 }
 
-fun resolveBaseUrl(key: String): String =
-    checkNotNull(localProperties.getProperty(key)) {
-        "Missing $key in local.properties"
-    }.trim()
+fun resolveBaseUrl(key: String): String {
+    val value = localProperties.getProperty(key)
+    require(value.isNotBlank()) { "Missing $key in local.properties" }
+    return value.trim()
+}
 
 val devBaseUrl = resolveBaseUrl("DEV_BASE_URL")
 val prodBaseUrl = resolveBaseUrl("PROD_BASE_URL")
