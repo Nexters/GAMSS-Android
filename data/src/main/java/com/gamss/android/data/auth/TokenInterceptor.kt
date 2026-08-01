@@ -5,6 +5,9 @@ import okhttp3.Interceptor
 import okhttp3.Response
 import javax.inject.Inject
 
+internal const val AUTHORIZATION_HEADER = "Authorization"
+internal const val BEARER_PREFIX = "Bearer "
+
 internal class TokenInterceptor @Inject constructor(
     private val tokenProvider: TokenProvider,
 ) : Interceptor {
@@ -21,10 +24,5 @@ internal class TokenInterceptor @Inject constructor(
         }
 
         return chain.proceed(request)
-    }
-
-    private companion object {
-        const val AUTHORIZATION_HEADER = "Authorization"
-        const val BEARER_PREFIX = "Bearer "
     }
 }

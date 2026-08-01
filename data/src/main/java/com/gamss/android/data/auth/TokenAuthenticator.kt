@@ -69,7 +69,5 @@ internal class TokenAuthenticator @Inject constructor(
 
     private companion object {
         const val MAX_RETRY_COUNT = 3
-        const val AUTHORIZATION_HEADER = "Authorization"
-        const val BEARER_PREFIX = "Bearer "
     }
 }

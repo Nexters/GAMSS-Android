@@ -2,6 +2,7 @@ package com.gamss.android.data.di
 
 import android.util.Log
 import com.gamss.android.data.BuildConfig
+import com.gamss.android.data.auth.AUTHORIZATION_HEADER
 import com.gamss.android.data.auth.TokenAuthenticator
 import com.gamss.android.data.auth.TokenInterceptor
 import com.gamss.android.data.remote.auth.AuthService
@@ -122,7 +123,6 @@ internal object NetworkModule {
         }
 
     private const val HTTP_LOG_TAG = "GamssHttp"
-    private const val AUTHORIZATION_HEADER = "Authorization"
     private val TOKEN_JSON_PATTERN =
         Regex("(\"(?:idToken|accessToken|refreshToken)\"\\s*:\\s*\")[^\"]*(\")")
 }
