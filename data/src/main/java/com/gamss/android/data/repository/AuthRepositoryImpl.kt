@@ -1,5 +1,6 @@
 package com.gamss.android.data.repository
 
+import android.util.Log
 import com.gamss.android.core.common.AppResult
 import com.gamss.android.core.common.map
 import com.gamss.android.core.common.network.ApiException
@@ -109,14 +110,19 @@ internal class AuthRepositoryImpl @Inject constructor(
         clearSession(AuthEvent.SessionExpired)
 
     private suspend fun clearSession(event: AuthEvent): AppResult<Unit> {
-        return runCatchingApiCall {
+        val result = runCatchingApiCall {
             authTokenLocalDataSource.clearTokens()
             firebaseAuth.signOut()
-            authEventBus.notify(event)
         }
+        if (result is AppResult.Failure) {
+            Log.e(TAG, "세션 정리 실패 (event=$event)", result.throwable)
+        }
+        authEventBus.notify(event)
+        return result
     }
 
     private companion object {
         const val MISSING_TOKEN_DATA_MESSAGE = "No available token data"
+        private const val TAG = "AuthRepositoryImpl"
     }
 }
