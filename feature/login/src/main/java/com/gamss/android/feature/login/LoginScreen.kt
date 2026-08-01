@@ -64,6 +64,7 @@ fun LoginScreen(
                     onClick = {
                         googleCredentialLauncher.launch(
                             onSuccess = viewModel::login,
+                            onCancel = viewModel::onGoogleSignInCancelled,
                             onFailure = viewModel::onGoogleSignInFailed,
                         )
                     },

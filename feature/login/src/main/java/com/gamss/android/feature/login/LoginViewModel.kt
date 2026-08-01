@@ -37,6 +37,10 @@ class LoginViewModel @Inject constructor(
         postSideEffect(LoginSideEffect.ShowToast("Google 로그인에 실패했어요"))
     }
 
+    fun onGoogleSignInCancelled() = intent {
+        reduce { state.copy(isLoading = false) }
+    }
+
     private fun Throwable.toLoginFailureMessage(): String = when (this) {
         is SessionExpiredException -> "세션이 만료되었어요. 다시 로그인해 주세요"
         is ApiException.Network -> "네트워크 연결을 확인해 주세요"

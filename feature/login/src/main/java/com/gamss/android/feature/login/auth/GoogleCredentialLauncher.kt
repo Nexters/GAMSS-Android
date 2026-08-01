@@ -1,6 +1,7 @@
 package com.gamss.android.feature.login.auth
 
 import android.content.Context
+import android.util.Log
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -8,6 +9,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.credentials.CredentialManager
 import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
+import androidx.credentials.exceptions.GetCredentialCancellationException
 import androidx.credentials.exceptions.GetCredentialException
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
@@ -15,7 +17,7 @@ import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingExcept
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
-class GoogleCredentialLauncher internal constructor(
+internal class GoogleCredentialLauncher(
     private val context: Context,
     private val credentialManager: CredentialManager,
     private val credentialRequest: GetCredentialRequest,
@@ -23,6 +25,7 @@ class GoogleCredentialLauncher internal constructor(
 ) {
     fun launch(
         onSuccess: (idToken: String) -> Unit,
+        onCancel: () -> Unit,
         onFailure: () -> Unit,
     ) {
         coroutineScope.launch {
@@ -41,17 +44,25 @@ class GoogleCredentialLauncher internal constructor(
                 } else {
                     onFailure()
                 }
-            } catch (_: GetCredentialException) {
+            } catch (e: GetCredentialCancellationException) {
+                onCancel()
+            } catch (e: GetCredentialException) {
+                Log.w(TAG, "getCredential failed", e)
                 onFailure()
-            } catch (_: GoogleIdTokenParsingException) {
+            } catch (e: GoogleIdTokenParsingException) {
+                Log.w(TAG, "Google ID token 파싱 실패", e)
                 onFailure()
             }
         }
     }
+
+    private companion object {
+        const val TAG = "GoogleCredentialLauncher"
+    }
 }
 
 @Composable
-fun rememberGoogleCredentialLauncher(
+internal fun rememberGoogleCredentialLauncher(
     googleWebClientId: String,
 ): GoogleCredentialLauncher {
     val context = LocalContext.current
