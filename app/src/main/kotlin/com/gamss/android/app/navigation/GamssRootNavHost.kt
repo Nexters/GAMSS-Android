@@ -10,7 +10,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
@@ -43,15 +42,8 @@ fun GamssRootNavHost(
                 CircularProgressIndicator()
             }
         }
-
-        SessionState.Authenticated -> RootNavDisplay(
+        else -> RootNavDisplay(
             sessionState = sessionState,
-            initialKey = MainKey,
-            onLoginSucceeded = mainViewModel::onLoginSucceeded,
-        )
-        SessionState.Unauthenticated -> RootNavDisplay(
-            sessionState = sessionState,
-            initialKey = LoginKey,
             onLoginSucceeded = mainViewModel::onLoginSucceeded,
         )
     }
@@ -60,9 +52,9 @@ fun GamssRootNavHost(
 @Composable
 private fun RootNavDisplay(
     sessionState: SessionState,
-    initialKey: NavKey,
     onLoginSucceeded: () -> Unit,
 ) {
+    val initialKey = if (sessionState == SessionState.Authenticated) MainKey else LoginKey
     val backStack = rememberNavBackStack(initialKey)
 
     LaunchedEffect(sessionState) {
