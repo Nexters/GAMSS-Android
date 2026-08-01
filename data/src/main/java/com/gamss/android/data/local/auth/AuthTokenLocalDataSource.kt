@@ -90,11 +90,11 @@ internal class EncryptedAuthTokenLocalDataSource @Inject constructor(
         }
     }
 
-    internal companion object {
-        val ACCESS_TOKEN_KEY = stringPreferencesKey("encrypted_access_token")
-        val REFRESH_TOKEN_KEY = stringPreferencesKey("encrypted_refresh_token")
+    companion object {
+        private val ACCESS_TOKEN_KEY = stringPreferencesKey("encrypted_access_token")
+        private val REFRESH_TOKEN_KEY = stringPreferencesKey("encrypted_refresh_token")
 
-        const val ACCESS_TOKEN_ASSOCIATED_DATA = "gamss.auth.access_token"
-        const val REFRESH_TOKEN_ASSOCIATED_DATA = "gamss.auth.refresh_token"
+        private const val ACCESS_TOKEN_ASSOCIATED_DATA = "gamss.auth.access_token"
+        private const val REFRESH_TOKEN_ASSOCIATED_DATA = "gamss.auth.refresh_token"
     }
 }
