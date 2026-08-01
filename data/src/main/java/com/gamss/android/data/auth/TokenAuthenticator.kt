@@ -21,7 +21,7 @@ internal class TokenAuthenticator @Inject constructor(
 ) : Authenticator {
 
     override fun authenticate(route: Route?, response: Response): Request? =
-        if (responseCount(response) > MAX_RETRY_COUNT) {
+        if (response.priorResponse != null) {
             null
         } else {
             synchronized(this) {
@@ -56,18 +56,4 @@ internal class TokenAuthenticator @Inject constructor(
         newBuilder()
             .header(AUTHORIZATION_HEADER, "$BEARER_PREFIX$accessToken")
             .build()
-
-    private fun responseCount(response: Response): Int {
-        var count = 1
-        var prior = response.priorResponse
-        while (prior != null) {
-            count++
-            prior = prior.priorResponse
-        }
-        return count
-    }
-
-    private companion object {
-        const val MAX_RETRY_COUNT = 3
-    }
 }
