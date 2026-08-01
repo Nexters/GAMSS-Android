@@ -2,23 +2,23 @@ package com.gamss.android.data.repository
 
 import android.util.Log
 import com.gamss.android.core.common.AppResult
-import com.gamss.android.core.common.map
 import com.gamss.android.core.common.network.ApiException
-import com.gamss.android.data.auth.AuthEventBus
 import com.gamss.android.data.di.ApplicationScope
 import com.gamss.android.data.local.auth.AuthTokenLocalDataSource
 import com.gamss.android.data.local.auth.model.StoredAuthTokens
 import com.gamss.android.data.remote.auth.AuthService
 import com.gamss.android.data.remote.auth.model.request.LoginRequest
 import com.gamss.android.data.remote.auth.model.request.RefreshTokenRequest
-import com.gamss.android.domain.model.AuthEvent
+import com.gamss.android.domain.model.SessionState
 import com.gamss.android.domain.model.SessionExpiredException
 import com.gamss.android.domain.repository.AuthRepository
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
@@ -29,14 +29,14 @@ internal class AuthRepositoryImpl @Inject constructor(
     private val authService: AuthService,
     private val firebaseAuth: FirebaseAuth,
     private val authTokenLocalDataSource: AuthTokenLocalDataSource,
-    private val authEventBus: AuthEventBus,
     @ApplicationScope private val applicationScope: CoroutineScope,
 ) : AuthRepository {
 
-    override val authEvents: Flow<AuthEvent> = authEventBus.events
+    private val _sessionState = MutableStateFlow<SessionState>(SessionState.Loading)
+    override val sessionState: StateFlow<SessionState> = _sessionState.asStateFlow()
 
     override suspend fun login(googleIdToken: String): AppResult<Unit> {
-        return runCatchingApiCall(treatUnauthorizedAsSessionExpired = false) {
+        val result = runCatchingApiCall(treatUnauthorizedAsSessionExpired = false) {
             val credential = GoogleAuthProvider.getCredential(googleIdToken, null)
 
             val authResult = firebaseAuth
@@ -59,6 +59,10 @@ internal class AuthRepositoryImpl @Inject constructor(
                 ),
             )
         }
+        if (result is AppResult.Success) {
+            _sessionState.value = SessionState.Authenticated
+        }
+        return result
     }
 
     override suspend fun reissueTokens(): AppResult<Unit> {
@@ -83,53 +87,67 @@ internal class AuthRepositoryImpl @Inject constructor(
         }
         if (result is AppResult.Failure && result.throwable !is ApiException.Network) {
             applicationScope.launch { invalidateSession() }
+        } else if (result is AppResult.Success) {
+            _sessionState.value = SessionState.Authenticated
         }
         return result
     }
 
     @Suppress("TooGenericExceptionCaught")
-    override suspend fun restoreSession(): AppResult<Boolean> {
+    override suspend fun restoreSession(): AppResult<Unit> {
         return try {
-            restoreStoredSession()
+            val result = restoreStoredSession()
+            if (result is AppResult.Failure) {
+                _sessionState.value = SessionState.Unauthenticated
+            }
+            result
         } catch (e: CancellationException) {
             throw e
         } catch (e: Throwable) {
+            _sessionState.value = SessionState.Unauthenticated
             applicationScope.launch { invalidateSession() }
             AppResult.Failure(e)
         }
     }
 
-    private suspend fun restoreStoredSession(): AppResult<Boolean> {
+    private suspend fun restoreStoredSession(): AppResult<Unit> {
         val storedTokens = authTokenLocalDataSource.getTokens()
         val accessToken = storedTokens.accessToken
         val refreshToken = storedTokens.refreshToken
 
         return when {
             accessToken.isNullOrBlank() && refreshToken.isNullOrBlank() -> {
-                AppResult.Success(false)
+                _sessionState.value = SessionState.Unauthenticated
+                AppResult.Success(Unit)
             }
-            accessToken.isNullOrBlank() -> {
-                reissueTokens().map { true }
+            accessToken.isNullOrBlank() -> reissueTokens()
+            else -> {
+                _sessionState.value = SessionState.Authenticated
+                AppResult.Success(Unit)
             }
-            else -> AppResult.Success(true)
         }
     }
 
-    override suspend fun logout(): AppResult<Unit> = clearSession(AuthEvent.LoggedOut)
+    override suspend fun logout(): AppResult<Unit> = clearSession(SessionClearReason.LoggedOut)
 
     private suspend fun invalidateSession(): AppResult<Unit> =
-        clearSession(AuthEvent.SessionExpired)
+        clearSession(SessionClearReason.Expired)
 
-    private suspend fun clearSession(event: AuthEvent): AppResult<Unit> {
+    private suspend fun clearSession(reason: SessionClearReason): AppResult<Unit> {
         val result = runCatchingApiCall {
             authTokenLocalDataSource.clearTokens()
             firebaseAuth.signOut()
         }
         if (result is AppResult.Failure) {
-            Log.e(TAG, "세션 정리 실패 (event=$event)", result.throwable)
+            Log.e(TAG, "세션 정리 실패 (reason=$reason)", result.throwable)
         }
-        authEventBus.notify(event)
+        _sessionState.value = SessionState.Unauthenticated
         return result
+    }
+
+    private enum class SessionClearReason {
+        LoggedOut,
+        Expired,
     }
 
     private companion object {

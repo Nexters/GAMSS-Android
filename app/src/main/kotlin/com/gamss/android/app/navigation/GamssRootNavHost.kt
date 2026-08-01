@@ -16,7 +16,7 @@ import androidx.navigation3.ui.NavDisplay
 import com.gamss.android.app.R
 import com.gamss.android.app.main.MainScreen
 import com.gamss.android.app.main.MainViewModel
-import com.gamss.android.app.main.SessionState
+import com.gamss.android.domain.model.SessionState
 import com.gamss.android.feature.login.LoginScreen
 import com.gamss.android.feature.login.navigation.LoginKey
 import org.orbitmvi.orbit.compose.collectAsState
@@ -44,7 +44,6 @@ fun GamssRootNavHost(
         }
         else -> RootNavDisplay(
             sessionState = sessionState,
-            onLoginSucceeded = mainViewModel::onLoginSucceeded,
         )
     }
 }
@@ -52,7 +51,6 @@ fun GamssRootNavHost(
 @Composable
 private fun RootNavDisplay(
     sessionState: SessionState,
-    onLoginSucceeded: () -> Unit,
 ) {
     val initialKey = if (sessionState == SessionState.Authenticated) MainKey else LoginKey
     val backStack = rememberNavBackStack(initialKey)
@@ -75,7 +73,6 @@ private fun RootNavDisplay(
                 entry<LoginKey> {
                     LoginScreen(
                         googleWebClientId = stringResource(R.string.default_web_client_id),
-                        onLoginSuccess = onLoginSucceeded,
                     )
                 }
                 entry<MainKey> { MainScreen() }

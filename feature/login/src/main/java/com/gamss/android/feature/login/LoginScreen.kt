@@ -27,7 +27,6 @@ import org.orbitmvi.orbit.compose.collectSideEffect
 @Composable
 fun LoginScreen(
     googleWebClientId: String,
-    onLoginSuccess: () -> Unit,
     viewModel: LoginViewModel = hiltViewModel(),
 ) {
     val state by viewModel.collectAsState()
@@ -36,7 +35,6 @@ fun LoginScreen(
 
     viewModel.collectSideEffect { sideEffect ->
         when (sideEffect) {
-            is LoginSideEffect.NavigateToMain -> onLoginSuccess()
             is LoginSideEffect.ShowToast ->
                 Toast.makeText(context, sideEffect.message, Toast.LENGTH_SHORT).show()
         }

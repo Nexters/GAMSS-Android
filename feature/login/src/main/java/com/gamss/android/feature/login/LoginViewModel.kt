@@ -23,7 +23,6 @@ class LoginViewModel @Inject constructor(
         when (val result = loginUseCase(googleIdToken)) {
             is AppResult.Success -> {
                 reduce { state.copy(isLoading = false) }
-                postSideEffect(LoginSideEffect.NavigateToMain)
             }
 
             is AppResult.Failure -> {

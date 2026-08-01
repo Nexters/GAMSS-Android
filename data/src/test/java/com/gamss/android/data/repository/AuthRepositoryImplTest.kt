@@ -1,13 +1,13 @@
 package com.gamss.android.data.repository
 
 import com.gamss.android.core.common.AppResult
-import com.gamss.android.data.auth.AuthEventBus
 import com.gamss.android.data.local.auth.AuthTokenLocalDataSource
 import com.gamss.android.data.local.auth.model.StoredAuthTokens
 import com.gamss.android.data.remote.auth.AuthService
 import com.gamss.android.data.remote.auth.model.request.RefreshTokenRequest
 import com.gamss.android.data.remote.auth.model.response.LoginResponse
 import com.gamss.android.data.remote.model.response.ApiResponse
+import com.gamss.android.domain.model.SessionState
 import com.google.firebase.auth.FirebaseAuth
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -19,6 +19,7 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.ResponseBody.Companion.toResponseBody
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -32,7 +33,6 @@ class AuthRepositoryImplTest {
     private val authService: AuthService = mockk()
     private val firebaseAuth: FirebaseAuth = mockk(relaxed = true)
     private val authTokenLocalDataSource: AuthTokenLocalDataSource = mockk(relaxed = true)
-    private val authEventBus = AuthEventBus()
 
     @Test
     fun `저장된 두 토큰이 모두 없으면 재발급 없이 인증되지 않은 세션을 반환한다`() = runTest {
@@ -41,7 +41,8 @@ class AuthRepositoryImplTest {
 
         val result = repository.restoreSession()
 
-        assertTrue(result is AppResult.Success && !result.data)
+        assertTrue(result is AppResult.Success)
+        assertEquals(SessionState.Unauthenticated, repository.sessionState.value)
         coVerify(exactly = 0) { authService.reissueTokens(any()) }
         coVerify(exactly = 0) { authTokenLocalDataSource.clearTokens() }
     }
@@ -56,7 +57,8 @@ class AuthRepositoryImplTest {
 
         val result = repository.restoreSession()
 
-        assertTrue(result is AppResult.Success && result.data)
+        assertTrue(result is AppResult.Success)
+        assertEquals(SessionState.Authenticated, repository.sessionState.value)
         coVerify(exactly = 0) { authService.reissueTokens(any()) }
     }
 
@@ -72,7 +74,8 @@ class AuthRepositoryImplTest {
 
         val result = repository.restoreSession()
 
-        assertTrue(result is AppResult.Success && result.data)
+        assertTrue(result is AppResult.Success)
+        assertEquals(SessionState.Authenticated, repository.sessionState.value)
         coVerify(exactly = 1) {
             authTokenLocalDataSource.saveTokens(
                 storedTokens(
@@ -94,6 +97,7 @@ class AuthRepositoryImplTest {
 
         assertTrue(result is AppResult.Failure)
         assertSame(decryptionFailure, (result as AppResult.Failure).throwable)
+        assertEquals(SessionState.Unauthenticated, repository.sessionState.value)
         coVerify(exactly = 1) { authTokenLocalDataSource.clearTokens() }
         verify(exactly = 1) { firebaseAuth.signOut() }
     }
@@ -113,6 +117,7 @@ class AuthRepositoryImplTest {
         advanceUntilIdle()
 
         assertTrue(result is AppResult.Failure)
+        assertEquals(SessionState.Unauthenticated, repository.sessionState.value)
         coVerify(exactly = 1) { authTokenLocalDataSource.clearTokens() }
     }
 
@@ -128,21 +133,29 @@ class AuthRepositoryImplTest {
         advanceUntilIdle()
 
         assertTrue(result is AppResult.Failure)
+        assertEquals(SessionState.Unauthenticated, repository.sessionState.value)
         coVerify(exactly = 1) { authTokenLocalDataSource.clearTokens() }
     }
 
     @Test
     fun `재발급 네트워크 오류는 세션을 유지한다`() = runTest {
         coEvery { authTokenLocalDataSource.getTokens() } returns storedTokens(
+            accessToken = "access-token",
+            refreshToken = "refresh-token",
+        )
+        val repository = repository()
+        repository.restoreSession()
+
+        coEvery { authTokenLocalDataSource.getTokens() } returns storedTokens(
             refreshToken = "refresh-token",
         )
         coEvery { authService.reissueTokens(any()) } throws IOException("offline")
-        val repository = repository()
 
         val result = repository.reissueTokens()
         advanceUntilIdle()
 
         assertTrue(result is AppResult.Failure)
+        assertEquals(SessionState.Authenticated, repository.sessionState.value)
         coVerify(exactly = 0) { authTokenLocalDataSource.clearTokens() }
     }
 
@@ -162,7 +175,6 @@ class AuthRepositoryImplTest {
         authService = authService,
         firebaseAuth = firebaseAuth,
         authTokenLocalDataSource = authTokenLocalDataSource,
-        authEventBus = authEventBus,
         applicationScope = this,
     )
 

@@ -33,7 +33,7 @@ class HomeViewModel @Inject constructor(
 
     fun logout() = intent {
         when (logoutUseCase()) {
-            is AppResult.Success -> Unit // 화면 이동은 AuthEventBus를 통해 전역에서 처리된다.
+            is AppResult.Success -> Unit // 화면 이동은 AuthRepository의 세션 상태 변경을 통해 처리된다.
             is AppResult.Failure -> postSideEffect(HomeSideEffect.ShowToast("로그아웃에 실패했어요"))
         }
     }
