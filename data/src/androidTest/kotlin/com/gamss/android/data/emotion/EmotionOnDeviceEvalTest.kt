@@ -1,10 +1,8 @@
-package com.gamss.android.app.emotion
+package com.gamss.android.data.emotion
 
 import android.util.Log
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
-import com.gamss.android.data.emotion.EmotionModelSpec
-import com.gamss.android.data.emotion.LiteRtClassifier
 import org.json.JSONObject
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -26,7 +24,7 @@ class EmotionOnDeviceEvalTest {
         val root = JSONObject(json)
         val samples = root.getJSONArray("samples")
 
-        // 모델: 앱(대상) assets 의 emotion_int8.tflite 로드.
+        // 모델: 병합된 main assets 의 emotion_int8.tflite 로드.
         // 네이티브 Interpreter/토크나이저 핸들을 쥐므로, 예외가 나도 닫히게 use 로 감싼다.
         LiteRtClassifier.load(instr.targetContext, EmotionModelSpec.SPEC).use { classifier ->
             var correct = 0
@@ -37,7 +35,7 @@ class EmotionOnDeviceEvalTest {
                 val text = s.getString("text")
                 val gold = s.getString("label")
                 val result = classifier.classify(text)
-                val pred = EmotionModelSpec.LABEL_EN[result.topLabel] ?: result.topLabel
+                val pred = LABEL_EN[result.topLabel] ?: result.topLabel
                 val conf = result.confidence
                 if (pred == gold) correct++
                 val bucket = perGold.getOrPut(gold) { IntArray(2) }
@@ -57,5 +55,15 @@ class EmotionOnDeviceEvalTest {
 
     companion object {
         private const val TAG = "EMO_EVAL"
+
+        /** 한글 라벨 → 원본 모델 영문 라벨(id2label). 평가 로그를 gold 라벨과 대조하기 위한 테스트 전용 매핑. */
+        private val LABEL_EN = mapOf(
+            "분노" to "angry",
+            "불안" to "anxious",
+            "당황" to "embarrassed",
+            "기쁨" to "happy",
+            "상처" to "heartache",
+            "슬픔" to "sad",
+        )
     }
 }

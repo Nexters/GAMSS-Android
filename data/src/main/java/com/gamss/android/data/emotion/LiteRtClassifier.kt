@@ -3,6 +3,7 @@ package com.gamss.android.data.emotion
 import android.content.Context
 import com.gamss.android.domain.emotion.ClassificationResult
 import org.tensorflow.lite.DataType
+import org.tensorflow.lite.Interpreter
 import java.io.Closeable
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -11,7 +12,7 @@ import kotlin.math.exp
 /**
  * WordPiece 인코더 분류기의 실추론 코어. 토큰화 → LiteRT 추론 → softmax → [ClassificationResult].
  */
-class LiteRtClassifier private constructor(
+internal class LiteRtClassifier private constructor(
     private val model: LiteRtModel,
     private val tokenizer: WordPieceTokenizer,
     private val labels: List<String>,
@@ -93,7 +94,7 @@ class LiteRtClassifier private constructor(
             labels = spec.labels,
         )
 
-        private fun resolveInputRoles(interpreter: org.tensorflow.lite.Interpreter): IntArray =
+        private fun resolveInputRoles(interpreter: Interpreter): IntArray =
             IntArray(interpreter.inputTensorCount) { i ->
                 val name = interpreter.getInputTensor(i).name()
                 when {

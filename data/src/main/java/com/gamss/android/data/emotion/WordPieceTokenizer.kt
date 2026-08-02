@@ -8,7 +8,7 @@ import java.io.Closeable
  * HuggingFace tokenizer.json 을 그대로 로드해 학습 토크나이저와 동일하게 인코딩하는 래퍼.
  * 고정 길이(seqLen)로 자르거나 0 패딩해 LiteRT 입력에 맞춘다.
  */
-class WordPieceTokenizer private constructor(
+internal class WordPieceTokenizer private constructor(
     private val tokenizer: HuggingFaceTokenizer,
     private val seqLen: Int,
 ) : Closeable {
@@ -35,7 +35,6 @@ class WordPieceTokenizer private constructor(
         LongArray(seqLen).also { src.copyInto(it, endIndex = minOf(seqLen, src.size)) }
 
     companion object {
-        // DJL HuggingFaceTokenizer 옵션 키
         private const val OPT_SPECIAL_TOKENS = "addSpecialTokens"
         private const val OPT_TRUNCATION = "truncation"
         private const val OPT_MAX_LENGTH = "maxLength"

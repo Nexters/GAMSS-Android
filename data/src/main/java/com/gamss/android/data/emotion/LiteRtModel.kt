@@ -10,7 +10,7 @@ import java.nio.channels.FileChannel
 /**
  * assets 의 .tflite 를 메모리 매핑(mmap)으로 로드해 스레드 고정 Interpreter 를 소유하는 홀더.
  */
-class LiteRtModel private constructor(
+internal class LiteRtModel private constructor(
     val interpreter: Interpreter,
 ) : Closeable {
 
