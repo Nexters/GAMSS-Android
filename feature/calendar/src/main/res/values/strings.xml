@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="calendar_month_title">%1$d년 %2$d월</string>
+    <string name="calendar_previous_month">이전 달</string>
+    <string name="calendar_next_month">다음 달</string>
+    <string name="calendar_date_description">%1$d년 %2$d월 %3$d일</string>
+    <string name="calendar_date_description_today">%1$d년 %2$d월 %3$d일, 오늘</string>
+</resources>

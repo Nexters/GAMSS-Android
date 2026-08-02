@@ -4,7 +4,7 @@ kotlin = "2.2.20"
 ksp = "2.3.5"
 hilt = "2.60.1"
 android-compileSdk = "36"
-android-minSdk = "24"
+android-minSdk = "26"
 android-targetSdk = "36"
 androidx-activity = "1.11.0"
 androidx-hilt = "1.2.0"
@@ -18,6 +18,7 @@ kotlinx-serialization = "1.11.0"
 coroutines = "1.10.2"
 litert = "2.1.5"
 djl = "0.33.0"
+onnxruntime = "1.20.0"
 orbit-mvi = "11.0.0"
 retrofit = "3.0.0"
 okhttp = "5.4.0"
@@ -77,6 +78,7 @@ litert = { module = "com.google.ai.edge.litert:litert", version.ref = "litert" }
 djl-bom = { module = "ai.djl:bom", version.ref = "djl" }
 djl-huggingface-tokenizers = { module = "ai.djl.huggingface:tokenizers" }
 djl-android-tokenizer-native = { module = "ai.djl.android:tokenizer-native", version.ref = "djl" }
+onnxruntime-android = { module = "com.microsoft.onnxruntime:onnxruntime-android", version.ref = "onnxruntime" }
 
 orbit-core = { module = "org.orbit-mvi:orbit-core", version.ref = "orbit-mvi" }
 orbit-viewmodel = { module = "org.orbit-mvi:orbit-viewmodel", version.ref = "orbit-mvi" }

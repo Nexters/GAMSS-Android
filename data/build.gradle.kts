@@ -29,7 +29,7 @@ android {
     buildFeatures {
         buildConfig = true
     }
-
+    
     buildTypes {
         debug {
             buildConfigField("String", "BASE_URL", "\"$devBaseUrl\"")
@@ -37,6 +37,12 @@ android {
         release {
             buildConfigField("String", "BASE_URL", "\"$prodBaseUrl\"")
         }
+    }    
+
+    androidResources {
+        // .onnx 를 비압축 저장해야 assets.openFd + mmap 로드 가능(androidTest APK 는 이 모듈 설정을 따른다).
+        // .tflite 는 AGP 가 기본으로 비압축 처리한다.
+        noCompress += "onnx"
     }
 }
 
@@ -69,4 +75,13 @@ dependencies {
     implementation(platform(libs.djl.bom))
     implementation(libs.djl.huggingface.tokenizers)
     runtimeOnly(libs.djl.android.tokenizer.native)
+
+    // 온디바이스 원문 요약(kobart INT8) — ONNX Runtime Mobile (토크나이저는 DJL 재사용)
+    implementation(libs.onnxruntime.android)
+
+    testImplementation(libs.junit)
+
+    androidTestImplementation(libs.junit)
+    androidTestImplementation(libs.androidx.junit)
+    androidTestImplementation("androidx.test:runner:1.6.2")
 }
