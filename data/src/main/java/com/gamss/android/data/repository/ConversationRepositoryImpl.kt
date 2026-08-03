@@ -20,12 +20,14 @@ internal class ConversationRepositoryImpl @Inject constructor(
         conversationId: Long?,
         content: String,
         replyToMessageId: Long?,
+        contextSummary: String?,
     ): AppResult<SentMessage> = runCatchingApiCall {
         val response = conversationService.saveMessage(
             SaveMessageRequest(
                 content = content,
                 conversationId = conversationId,
                 repliesToMessageId = replyToMessageId,
+                currentConversationSummary = contextSummary,
             ),
         )
         checkNotNull(response.data) { "No available saved message data" }.toDomain()

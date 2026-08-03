@@ -3,6 +3,7 @@ package com.gamss.android.feature.chat
 import androidx.lifecycle.ViewModel
 import com.gamss.android.core.common.AppResult
 import com.gamss.android.domain.conversation.CommentGenerationStatus
+import com.gamss.android.domain.conversation.ConversationSummaryStore
 import com.gamss.android.domain.conversation.GetMessagesUseCase
 import com.gamss.android.domain.conversation.MAX_MESSAGE_LENGTH
 import com.gamss.android.domain.conversation.Message
@@ -25,6 +26,7 @@ private typealias ChatRoomSyntax = Syntax<ChatRoomState, ChatRoomSideEffect>
 class ChatRoomViewModel @Inject constructor(
     private val sendMessage: SendMessageUseCase,
     private val getMessages: GetMessagesUseCase,
+    private val summaryStore: ConversationSummaryStore,
 ) : ViewModel(),
     ContainerHost<ChatRoomState, ChatRoomSideEffect> {
 
@@ -51,9 +53,12 @@ class ChatRoomViewModel @Inject constructor(
     private fun loadMessages(conversationId: Long) = intent {
         reduce { state.copy(conversationId = conversationId, isLoading = true) }
         when (val result = getMessages(conversationId)) {
-            is AppResult.Success ->
+            is AppResult.Success -> {
+                summaryStore.reset()
+                summaryStore.addAll(result.data.userContents())
                 // 서버 목록엔 댓글이 다 들어 있다. 큐를 남기면 같은 댓글이 두 번 붙어 key 가 충돌한다.
                 reduce { state.copy(isLoading = false, messages = result.data, pendingComments = emptyList()) }
+            }
             is AppResult.Failure -> {
                 reduce { state.copy(isLoading = false) }
                 postSideEffect(ChatRoomSideEffect.ShowToast(LOAD_FAILED))
@@ -102,12 +107,16 @@ class ChatRoomViewModel @Inject constructor(
                 conversationId = state.conversationId,
                 content = sending.content,
                 replyToMessageId = sending.replyToMessageId,
+                // 지금까지의 대화를 압축해 함께 보낸다. 첫 전송에는 아직 없다.
+                contextSummary = summaryStore.current(),
             ),
         )
 
         when (result) {
             is AppResult.Success -> {
                 val sent = result.data
+                // 다음 전송에 실릴 압축본을 미리 갱신한다. 청크가 찰 때만 요약기가 돈다.
+                summaryStore.add(sent.message.content)
                 reduce {
                     state.copy(
                         isSending = false,
@@ -187,3 +196,6 @@ class ChatRoomViewModel @Inject constructor(
         const val SEND_FAILED = "메시지를 보내지 못했어요"
     }
 }
+
+private fun List<Message>.userContents(): List<String> =
+    filter { it.sender == MessageSender.User }.map { it.content }

@@ -3,12 +3,15 @@ package com.gamss.android.feature.chat
 import com.gamss.android.core.common.AppResult
 import com.gamss.android.domain.conversation.CommentGenerationStatus
 import com.gamss.android.domain.conversation.ConversationRepository
+import com.gamss.android.domain.conversation.ConversationSummaryStore
 import com.gamss.android.domain.conversation.GetMessagesUseCase
 import com.gamss.android.domain.conversation.Message
 import com.gamss.android.domain.conversation.MessageSender
 import com.gamss.android.domain.conversation.SendMessageUseCase
 import com.gamss.android.domain.conversation.SentMessage
 import com.gamss.android.domain.emotion.EmotionCharacter
+import com.gamss.android.domain.summary.DiarySummarizer
+import com.gamss.android.domain.summary.UtteranceTokenCounter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -121,7 +124,20 @@ class ChatRoomRevealTest {
         return ChatRoomViewModel(
             sendMessage = SendMessageUseCase(conversationRepository),
             getMessages = GetMessagesUseCase(conversationRepository),
+            summaryStore = ConversationSummaryStore(
+                summarizer = PassThroughSummarizer,
+                tokenCounter = CharLengthTokenCounter,
+            ),
         )
+    }
+
+    private object PassThroughSummarizer : DiarySummarizer {
+        override suspend fun summarize(text: String): String = text
+    }
+
+    /** 글자 수를 토큰 수로 쓴다. 노출 테스트는 청크 경계에 관심이 없다. */
+    private object CharLengthTokenCounter : UtteranceTokenCounter {
+        override suspend fun count(text: String): Int = text.length
     }
 
     private class FakeConversationRepository(private val commentCount: Int) : ConversationRepository {
@@ -131,6 +147,7 @@ class ChatRoomRevealTest {
             conversationId: Long?,
             content: String,
             replyToMessageId: Long?,
+            contextSummary: String?,
         ): AppResult<SentMessage> {
             val roomId = conversationId ?: ROOM_ID
             return AppResult.Success(

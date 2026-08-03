@@ -12,11 +12,15 @@ class SendMessageUseCase @Inject constructor(
     private val conversationRepository: ConversationRepository,
 ) : UseCase<SendMessageUseCase.Params, AppResult<SentMessage>> {
 
-    /** @param conversationId null 이면 서버가 새 채팅방을 만든다. */
+    /**
+     * @param conversationId null 이면 서버가 새 채팅방을 만든다.
+     * @param contextSummary 생성 컨텍스트로만 쓰이는 압축본. 첫 전송에는 없다.
+     */
     data class Params(
         val conversationId: Long?,
         val content: String,
         val replyToMessageId: Long? = null,
+        val contextSummary: String? = null,
     )
 
     override suspend fun invoke(params: Params): AppResult<SentMessage> {
@@ -29,6 +33,7 @@ class SendMessageUseCase @Inject constructor(
             conversationId = params.conversationId,
             content = trimmed,
             replyToMessageId = params.replyToMessageId,
+            contextSummary = params.contextSummary,
         )
     }
 

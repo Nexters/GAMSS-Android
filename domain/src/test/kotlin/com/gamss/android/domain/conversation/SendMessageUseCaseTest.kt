@@ -20,16 +20,20 @@ class SendMessageUseCaseTest {
             private set
         var sentReplyToMessageId: Long? = null
             private set
+        var sentContextSummary: String? = null
+            private set
 
         override suspend fun sendMessage(
             conversationId: Long?,
             content: String,
             replyToMessageId: Long?,
+            contextSummary: String?,
         ): AppResult<SentMessage> {
             called = true
             sentConversationId = conversationId
             sentContent = content
             sentReplyToMessageId = replyToMessageId
+            sentContextSummary = contextSummary
             return AppResult.Success(
                 SentMessage(
                     message = Message(
