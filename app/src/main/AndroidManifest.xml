@@ -3,6 +3,14 @@
 
     <uses-permission android:name="android.permission.INTERNET"/>
 
+    <!-- 기관 안내의 전화 걸기가 Android 11+ 패키지 가시성 정책에 막히지 않도록 선언한다. -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.DIAL" />
+            <data android:scheme="tel" />
+        </intent>
+    </queries>
+
     <application
         android:name=".GamssApplication"
         android:allowBackup="true"
