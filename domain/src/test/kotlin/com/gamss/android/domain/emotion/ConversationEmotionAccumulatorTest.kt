@@ -1,5 +1,6 @@
 package com.gamss.android.domain.emotion
 
+import com.gamss.android.domain.assertSuccess
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -31,7 +32,7 @@ class ConversationEmotionAccumulatorTest {
 
     @Test
     fun 증분_누적_결과가_한꺼번에_분류한_결과와_같다() = runBlocking {
-        val batch = ClassifyUserEmotionUseCase(KeywordClassifier())(utterances)
+        val batch = ClassifyUserEmotionUseCase(KeywordClassifier())(utterances).assertSuccess()
 
         val accumulator = ConversationEmotionAccumulator(KeywordClassifier())
         utterances.forEach { accumulator.add(it) }

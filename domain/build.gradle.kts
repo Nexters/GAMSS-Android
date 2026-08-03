@@ -7,7 +7,7 @@ dependencies {
     api(projects.core.common)
 
     implementation(libs.javax.inject)
+    implementation(libs.kotlinx.coroutines.core)
 
     testImplementation(libs.junit)
-    testImplementation(libs.kotlinx.coroutines.core)
 }

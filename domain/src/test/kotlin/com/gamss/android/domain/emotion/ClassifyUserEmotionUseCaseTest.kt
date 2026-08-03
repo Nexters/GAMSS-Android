@@ -1,5 +1,6 @@
 package com.gamss.android.domain.emotion
 
+import com.gamss.android.domain.assertSuccess
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -27,7 +28,7 @@ class ClassifyUserEmotionUseCaseTest {
                 ),
             ),
         )
-        val result = useCase(listOf("오늘 너무 힘들었어", "자꾸 눈물이 나"))
+        val result = useCase(listOf("오늘 너무 힘들었어", "자꾸 눈물이 나")).assertSuccess()
         assertEquals(EmotionLabel.SADNESS, result?.label)
         assertEquals(EmotionCharacter.WARM, result?.character)
     }
@@ -44,7 +45,7 @@ class ClassifyUserEmotionUseCaseTest {
                 ),
             ),
         )
-        val result = useCase(listOf("진짜 화나!", "그래도 너무 슬퍼", "계속 눈물나"))
+        val result = useCase(listOf("진짜 화나!", "그래도 너무 슬퍼", "계속 눈물나")).assertSuccess()
         assertEquals(EmotionLabel.SADNESS, result?.label)
     }
 
@@ -53,15 +54,15 @@ class ClassifyUserEmotionUseCaseTest {
         val useCase = ClassifyUserEmotionUseCase(
             classifierOf(mapOf("합격했어 너무 기뻐" to mapOf("기쁨" to 0.99f, "슬픔" to 0.01f))),
         )
-        val result = useCase(listOf("합격했어 너무 기뻐"))
+        val result = useCase(listOf("합격했어 너무 기뻐")).assertSuccess()
         assertEquals(EmotionLabel.JOY, result?.label)
         assertEquals(EmotionCharacter.JOY, result?.character)
     }
 
     @Test
-    fun 빈_목록이나_공백은_null() = runBlocking {
+    fun 빈_목록이나_공백은_Success_null() = runBlocking {
         val useCase = ClassifyUserEmotionUseCase(classifierOf(emptyMap()))
-        assertNull(useCase(emptyList()))
-        assertNull(useCase(listOf("   ", "")))
+        assertNull(useCase(emptyList()).assertSuccess())
+        assertNull(useCase(listOf("   ", "")).assertSuccess())
     }
 }

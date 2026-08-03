@@ -1,11 +1,13 @@
 package com.gamss.android.data.di
 
+import android.util.Log
 import com.gamss.android.data.BuildConfig
-import com.gamss.android.data.auth.DevTokenInterceptor
+import com.gamss.android.data.auth.AUTHORIZATION_HEADER
+import com.gamss.android.data.auth.TokenAuthenticator
+import com.gamss.android.data.auth.TokenInterceptor
 import com.gamss.android.data.remote.auth.AuthService
-import com.gamss.android.data.remote.card.CardService
-import com.gamss.android.data.remote.conversation.ConversationService
 import com.gamss.android.data.remote.gamssJson
+import com.gamss.android.data.remote.user.UserService
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -16,6 +18,7 @@ import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.kotlinx.serialization.asConverterFactory
+import java.util.concurrent.TimeUnit
 import javax.inject.Singleton
 
 @Module
@@ -28,8 +31,10 @@ internal object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideOkHttpClient(): OkHttpClient {
-        val loggingInterceptor = HttpLoggingInterceptor().apply {
+    fun provideLoggingInterceptor(): HttpLoggingInterceptor =
+        HttpLoggingInterceptor { message ->
+            Log.d(HTTP_LOG_TAG, message.redactTokenValues())
+        }.apply {
             redactHeader(AUTHORIZATION_HEADER)
             level = if (BuildConfig.DEBUG) {
                 HttpLoggingInterceptor.Level.BODY
@@ -37,10 +42,53 @@ internal object NetworkModule {
                 HttpLoggingInterceptor.Level.NONE
             }
         }
+
+    /**
+     * 로그인/토큰 재발급 전용 클라이언트. TokenAuthenticator를 통해 재발급되는 요청과
+     * 디스패처·커넥션 풀을 공유하지 않도록 별도로 둔다.
+     */
+    @Provides
+    @Singleton
+    @AuthApi
+    fun provideAuthOkHttpClient(
+        loggingInterceptor: HttpLoggingInterceptor,
+    ): OkHttpClient {
         return OkHttpClient.Builder()
-            // TODO(google-login 머지 시 삭제): TokenInterceptor·TokenAuthenticator 로 대체한다.
-            .addInterceptor(DevTokenInterceptor())
             .addInterceptor(loggingInterceptor)
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
+            .writeTimeout(30, TimeUnit.SECONDS)
+            .build()
+    }
+
+    @Provides
+    @Singleton
+    fun provideOkHttpClient(
+        tokenInterceptor: TokenInterceptor,
+        tokenAuthenticator: TokenAuthenticator,
+        loggingInterceptor: HttpLoggingInterceptor,
+    ): OkHttpClient {
+        return OkHttpClient.Builder()
+            .addInterceptor(tokenInterceptor)
+            .authenticator(tokenAuthenticator)
+            .addInterceptor(loggingInterceptor)
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
+            .writeTimeout(30, TimeUnit.SECONDS)
+            .build()
+    }
+
+    @Provides
+    @Singleton
+    @AuthApi
+    fun provideAuthRetrofit(
+        @AuthApi okHttpClient: OkHttpClient,
+        json: Json,
+    ): Retrofit {
+        return Retrofit.Builder()
+            .baseUrl(BuildConfig.BASE_URL)
+            .client(okHttpClient)
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
             .build()
     }
 
@@ -59,18 +107,20 @@ internal object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideAuthService(retrofit: Retrofit): AuthService =
+    fun provideAuthService(@AuthApi retrofit: Retrofit): AuthService =
         retrofit.create(AuthService::class.java)
 
     @Provides
     @Singleton
-    fun provideConversationService(retrofit: Retrofit): ConversationService =
-        retrofit.create(ConversationService::class.java)
+    fun provideUserService(retrofit: Retrofit): UserService =
+        retrofit.create(UserService::class.java)
 
-    @Provides
-    @Singleton
-    fun provideCardService(retrofit: Retrofit): CardService =
-        retrofit.create(CardService::class.java)
+    private fun String.redactTokenValues(): String =
+        TOKEN_JSON_PATTERN.replace(this) { matchResult ->
+            "${matchResult.groupValues[1]}<redacted>${matchResult.groupValues[2]}"
+        }
 
-    private const val AUTHORIZATION_HEADER = "Authorization"
+    private const val HTTP_LOG_TAG = "GamssHttp"
+    private val TOKEN_JSON_PATTERN =
+        Regex("(\"(?:idToken|accessToken|refreshToken)\"\\s*:\\s*\")[^\"]*(\")")
 }

@@ -1,5 +1,7 @@
 package com.gamss.android.domain.emotion
 
+import com.gamss.android.core.common.AppResult
+import com.gamss.android.domain.usecase.UseCase
 import javax.inject.Inject
 
 /**
@@ -9,14 +11,14 @@ import javax.inject.Inject
  * - 한 발화가 튀어도 대화 전체의 지배적 감정이 뽑힌다(다수결·최고신뢰보다 안정적).
  * - 요약을 거치지 않아 감정 어휘 신호가 보존된다(요약→감정 체이닝의 신호 손실 회피).
  * 대표 감정(6종)은 [EmotionCharacter.fromEmotionLabel] 로 캐릭터에 1:1 매핑한다.
- * 발화가 없거나 모두 공백이면 분류할 대상이 없어 null.
  */
 class ClassifyUserEmotionUseCase @Inject constructor(
     private val classifier: EmotionClassifier,
-) {
-    suspend operator fun invoke(userUtterances: List<String>): EmotionResult? {
-        val utterances = userUtterances.map { it.trim() }.filter { it.isNotEmpty() }
-        if (utterances.isEmpty()) return null
+) : UseCase<List<String>, AppResult<EmotionResult?>> {
+
+    override suspend fun invoke(params: List<String>): AppResult<EmotionResult?> = AppResult.of {
+        val utterances = params.map { it.trim() }.filter { it.isNotEmpty() }
+        if (utterances.isEmpty()) return@of null
 
         val summed = LinkedHashMap<String, Float>()
         for (utterance in utterances) {
@@ -24,6 +26,6 @@ class ClassifyUserEmotionUseCase @Inject constructor(
                 summed[label] = (summed[label] ?: 0f) + score
             }
         }
-        return aggregateEmotion(summed, utterances.size)
+        aggregateEmotion(summed, utterances.size)
     }
 }

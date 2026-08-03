@@ -9,29 +9,20 @@ plugins {
 val localProperties = Properties().apply {
     val localPropertiesFile = rootProject.file("local.properties")
     check(localPropertiesFile.exists()) {
-        "local.properties 가 없습니다. 프로젝트 루트에 만들고 DEV_BASE_URL·PROD_BASE_URL 을 채우세요."
+        "local.properties not found. Create it in the project root."
     }
     localPropertiesFile.inputStream().use(::load)
 }
 
-fun localProperty(key: String): String = localProperties.getProperty(key).orEmpty().trim()
-
-/** 주소는 기본값으로 떨어뜨리지 않는다 — 빠진 채로 빌드되면 잘못된 서버를 가리킨 앱이 나온다. */
 fun resolveBaseUrl(key: String): String {
-    val value = localProperty(key)
-    check(value.isNotEmpty()) { "local.properties 에 $key 이 없습니다. 예: https://dev-api.gamss.kr/" }
-    // Retrofit 은 '/' 로 끝나지 않는 baseUrl 을 거부한다.
-    return value.removeSuffix("/") + "/"
+    val value = localProperties.getProperty(key)
+    require(value.isNotBlank()) { "Missing $key in local.properties" }
+    // Retrofit 은 '/' 로 끝나지 않는 baseUrl 을 거부한다. 런타임이 아니라 빌드에서 걸러낸다.
+    return value.trim().removeSuffix("/") + "/"
 }
-
-fun String.asBuildConfigString(): String =
-    "\"" + replace("\\", "\\\\").replace("\"", "\\\"") + "\""
 
 val devBaseUrl = resolveBaseUrl("DEV_BASE_URL")
 val prodBaseUrl = resolveBaseUrl("PROD_BASE_URL")
-
-// TODO(google-login 머지 시 삭제): 저장된 토큰을 쓰는 TokenInterceptor 로 대체한다.
-val devAccessToken = localProperty("DEV_ACCESS_TOKEN")
 
 android {
     namespace = "com.gamss.android.data"
@@ -42,12 +33,10 @@ android {
 
     buildTypes {
         debug {
-            buildConfigField("String", "BASE_URL", devBaseUrl.asBuildConfigString())
-            buildConfigField("String", "DEV_ACCESS_TOKEN", devAccessToken.asBuildConfigString())
+            buildConfigField("String", "BASE_URL", "\"$devBaseUrl\"")
         }
         release {
-            buildConfigField("String", "BASE_URL", prodBaseUrl.asBuildConfigString())
-            buildConfigField("String", "DEV_ACCESS_TOKEN", "\"\"")
+            buildConfigField("String", "BASE_URL", "\"$prodBaseUrl\"")
         }
     }
 
@@ -67,8 +56,13 @@ dependencies {
     implementation(libs.okhttp)
     implementation(libs.okhttp.logging.interceptor)
     implementation(libs.kotlinx.serialization.json)
-
+    implementation(libs.androidx.datastore.preferences)
+    implementation(libs.google.tink.android)
     implementation(libs.kotlinx.coroutines.android)
+
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.auth)
+    implementation(libs.kotlinx.coroutines.play.services)
 
     // 온디바이스 감정 분류(KoELECTRA INT8) — LiteRT 추론 + DJL WordPiece 토크나이저
     implementation(libs.litert)
@@ -80,8 +74,11 @@ dependencies {
     implementation(libs.onnxruntime.android)
 
     testImplementation(libs.junit)
+    testImplementation(libs.mockk)
+    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.okhttp.mockwebserver)
 
     androidTestImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
-    androidTestImplementation("androidx.test:runner:1.6.2")
+    androidTestImplementation(libs.androidx.test.runner)
 }

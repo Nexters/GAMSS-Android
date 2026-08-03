@@ -21,6 +21,7 @@ import androidx.compose.runtime.produceState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.gamss.android.app.ui.theme.GamssTheme
+import com.gamss.android.core.common.AppResult
 import com.gamss.android.data.remote.conversation.model.response.ConversationMessage
 import com.gamss.android.data.remote.conversation.model.response.userUtterances
 import com.gamss.android.domain.card.CardInput
@@ -53,7 +54,7 @@ class CardDebugActivity : ComponentActivity() {
 private data class DebugResult(
     val title: String,
     val utterances: List<String>,
-    val card: CardInput?,
+    val card: AppResult<CardInput?>,
 )
 
 @Composable
@@ -96,12 +97,17 @@ private fun ResultCard(result: DebugResult) {
             Text(result.title, style = MaterialTheme.typography.titleMedium)
             Text("USER 발화 (${result.utterances.size}):", style = MaterialTheme.typography.labelLarge)
             result.utterances.forEach { Text("· $it") }
-            val card = result.card
-            if (card == null) {
-                Text("→ 감정 없음 (USER 발화 없음)")
-            } else {
-                Text("감정: ${card.emotion.koLabel}  →  캐릭터: ${card.character.displayName}")
-                Text("요약: ${card.summary ?: "(없음)"}")
+            when (val card = result.card) {
+                is AppResult.Failure -> Text("→ 실패: ${card.throwable}")
+                is AppResult.Success -> {
+                    val input = card.data
+                    if (input == null) {
+                        Text("→ 감정 없음 (USER 발화 없음)")
+                    } else {
+                        Text("감정: ${input.emotion.koLabel}  →  캐릭터: ${input.character.displayName}")
+                        Text("요약: ${input.summary ?: "(없음)"}")
+                    }
+                }
             }
         }
     }

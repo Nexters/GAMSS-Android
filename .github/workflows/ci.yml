@@ -31,13 +31,15 @@ jobs:
             task: test
           - name: build
             task: assembleRelease
+          - name: build-debug
+            task: assembleDebug
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           # 모델(.tflite)/네이티브(.so)가 필요한 build 잡에서만 LFS 다운로드 (대역폭 절약)
-          lfs: ${{ matrix.name == 'build' }}
+          lfs: ${{ matrix.name == 'build' || matrix.name == 'build-debug' }}
 
       - name: Set up JDK 17
         uses: actions/setup-java@v5
@@ -53,13 +55,11 @@ jobs:
       - name: Write google-services.json
         run: echo "${{ secrets.GOOGLE_SERVICES_JSON }}" | base64 -d > app/google-services.json
 
-      # :data 가 API 주소를 local.properties 에서만 읽고, 없으면 빌드를 멈춘다.
       - name: Write local.properties
+        shell: bash
         run: |
-          {
-            echo "DEV_BASE_URL=${{ secrets.DEV_BASE_URL }}"
-            echo "PROD_BASE_URL=${{ secrets.PROD_BASE_URL }}"
-          } > local.properties
+          printf 'DEV_BASE_URL=%s\n' "${{ secrets.DEV_BASE_URL }}" > local.properties
+          printf 'PROD_BASE_URL=%s\n' "${{ secrets.PROD_BASE_URL }}" >> local.properties
 
       - name: Run ${{ matrix.task }}
         run: ./gradlew ${{ matrix.task }} --stacktrace

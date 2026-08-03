@@ -201,7 +201,8 @@ class ChatRoomViewModel @Inject constructor(
 
         val conversationId = state.conversationId
         val emotion = emotionAccumulator.result()
-        val summary = summarizeDiary(state.messages.userContents())
+        // 요약 실패도 카드 실패로 접는다. 감정·요약 중 하나라도 없으면 카드를 만들 수 없다.
+        val summary = summarizeDiary(state.messages.userContents()).getOrNull()
         val result = if (conversationId == null || emotion == null || summary.isNullOrBlank()) {
             AppResult.Failure(IllegalStateException("Card input is not ready"))
         } else {

@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
 plugins {
     alias(libs.plugins.gamss.android.application)
     alias(libs.plugins.gamss.android.compose)
@@ -9,6 +11,10 @@ plugins {
 
 android {
     namespace = "com.gamss.android.app"
+
+    buildFeatures {
+        resValues = true
+    }
 
     defaultConfig {
         applicationId = "com.gamss.android"
@@ -29,6 +35,11 @@ android {
     }
 
     buildTypes {
+        getByName("debug") {
+            applicationIdSuffix = ".dev"
+            versionNameSuffix = "-dev"
+            resValue("string", "app_name", "GAMSS Dev")
+        }
         getByName("release") {
             isMinifyEnabled = false
         }
@@ -44,14 +55,21 @@ dependencies {
     implementation(projects.feature.chat)
     implementation(projects.feature.calendar)
     implementation(projects.feature.emotion)
+    implementation(projects.feature.login)
 
     implementation(libs.compose.material.icons.core)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.lifecycle.viewmodel.ktx)
     implementation(libs.androidx.lifecycle.viewmodel.navigation3)
+    implementation(libs.androidx.hilt.navigation.compose)
 
     implementation(libs.navigation3.runtime)
     implementation(libs.navigation3.ui)
+
+    implementation(libs.orbit.core)
+    implementation(libs.orbit.viewmodel)
+    implementation(libs.orbit.compose)
 
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.crashlytics)
