@@ -100,6 +100,7 @@ private fun ThemeVerificationButton(
 
 @Preview(name = "Button - Light", showBackground = true)
 @Composable
+@Suppress("UnusedPrivateMember")
 private fun LightThemeVerificationButtonPreview() {
     GamssTheme(darkTheme = false) {
         Box(
@@ -114,6 +115,7 @@ private fun LightThemeVerificationButtonPreview() {
 
 @Preview(name = "Button - Dark", showBackground = true)
 @Composable
+@Suppress("UnusedPrivateMember")
 private fun DarkThemeVerificationButtonPreview() {
     GamssTheme(darkTheme = true) {
         Box(
