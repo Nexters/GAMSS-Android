@@ -54,12 +54,15 @@ class ChatRoomViewModel @Inject constructor(
         reduce { state.copy(conversationId = conversationId, isLoading = true) }
         when (val result = getMessages(conversationId)) {
             is AppResult.Success -> {
-                summaryStore.reset()
-                summaryStore.addAll(result.data.userContents())
                 // 서버 목록엔 댓글이 다 들어 있다. 큐를 남기면 같은 댓글이 두 번 붙어 key 가 충돌한다.
                 reduce { state.copy(isLoading = false, messages = result.data, pendingComments = emptyList()) }
+                // 압축은 온디바이스 요약을 태울 수 있어 목록 표시를 막지 않도록 뒤에 둔다.
+                summaryStore.reset()
+                summaryStore.addAll(result.data.userContents())
             }
             is AppResult.Failure -> {
+                // 이전 대화가 남아 있으면 다음 전송의 압축본에 섞인다.
+                summaryStore.reset()
                 reduce { state.copy(isLoading = false) }
                 postSideEffect(ChatRoomSideEffect.ShowToast(LOAD_FAILED))
             }
@@ -71,7 +74,6 @@ class ChatRoomViewModel @Inject constructor(
         reduce { state.copy(input = text.take(MAX_MESSAGE_LENGTH)) }
     }
 
-    /** 사용자 메시지는 답장 대상이 될 수 없다. */
     fun onReplyTargetSelect(message: Message) = intent {
         val character = (message.sender as? MessageSender.Character)?.character ?: return@intent
         reduce {
@@ -107,7 +109,6 @@ class ChatRoomViewModel @Inject constructor(
                 conversationId = state.conversationId,
                 content = sending.content,
                 replyToMessageId = sending.replyToMessageId,
-                // 지금까지의 대화를 압축해 함께 보낸다. 첫 전송에는 아직 없다.
                 contextSummary = summaryStore.current(),
             ),
         )
@@ -115,8 +116,6 @@ class ChatRoomViewModel @Inject constructor(
         when (result) {
             is AppResult.Success -> {
                 val sent = result.data
-                // 다음 전송에 실릴 압축본을 미리 갱신한다. 청크가 찰 때만 요약기가 돈다.
-                summaryStore.add(sent.message.content)
                 reduce {
                     state.copy(
                         isSending = false,
@@ -131,8 +130,9 @@ class ChatRoomViewModel @Inject constructor(
                 }
                 launchCommentReveal()
                 sent.commentStatus.toUserMessage()?.let { postSideEffect(ChatRoomSideEffect.ShowToast(it)) }
+                // 요약기가 돌 수 있어 화면 갱신 뒤에 둔다.
+                summaryStore.add(sent.message.content)
             }
-            // 실패해도 입력은 지우지 않는다. 사용자가 쓴 내용을 잃지 않게.
             is AppResult.Failure -> {
                 reduce { state.copy(isSending = false) }
                 postSideEffect(ChatRoomSideEffect.ShowToast(SEND_FAILED))

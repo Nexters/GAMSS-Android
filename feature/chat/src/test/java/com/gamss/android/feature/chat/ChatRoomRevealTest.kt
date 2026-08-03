@@ -26,10 +26,7 @@ import org.junit.Before
 import org.junit.Test
 import org.orbitmvi.orbit.test.test
 
-/**
- * 캐릭터 댓글 순차 노출의 상태 기계를 가상 시간으로 고정한다.
- * 간격 자체(1~3초)는 정책 테스트가 보고, 여기서는 순서와 큐 소진을 본다.
- */
+/** 간격 자체(1~3초)는 정책 테스트가 보고, 여기서는 순서와 큐 소진을 본다. */
 @OptIn(ExperimentalCoroutinesApi::class)
 class ChatRoomRevealTest {
 
@@ -91,7 +88,6 @@ class ChatRoomRevealTest {
             skipItems(1) // input 반영
             containerHost.onSend()
 
-            // 노출이 취소되고 남은 3개가 한 번에 붙는다.
             val flushed = awaitState()
             assertTrue(flushed.pendingComments.isEmpty())
             assertEquals(5, flushed.messages.size)
@@ -119,8 +115,58 @@ class ChatRoomRevealTest {
         }
     }
 
-    private fun viewModel(commentCount: Int): ChatRoomViewModel {
-        val conversationRepository = FakeConversationRepository(commentCount)
+    @Test
+    fun 첫_전송에는_압축본이_없고_다음_전송에_직전_발화가_실린다() = runTest {
+        val repository = FakeConversationRepository(commentCount = 1)
+        val viewModel = viewModel(repository)
+
+        viewModel.test(this) {
+            expectInitialState()
+            containerHost.onInputChange(INPUT)
+            skipItems(1) // input 반영
+            containerHost.onSend()
+            skipItems(1) // isSending = true
+            awaitState() // 전송 성공 반영
+
+            containerHost.onInputChange(SECOND_INPUT)
+            skipItems(1) // input 반영
+            containerHost.onSend()
+            skipItems(1) // isSending = true
+            awaitState() // 전송 성공 반영
+
+            assertEquals(listOf(null, INPUT), repository.sentSummaries)
+
+            cancelAndIgnoreRemainingItems()
+        }
+    }
+
+    @Test
+    fun 전송이_실패하면_압축본에_쌓이지_않는다() = runTest {
+        val repository = FakeConversationRepository(commentCount = 1, failing = true)
+        val viewModel = viewModel(repository)
+
+        viewModel.test(this) {
+            expectInitialState()
+            containerHost.onInputChange(INPUT)
+            skipItems(1) // input 반영
+            containerHost.onSend()
+            skipItems(1) // isSending = true
+            awaitState() // 실패 반영
+            containerHost.onSend()
+            skipItems(1) // isSending = true
+            awaitState() // 실패 반영
+
+            // 서버에 남지 않은 발화가 압축본에 들어가면 다음 대화 맥락이 어긋난다.
+            assertEquals(listOf(null, null), repository.sentSummaries)
+
+            cancelAndIgnoreRemainingItems()
+        }
+    }
+
+    private fun viewModel(commentCount: Int): ChatRoomViewModel =
+        viewModel(FakeConversationRepository(commentCount))
+
+    private fun viewModel(conversationRepository: FakeConversationRepository): ChatRoomViewModel {
         return ChatRoomViewModel(
             sendMessage = SendMessageUseCase(conversationRepository),
             getMessages = GetMessagesUseCase(conversationRepository),
@@ -135,13 +181,17 @@ class ChatRoomRevealTest {
         override suspend fun summarize(text: String): String = text
     }
 
-    /** 글자 수를 토큰 수로 쓴다. 노출 테스트는 청크 경계에 관심이 없다. */
     private object CharLengthTokenCounter : UtteranceTokenCounter {
         override suspend fun count(text: String): Int = text.length
     }
 
-    private class FakeConversationRepository(private val commentCount: Int) : ConversationRepository {
+    private class FakeConversationRepository(
+        private val commentCount: Int,
+        private val failing: Boolean = false,
+    ) : ConversationRepository {
         private var sentCount = 0
+
+        val sentSummaries = mutableListOf<String?>()
 
         override suspend fun sendMessage(
             conversationId: Long?,
@@ -149,6 +199,8 @@ class ChatRoomRevealTest {
             replyToMessageId: Long?,
             contextSummary: String?,
         ): AppResult<SentMessage> {
+            sentSummaries += contextSummary
+            if (failing) return AppResult.Failure(IllegalStateException("send failed"))
             val roomId = conversationId ?: ROOM_ID
             return AppResult.Success(
                 SentMessage(
@@ -177,6 +229,7 @@ class ChatRoomRevealTest {
 
     private companion object {
         const val INPUT = "오늘 억울한 일이 있었어"
+        const val SECOND_INPUT = "팀장이 갑자기 일을 더 줬어"
         const val ROOM_ID = 7L
         const val USER_ID = 100L
         const val COMMENT_ID_BASE = 200L

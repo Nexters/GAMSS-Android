@@ -10,13 +10,13 @@ import org.junit.Test
 
 class ConversationSummaryStoreTest {
 
-    /** 요약을 눈에 보이게 표시해 어느 구간이 압축됐는지 확인한다. */
+    /** 요약을 눈에 보이게 표시해 어느 구간이 압축됐는지 확인하고, 요약기에 들어간 입력을 기록한다. */
     private class MarkingSummarizer : DiarySummarizer {
-        var calls = 0
-            private set
+        val inputs = mutableListOf<String>()
+        val calls get() = inputs.size
 
         override suspend fun summarize(text: String): String {
-            calls++
+            inputs += text
             return "[요약$calls]"
         }
     }
@@ -26,11 +26,21 @@ class ConversationSummaryStoreTest {
         override suspend fun count(text: String): Int = text.length
     }
 
-    private fun store(summarizer: DiarySummarizer = MarkingSummarizer()) =
-        ConversationSummaryStore(summarizer, CharTokenCounter)
+    private object PassThroughSummarizer : DiarySummarizer {
+        override suspend fun summarize(text: String): String = text
+    }
+
+    private object FailingSummarizer : DiarySummarizer {
+        override suspend fun summarize(text: String): String = error("boom")
+    }
+
+    private fun store(
+        summarizer: DiarySummarizer = MarkingSummarizer(),
+        tokenCounter: UtteranceTokenCounter = CharTokenCounter,
+    ) = ConversationSummaryStore(summarizer, tokenCounter)
 
     @Test
-    fun 발화가_없으면_압축본도_없다() {
+    fun 발화가_없으면_압축본도_없다() = runBlocking {
         assertNull(store().current())
     }
 
@@ -41,9 +51,17 @@ class ConversationSummaryStoreTest {
 
         store.addAll(listOf("첫째", "둘째", "셋째"))
 
-        // 3개는 모두 최근 창이라 첫 발화를 따로 붙이지 않는다(중복 방지).
         assertEquals("첫째 둘째 셋째", store.current())
         assertEquals(0, summarizer.calls)
+    }
+
+    @Test
+    fun 발화가_하나여도_그_발화만_남는다() = runBlocking {
+        val store = store()
+
+        store.add("혼잣말")
+
+        assertEquals("혼잣말", store.current())
     }
 
     @Test
@@ -52,7 +70,6 @@ class ConversationSummaryStoreTest {
 
         store.addAll(listOf("첫째", "둘째", "셋째", "넷째"))
 
-        // 첫째는 원문으로 남고 둘째부터가 최근 창이다.
         assertEquals("첫째 둘째 셋째 넷째", store.current())
     }
 
@@ -61,14 +78,30 @@ class ConversationSummaryStoreTest {
         val summarizer = MarkingSummarizer()
         val store = store(summarizer)
 
-        // 첫 발화 + 예산(512자)을 채우는 긴 발화 + 최근 3턴
         store.add("주제")
         store.add("가".repeat(SUMMARY_CHUNK_TOKEN_BUDGET))
         store.addAll(listOf("최근1", "최근2", "최근3"))
 
-        val summary = store.current()
         assertEquals(1, summarizer.calls)
-        assertEquals("주제 [요약1] 최근1 최근2 최근3", summary)
+        assertEquals("주제 [요약1] 최근1 최근2 최근3", store.current())
+    }
+
+    @Test
+    fun 요약기에는_예산을_넘는_입력이_들어가지_않는다() = runBlocking {
+        val summarizer = MarkingSummarizer()
+        val store = store(summarizer)
+
+        // 한 발화가 예산의 40%씩 차지해 청크 경계가 발화 중간에 걸린다.
+        val chunky = "나".repeat(SUMMARY_CHUNK_TOKEN_BUDGET * 2 / 5)
+        store.add("주제")
+        repeat(8) { store.add(chunky) }
+        store.addAll(listOf("최근1", "최근2", "최근3"))
+
+        assertTrue("요약이 한 번도 안 돌았다", summarizer.calls > 0)
+        summarizer.inputs.forEach {
+            // 넘겨서 넣으면 요약기 입력 한계에서 잘려 그 발화가 압축본에서 사라진다.
+            assertTrue("요약 입력이 예산 초과: ${it.length}", it.length <= SUMMARY_CHUNK_TOKEN_BUDGET)
+        }
     }
 
     @Test
@@ -82,51 +115,91 @@ class ConversationSummaryStoreTest {
         val callsAfterFirstChunk = summarizer.calls
 
         store.addAll(listOf("최근4", "최근5"))
-        store.current()
 
-        // 새 발화가 예산을 채우지 않는 한 요약기는 다시 돌지 않는다.
         assertEquals(callsAfterFirstChunk, summarizer.calls)
+        assertEquals("주제 [요약1] 최근1 최근2 최근3 최근4 최근5", store.current())
     }
 
     @Test
-    fun 요약이_실패하면_원문을_남긴다() = runBlocking {
+    fun 요약이_실패하면_원문으로_확정하고_다시_시도하지_않는다() = runBlocking {
         val failing = object : DiarySummarizer {
-            override suspend fun summarize(text: String): String = error("boom")
+            var calls = 0
+                private set
+
+            override suspend fun summarize(text: String): String {
+                calls++
+                error("boom")
+            }
         }
         val store = store(failing)
 
         store.add("주제")
         store.add("나".repeat(SUMMARY_CHUNK_TOKEN_BUDGET))
         store.addAll(listOf("최근1", "최근2", "최근3"))
+        val callsAfterFirstChunk = failing.calls
+        store.addAll(listOf("최근4", "최근5"))
 
-        val summary = store.current()
-        assertTrue(summary!!.startsWith("주제 나나나"))
-        assertTrue(summary.endsWith("최근1 최근2 최근3"))
+        val summary = store.current()!!
+        assertTrue(summary.startsWith("주제 나나나"))
+        assertTrue(summary.endsWith("최근3 최근4 최근5"))
+        // 실패한 청크를 열어 두면 전송마다 요약을 재시도해 지연이 누적된다.
+        assertEquals(callsAfterFirstChunk, failing.calls)
     }
 
     @Test
-    fun 상한을_넘기면_잘라서_전송이_거절되지_않게_한다() = runBlocking {
+    fun 상한을_넘기면_첫_발화와_최근_발화를_남기고_오래된_쪽을_버린다() = runBlocking {
         val store = store(PassThroughSummarizer)
 
         store.add("주제")
         repeat(6) { store.add("다".repeat(SUMMARY_CHUNK_TOKEN_BUDGET)) }
         store.addAll(listOf("최근1", "최근2", "최근3"))
 
-        val summary = store.current()
-        assertTrue("length=${summary!!.length}", summary.length <= MAX_CONTEXT_SUMMARY_LENGTH)
+        val summary = store.current()!!
+        assertTrue("length=${summary.length}", summary.length <= MAX_CONTEXT_SUMMARY_LENGTH)
+        assertTrue("첫 발화가 사라졌다", summary.startsWith("주제"))
+        assertTrue("최근 발화가 사라졌다", summary.endsWith("최근1 최근2 최근3"))
+    }
+
+    @Test
+    fun 요약이_계속_실패해도_최근_발화는_압축본에_남는다() = runBlocking {
+        val store = store(FailingSummarizer)
+
+        store.add("주제")
+        repeat(30) { store.add("라".repeat(MAX_MESSAGE_LENGTH)) }
+        store.addAll(listOf("최근1", "최근2", "최근3"))
+
+        val summary = store.current()!!
+        assertTrue("length=${summary.length}", summary.length <= MAX_CONTEXT_SUMMARY_LENGTH)
+        assertTrue("첫 발화가 사라졌다", summary.startsWith("주제"))
+        assertTrue("최근 발화가 사라졌다", summary.endsWith("최근1 최근2 최근3"))
+    }
+
+    @Test
+    fun 토큰_계산이_실패해도_전송_경로를_막지_않는다() = runBlocking {
+        val failingCounter = object : UtteranceTokenCounter {
+            override suspend fun count(text: String): Int = error("tokenizer dead")
+        }
+        val store = store(PassThroughSummarizer, failingCounter)
+
+        store.add("주제")
+        repeat(5) { store.add("마".repeat(MAX_MESSAGE_LENGTH)) }
+        store.addAll(listOf("최근1", "최근2", "최근3"))
+
+        val summary = store.current()!!
+        assertTrue(summary.startsWith("주제"))
+        assertTrue(summary.endsWith("최근1 최근2 최근3"))
     }
 
     @Test
     fun reset_하면_이전_대화가_남지_않는다() = runBlocking {
         val store = store()
-        store.addAll(listOf("첫째", "둘째", "셋째"))
+        store.addAll(listOf("첫째", "둘째", "셋째", "넷째"))
 
         store.reset()
-
         assertNull(store.current())
-    }
 
-    private object PassThroughSummarizer : DiarySummarizer {
-        override suspend fun summarize(text: String): String = text
+        // reset 후에도 정상 동작해야 한다(재진입 복원이 같은 인스턴스를 다시 채운다).
+        store.addAll(listOf("새첫째", "새둘째"))
+        assertEquals("새첫째 새둘째", store.current())
     }
 }
