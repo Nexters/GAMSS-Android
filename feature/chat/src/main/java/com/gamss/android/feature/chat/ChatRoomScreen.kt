@@ -79,7 +79,6 @@ fun ChatRoomScreen(
     ChatRoomContent(state = state, actions = actions)
 }
 
-/** 콜백 묶음. remember 로 잡아둬야 재구성에서 스킵이 유지된다. */
 private class ChatRoomActions(
     val onInputChange: (String) -> Unit,
     val onSendClick: () -> Unit,

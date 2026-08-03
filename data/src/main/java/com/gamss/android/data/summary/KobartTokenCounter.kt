@@ -10,10 +10,6 @@ import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/**
- * 청크 경계를 재는 전용 토크나이저. 요약용 인스턴스는 truncation 이 켜져 있어 512 를 넘는 입력의
- * 실제 토큰 수를 셀 수 없으므로 절단 없는 인스턴스를 따로 둔다.
- */
 @Singleton
 internal class KobartTokenCounter @Inject constructor(
     @ApplicationContext private val context: Context,

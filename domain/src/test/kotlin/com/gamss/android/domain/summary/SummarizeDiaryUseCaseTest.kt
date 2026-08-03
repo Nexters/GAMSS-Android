@@ -55,7 +55,6 @@ class SummarizeDiaryUseCaseTest {
 
         val result = useCase(listOf("나 배고파", "배고파", "배고파", "그래서 뭐 먹지", "배고파")).assertSuccess()
 
-        // 떨어져 있는 반복은 대화 맥락일 수 있어 남긴다.
         assertEquals("나 배고파 배고파 그래서 뭐 먹지 배고파", result)
     }
 }

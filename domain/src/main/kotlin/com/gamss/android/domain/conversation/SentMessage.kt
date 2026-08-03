@@ -3,7 +3,6 @@ package com.gamss.android.domain.conversation
 data class SentMessage(
     val message: Message,
     val commentStatus: CommentGenerationStatus,
-    /** [CommentGenerationStatus.DONE] 이 아니면 빈 리스트. */
     val comments: List<Message>,
 )
 

@@ -39,7 +39,6 @@ fun List<ConversationMessage>.userUtterances(): List<String> =
 /** 발신 주체를 해석할 수 없으면 잘못된 주체로 그리는 대신 null 을 돌려 목록에서 제외한다. */
 internal fun ConversationMessage.toDomain(): Message? = resolveSender()?.let(::toMessage)
 
-/** 내가 보낸 게 확실한 메시지. 발신 주체 해석 실패와 무관하게 화면에 남는다. */
 internal fun ConversationMessage.toSentUserMessage(): Message = toMessage(MessageSender.User)
 
 private fun ConversationMessage.toMessage(sender: MessageSender): Message = Message(

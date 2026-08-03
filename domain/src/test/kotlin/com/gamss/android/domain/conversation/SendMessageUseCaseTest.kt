@@ -10,7 +10,6 @@ import org.junit.Test
 
 class SendMessageUseCaseTest {
 
-    /** 전달받은 인자를 기록하는 fake repository. */
     private class RecordingRepository : ConversationRepository {
         var called = false
             private set

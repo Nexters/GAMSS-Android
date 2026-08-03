@@ -18,7 +18,6 @@ internal fun SaveMessageResponse.toDomain(): SentMessage = SentMessage(
     comments = comments.mapNotNull(ConversationMessage::toDomain),
 )
 
-/** 모르는 값은 "응답을 받지 못한 상태"로 본다. */
 private fun String.toCommentGenerationStatus(): CommentGenerationStatus = when (this) {
     "DONE" -> CommentGenerationStatus.DONE
     "LIMIT_EXCEEDED" -> CommentGenerationStatus.LIMIT_EXCEEDED
