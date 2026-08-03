@@ -6,13 +6,13 @@ import com.gamss.android.core.common.getOrNull
 import com.gamss.android.domain.card.CardAlreadyExistsException
 import com.gamss.android.domain.card.CreateCardUseCase
 import com.gamss.android.domain.conversation.CommentGenerationStatus
-import com.gamss.android.domain.conversation.CommentRevealPolicy
 import com.gamss.android.domain.conversation.EndConversationUseCase
 import com.gamss.android.domain.conversation.GetMessagesUseCase
 import com.gamss.android.domain.conversation.MAX_MESSAGE_LENGTH
 import com.gamss.android.domain.conversation.Message
 import com.gamss.android.domain.conversation.MessageSender
 import com.gamss.android.domain.conversation.SendMessageUseCase
+import com.gamss.android.domain.conversation.nextCommentRevealGapMillis
 import com.gamss.android.domain.emotion.ConversationEmotionAccumulator
 import com.gamss.android.domain.summary.SummarizeDiaryUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -134,7 +134,7 @@ class ChatRoomViewModel @Inject constructor(
                         replyTarget = state.replyTarget.takeIf { it?.messageId != sending.replyToMessageId },
                     )
                 }
-                startRevealing()
+                launchCommentReveal()
                 sent.commentStatus.toUserMessage()?.let { postSideEffect(ChatRoomSideEffect.ShowToast(it)) }
             }
             // 실패해도 입력은 지우지 않는다. 사용자가 쓴 내용을 잃지 않게.
@@ -225,11 +225,11 @@ class ChatRoomViewModel @Inject constructor(
         }
     }
 
-    /** 대기 중인 댓글을 간격을 두고 하나씩 노출한다. */
-    private fun startRevealing() {
+    /** 호출자 intent 와 별개 코루틴으로 띄운다. 취소 핸들이 필요해 [revealJob] 에 담는다. */
+    private fun launchCommentReveal() {
         revealJob = intent {
             while (state.pendingComments.isNotEmpty()) {
-                delay(CommentRevealPolicy.nextGapMillis())
+                delay(nextCommentRevealGapMillis())
                 reduce {
                     val next = state.pendingComments.firstOrNull()
                     if (next == null) {
@@ -245,7 +245,10 @@ class ChatRoomViewModel @Inject constructor(
         }
     }
 
-    /** 남은 댓글을 기다리지 않고 한꺼번에 붙인다. */
+    /**
+     * 남은 댓글을 기다리지 않고 한꺼번에 붙인다. 호출자 intent 안에서 돈다.
+     * Orbit 의 subIntent 가 같은 역할이지만 @OrbitExperimental 이라 Syntax 확장으로 둔다.
+     */
     private suspend fun ChatRoomSyntax.flushPendingComments() {
         revealJob?.cancelAndJoin()
         revealJob = null

@@ -27,6 +27,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -56,7 +57,7 @@ class ChatRoomRevealTest {
         viewModel.test(this) {
             expectInitialState()
             containerHost.onInputChange(INPUT)
-            skipItems(1)
+            skipItems(1) // input 반영
 
             containerHost.onSend()
             skipItems(1) // isSending = true
@@ -73,7 +74,7 @@ class ChatRoomRevealTest {
             val secondReveal = awaitState()
             assertEquals(COMMENT_ID_BASE + 2, secondReveal.messages.last().id)
             assertTrue(secondReveal.pendingComments.isEmpty())
-            assertTrue(!secondReveal.isReceiving)
+            assertFalse(secondReveal.isReceiving)
 
             cancelAndIgnoreRemainingItems()
         }
@@ -86,15 +87,15 @@ class ChatRoomRevealTest {
         viewModel.test(this) {
             expectInitialState()
             containerHost.onInputChange(INPUT)
-            skipItems(1)
+            skipItems(1) // input 반영
             containerHost.onSend()
-            skipItems(1)
+            skipItems(1) // isSending = true
 
             val afterSend = awaitState()
             assertEquals(3, afterSend.pendingComments.size)
 
             containerHost.onInputChange(INPUT)
-            skipItems(1)
+            skipItems(1) // input 반영
             containerHost.onSend()
 
             // 노출이 취소되고 남은 3개가 한 번에 붙는다.
@@ -113,9 +114,9 @@ class ChatRoomRevealTest {
         viewModel.test(this) {
             expectInitialState()
             containerHost.onInputChange(INPUT)
-            skipItems(1)
+            skipItems(1) // input 반영
             containerHost.onSend()
-            skipItems(1)
+            skipItems(1) // isSending = true
 
             val afterSend = awaitState()
             assertTrue(afterSend.pendingComments.isEmpty())
@@ -138,6 +139,8 @@ class ChatRoomRevealTest {
     }
 
     private class FakeConversationRepository(private val commentCount: Int) : ConversationRepository {
+        private var sentCount = 0
+
         override suspend fun sendMessage(
             conversationId: Long?,
             content: String,
@@ -146,7 +149,12 @@ class ChatRoomRevealTest {
             val roomId = conversationId ?: ROOM_ID
             return AppResult.Success(
                 SentMessage(
-                    message = message(USER_ID + sentCount++, roomId, MessageSender.User, content),
+                    message = message(
+                        id = USER_ID + sentCount++,
+                        conversationId = roomId,
+                        sender = MessageSender.User,
+                        content = content,
+                    ),
                     commentStatus = CommentGenerationStatus.DONE,
                     comments = List(commentCount) { index ->
                         message(
@@ -165,8 +173,6 @@ class ChatRoomRevealTest {
 
         override suspend fun endConversation(conversationId: Long): AppResult<Unit> =
             AppResult.Success(Unit)
-
-        private var sentCount = 0
     }
 
     private object FakeSummarizer : DiarySummarizer {
@@ -178,7 +184,9 @@ class ChatRoomRevealTest {
             conversationId: Long,
             character: EmotionCharacter,
             summary: String,
-        ): AppResult<Card> = AppResult.Success(Card(character, summary, "대사"))
+        ): AppResult<Card> = AppResult.Success(
+            Card(character = character, summary = summary, message = "대사"),
+        )
     }
 
     private object FakeClassifier : EmotionClassifier {

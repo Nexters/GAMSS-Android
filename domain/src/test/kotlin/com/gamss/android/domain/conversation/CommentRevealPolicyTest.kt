@@ -24,9 +24,9 @@ class CommentRevealPolicyTest {
     fun 상한을_포함하도록_exclusive_경계에_하나를_더한다() {
         val random = CapturingRandom()
 
-        CommentRevealPolicy.nextGapMillis(random)
+        nextCommentRevealGapMillis(random)
 
-        assertEquals(CommentRevealPolicy.MAX_GAP_MILLIS + 1, random.capturedUntil)
+        assertEquals(COMMENT_REVEAL_MAX_GAP_MILLIS + 1, random.capturedUntil)
     }
 
     @Test
@@ -34,11 +34,8 @@ class CommentRevealPolicyTest {
         val random = Random(SEED)
 
         repeat(SAMPLES) {
-            val gap = CommentRevealPolicy.nextGapMillis(random)
-            assertTrue(
-                "gap=$gap",
-                gap in CommentRevealPolicy.MIN_GAP_MILLIS..CommentRevealPolicy.MAX_GAP_MILLIS,
-            )
+            val gap = nextCommentRevealGapMillis(random)
+            assertTrue("gap=$gap", gap in COMMENT_REVEAL_MIN_GAP_MILLIS..COMMENT_REVEAL_MAX_GAP_MILLIS)
         }
     }
 
