@@ -57,8 +57,7 @@ class SendMessageUseCaseTest {
         val repository = RecordingRepository()
 
         val result = SendMessageUseCase(repository)(
-            conversationId = 7L,
-            content = "  오늘 억울한 일이 있었어  ",
+            SendMessageUseCase.Params(conversationId = 7L, content = "  오늘 억울한 일이 있었어  "),
         )
 
         assertTrue(repository.called)
@@ -73,9 +72,7 @@ class SendMessageUseCaseTest {
         val repository = RecordingRepository()
 
         SendMessageUseCase(repository)(
-            conversationId = 7L,
-            content = "고마워",
-            replyToMessageId = 42L,
+            SendMessageUseCase.Params(conversationId = 7L, content = "고마워", replyToMessageId = 42L),
         )
 
         assertEquals(42L, repository.sentReplyToMessageId)
@@ -85,7 +82,9 @@ class SendMessageUseCaseTest {
     fun 공백만_있는_입력은_서버를_호출하지_않고_실패한다() = runBlocking {
         val repository = RecordingRepository()
 
-        val result = SendMessageUseCase(repository)(conversationId = null, content = "   \n ")
+        val result = SendMessageUseCase(repository)(
+            SendMessageUseCase.Params(conversationId = null, content = "   \n "),
+        )
 
         assertFalse(repository.called)
         assertTrue(result is AppResult.Failure)
@@ -96,8 +95,7 @@ class SendMessageUseCaseTest {
         val repository = RecordingRepository()
 
         val result = SendMessageUseCase(repository)(
-            conversationId = null,
-            content = "가".repeat(MAX_MESSAGE_LENGTH + 1),
+            SendMessageUseCase.Params(conversationId = null, content = "가".repeat(MAX_MESSAGE_LENGTH + 1)),
         )
 
         assertFalse(repository.called)
@@ -109,8 +107,7 @@ class SendMessageUseCaseTest {
         val repository = RecordingRepository()
 
         val result = SendMessageUseCase(repository)(
-            conversationId = null,
-            content = "가".repeat(MAX_MESSAGE_LENGTH),
+            SendMessageUseCase.Params(conversationId = null, content = "가".repeat(MAX_MESSAGE_LENGTH)),
         )
 
         assertTrue(repository.called)

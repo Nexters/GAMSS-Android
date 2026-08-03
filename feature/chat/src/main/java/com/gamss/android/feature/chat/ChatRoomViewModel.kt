@@ -112,9 +112,11 @@ class ChatRoomViewModel @Inject constructor(
         val sending = pending ?: return@intent
 
         val result = sendMessage(
-            conversationId = state.conversationId,
-            content = sending.content,
-            replyToMessageId = sending.replyToMessageId,
+            SendMessageUseCase.Params(
+                conversationId = state.conversationId,
+                content = sending.content,
+                replyToMessageId = sending.replyToMessageId,
+            ),
         )
 
         when (result) {
@@ -206,7 +208,13 @@ class ChatRoomViewModel @Inject constructor(
         val result = if (conversationId == null || emotion == null || summary.isNullOrBlank()) {
             AppResult.Failure(IllegalStateException("Card input is not ready"))
         } else {
-            createCard(conversationId, emotion.character, summary)
+            createCard(
+                CreateCardUseCase.Params(
+                    conversationId = conversationId,
+                    character = emotion.character,
+                    summary = summary,
+                ),
+            )
         }
 
         // 이미 만들어진 카드는 다시 만들 수 없다. 재시도를 남기면 영구히 409 다.

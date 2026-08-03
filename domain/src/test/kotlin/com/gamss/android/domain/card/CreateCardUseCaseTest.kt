@@ -28,9 +28,11 @@ class CreateCardUseCaseTest {
         val repository = RecordingRepository()
 
         val result = CreateCardUseCase(repository)(
-            conversationId = 1L,
-            character = EmotionCharacter.ANGER,
-            summary = "가".repeat(MAX_CARD_SUMMARY_LENGTH + 50),
+            CreateCardUseCase.Params(
+                conversationId = 1L,
+                character = EmotionCharacter.ANGER,
+                summary = "가".repeat(MAX_CARD_SUMMARY_LENGTH + 50),
+            ),
         )
 
         assertEquals(MAX_CARD_SUMMARY_LENGTH, repository.sentSummary?.length)
@@ -42,9 +44,11 @@ class CreateCardUseCaseTest {
         val repository = RecordingRepository()
 
         CreateCardUseCase(repository)(
-            conversationId = 1L,
-            character = EmotionCharacter.WARM,
-            summary = "  오늘 억울한 일이 있었다  ",
+            CreateCardUseCase.Params(
+                conversationId = 1L,
+                character = EmotionCharacter.WARM,
+                summary = "  오늘 억울한 일이 있었다  ",
+            ),
         )
 
         assertEquals("오늘 억울한 일이 있었다", repository.sentSummary)
