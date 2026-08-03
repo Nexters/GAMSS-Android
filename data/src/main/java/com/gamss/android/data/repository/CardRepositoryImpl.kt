@@ -22,7 +22,7 @@ internal class CardRepositoryImpl @Inject constructor(
         character: EmotionCharacter,
         summary: String,
     ): AppResult<Card> {
-        val result = AppResult.of {
+        val result = runCatchingApiCall {
             val response = cardService.createCard(
                 CreateCardRequest(
                     conversationId = conversationId,
@@ -36,7 +36,7 @@ internal class CardRepositoryImpl @Inject constructor(
             is AppResult.Success -> result
             // 재시도해도 계속 409 이므로 호출부가 "다시 만들기"를 접을 수 있게 구분해서 알린다.
             is AppResult.Failure ->
-                if (result.throwable.isConflict()) {
+                if (result.throwable.hasErrorCode(CARD_ALREADY_EXISTS)) {
                     AppResult.Failure(CardAlreadyExistsException(result.throwable))
                 } else {
                     result

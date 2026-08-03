@@ -20,7 +20,7 @@ internal class ConversationRepositoryImpl @Inject constructor(
         conversationId: Long?,
         content: String,
         replyToMessageId: Long?,
-    ): AppResult<SentMessage> = AppResult.of {
+    ): AppResult<SentMessage> = runCatchingApiCall {
         val response = conversationService.saveMessage(
             SaveMessageRequest(
                 content = content,
@@ -31,14 +31,14 @@ internal class ConversationRepositoryImpl @Inject constructor(
         checkNotNull(response.data) { "No available saved message data" }.toDomain()
     }
 
-    override suspend fun getMessages(conversationId: Long): AppResult<List<Message>> = AppResult.of {
+    override suspend fun getMessages(conversationId: Long): AppResult<List<Message>> = runCatchingApiCall {
         val response = conversationService.getMessages(conversationId)
         checkNotNull(response.data) { "No available message data" }
             .mapNotNull(ConversationMessage::toDomain)
     }
 
     override suspend fun endConversation(conversationId: Long): AppResult<Unit> {
-        val result = AppResult.of {
+        val result = runCatchingApiCall {
             val response = conversationService.endConversation(conversationId)
             checkNotNull(response.data) { "No available conversation data" }
         }
@@ -46,7 +46,11 @@ internal class ConversationRepositoryImpl @Inject constructor(
             is AppResult.Success -> AppResult.Success(Unit)
             // 이미 종료된 방이면 목표는 달성된 상태다. 실패로 흘리면 카드 생성으로 넘어갈 수 없다.
             is AppResult.Failure ->
-                if (result.throwable.isConflict()) AppResult.Success(Unit) else result
+                if (result.throwable.hasErrorCode(CONVERSATION_ALREADY_ENDED)) {
+                    AppResult.Success(Unit)
+                } else {
+                    result
+                }
         }
     }
 }
