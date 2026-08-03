@@ -12,10 +12,6 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration.Companion.hours
 
-/**
- * 내장 사전과 원격 사전 중 version 이 큰 쪽을 쓴다. 원격 조회나 캐시 파싱이 실패해도
- * 내장 사전으로 계속 동작해야 하므로 이 클래스 밖으로 예외를 내보내지 않는다.
- */
 @Singleton
 internal class RiskLexiconRepositoryImpl @Inject constructor(
     private val bundled: BundledRiskLexiconDataSource,
@@ -36,10 +32,8 @@ internal class RiskLexiconRepositoryImpl @Inject constructor(
     }
 
     private suspend fun adopt(fetched: RiskLexiconDto) {
-        // 채택 여부와 무관하게 조회 시각을 남긴다. 남기지 않으면 TTL 이 갱신되지 않아 앱 실행마다 다시 조회한다.
         runSafely { local.markFetched(System.currentTimeMillis()) }
 
-        // 필드명이 바뀌거나 파싱이 어긋나면 빈 사전이 온다. 그대로 채택하면 감지가 통째로 꺼진다.
         if (fetched.terms.isEmpty() || fetched.agencies.isEmpty()) return
 
         mutex.withLock {
@@ -76,9 +70,6 @@ internal class RiskLexiconRepositoryImpl @Inject constructor(
 
     private suspend fun fetchRemoteOrNull(): RiskLexiconDto? = runSafely { remote.fetch() }
 
-    /**
-     * 사전 로딩 실패가 감지 실패로 이어지지 않도록 삼킨다. 취소만 그대로 전파한다.
-     */
     @Suppress("TooGenericExceptionCaught", "SwallowedException")
     private suspend fun <T> runSafely(block: suspend () -> T): T? =
         try {

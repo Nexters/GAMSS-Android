@@ -10,10 +10,6 @@ import org.junit.Assert.assertNotEquals
 import org.junit.Test
 import java.io.File
 
-/**
- * 실제로 앱에 실리는 사전을 검증한다. CRITICAL 은 사용자의 글을 차단하므로 오탐 하나의 비용이 크다.
- * 사전을 고칠 때마다 이 문장 목록으로 회귀를 잡는다.
- */
 class BundledRiskLexiconContentTest {
 
     private val lexicon = JSON
@@ -92,7 +88,6 @@ class BundledRiskLexiconContentTest {
             "그 회사에 목매고 있다",
             "손목 시계를 새로 샀다",
             "이 동네는 살기 좋다",
-            // 공백을 지우면 어절을 넘어 "자살"이 생기는 문장들
             "편의점에서 과자 살까 말까 고민했다",
             "요즘은 혼자 살아보니 편하다",
             "감자 살 때 크기를 봤다",

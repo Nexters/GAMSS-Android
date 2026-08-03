@@ -25,14 +25,12 @@ class EmotionViewModel @Inject constructor(
 
     fun onAnalyze() = intent {
         if (state.isRunning) return@intent
-        // 위험 감지가 사전 로딩으로 멈출 수 있으므로 그 앞에서 실행 중으로 바꿔 연타를 막는다.
         reduce { state.copy(isRunning = true, result = null, notRecognized = false, error = null) }
 
         val detection = detectRiskInText(state.input)
         if (detection.level != RiskLevel.NONE) {
             reduce { state.copy(riskDetection = detection) }
             if (detection.shouldBlock) {
-                // 차단해도 입력은 그대로 둔다. 안내를 닫았을 때 사용자가 쓴 글이 남아 있어야 한다.
                 reduce { state.copy(isRunning = false) }
                 return@intent
             }

@@ -9,9 +9,6 @@ import kotlinx.serialization.json.Json
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/**
- * 앱에 내장된 기본 사전. 네트워크와 캐시가 모두 없을 때의 최종 폴백이라 실패하면 그대로 던진다.
- */
 @Singleton
 internal class BundledRiskLexiconDataSource @Inject constructor(
     @param:ApplicationContext private val context: Context,

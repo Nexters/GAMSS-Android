@@ -10,12 +10,6 @@ import javax.inject.Inject
 import javax.inject.Provider
 import javax.inject.Singleton
 
-/**
- * 사전 전체를 문서 하나에 담아 읽기 1회로 끝낸다. 쓰기는 콘솔에서만 하고 클라이언트는 읽기만 한다.
- *
- * Firestore 인스턴스는 Provider 로 받는다. 생성 시점에 gRPC 채널과 네트워크 콜백이 함께 올라오므로,
- * 캐시가 신선해 조회를 건너뛰는 실행에서는 그 비용을 치르지 않게 한다.
- */
 @Singleton
 internal class FirestoreRiskLexiconDataSource @Inject constructor(
     private val firestoreProvider: Provider<FirebaseFirestore>,

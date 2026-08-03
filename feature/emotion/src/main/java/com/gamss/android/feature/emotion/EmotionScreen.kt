@@ -95,9 +95,6 @@ fun EmotionScreen(
     }
 }
 
-/**
- * 다이얼러를 열 수 없는 기기에서 버튼이 무반응으로 보이지 않도록 번호를 안내한다.
- */
 private fun Context.dialOrNotify(phoneNumber: String?) {
     if (phoneNumber == null) return
     if (!dial(phoneNumber)) {

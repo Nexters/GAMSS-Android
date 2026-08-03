@@ -37,10 +37,6 @@ internal fun RiskLexiconDto.toDomain(): RiskLexicon = RiskLexicon(
     agencies = agencies.filter { it.name.isNotBlank() }.map { it.toDomain() },
 )
 
-/**
- * 알 수 없는 등급 문자열은 차단하지 않는 WARNING 으로 강등한다.
- * 원격 사전의 오타가 곧바로 과차단이 되면 안 된다.
- */
 private fun RiskTermDto.toDomain(): RiskTerm = RiskTerm(
     term = term,
     level = when (level.uppercase()) {

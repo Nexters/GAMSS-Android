@@ -19,9 +19,6 @@ class GamssApplication : Application() {
     @Inject
     lateinit var refreshRiskLexicon: RefreshRiskLexiconUseCase
 
-    /**
-     * 백그라운드 초기화 작업의 실패가 앱을 죽이지 않게 한다.
-     */
     private val applicationScope = CoroutineScope(
         SupervisorJob() + Dispatchers.IO +
             CoroutineExceptionHandler { _, throwable ->
@@ -31,7 +28,6 @@ class GamssApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
-        // 위험 표현 사전은 화면 진입 전에 최신화해 둔다. 실패해도 내장 사전으로 동작한다.
         applicationScope.launch { refreshRiskLexicon() }
     }
 }

@@ -19,10 +19,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.gamss.android.domain.safety.SupportAgency
 
-/**
- * 위험 신호가 감지됐을 때 상담 창구를 안내한다.
- * isBlocking 이면 사용자의 글이 저장되지 않았다는 사실을 함께 알린다.
- */
 @Composable
 fun GamssSupportAgencyDialog(
     agencies: List<SupportAgency>,

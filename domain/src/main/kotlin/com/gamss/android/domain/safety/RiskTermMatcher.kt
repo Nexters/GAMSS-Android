@@ -4,11 +4,9 @@ import java.text.Normalizer
 import javax.inject.Inject
 
 /**
- * 공백과 구두점을 지운 뒤 부분 문자열로 찾으므로 "죽고 싶다", "죽.고.싶.다" 를 한 표현으로 본다.
- *
- * 두 글자 이하 표현은 어절 경계에서 시작할 때만 인정한다. 공백을 지우면 "과자 살까" 안에
- * "자살" 이, "혼자 살아보니" 안에도 "자살" 이 생겨 평범한 일기가 차단되기 때문이다.
- * safePhrases 구간은 먼저 마스킹해 "배고파 죽겠다" 류의 관용 표현을 걸러낸다.
+ * 공백과 구두점을 지운 뒤 부분 문자열로 찾되, 두 글자 이하 표현은 어절 경계에서 시작할 때만
+ * 인정한다. 공백을 지우면 "과자 살까" 와 "혼자 살아보니" 안에 "자살" 이 생겨 평범한 일기가
+ * 차단되기 때문이다. 세 글자 이상은 "죽고 싶다" 처럼 어절이 갈려도 잡아야 하므로 위치를 보지 않는다.
  */
 class RiskTermMatcher @Inject constructor() {
 
@@ -47,9 +45,6 @@ class RiskTermMatcher @Inject constructor() {
         }
     }
 
-    /**
-     * 알파벳과 숫자만 남긴 문자열, 그리고 각 어절의 첫 글자가 그 문자열에서 갖는 위치.
-     */
     private class NormalizedText(val value: String, val wordStarts: Set<Int>)
 
     private fun normalize(text: String): NormalizedText {
@@ -89,10 +84,7 @@ class RiskTermMatcher @Inject constructor() {
     }
 
     private companion object {
-        /** 어떤 위험 표현과도 겹치지 않는 대체 문자. 마스킹 후에도 위치가 밀리지 않게 길이를 보존한다. */
         const val MASK = ' '
-
-        /** 이 길이 이하의 표현은 어절 경계에서 시작할 때만 인정한다. */
         const val SHORT_TERM_LENGTH = 2
     }
 }

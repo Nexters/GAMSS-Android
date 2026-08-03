@@ -36,9 +36,6 @@ internal class RiskLexiconLocalDataSource @Inject constructor(
         }
     }
 
-    /**
-     * 원격 사전을 채택하지 않았더라도 조회에 성공했다면 시각만 갱신해 TTL 이 흐르게 한다.
-     */
     suspend fun markFetched(fetchedAtMillis: Long): Unit = withContext(Dispatchers.IO) {
         dataStore.edit { preferences ->
             preferences[FETCHED_AT_KEY] = fetchedAtMillis
