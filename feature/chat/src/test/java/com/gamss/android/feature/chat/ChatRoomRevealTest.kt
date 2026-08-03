@@ -1,24 +1,14 @@
 package com.gamss.android.feature.chat
 
 import com.gamss.android.core.common.AppResult
-import com.gamss.android.domain.card.Card
-import com.gamss.android.domain.card.CardRepository
-import com.gamss.android.domain.card.CreateCardUseCase
 import com.gamss.android.domain.conversation.CommentGenerationStatus
 import com.gamss.android.domain.conversation.ConversationRepository
-import com.gamss.android.domain.conversation.EndConversationUseCase
 import com.gamss.android.domain.conversation.GetMessagesUseCase
 import com.gamss.android.domain.conversation.Message
 import com.gamss.android.domain.conversation.MessageSender
 import com.gamss.android.domain.conversation.SendMessageUseCase
 import com.gamss.android.domain.conversation.SentMessage
-import com.gamss.android.domain.emotion.ClassificationResult
-import com.gamss.android.domain.emotion.ConversationEmotionAccumulator
 import com.gamss.android.domain.emotion.EmotionCharacter
-import com.gamss.android.domain.emotion.EmotionClassifier
-import com.gamss.android.domain.emotion.EmotionLabel
-import com.gamss.android.domain.summary.DiarySummarizer
-import com.gamss.android.domain.summary.SummarizeDiaryUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -131,10 +121,6 @@ class ChatRoomRevealTest {
         return ChatRoomViewModel(
             sendMessage = SendMessageUseCase(conversationRepository),
             getMessages = GetMessagesUseCase(conversationRepository),
-            endConversation = EndConversationUseCase(conversationRepository),
-            summarizeDiary = SummarizeDiaryUseCase(FakeSummarizer),
-            createCard = CreateCardUseCase(FakeCardRepository),
-            emotionAccumulator = ConversationEmotionAccumulator(FakeClassifier),
         )
     }
 
@@ -170,30 +156,6 @@ class ChatRoomRevealTest {
 
         override suspend fun getMessages(conversationId: Long): AppResult<List<Message>> =
             AppResult.Success(emptyList())
-
-        override suspend fun endConversation(conversationId: Long): AppResult<Unit> =
-            AppResult.Success(Unit)
-    }
-
-    private object FakeSummarizer : DiarySummarizer {
-        override suspend fun summarize(text: String): String = text
-    }
-
-    private object FakeCardRepository : CardRepository {
-        override suspend fun createCard(
-            conversationId: Long,
-            character: EmotionCharacter,
-            summary: String,
-        ): AppResult<Card> = AppResult.Success(
-            Card(character = character, summary = summary, message = "대사"),
-        )
-    }
-
-    private object FakeClassifier : EmotionClassifier {
-        override suspend fun classify(text: String): ClassificationResult {
-            val scores = EmotionLabel.entries.associate { it.koLabel to 0.1f }
-            return ClassificationResult(EmotionLabel.ANGER.koLabel, 0.1f, scores)
-        }
     }
 
     private companion object {

@@ -2,7 +2,6 @@ package com.gamss.android.data.remote.conversation
 
 import com.gamss.android.data.remote.conversation.model.request.SaveMessageRequest
 import com.gamss.android.data.remote.conversation.model.response.ConversationMessage
-import com.gamss.android.data.remote.conversation.model.response.ConversationResponse
 import com.gamss.android.data.remote.conversation.model.response.SaveMessageResponse
 import com.gamss.android.data.remote.model.response.ApiResponse
 import retrofit2.http.Body
@@ -18,9 +17,4 @@ internal interface ConversationService {
 
     @GET("/api/conversations/{conversationId}/messages")
     suspend fun getMessages(@Path("conversationId") conversationId: Long): ApiResponse<List<ConversationMessage>>
-
-    @POST("/api/conversations/{conversationId}/end")
-    suspend fun endConversation(
-        @Path("conversationId") conversationId: Long,
-    ): ApiResponse<ConversationResponse>
 }

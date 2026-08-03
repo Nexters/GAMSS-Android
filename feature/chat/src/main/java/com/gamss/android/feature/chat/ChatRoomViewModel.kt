@@ -2,19 +2,13 @@ package com.gamss.android.feature.chat
 
 import androidx.lifecycle.ViewModel
 import com.gamss.android.core.common.AppResult
-import com.gamss.android.core.common.getOrNull
-import com.gamss.android.domain.card.CardAlreadyExistsException
-import com.gamss.android.domain.card.CreateCardUseCase
 import com.gamss.android.domain.conversation.CommentGenerationStatus
-import com.gamss.android.domain.conversation.EndConversationUseCase
 import com.gamss.android.domain.conversation.GetMessagesUseCase
 import com.gamss.android.domain.conversation.MAX_MESSAGE_LENGTH
 import com.gamss.android.domain.conversation.Message
 import com.gamss.android.domain.conversation.MessageSender
 import com.gamss.android.domain.conversation.SendMessageUseCase
 import com.gamss.android.domain.conversation.nextCommentRevealGapMillis
-import com.gamss.android.domain.emotion.ConversationEmotionAccumulator
-import com.gamss.android.domain.summary.SummarizeDiaryUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancelAndJoin
@@ -31,10 +25,6 @@ private typealias ChatRoomSyntax = Syntax<ChatRoomState, ChatRoomSideEffect>
 class ChatRoomViewModel @Inject constructor(
     private val sendMessage: SendMessageUseCase,
     private val getMessages: GetMessagesUseCase,
-    private val endConversation: EndConversationUseCase,
-    private val summarizeDiary: SummarizeDiaryUseCase,
-    private val createCard: CreateCardUseCase,
-    private val emotionAccumulator: ConversationEmotionAccumulator,
 ) : ViewModel(),
     ContainerHost<ChatRoomState, ChatRoomSideEffect> {
 
@@ -43,7 +33,7 @@ class ChatRoomViewModel @Inject constructor(
     private var started = false
 
     /**
-     * 노출 중인 코루틴. 새 전송이나 종료가 오면 취소하고 남은 댓글을 즉시 붙인다.
+     * 노출 중인 코루틴. 새 전송이 오면 취소하고 남은 댓글을 즉시 붙인다.
      * 네트워크 응답 스레드에서 쓰고 이벤트 루프 스레드에서 읽으므로 @Volatile 이 필요하다.
      */
     @Volatile
@@ -61,13 +51,9 @@ class ChatRoomViewModel @Inject constructor(
     private fun loadMessages(conversationId: Long) = intent {
         reduce { state.copy(conversationId = conversationId, isLoading = true) }
         when (val result = getMessages(conversationId)) {
-            is AppResult.Success -> {
-                // 배치와 증분 결과가 같으므로 복원 시 순서대로 다시 누적하면 된다.
-                emotionAccumulator.reset()
-                emotionAccumulator.addAll(result.data.userContents())
+            is AppResult.Success ->
                 // 서버 목록엔 댓글이 다 들어 있다. 큐를 남기면 같은 댓글이 두 번 붙어 key 가 충돌한다.
                 reduce { state.copy(isLoading = false, messages = result.data, pendingComments = emptyList()) }
-            }
             is AppResult.Failure -> {
                 reduce { state.copy(isLoading = false) }
                 postSideEffect(ChatRoomSideEffect.ShowToast(LOAD_FAILED))
@@ -122,8 +108,6 @@ class ChatRoomViewModel @Inject constructor(
         when (result) {
             is AppResult.Success -> {
                 val sent = result.data
-                // isSending 이 풀리기 전에 누적해야 canEnd 가 누적기를 보호한다.
-                emotionAccumulator.add(sent.message.content)
                 reduce {
                     state.copy(
                         isSending = false,
@@ -144,93 +128,6 @@ class ChatRoomViewModel @Inject constructor(
                 reduce { state.copy(isSending = false) }
                 postSideEffect(ChatRoomSideEffect.ShowToast(SEND_FAILED))
             }
-        }
-    }
-
-    fun onEndRequest() = intent {
-        // 검사와 상태 전환을 한 reduce 안에서 처리해야 연타로 두 번 시작되지 않는다.
-        var retryCard = false
-        reduce {
-            retryCard = state.canEnd && state.isEnded
-            when {
-                // 이미 종료된 뒤 카드만 실패한 경우라 다시 물어볼 게 없다.
-                retryCard -> state.copy(isFinishing = true)
-                state.canEnd -> state.copy(showEndConfirm = true)
-                else -> state
-            }
-        }
-        if (retryCard) runCardCreation()
-    }
-
-    fun onEndCancel() = intent {
-        reduce { state.copy(showEndConfirm = false) }
-    }
-
-    fun onCardDismiss() = intent {
-        reduce { state.copy(card = null) }
-    }
-
-    /** 감정은 전송할 때마다 누적해 둔 값이라 여기서 추론하지 않는다. */
-    fun onEndConfirm() = intent {
-        var accepted = false
-        reduce {
-            accepted = state.canEnd
-            if (accepted) {
-                state.copy(showEndConfirm = false, isFinishing = true)
-            } else {
-                state.copy(showEndConfirm = false)
-            }
-        }
-        if (!accepted) return@intent
-
-        // 카드를 만드는 동안 댓글이 하나씩 튀어나오면 어색하다.
-        flushPendingComments()
-
-        val ended = endConversation(requireNotNull(state.conversationId))
-        if (ended is AppResult.Failure) {
-            reduce { state.copy(isFinishing = false) }
-            postSideEffect(ChatRoomSideEffect.ShowToast(END_FAILED))
-            return@intent
-        }
-        reduce { state.copy(isEnded = true) }
-
-        runCardCreation()
-    }
-
-    /** 실패하면 [ChatRoomState.endedButCardFailed] 로 재시도 경로를 남긴다. */
-    private suspend fun ChatRoomSyntax.runCardCreation() {
-        reduce { state.copy(isFinishing = true, endedButCardFailed = false) }
-
-        val conversationId = state.conversationId
-        val emotion = emotionAccumulator.result()
-        // 요약 실패도 카드 실패로 접는다. 감정·요약 중 하나라도 없으면 카드를 만들 수 없다.
-        val summary = summarizeDiary(state.messages.userContents()).getOrNull()
-        val result = if (conversationId == null || emotion == null || summary.isNullOrBlank()) {
-            AppResult.Failure(IllegalStateException("Card input is not ready"))
-        } else {
-            createCard(
-                CreateCardUseCase.Params(
-                    conversationId = conversationId,
-                    character = emotion.character,
-                    summary = summary,
-                ),
-            )
-        }
-
-        // 이미 만들어진 카드는 다시 만들 수 없다. 재시도를 남기면 영구히 409 다.
-        val alreadyExists = (result as? AppResult.Failure)?.throwable is CardAlreadyExistsException
-        val card = result.getOrNull()
-        reduce {
-            state.copy(
-                isFinishing = false,
-                card = card,
-                endedButCardFailed = card == null && !alreadyExists,
-            )
-        }
-        if (card == null) {
-            postSideEffect(
-                ChatRoomSideEffect.ShowToast(if (alreadyExists) CARD_ALREADY_MADE else CARD_FAILED),
-            )
         }
     }
 
@@ -288,11 +185,5 @@ class ChatRoomViewModel @Inject constructor(
     private companion object {
         const val LOAD_FAILED = "대화를 불러오지 못했어요"
         const val SEND_FAILED = "메시지를 보내지 못했어요"
-        const val END_FAILED = "대화를 끝내지 못했어요"
-        const val CARD_FAILED = "카드를 만들지 못했어요. 다시 시도해 주세요."
-        const val CARD_ALREADY_MADE = "이 대화의 카드는 이미 만들어졌어요"
     }
 }
-
-private fun List<Message>.userContents(): List<String> =
-    filter { it.sender == MessageSender.User }.map { it.content }
