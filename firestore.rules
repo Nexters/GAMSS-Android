@@ -1,0 +1,17 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // 위험 표현 사전. 클라이언트는 읽기만 한다. 사전 수정은 콘솔이나 서버에서만 이뤄져야 한다.
+    match /app_config/{document} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+
+    // 명시적으로 허용한 경로 외에는 모두 차단한다.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -1,0 +1,76 @@
+{
+  "version": 1,
+  "terms": [
+    { "term": "자살", "level": "CRITICAL" },
+    { "term": "자살방법", "level": "CRITICAL" },
+    { "term": "죽는방법", "level": "CRITICAL" },
+    { "term": "죽고싶", "level": "CRITICAL" },
+    { "term": "죽어버리", "level": "CRITICAL" },
+    { "term": "죽어야겠", "level": "CRITICAL" },
+    { "term": "자해", "level": "CRITICAL" },
+    { "term": "손목그", "level": "CRITICAL" },
+    { "term": "목매달", "level": "CRITICAL" },
+    { "term": "목을매", "level": "CRITICAL" },
+    { "term": "극단적선택", "level": "CRITICAL" },
+    { "term": "살고싶지않", "level": "CRITICAL" },
+    { "term": "유서를", "level": "CRITICAL" },
+    { "term": "유서써", "level": "CRITICAL" },
+    { "term": "유서남", "level": "CRITICAL" },
+    { "term": "번개탄", "level": "WARNING" },
+    { "term": "사라지고싶", "level": "WARNING" },
+    { "term": "없어지고싶", "level": "WARNING" },
+    { "term": "살기싫", "level": "WARNING" },
+    { "term": "살아갈이유", "level": "WARNING" },
+    { "term": "다포기하고싶", "level": "WARNING" },
+    { "term": "아무도날필요", "level": "WARNING" },
+    { "term": "혼자남겨진것같", "level": "WARNING" }
+  ],
+  "safePhrases": [
+    "죽고싶지않",
+    "자살예방",
+    "자살률",
+    "자살골",
+    "자살패스",
+    "유서깊",
+    "배고파죽",
+    "웃겨죽",
+    "좋아죽",
+    "귀여워죽",
+    "더워죽",
+    "추워죽",
+    "졸려죽",
+    "힘들어죽",
+    "심심해죽",
+    "죽을맛",
+    "죽을만큼",
+    "죽도록",
+    "죽여주는",
+    "자해공갈"
+  ],
+  "agencies": [
+    {
+      "id": "kr-109",
+      "name": "자살예방 상담전화",
+      "description": "24시간 무료 전문 상담",
+      "phoneNumber": "109",
+      "url": null,
+      "priority": 1
+    },
+    {
+      "id": "kr-mental-health",
+      "name": "정신건강 상담전화",
+      "description": "정신건강 위기 상담",
+      "phoneNumber": "1577-0199",
+      "url": null,
+      "priority": 2
+    },
+    {
+      "id": "kr-youth",
+      "name": "청소년 상담전화",
+      "description": "청소년 전문 상담",
+      "phoneNumber": "1388",
+      "url": null,
+      "priority": 3
+    }
+  ]
+}
