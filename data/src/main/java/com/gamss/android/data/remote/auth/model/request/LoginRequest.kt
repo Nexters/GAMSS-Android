@@ -1,10 +1,8 @@
 package com.gamss.android.data.remote.auth.model.request
 
-import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class LoginRequest(
-    @SerialName("userId")
-    val userId: String,
+internal data class LoginRequest(
+    val idToken: String,
 )

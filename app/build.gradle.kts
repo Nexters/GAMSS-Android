@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
 plugins {
     alias(libs.plugins.gamss.android.application)
     alias(libs.plugins.gamss.android.compose)
@@ -9,6 +11,10 @@ plugins {
 
 android {
     namespace = "com.gamss.android.app"
+
+    buildFeatures {
+        resValues = true
+    }
 
     defaultConfig {
         applicationId = "com.gamss.android"
@@ -22,11 +28,18 @@ android {
     }
 
     androidResources {
-        // .tflite 를 비압축 저장해야 assets.openFd + FileChannel.map(mmap) 가능
+        // 모델을 비압축 저장해야 assets.openFd + FileChannel.map(mmap) 로 힙 복사 없이 로드 가능.
+        // (int8 모델은 고엔트로피라 비압축 저장에 따른 APK 크기 증가가 미미하다.)
         noCompress += "tflite"
+        noCompress += "onnx"
     }
 
     buildTypes {
+        getByName("debug") {
+            applicationIdSuffix = ".dev"
+            versionNameSuffix = "-dev"
+            resValue("string", "app_name", "GAMSS Dev")
+        }
         getByName("release") {
             isMinifyEnabled = false
         }
@@ -43,14 +56,21 @@ dependencies {
     implementation(projects.feature.chat)
     implementation(projects.feature.calendar)
     implementation(projects.feature.emotion)
+    implementation(projects.feature.login)
 
     implementation(libs.compose.material.icons.core)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.lifecycle.viewmodel.ktx)
     implementation(libs.androidx.lifecycle.viewmodel.navigation3)
+    implementation(libs.androidx.hilt.navigation.compose)
 
     implementation(libs.navigation3.runtime)
     implementation(libs.navigation3.ui)
+
+    implementation(libs.orbit.core)
+    implementation(libs.orbit.viewmodel)
+    implementation(libs.orbit.compose)
 
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.crashlytics)
