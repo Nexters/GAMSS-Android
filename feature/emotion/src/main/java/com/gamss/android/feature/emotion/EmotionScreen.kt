@@ -1,5 +1,7 @@
 package com.gamss.android.feature.emotion
 
+import android.content.Context
+import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -20,10 +22,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.gamss.android.core.ui.GamssSupportAgencyDialog
+import com.gamss.android.core.ui.dial
 import com.gamss.android.domain.emotion.EmotionResult
 import org.orbitmvi.orbit.compose.collectAsState
+import com.gamss.android.core.ui.R as CoreUiR
 
 private const val MAX_DIARY_LEN = 140
 private const val PERCENT = 100
@@ -34,6 +40,16 @@ fun EmotionScreen(
     viewModel: EmotionViewModel = hiltViewModel(),
 ) {
     val state by viewModel.collectAsState()
+    val context = LocalContext.current
+
+    state.riskDetection?.let { detection ->
+        GamssSupportAgencyDialog(
+            agencies = detection.agencies,
+            isBlocking = detection.shouldBlock,
+            onCallClick = { agency -> context.dialOrNotify(agency.phoneNumber) },
+            onDismiss = viewModel::onRiskGuidanceDismiss,
+        )
+    }
 
     Scaffold(
         topBar = { TopAppBar(title = { Text("오늘의 일기 감정") }) },
@@ -76,6 +92,20 @@ fun EmotionScreen(
             state.error?.let { Text("오류: $it") }
             state.result?.let { ResultCard(it) }
         }
+    }
+}
+
+/**
+ * 다이얼러를 열 수 없는 기기에서 버튼이 무반응으로 보이지 않도록 번호를 안내한다.
+ */
+private fun Context.dialOrNotify(phoneNumber: String?) {
+    if (phoneNumber == null) return
+    if (!dial(phoneNumber)) {
+        Toast.makeText(
+            this,
+            getString(CoreUiR.string.safety_call_unavailable, phoneNumber),
+            Toast.LENGTH_LONG,
+        ).show()
     }
 }
 
