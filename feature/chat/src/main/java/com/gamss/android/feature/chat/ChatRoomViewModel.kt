@@ -42,7 +42,11 @@ class ChatRoomViewModel @Inject constructor(
 
     private var started = false
 
-    /** 노출 중인 코루틴. 새 전송이나 종료가 오면 취소하고 남은 댓글을 즉시 붙인다. */
+    /**
+     * 노출 중인 코루틴. 새 전송이나 종료가 오면 취소하고 남은 댓글을 즉시 붙인다.
+     * 네트워크 응답 스레드에서 쓰고 이벤트 루프 스레드에서 읽으므로 @Volatile 이 필요하다.
+     */
+    @Volatile
     private var revealJob: Job? = null
 
     /** 화면 재구성으로 다시 호출돼도 재조회하지 않는다. */
@@ -61,7 +65,8 @@ class ChatRoomViewModel @Inject constructor(
                 // 배치와 증분 결과가 같으므로 복원 시 순서대로 다시 누적하면 된다.
                 emotionAccumulator.reset()
                 emotionAccumulator.addAll(result.data.userContents())
-                reduce { state.copy(isLoading = false, messages = result.data) }
+                // 서버 목록엔 댓글이 다 들어 있다. 큐를 남기면 같은 댓글이 두 번 붙어 key 가 충돌한다.
+                reduce { state.copy(isLoading = false, messages = result.data, pendingComments = emptyList()) }
             }
             is AppResult.Failure -> {
                 reduce { state.copy(isLoading = false) }

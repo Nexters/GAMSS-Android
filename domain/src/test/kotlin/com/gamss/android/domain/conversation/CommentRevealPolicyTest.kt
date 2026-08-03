@@ -1,10 +1,33 @@
 package com.gamss.android.domain.conversation
 
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import kotlin.random.Random
 
 class CommentRevealPolicyTest {
+
+    /** nextLong 의 until 은 exclusive 다. 상한을 포함하려면 MAX + 1 을 넘겨야 한다. */
+    private class CapturingRandom : Random() {
+        var capturedUntil: Long? = null
+            private set
+
+        override fun nextBits(bitCount: Int): Int = 0
+
+        override fun nextLong(from: Long, until: Long): Long {
+            capturedUntil = until
+            return from
+        }
+    }
+
+    @Test
+    fun 상한을_포함하도록_exclusive_경계에_하나를_더한다() {
+        val random = CapturingRandom()
+
+        CommentRevealPolicy.nextGapMillis(random)
+
+        assertEquals(CommentRevealPolicy.MAX_GAP_MILLIS + 1, random.capturedUntil)
+    }
 
     @Test
     fun 간격은_항상_정책_범위_안이다() {
