@@ -89,6 +89,7 @@ dependencies {
     implementation(projects.core.designsystem)
     implementation(projects.feature.home)
     implementation(projects.feature.chat)
+    implementation(projects.feature.chatSearch)
     implementation(projects.feature.calendar)
     implementation(projects.feature.login)
     implementation(projects.feature.setting)
@@ -107,6 +108,7 @@ dependencies {
     implementation(libs.orbit.core)
     implementation(libs.orbit.viewmodel)
     implementation(libs.orbit.compose)
+    implementation(libs.kotlinx.serialization.json)
 
     implementation(libs.kotlinx.coroutines.android)
 

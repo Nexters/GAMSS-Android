@@ -1,0 +1,106 @@
+{
+  "pages": [
+    {
+      "content": [
+        {
+          "conversationId": 1001,
+          "title": "출근길에 느낀 답답함",
+          "status": "ACTIVE",
+          "createdAt": "2026-08-04T08:12:00Z"
+        },
+        {
+          "conversationId": 1002,
+          "title": "점심시간 감정 기록",
+          "status": "ACTIVE",
+          "createdAt": "2026-08-04T12:31:00Z"
+        },
+        {
+          "conversationId": 1003,
+          "title": "회의 후 정리한 생각",
+          "status": "ACTIVE",
+          "createdAt": "2026-08-04T15:05:00Z"
+        },
+        {
+          "conversationId": 1004,
+          "title": "친구와 나눈 고민",
+          "status": "ACTIVE",
+          "createdAt": "2026-08-03T22:18:00Z"
+        },
+        {
+          "conversationId": 1005,
+          "title": "잠들기 전 감정 점검",
+          "status": "ACTIVE",
+          "createdAt": "2026-08-03T23:40:00Z"
+        }
+      ],
+      "page": 0,
+      "size": 5,
+      "totalElements": 13,
+      "totalPages": 3
+    },
+    {
+      "content": [
+        {
+          "conversationId": 1006,
+          "title": "아침 루틴과 기분 변화",
+          "status": "ACTIVE",
+          "createdAt": "2026-08-02T07:55:00Z"
+        },
+        {
+          "conversationId": 1007,
+          "title": "미뤄둔 일을 끝낸 날",
+          "status": "ACTIVE",
+          "createdAt": "2026-08-02T18:22:00Z"
+        },
+        {
+          "conversationId": 1008,
+          "title": "가족 대화 이후의 마음",
+          "status": "ACTIVE",
+          "createdAt": "2026-08-01T20:10:00Z"
+        },
+        {
+          "conversationId": 1009,
+          "title": "퇴근 후 산책 기록",
+          "status": "ACTIVE",
+          "createdAt": "2026-08-01T21:03:00Z"
+        },
+        {
+          "conversationId": 1010,
+          "title": "감정이 가라앉은 순간",
+          "status": "ACTIVE",
+          "createdAt": "2026-07-31T23:15:00Z"
+        }
+      ],
+      "page": 1,
+      "size": 5,
+      "totalElements": 13,
+      "totalPages": 3
+    },
+    {
+      "content": [
+        {
+          "conversationId": 1011,
+          "title": "오랜만에 편안했던 저녁",
+          "status": "ACTIVE",
+          "createdAt": "2026-07-31T19:30:00Z"
+        },
+        {
+          "conversationId": 1012,
+          "title": "작은 성취감",
+          "status": "ACTIVE",
+          "createdAt": "2026-07-30T17:46:00Z"
+        },
+        {
+          "conversationId": 1013,
+          "title": "불안했지만 지나간 일",
+          "status": "ACTIVE",
+          "createdAt": "2026-07-30T09:20:00Z"
+        }
+      ],
+      "page": 2,
+      "size": 5,
+      "totalElements": 13,
+      "totalPages": 3
+    }
+  ]
+}
