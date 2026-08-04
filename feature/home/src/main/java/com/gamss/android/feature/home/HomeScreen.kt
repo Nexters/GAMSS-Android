@@ -28,6 +28,7 @@ import org.orbitmvi.orbit.compose.collectSideEffect
 
 @Composable
 fun HomeScreen(
+    onNavigateToSetting: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val state by viewModel.collectAsState()
@@ -37,6 +38,7 @@ fun HomeScreen(
         when (sideEffect) {
             is HomeSideEffect.ShowToast ->
                 Toast.makeText(context, sideEffect.message, Toast.LENGTH_SHORT).show()
+            is HomeSideEffect.NavigateToSetting -> onNavigateToSetting()
         }
     }
 
@@ -56,8 +58,8 @@ fun HomeScreen(
                         style = MaterialTheme.typography.headlineLarge,
                     )
                     Spacer(modifier = Modifier.height(16.dp))
-                    Button(onClick = viewModel::loadGreeting) {
-                        Text("새로고침")
+                    Button(onClick = viewModel::navigateToSetting) {
+                        Text("설정으로 이동")
                     }
                     Spacer(modifier = Modifier.height(16.dp))
                     // 정식 설정 화면이 추가되기 전까지 사용하는 임시 로그아웃 버튼
