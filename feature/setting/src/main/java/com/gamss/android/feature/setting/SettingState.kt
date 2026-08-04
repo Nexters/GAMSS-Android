@@ -1,5 +1,9 @@
 package com.gamss.android.feature.setting
 
-data class SettingState (
+import com.gamss.android.domain.user.UserProfile
+
+data class SettingState(
     val isLoading: Boolean = false,
+    val userProfile: UserProfile? = null,
+    val nicknameInput: String = "",
 )

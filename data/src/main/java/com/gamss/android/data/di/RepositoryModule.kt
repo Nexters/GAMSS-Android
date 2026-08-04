@@ -9,7 +9,7 @@ import com.gamss.android.data.local.auth.TokenProviderImpl
 import com.gamss.android.data.repository.AuthRepositoryImpl
 import com.gamss.android.data.repository.UserRepositoryImpl
 import com.gamss.android.domain.repository.AuthRepository
-import com.gamss.android.domain.repository.UserRepository
+import com.gamss.android.domain.user.UserRepository
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
