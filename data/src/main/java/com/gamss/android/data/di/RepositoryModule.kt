@@ -79,6 +79,11 @@ internal abstract class RepositoryModule {
         userRepositoryImpl: UserRepositoryImpl,
     ): UserRepository
 
+    @Binds
+    abstract fun bindChattingRoomSearchRepository(
+        chattingRoomSearchRepositoryImpl: ChattingRoomSearchRepositoryImpl,
+    ): ChattingRoomSearchRepository
+
     companion object {
         @Provides
         @Singleton
