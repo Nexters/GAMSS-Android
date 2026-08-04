@@ -1,6 +1,15 @@
 {
-  "version": 1,
+  "version": 2,
   "terms": [
+    { "term": "죽을거야", "level": "CRITICAL" },
+    { "term": "죽을게", "level": "CRITICAL" },
+    { "term": "죽을래", "level": "CRITICAL" },
+    { "term": "죽어버릴", "level": "CRITICAL" },
+    { "term": "죽어야지", "level": "CRITICAL" },
+    { "term": "죽고말", "level": "CRITICAL" },
+    { "term": "죽는게낫", "level": "CRITICAL" },
+    { "term": "죽으면좋겠", "level": "CRITICAL" },
+    { "term": "죽는수밖에", "level": "CRITICAL" },
     { "term": "자살", "level": "CRITICAL" },
     { "term": "자살방법", "level": "CRITICAL" },
     { "term": "죽는방법", "level": "CRITICAL" },
@@ -26,6 +35,15 @@
     { "term": "혼자남겨진것같", "level": "WARNING" }
   ],
   "safePhrases": [
+    "죽을것같",
+    "죽을거같",
+    "죽을뻔",
+    "죽을각오",
+    "죽을힘",
+    "죽을죄",
+    "너죽을래",
+    "죽을때까지",
+    "죽을고생",
     "죽고싶지않",
     "자살예방",
     "자살률",
