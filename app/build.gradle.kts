@@ -34,6 +34,25 @@ android {
         noCompress += "onnx"
     }
 
+    packaging {
+        resources {
+            // DJL 토크나이저가 데스크톱 바이너리까지 배포한다. 안드로이드는 lib/arm64-v8a 만 쓴다.
+            excludes += setOf(
+                "native/lib/win-x86_64/**",
+                "native/lib/osx-aarch64/**",
+                "native/lib/osx-x86_64/**",
+                "native/lib/linux-x86_64/**",
+                "com/sun/jna/aix-ppc/**",
+                "com/sun/jna/aix-ppc64/**",
+                "com/sun/jna/win32-x86/**",
+                "com/sun/jna/win32-x86-64/**",
+                "com/sun/jna/darwin-aarch64/**",
+                "com/sun/jna/darwin-x86-64/**",
+                "META-INF/INDEX.LIST",
+            )
+        }
+    }
+
     buildTypes {
         getByName("debug") {
             applicationIdSuffix = ".dev"
