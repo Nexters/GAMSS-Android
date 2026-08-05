@@ -1,6 +1,15 @@
 {
-  "version": 2,
+  "version": 3,
   "terms": [
+    { "term": "차라리죽", "level": "CRITICAL" },
+    { "term": "죽어야편", "level": "CRITICAL" },
+    { "term": "죽는게답", "level": "CRITICAL" },
+    { "term": "다끝내버리고싶", "level": "CRITICAL" },
+    { "term": "죽었으면좋겠", "level": "WARNING" },
+    { "term": "나만없으면", "level": "WARNING" },
+    { "term": "태어나지말았", "level": "WARNING" },
+    { "term": "살아있을이유", "level": "WARNING" },
+    { "term": "없어지는게낫", "level": "WARNING" },
     { "term": "죽을거야", "level": "CRITICAL" },
     { "term": "죽을게", "level": "CRITICAL" },
     { "term": "죽을래", "level": "CRITICAL" },
