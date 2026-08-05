@@ -1,9 +1,12 @@
 package com.gamss.android.data.repository
 
 import com.gamss.android.core.common.AppResult
+import com.gamss.android.core.common.mapFailure
+import com.gamss.android.core.common.network.ApiException
 import com.gamss.android.data.remote.user.UserService
 import com.gamss.android.data.remote.user.model.request.UpdateNicknameRequest
 import com.gamss.android.data.remote.user.model.response.toDomain
+import com.gamss.android.domain.user.NicknameUpdateException
 import com.gamss.android.domain.user.UserProfile
 import com.gamss.android.domain.user.UserRepository
 import javax.inject.Inject
@@ -18,6 +21,8 @@ internal class UserRepositoryImpl @Inject constructor(
         return runCatchingApiCall {
             val response = userService.updateNickname(UpdateNicknameRequest(nickname = nickname))
             checkNotNull(response.data) { "No available nickname data" }.toDomain()
+        }.mapFailure {
+            it.toNicknameUpdateException()
         }
     }
 
@@ -32,6 +37,18 @@ internal class UserRepositoryImpl @Inject constructor(
             checkNotNull(userService.getUserInfo().data) { "No available user info data" }.toDomain()
         }
     }
-
-
 }
+
+private fun Throwable.toNicknameUpdateException(): Throwable =
+    if (this is ApiException.Http) {
+        when (code) {
+            ERROR_INVALID_INPUT -> NicknameUpdateException.MissingNickname()
+            ERROR_INVALID_NICKNAME -> NicknameUpdateException.InvalidNickname()
+            else -> this
+        }
+    } else {
+        this
+    }
+
+private const val ERROR_INVALID_INPUT = "INVALID_INPUT"
+private const val ERROR_INVALID_NICKNAME = "INVALID_NICKNAME"

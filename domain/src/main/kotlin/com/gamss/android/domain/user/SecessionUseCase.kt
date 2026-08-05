@@ -9,7 +9,6 @@ class SecessionUseCase @Inject constructor(
     private val userRepository: UserRepository,
     private val authRepository: AuthRepository,
 ) : NoParamUseCase<AppResult<Unit>> {
-
     override suspend fun invoke(): AppResult<Unit> {
         return when (val result = userRepository.secession()) {
             is AppResult.Success -> authRepository.logout()

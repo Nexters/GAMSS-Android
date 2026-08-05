@@ -21,6 +21,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.gamss.android.core.common.network.ApiException
+import com.gamss.android.domain.user.NicknameUpdateException
 import com.gamss.android.domain.user.UpdateNicknameUseCase
 import com.gamss.android.domain.user.UserProfile
 import org.orbitmvi.orbit.compose.collectAsState
@@ -55,6 +56,7 @@ fun SettingScreen(
         GetUserInfoSection(
             userProfile = state.userProfile,
             onLoadUserInfo = viewModel::loadUserInfo,
+            enabled = !state.isLoading,
         )
 
         HorizontalDivider(modifier = Modifier.padding(vertical = 24.dp))
@@ -63,11 +65,15 @@ fun SettingScreen(
             nicknameInput = state.nicknameInput,
             onNicknameInputChange = viewModel::onNicknameInputChange,
             onUpdateNickname = viewModel::updateNickname,
+            enabled = !state.isLoading,
         )
 
         HorizontalDivider(modifier = Modifier.padding(vertical = 24.dp))
 
-        SecessionSection(onSecession = viewModel::secession)
+        SecessionSection(
+            onSecession = viewModel::secession,
+            enabled = !state.isLoading,
+        )
     }
 }
 
@@ -75,10 +81,11 @@ fun SettingScreen(
 private fun GetUserInfoSection(
     userProfile: UserProfile?,
     onLoadUserInfo: () -> Unit,
+    enabled: Boolean,
 ) {
     Text(
         modifier = Modifier.padding(top = 16.dp),
-        text = "1. GetUserInfoUseCase",
+        text = "1. 사용자 정보 조회",
         style = MaterialTheme.typography.titleMedium,
     )
     Button(
@@ -86,6 +93,7 @@ private fun GetUserInfoSection(
             .fillMaxWidth()
             .padding(top = 8.dp),
         onClick = onLoadUserInfo,
+        enabled = enabled,
     ) {
         Text("내 정보 조회")
     }
@@ -109,9 +117,10 @@ private fun UpdateNicknameSection(
     nicknameInput: String,
     onNicknameInputChange: (String) -> Unit,
     onUpdateNickname: () -> Unit,
+    enabled: Boolean,
 ) {
     Text(
-        text = "2. UpdateNicknameUseCase",
+        text = "2. 닉네임 변경",
         style = MaterialTheme.typography.titleMedium,
     )
     OutlinedTextField(
@@ -131,6 +140,7 @@ private fun UpdateNicknameSection(
             .fillMaxWidth()
             .padding(top = 8.dp),
         onClick = onUpdateNickname,
+        enabled = enabled,
     ) {
         Text("닉네임 변경")
     }
@@ -139,9 +149,10 @@ private fun UpdateNicknameSection(
 @Composable
 private fun SecessionSection(
     onSecession: () -> Unit,
+    enabled: Boolean,
 ) {
     Text(
-        text = "3. SecessionUseCase",
+        text = "3. 탈퇴",
         style = MaterialTheme.typography.titleMedium,
     )
     Button(
@@ -149,6 +160,7 @@ private fun SecessionSection(
             .fillMaxWidth()
             .padding(top = 8.dp),
         onClick = onSecession,
+        enabled = enabled,
     ) {
         Text("회원 탈퇴")
     }
@@ -164,11 +176,11 @@ private fun SettingSideEffect.toMessage(): String =
 
 private fun Throwable.toUpdateNicknameFailureMessage(): String =
     when (this) {
-        is UpdateNicknameUseCase.NicknameUpdateException.MissingNickname ->
+        is NicknameUpdateException.MissingNickname ->
             "닉네임을 입력해주세요"
 
-        is UpdateNicknameUseCase.NicknameUpdateException.InvalidNickname ->
-            "닉네임은 2~20자이며 사용할 수 없는 단어는 포함할 수 없어요"
+        is NicknameUpdateException.InvalidNickname ->
+            "닉네임은 2~20자이며 금칙어는 포함할 수 없어요"
 
         is ApiException.Network -> "네트워크 연결을 확인해주세요"
         else -> "닉네임 변경에 실패했어요"

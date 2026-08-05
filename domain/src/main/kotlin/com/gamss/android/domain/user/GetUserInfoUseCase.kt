@@ -6,6 +6,6 @@ import javax.inject.Inject
 
 class GetUserInfoUseCase @Inject constructor(
     private val userRepository: UserRepository,
-): NoParamUseCase<AppResult<UserProfile>> {
+) : NoParamUseCase<AppResult<UserProfile>> {
     override suspend fun invoke(): AppResult<UserProfile> = userRepository.getUserInfo()
 }

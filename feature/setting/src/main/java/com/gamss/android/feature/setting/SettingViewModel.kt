@@ -43,24 +43,34 @@ class SettingViewModel @Inject constructor(
     }
 
     fun updateNickname() = intent {
+        reduce { state.copy(isLoading = true) }
         when (val result = updateNicknameUseCase(state.nicknameInput)) {
             is AppResult.Success -> {
                 reduce {
-                    state.copy(userProfile = result.data, nicknameInput = result.data.nickname)
+                    state.copy(
+                        isLoading = false,
+                        userProfile = result.data,
+                        nicknameInput = result.data.nickname,
+                    )
                 }
                 postSideEffect(SettingSideEffect.UpdateNicknameSuccess)
             }
 
             is AppResult.Failure -> {
+                reduce { state.copy(isLoading = false) }
                 postSideEffect(SettingSideEffect.UpdateNicknameFailure(result.throwable))
             }
         }
     }
 
     fun secession() = intent {
+        reduce { state.copy(isLoading = true) }
         when (secessionUseCase()) {
             is AppResult.Success -> Unit // 화면 이동은 AuthRepository의 세션 상태 변경을 통해 처리된다.
-            is AppResult.Failure -> postSideEffect(SettingSideEffect.SecessionFailure)
+            is AppResult.Failure -> {
+                reduce { state.copy(isLoading = false) }
+                postSideEffect(SettingSideEffect.SecessionFailure)
+            }
         }
     }
 }

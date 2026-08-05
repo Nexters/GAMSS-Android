@@ -4,7 +4,7 @@ import com.gamss.android.domain.user.UserProfile
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class UserInfo(
+internal data class UserInfoResponse(
     val id: Long,
     val email: String,
     val nickname: String,
@@ -12,7 +12,7 @@ data class UserInfo(
     val createdAt: String,
 )
 
-internal fun UserInfo.toDomain(): UserProfile =
+internal fun UserInfoResponse.toDomain(): UserProfile =
     UserProfile(
         id = id,
         email = email,
