@@ -56,9 +56,7 @@ class ChatRoomViewModel @Inject constructor(
             is AppResult.Success -> {
                 // 서버 목록엔 댓글이 다 들어 있다. 큐를 남기면 같은 댓글이 두 번 붙어 key 가 충돌한다.
                 reduce { state.copy(isLoading = false, messages = result.data, pendingComments = emptyList()) }
-                // 압축은 온디바이스 요약을 태울 수 있어 목록 표시를 막지 않도록 뒤에 둔다.
-                summaryStore.reset()
-                summaryStore.addAll(result.data.userContents())
+                summaryStore.restore(result.data.userUtterances())
             }
             is AppResult.Failure -> {
                 // 이전 대화가 남아 있으면 다음 전송의 압축본에 섞인다.
@@ -109,7 +107,7 @@ class ChatRoomViewModel @Inject constructor(
                 conversationId = state.conversationId,
                 content = sending.content,
                 replyToMessageId = sending.replyToMessageId,
-                contextSummary = summaryStore.current(),
+                contextSummary = summaryStore.currentContextSummary(),
             ),
         )
 
@@ -197,5 +195,5 @@ class ChatRoomViewModel @Inject constructor(
     }
 }
 
-private fun List<Message>.userContents(): List<String> =
+private fun List<Message>.userUtterances(): List<String> =
     filter { it.sender == MessageSender.User }.map { it.content }

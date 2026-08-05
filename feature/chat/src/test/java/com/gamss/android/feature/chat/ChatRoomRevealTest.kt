@@ -45,7 +45,6 @@ class ChatRoomRevealTest {
         val viewModel = viewModel(commentCount = 3)
 
         viewModel.test(this) {
-            expectInitialState()
             containerHost.onInputChange(INPUT)
             skipItems(1) // input 반영
 
@@ -75,7 +74,6 @@ class ChatRoomRevealTest {
         val viewModel = viewModel(commentCount = 4)
 
         viewModel.test(this) {
-            expectInitialState()
             containerHost.onInputChange(INPUT)
             skipItems(1) // input 반영
             containerHost.onSend()
@@ -101,7 +99,6 @@ class ChatRoomRevealTest {
         val viewModel = viewModel(commentCount = 1)
 
         viewModel.test(this) {
-            expectInitialState()
             containerHost.onInputChange(INPUT)
             skipItems(1) // input 반영
             containerHost.onSend()
@@ -121,7 +118,6 @@ class ChatRoomRevealTest {
         val viewModel = viewModel(repository)
 
         viewModel.test(this) {
-            expectInitialState()
             containerHost.onInputChange(INPUT)
             skipItems(1) // input 반영
             containerHost.onSend()
@@ -134,7 +130,7 @@ class ChatRoomRevealTest {
             skipItems(1) // isSending = true
             awaitState() // 전송 성공 반영
 
-            assertEquals(listOf(null, INPUT), repository.sentSummaries)
+            assertEquals(listOf(null, INPUT), repository.sentContextSummaries)
 
             cancelAndIgnoreRemainingItems()
         }
@@ -145,21 +141,23 @@ class ChatRoomRevealTest {
         val repository = FakeConversationRepository(commentCount = 1, failing = true)
         val viewModel = viewModel(repository)
 
+        // 상태와 side effect 가 한 스트림으로 합쳐지므로 타입을 고정해 받는다.
         viewModel.test(this) {
-            expectInitialState()
             containerHost.onInputChange(INPUT)
-            skipItems(1) // input 반영
+            awaitState()
             containerHost.onSend()
-            skipItems(1) // isSending = true
-            awaitState() // 실패 반영
+            awaitState()
+            awaitState()
+            expectSideEffect(ChatRoomSideEffect.ShowToast(SEND_FAILED_MESSAGE))
+
             containerHost.onSend()
-            skipItems(1) // isSending = true
-            awaitState() // 실패 반영
+            awaitState()
+            awaitState()
+            expectSideEffect(ChatRoomSideEffect.ShowToast(SEND_FAILED_MESSAGE))
 
             // 서버에 남지 않은 발화가 압축본에 들어가면 다음 대화 맥락이 어긋난다.
-            assertEquals(listOf(null, null), repository.sentSummaries)
-
-            cancelAndIgnoreRemainingItems()
+            assertEquals(listOf(null, null), repository.sentContextSummaries)
+            expectNoItems()
         }
     }
 
@@ -191,7 +189,7 @@ class ChatRoomRevealTest {
     ) : ConversationRepository {
         private var sentCount = 0
 
-        val sentSummaries = mutableListOf<String?>()
+        val sentContextSummaries = mutableListOf<String?>()
 
         override suspend fun sendMessage(
             conversationId: Long?,
@@ -199,7 +197,7 @@ class ChatRoomRevealTest {
             replyToMessageId: Long?,
             contextSummary: String?,
         ): AppResult<SentMessage> {
-            sentSummaries += contextSummary
+            sentContextSummaries += contextSummary
             if (failing) return AppResult.Failure(IllegalStateException("send failed"))
             val roomId = conversationId ?: ROOM_ID
             return AppResult.Success(
@@ -229,6 +227,7 @@ class ChatRoomRevealTest {
 
     private companion object {
         const val INPUT = "오늘 억울한 일이 있었어"
+        const val SEND_FAILED_MESSAGE = "메시지를 보내지 못했어요"
         const val SECOND_INPUT = "팀장이 갑자기 일을 더 줬어"
         const val ROOM_ID = 7L
         const val USER_ID = 100L
