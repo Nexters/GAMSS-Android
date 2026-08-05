@@ -51,6 +51,7 @@ dependencies {
     implementation(projects.data)
     implementation(projects.core.common)
     implementation(projects.core.ui)
+    implementation(projects.core.designsystem)
     implementation(projects.feature.home)
     // 검증용 화면이라 debug 에서만 진입 가능하다.
     debugImplementation(projects.feature.chat)

@@ -20,8 +20,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.gamss.android.app.ui.theme.GamssTheme
 import com.gamss.android.core.common.AppResult
+import com.gamss.android.core.designsystem.theme.GamssTheme
 import com.gamss.android.data.remote.conversation.model.response.ConversationMessage
 import com.gamss.android.data.remote.conversation.model.response.userUtterances
 import com.gamss.android.domain.card.CardInput
