@@ -20,6 +20,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.gamss.android.core.common.network.ApiException
+import com.gamss.android.domain.user.UpdateNicknameUseCase
 import com.gamss.android.domain.user.UserProfile
 import org.orbitmvi.orbit.compose.collectAsState
 import org.orbitmvi.orbit.compose.collectSideEffect
@@ -32,10 +34,7 @@ fun SettingScreen(
     val context = LocalContext.current
 
     viewModel.collectSideEffect { sideEffect ->
-        when (sideEffect) {
-            is SettingSideEffect.ShowToast ->
-                Toast.makeText(context, sideEffect.message, Toast.LENGTH_SHORT).show()
-        }
+        Toast.makeText(context, sideEffect.toMessage(), Toast.LENGTH_SHORT).show()
     }
 
     Column(
@@ -120,7 +119,11 @@ private fun UpdateNicknameSection(
             .fillMaxWidth()
             .padding(top = 8.dp),
         value = nicknameInput,
-        onValueChange = onNicknameInputChange,
+        onValueChange = { nickname ->
+            if (nickname.codePointCount(0, nickname.length) <= UpdateNicknameUseCase.MAX_NICKNAME_LENGTH) {
+                onNicknameInputChange(nickname)
+            }
+        },
         label = { Text("닉네임") },
     )
     Button(
@@ -150,3 +153,23 @@ private fun SecessionSection(
         Text("회원 탈퇴")
     }
 }
+
+private fun SettingSideEffect.toMessage(): String =
+    when (this) {
+        SettingSideEffect.LoadUserInfoFailure -> "사용자 정보를 불러오지 못했어요"
+        SettingSideEffect.UpdateNicknameSuccess -> "닉네임이 변경되었어요"
+        is SettingSideEffect.UpdateNicknameFailure -> throwable.toUpdateNicknameFailureMessage()
+        SettingSideEffect.SecessionFailure -> "회원 탈퇴에 실패했어요"
+    }
+
+private fun Throwable.toUpdateNicknameFailureMessage(): String =
+    when (this) {
+        is UpdateNicknameUseCase.NicknameUpdateException.MissingNickname ->
+            "닉네임을 입력해주세요"
+
+        is UpdateNicknameUseCase.NicknameUpdateException.InvalidNickname ->
+            "닉네임은 2~20자이며 사용할 수 없는 단어는 포함할 수 없어요"
+
+        is ApiException.Network -> "네트워크 연결을 확인해주세요"
+        else -> "닉네임 변경에 실패했어요"
+    }
