@@ -8,4 +8,5 @@ android {
 
 dependencies {
     implementation(projects.domain)
+    implementation(libs.androidx.paging.compose)
 }

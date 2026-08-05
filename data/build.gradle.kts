@@ -60,6 +60,7 @@ dependencies {
     implementation(libs.firebase.firestore)
     implementation(libs.firebase.config)
     implementation(libs.kotlinx.coroutines.play.services)
+    implementation(libs.androidx.paging.common)
 
     // 온디바이스 감정 분류(KoELECTRA INT8). LiteRT 추론, 토크나이저는 순수 Kotlin.
     implementation(libs.litert) {
@@ -83,5 +84,6 @@ dependencies {
 
     androidTestImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
+    androidTestImplementation("androidx.test:runner:1.6.2")
     androidTestImplementation(libs.androidx.test.runner)
 }

@@ -1,4 +1,4 @@
-package com.gamss.android.domain.chat
+package com.gamss.android.domain.chattingsearch
 
 data class ChattingRoomSearch(
     val rooms: List<ChattingRoomSummary>,

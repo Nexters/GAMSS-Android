@@ -1,12 +1,10 @@
 package com.gamss.android.domain.repository
 
-import com.gamss.android.core.common.AppResult
-import com.gamss.android.domain.chat.ChattingRoomSearch
-import com.gamss.android.domain.chat.ChattingRoomSearchQuery
+import androidx.paging.PagingData
+import com.gamss.android.domain.chattingsearch.ChattingRoomSummary
+import kotlinx.coroutines.flow.Flow
 
 interface ChattingRoomSearchRepository {
 
-    suspend fun searchChattingRooms(
-        query: ChattingRoomSearchQuery,
-    ): AppResult<ChattingRoomSearch>
+    fun searchChattingRooms(keyword: String): Flow<PagingData<ChattingRoomSummary>>
 }

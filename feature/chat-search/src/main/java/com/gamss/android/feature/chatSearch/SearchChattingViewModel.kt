@@ -1,17 +1,23 @@
 package com.gamss.android.feature.chatSearch
 
 import androidx.lifecycle.ViewModel
-import com.gamss.android.core.common.AppResult
-import com.gamss.android.core.common.network.ApiException
-import com.gamss.android.domain.chat.ChattingRoomSearchQuery
-import com.gamss.android.domain.chat.SearchChattingRoomsUseCase
-import com.gamss.android.domain.model.SessionExpiredException
+import androidx.lifecycle.viewModelScope
+import androidx.paging.PagingData
+import androidx.paging.cachedIn
+import com.gamss.android.domain.chattingsearch.ChattingRoomSummary
+import com.gamss.android.domain.chattingsearch.SearchChattingRoomsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.flatMapLatest
 import org.orbitmvi.orbit.ContainerHost
 import org.orbitmvi.orbit.viewmodel.container
 import javax.inject.Inject
 
 @HiltViewModel
+@OptIn(ExperimentalCoroutinesApi::class)
 class SearchChattingViewModel @Inject constructor(
     private val searchChattingRooms: SearchChattingRoomsUseCase,
 ) : ViewModel(), ContainerHost<SearchChattingState, SearchChattingSideEffect> {
@@ -20,83 +26,34 @@ class SearchChattingViewModel @Inject constructor(
         SearchChattingState(),
     )
 
+    private val searchRequests = MutableStateFlow<SearchRequest?>(null)
+
+    val chattingRooms: Flow<PagingData<ChattingRoomSummary>> = searchRequests
+        .filterNotNull()
+        .flatMapLatest { request -> searchChattingRooms(request.keyword) }
+        .cachedIn(viewModelScope)
+
     fun onKeywordChanged(keyword: String) = intent {
         reduce { state.copy(keyword = keyword) }
     }
 
     fun search() = intent {
         val keyword = state.keyword.trim()
-        if (keyword.isEmpty() || state.isLoading) return@intent
+        if (keyword.isEmpty()) return@intent
 
+        val nextGeneration = state.searchGeneration + 1
         reduce {
             state.copy(
                 keyword = keyword,
-                rooms = emptyList(),
-                isLoading = true,
-                isAppending = false,
                 hasSearched = true,
-                page = ChattingRoomSearchQuery.DEFAULT_PAGE,
-                canLoadMore = false,
+                searchGeneration = nextGeneration,
             )
         }
-
-        when (val result = searchChattingRooms(ChattingRoomSearchQuery(keyword = keyword))) {
-            is AppResult.Success -> {
-                val data = result.data
-                reduce {
-                    state.copy(
-                        rooms = data.rooms,
-                        isLoading = false,
-                        page = data.page,
-                        canLoadMore = data.hasNextPage,
-                    )
-                }
-            }
-
-            is AppResult.Failure -> {
-                reduce { state.copy(isLoading = false) }
-                postSideEffect(SearchChattingSideEffect.ShowToast(result.throwable.toSearchFailureMessage()))
-            }
-        }
+        searchRequests.value = SearchRequest(keyword, nextGeneration)
     }
 
-    fun loadNextPage() = intent {
-        if (!state.canLoadMore || state.isLoading || state.isAppending) return@intent
-
-        val nextPage = state.page + 1
-        reduce { state.copy(isAppending = true) }
-
-        when (
-            val result = searchChattingRooms(
-                ChattingRoomSearchQuery(
-                    keyword = state.keyword,
-                    page = nextPage,
-                ),
-            )
-        ) {
-            is AppResult.Success -> {
-                val data = result.data
-                reduce {
-                    state.copy(
-                        rooms = state.rooms + data.rooms,
-                        isAppending = false,
-                        page = data.page,
-                        canLoadMore = data.hasNextPage,
-                    )
-                }
-            }
-
-            is AppResult.Failure -> {
-                reduce { state.copy(isAppending = false) }
-                postSideEffect(SearchChattingSideEffect.ShowToast(result.throwable.toSearchFailureMessage()))
-            }
-        }
-    }
-
-    private fun Throwable.toSearchFailureMessage(): String = when (this) {
-        is SessionExpiredException -> "세션이 만료되었어요. 다시 로그인해 주세요"
-        is ApiException.Network -> "네트워크 연결을 확인해 주세요"
-        is ApiException.Http -> message ?: "채팅방 검색에 실패했어요"
-        else -> "채팅방 검색에 실패했어요"
-    }
+    private data class SearchRequest(
+        val keyword: String,
+        val generation: Long,
+    )
 }

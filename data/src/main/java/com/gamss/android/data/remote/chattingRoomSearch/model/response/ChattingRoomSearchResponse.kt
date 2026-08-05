@@ -1,11 +1,11 @@
 package com.gamss.android.data.remote.chattingRoomSearch.model.response
 
-import com.gamss.android.domain.chat.ChattingRoomSearch
-import com.gamss.android.domain.chat.ChattingRoomSummary
+import com.gamss.android.domain.chattingsearch.ChattingRoomSearch
+import com.gamss.android.domain.chattingsearch.ChattingRoomSummary
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class ChattingRoomSearchResponse(
+internal data class ChattingRoomSearchResponse(
     val content: List<ChattingRoomResponse>,
     val page: Int,
     val size: Int,
@@ -14,7 +14,7 @@ data class ChattingRoomSearchResponse(
 )
 
 @Serializable
-data class ChattingRoomResponse(
+internal data class ChattingRoomResponse(
     val conversationId: Long,
     val title: String,
     val status: String,
@@ -30,7 +30,7 @@ internal fun ChattingRoomSearchResponse.toDomain(): ChattingRoomSearch =
         totalPages = totalPages,
     )
 
-private fun ChattingRoomResponse.toDomain(): ChattingRoomSummary =
+internal fun ChattingRoomResponse.toDomain(): ChattingRoomSummary =
     ChattingRoomSummary(
         conversationId = conversationId,
         title = title,
