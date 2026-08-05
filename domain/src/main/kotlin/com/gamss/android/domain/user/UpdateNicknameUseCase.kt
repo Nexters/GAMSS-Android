@@ -23,12 +23,10 @@ class UpdateNicknameUseCase @Inject constructor(
     }
 
     private fun validate(nickname: String): NicknameUpdateException? {
-        val nicknameLength = nickname.codePointCount(0, nickname.length)
-
         return when {
             nickname.isBlank() -> NicknameUpdateException.MissingNickname()
-            nicknameLength < MIN_NICKNAME_LENGTH -> NicknameUpdateException.InvalidNickname()
-            nicknameLength > MAX_NICKNAME_LENGTH -> NicknameUpdateException.InvalidNickname()
+            nickname.length < MIN_NICKNAME_LENGTH -> NicknameUpdateException.InvalidNickname()
+            nickname.length > MAX_NICKNAME_LENGTH -> NicknameUpdateException.InvalidNickname()
             else -> null
         }
     }

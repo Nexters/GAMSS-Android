@@ -120,7 +120,7 @@ private fun UpdateNicknameSection(
             .padding(top = 8.dp),
         value = nicknameInput,
         onValueChange = { nickname ->
-            if (nickname.codePointCount(0, nickname.length) <= UpdateNicknameUseCase.MAX_NICKNAME_LENGTH) {
+            if (nickname.length <= UpdateNicknameUseCase.MAX_NICKNAME_LENGTH) {
                 onNicknameInputChange(nickname)
             }
         },
