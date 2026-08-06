@@ -6,6 +6,7 @@ import com.gamss.android.data.BuildConfig
 import com.gamss.android.data.auth.AUTHORIZATION_HEADER
 import com.gamss.android.data.auth.TokenAuthenticator
 import com.gamss.android.data.auth.TokenInterceptor
+import com.gamss.android.data.debug.provideChattingRoomSearchDummyInterceptor
 import com.gamss.android.data.remote.auth.AuthService
 import com.gamss.android.data.remote.gamssJson
 import com.gamss.android.data.remote.chattingRoomSearch.ChattingRoomSearchService
@@ -71,6 +72,8 @@ internal object NetworkModule {
         loggingInterceptor: HttpLoggingInterceptor,
     ): OkHttpClient {
         return OkHttpClient.Builder()
+            // 채팅방 검색 API만 가로채 더미 응답으로 대체한다(디버그 전용, 릴리즈에서는 no-op).
+            .addInterceptor(provideChattingRoomSearchDummyInterceptor())
             .addInterceptor(tokenInterceptor)
             .authenticator(tokenAuthenticator)
             .addInterceptor(loggingInterceptor)
