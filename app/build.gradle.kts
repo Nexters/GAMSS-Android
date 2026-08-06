@@ -51,6 +51,7 @@ dependencies {
     implementation(projects.data)
     implementation(projects.core.common)
     implementation(projects.core.ui)
+    implementation(projects.core.designsystem)
     implementation(projects.feature.home)
     implementation(projects.feature.chat)
     implementation(projects.feature.calendar)

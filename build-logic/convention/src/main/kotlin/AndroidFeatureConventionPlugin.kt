@@ -21,6 +21,7 @@ class AndroidFeatureConventionPlugin : Plugin<Project> {
                 "implementation"(libs.findLibrary("orbit-core").get())
                 "implementation"(libs.findLibrary("orbit-viewmodel").get())
                 "implementation"(libs.findLibrary("orbit-compose").get())
+                "implementation"(project(":core:designsystem"))
                 "testImplementation"(libs.findLibrary("junit").get())
                 "testImplementation"(libs.findLibrary("orbit-test").get())
                 "androidTestImplementation"(libs.findLibrary("androidx-junit").get())
