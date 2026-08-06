@@ -3,6 +3,7 @@ package com.gamss.android.feature.chat
 import com.gamss.android.core.common.AppResult
 import com.gamss.android.domain.conversation.CommentGenerationStatus
 import com.gamss.android.domain.conversation.ConversationRepository
+import com.gamss.android.domain.conversation.ConversationSession
 import com.gamss.android.domain.conversation.ConversationSummaryStore
 import com.gamss.android.domain.conversation.GetMessagesUseCase
 import com.gamss.android.domain.conversation.Message
@@ -164,11 +165,13 @@ class ChatRoomRevealTest {
 
     private fun viewModel(conversationRepository: FakeConversationRepository): ChatRoomViewModel {
         return ChatRoomViewModel(
-            sendMessage = SendMessageUseCase(conversationRepository),
-            getMessages = GetMessagesUseCase(conversationRepository),
-            summaryStore = ConversationSummaryStore(
-                summarizer = PassThroughSummarizer,
-                tokenCounter = CharLengthTokenCounter,
+            session = ConversationSession(
+                sendMessage = SendMessageUseCase(conversationRepository),
+                getMessages = GetMessagesUseCase(conversationRepository),
+                summaryStore = ConversationSummaryStore(
+                    summarizer = PassThroughSummarizer,
+                    tokenCounter = CharLengthTokenCounter,
+                ),
             ),
         )
     }

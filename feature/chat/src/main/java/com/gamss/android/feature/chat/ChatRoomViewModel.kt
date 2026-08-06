@@ -3,12 +3,10 @@ package com.gamss.android.feature.chat
 import androidx.lifecycle.ViewModel
 import com.gamss.android.core.common.AppResult
 import com.gamss.android.domain.conversation.CommentGenerationStatus
-import com.gamss.android.domain.conversation.ConversationSummaryStore
-import com.gamss.android.domain.conversation.GetMessagesUseCase
+import com.gamss.android.domain.conversation.ConversationSession
 import com.gamss.android.domain.conversation.MAX_MESSAGE_LENGTH
 import com.gamss.android.domain.conversation.Message
 import com.gamss.android.domain.conversation.MessageSender
-import com.gamss.android.domain.conversation.SendMessageUseCase
 import com.gamss.android.domain.conversation.nextCommentRevealGapMillis
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
@@ -24,9 +22,7 @@ private typealias ChatRoomSyntax = Syntax<ChatRoomState, ChatRoomSideEffect>
 
 @HiltViewModel
 class ChatRoomViewModel @Inject constructor(
-    private val sendMessage: SendMessageUseCase,
-    private val getMessages: GetMessagesUseCase,
-    private val summaryStore: ConversationSummaryStore,
+    private val session: ConversationSession,
 ) : ViewModel(),
     ContainerHost<ChatRoomState, ChatRoomSideEffect> {
 
@@ -47,13 +43,11 @@ class ChatRoomViewModel @Inject constructor(
 
     private fun loadMessages(conversationId: Long) = intent {
         reduce { state.copy(conversationId = conversationId, isLoading = true) }
-        when (val result = getMessages(conversationId)) {
-            is AppResult.Success -> {
+        when (val result = session.restore(conversationId)) {
+            is AppResult.Success ->
+                // 서버 목록엔 댓글이 다 들어 있다. 큐를 남기면 같은 댓글이 두 번 붙어 key 가 충돌한다.
                 reduce { state.copy(isLoading = false, messages = result.data, pendingComments = emptyList()) }
-                summaryStore.restore(result.data.userUtterances())
-            }
             is AppResult.Failure -> {
-                summaryStore.reset()
                 reduce { state.copy(isLoading = false) }
                 postSideEffect(ChatRoomSideEffect.ShowToast(LOAD_FAILED))
             }
@@ -92,13 +86,10 @@ class ChatRoomViewModel @Inject constructor(
         }
         val sending = pending ?: return@intent
 
-        val result = sendMessage(
-            SendMessageUseCase.Params(
-                conversationId = state.conversationId,
-                content = sending.content,
-                replyToMessageId = sending.replyToMessageId,
-                contextSummary = summaryStore.currentContextSummary(),
-            ),
+        val result = session.send(
+            conversationId = state.conversationId,
+            content = sending.content,
+            replyToMessageId = sending.replyToMessageId,
         )
 
         when (result) {
@@ -116,7 +107,7 @@ class ChatRoomViewModel @Inject constructor(
                 }
                 launchCommentReveal()
                 sent.commentStatus.toUserMessage()?.let { postSideEffect(ChatRoomSideEffect.ShowToast(it)) }
-                summaryStore.add(sent.message.content)
+                session.compactSummary()
             }
             is AppResult.Failure -> {
                 reduce { state.copy(isSending = false) }
@@ -175,6 +166,3 @@ class ChatRoomViewModel @Inject constructor(
         const val SEND_FAILED = "메시지를 보내지 못했어요"
     }
 }
-
-private fun List<Message>.userUtterances(): List<String> =
-    filter { it.sender == MessageSender.User }.map { it.content }

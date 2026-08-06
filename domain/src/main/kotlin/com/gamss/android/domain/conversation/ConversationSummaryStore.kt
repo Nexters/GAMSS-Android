@@ -25,11 +25,11 @@ class ConversationSummaryStore @Inject constructor(
 
     private var nextChunkCandidate = FIRST_CHUNK_CANDIDATE
 
-    suspend fun add(utterance: String) {
+    /** 발화만 적재한다. 요약은 [compact] 에서 돈다. */
+    suspend fun append(utterance: String) {
         val trimmed = utterance.trim()
         if (trimmed.isEmpty()) return
         stateMutex.withLock { utterances += trimmed }
-        compact()
     }
 
     suspend fun restore(history: List<String>) {
@@ -61,7 +61,7 @@ class ConversationSummaryStore @Inject constructor(
 
     suspend fun reset() = stateMutex.withLock { clearLocked() }
 
-    private suspend fun compact() = compactionMutex.withLock {
+    suspend fun compact() = compactionMutex.withLock {
         var hasCandidate = true
         while (hasCandidate) {
             hasCandidate = compactNextCandidate()

@@ -36,6 +36,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -53,6 +54,7 @@ import org.orbitmvi.orbit.compose.collectSideEffect
 @Composable
 fun ChatRoomScreen(
     conversationId: Long?,
+    modifier: Modifier = Modifier,
     viewModel: ChatRoomViewModel = hiltViewModel(),
 ) {
     val state by viewModel.collectAsState()
@@ -76,10 +78,11 @@ fun ChatRoomScreen(
         )
     }
 
-    ChatRoomContent(state = state, actions = actions)
+    ChatRoomContent(state = state, actions = actions, modifier = modifier)
 }
 
-private class ChatRoomActions(
+@Immutable
+private data class ChatRoomActions(
     val onInputChange: (String) -> Unit,
     val onSendClick: () -> Unit,
     val onCharacterMessageClick: (Message) -> Unit,
@@ -90,6 +93,7 @@ private class ChatRoomActions(
 private fun ChatRoomContent(
     state: ChatRoomState,
     actions: ChatRoomActions,
+    modifier: Modifier = Modifier,
 ) {
     val listState = rememberLazyListState()
 
@@ -101,6 +105,7 @@ private fun ChatRoomContent(
     }
 
     Scaffold(
+        modifier = modifier,
         topBar = {
             Text(
                 text = "대화",
@@ -184,12 +189,14 @@ private fun MessageBubble(
     message: Message,
     isReplyTarget: Boolean,
     onCharacterMessageClick: (Message) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val character = (message.sender as? MessageSender.Character)?.character
+    val isFromUser = character == null
 
     Column(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalAlignment = if (character == null) Alignment.End else Alignment.Start,
+        modifier = modifier.fillMaxWidth(),
+        horizontalAlignment = if (isFromUser) Alignment.End else Alignment.Start,
     ) {
         if (character != null) {
             Text(
@@ -209,7 +216,7 @@ private fun MessageBubble(
 
         Surface(
             shape = RoundedCornerShape(16.dp),
-            color = if (character == null) {
+            color = if (isFromUser) {
                 MaterialTheme.colorScheme.primaryContainer
             } else {
                 MaterialTheme.colorScheme.surfaceVariant
@@ -220,14 +227,8 @@ private fun MessageBubble(
                 null
             },
             modifier = Modifier
-                .widthIn(max = 280.dp)
-                .then(
-                    if (character == null) {
-                        Modifier
-                    } else {
-                        Modifier.clickable { onCharacterMessageClick(message) }
-                    },
-                ),
+                .widthIn(max = BubbleMaxWidth)
+                .then(if (isFromUser) Modifier else Modifier.clickable { onCharacterMessageClick(message) }),
         ) {
             Text(
                 text = message.content,
@@ -239,8 +240,9 @@ private fun MessageBubble(
 }
 
 @Composable
-private fun GeneratingIndicator() {
+private fun GeneratingIndicator(modifier: Modifier = Modifier) {
     Row(
+        modifier = modifier,
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
@@ -302,3 +304,5 @@ private fun MessageInputBar(
         }
     }
 }
+
+private val BubbleMaxWidth = 280.dp
