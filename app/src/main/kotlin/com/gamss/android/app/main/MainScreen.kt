@@ -7,12 +7,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.ui.NavDisplay
-import com.gamss.android.app.BuildConfig
 import com.gamss.android.app.navigation.Navigator
+import com.gamss.android.app.navigation.bottomBarItems
+import com.gamss.android.app.navigation.keys
 import com.gamss.android.app.navigation.rememberNavigationState
 import com.gamss.android.app.navigation.toEntries
-import com.gamss.android.app.navigation.topLevelBottomBarItems
-import com.gamss.android.app.navigation.topLevelDestinationKeys
+import com.gamss.android.app.navigation.topLevelDestinations
 import com.gamss.android.core.ui.GamssBottomBar
 import com.gamss.android.feature.calendar.CalendarScreen
 import com.gamss.android.feature.calendar.navigation.CalendarKey
@@ -26,10 +26,11 @@ import com.gamss.android.feature.home.HomeScreen
 import com.gamss.android.feature.home.navigation.HomeKey
 
 @Composable
-fun MainScreen() {
+fun MainScreen(isDebug: Boolean) {
+    val destinations = remember(isDebug) { topLevelDestinations(isDebug) }
     val navigationState = rememberNavigationState(
         startKey = HomeKey,
-        topLevelKeys = topLevelDestinationKeys,
+        topLevelKeys = remember(destinations) { destinations.keys() },
     )
     val navigator = remember(navigationState) { Navigator(navigationState) }
 
@@ -37,7 +38,7 @@ fun MainScreen() {
         bottomBar = {
             if (navigationState.currentKey == navigationState.currentTopLevelKey) {
                 GamssBottomBar(
-                    items = topLevelBottomBarItems,
+                    items = remember(destinations) { destinations.bottomBarItems() },
                     selectedValue = navigationState.currentTopLevelKey,
                     onItemClick = navigator::navigate,
                 )
@@ -51,7 +52,7 @@ fun MainScreen() {
                     entry<HomeKey> { HomeScreen() }
                     entry<CalendarKey> { CalendarScreen() }
                     entry<EmotionKey> { EmotionScreen() }
-                    if (BuildConfig.DEBUG) {
+                    if (isDebug) {
                         entry<ChatKey> {
                             ChattingListScreen(onChatClick = { navigator.navigate(ChatRoomKey()) })
                         }
