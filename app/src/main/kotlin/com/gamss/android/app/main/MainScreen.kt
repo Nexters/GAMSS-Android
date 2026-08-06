@@ -57,7 +57,10 @@ fun MainScreen(isDebug: Boolean) {
                             ChattingListScreen(onChatClick = { navigator.navigate(ChatRoomKey(it)) })
                         }
                         entry<ChatRoomKey> { key ->
-                            ChatRoomScreen(conversationId = key.conversationId)
+                            ChatRoomScreen(
+                                conversationId = key.conversationId,
+                                onCardClose = navigator::goBack,
+                            )
                         }
                     }
                 },
