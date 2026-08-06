@@ -27,7 +27,6 @@ class SettingViewModel @Inject constructor(
                 state.copy(
                     isLoading = false,
                     userProfile = result.data,
-                    nicknameInput = result.data.nickname,
                 )
             }
 
@@ -50,7 +49,6 @@ class SettingViewModel @Inject constructor(
                     state.copy(
                         isLoading = false,
                         userProfile = result.data,
-                        nicknameInput = result.data.nickname,
                     )
                 }
                 postSideEffect(SettingSideEffect.UpdateNicknameSuccess)
