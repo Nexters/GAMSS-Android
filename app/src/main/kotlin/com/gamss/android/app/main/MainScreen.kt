@@ -54,7 +54,7 @@ fun MainScreen(isDebug: Boolean) {
                     entry<EmotionKey> { EmotionScreen() }
                     if (isDebug) {
                         entry<ChatKey> {
-                            ChattingListScreen(onChatClick = { navigator.navigate(ChatRoomKey()) })
+                            ChattingListScreen(onChatClick = { navigator.navigate(ChatRoomKey(it)) })
                         }
                         entry<ChatRoomKey> { key ->
                             ChatRoomScreen(conversationId = key.conversationId)
