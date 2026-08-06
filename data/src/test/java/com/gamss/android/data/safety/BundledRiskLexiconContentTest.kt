@@ -6,7 +6,6 @@ import com.gamss.android.domain.safety.RiskLevel
 import com.gamss.android.domain.safety.RiskTermMatcher
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotEquals
 import org.junit.Test
 import java.io.File
 
@@ -20,31 +19,34 @@ class BundledRiskLexiconContentTest {
 
     @Test
     fun `차단해야 하는 문장은 CRITICAL로 판정한다`() {
-        CRITICAL_SENTENCES.forEach { sentence ->
-            assertEquals(sentence, RiskLevel.CRITICAL, matcher.match(sentence, lexicon).level)
-        }
+        assertNoMismatch(CRITICAL_SENTENCES) { it == RiskLevel.CRITICAL }
     }
 
     @Test
     fun `안내가 필요한 문장은 감지한다`() {
-        WARNING_SENTENCES.forEach { sentence ->
-            assertNotEquals(sentence, RiskLevel.NONE, matcher.match(sentence, lexicon).level)
-        }
+        assertNoMismatch(WARNING_SENTENCES) { it != RiskLevel.NONE }
     }
 
     @Test
     fun `일상적인 문장은 감지하지 않는다`() {
-        BENIGN_SENTENCES.forEach { sentence ->
-            assertEquals(sentence, RiskLevel.NONE, matcher.match(sentence, lexicon).level)
-        }
+        assertNoMismatch(BENIGN_SENTENCES) { it == RiskLevel.NONE }
     }
 
     @Test
-    fun `감지되면 상담 기관을 priority 순으로 안내한다`() {
-        val detection = matcher.match(CRITICAL_SENTENCES.first(), lexicon)
+    fun `사전의 최우선 상담 기관은 109다`() {
+        assertEquals("109", lexicon.agencies.first().phoneNumber)
+    }
 
-        assertEquals("109", detection.agencies.first().phoneNumber)
-        assertEquals(detection.agencies.map { it.priority }.sorted(), detection.agencies.map { it.priority })
+    /**
+     * 사전을 넓힐 때 어긋난 문장을 한 번에 다 보려면 첫 실패에서 멈추지 않아야 한다.
+     */
+    private fun assertNoMismatch(sentences: List<String>, expected: (RiskLevel) -> Boolean) {
+        val mismatched = sentences
+            .map { it to matcher.match(it, lexicon).level }
+            .filterNot { (_, level) -> expected(level) }
+            .map { (sentence, level) -> "$sentence -> $level" }
+
+        assertEquals(emptyList<String>(), mismatched)
     }
 
     private companion object {

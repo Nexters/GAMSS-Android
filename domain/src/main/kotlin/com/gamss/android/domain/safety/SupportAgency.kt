@@ -5,6 +5,5 @@ data class SupportAgency(
     val name: String,
     val description: String,
     val phoneNumber: String?,
-    val url: String?,
     val priority: Int,
 )

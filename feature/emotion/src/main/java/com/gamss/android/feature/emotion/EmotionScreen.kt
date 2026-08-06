@@ -25,11 +25,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.gamss.android.core.ui.GamssSupportAgencyDialog
-import com.gamss.android.core.ui.dial
 import com.gamss.android.domain.emotion.EmotionResult
+import com.gamss.android.feature.emotion.component.SupportAgencyDialog
 import org.orbitmvi.orbit.compose.collectAsState
-import com.gamss.android.core.ui.R as CoreUiR
 
 private const val MAX_DIARY_LEN = 140
 private const val PERCENT = 100
@@ -43,9 +41,9 @@ fun EmotionScreen(
     val context = LocalContext.current
 
     state.riskDetection?.let { detection ->
-        GamssSupportAgencyDialog(
+        SupportAgencyDialog(
             agencies = detection.agencies,
-            isBlocking = detection.shouldBlock,
+            riskLevel = detection.level,
             onCallClick = { agency -> context.dialOrNotify(agency.phoneNumber) },
             onDismiss = viewModel::onRiskGuidanceDismiss,
         )
@@ -100,7 +98,7 @@ private fun Context.dialOrNotify(phoneNumber: String?) {
     if (!dial(phoneNumber)) {
         Toast.makeText(
             this,
-            getString(CoreUiR.string.safety_call_unavailable, phoneNumber),
+            getString(R.string.safety_call_unavailable, phoneNumber),
             Toast.LENGTH_LONG,
         ).show()
     }

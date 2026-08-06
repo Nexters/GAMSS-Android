@@ -15,17 +15,12 @@ class RiskTermMatcher @Inject constructor() {
         return if (matched.isEmpty()) {
             RiskDetection.None
         } else {
-            RiskDetection(
-                level = if (matched.any { it.level == RiskLevel.CRITICAL }) {
-                    RiskLevel.CRITICAL
-                } else {
-                    RiskLevel.WARNING
-                },
-                matchedTerms = matched.map { it.term },
-                agencies = lexicon.agencies.sortedBy { it.priority },
-            )
+            RiskDetection(level = levelOf(matched), agencies = lexicon.agencies)
         }
     }
+
+    private fun levelOf(matched: List<RiskTerm>): RiskLevel =
+        if (matched.any { it.level == RiskLevel.CRITICAL }) RiskLevel.CRITICAL else RiskLevel.WARNING
 
     private fun findMatchedTerms(text: String, lexicon: RiskLexicon): List<RiskTerm> {
         val normalized = normalize(text)
@@ -84,6 +79,7 @@ class RiskTermMatcher @Inject constructor() {
     }
 
     private companion object {
+        /** 치환은 길이를 보존해야 한다. 길이가 바뀌면 wordStarts 인덱스가 밀려 짧은 표현 매칭이 깨진다. */
         const val MASK = ' '
         const val SHORT_TERM_LENGTH = 2
     }

@@ -17,8 +17,8 @@ class DetectRiskInTextUseCaseTest {
         terms = listOf(RiskTerm("죽고싶", RiskLevel.CRITICAL)),
         safePhrases = emptyList(),
         agencies = listOf(
-            SupportAgency("b", "청소년 상담전화", "청소년 전문 상담", "1388", null, 3),
-            SupportAgency("a", "자살예방 상담전화", "24시간 무료 전문 상담", "109", null, 1),
+            SupportAgency("a", "자살예방 상담전화", "24시간 무료 전문 상담", "109", 1),
+            SupportAgency("b", "청소년 상담전화", "청소년 전문 상담", "1388", 3),
         ),
     )
 
@@ -28,7 +28,7 @@ class DetectRiskInTextUseCaseTest {
     )
 
     @Test
-    fun 사전에_있는_위험_표현을_감지하고_기관을_priority_순으로_안내한다() = runBlocking {
+    fun 사전에_있는_위험_표현을_감지하고_기관을_안내한다() = runBlocking {
         val detection = useCase("요즘 정말 죽고싶다는 생각뿐이다")
 
         assertEquals(RiskLevel.CRITICAL, detection.level)

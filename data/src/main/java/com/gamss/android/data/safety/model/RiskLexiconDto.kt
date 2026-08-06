@@ -30,11 +30,12 @@ internal data class SupportAgencyDto(
     val priority: Int = DEFAULT_PRIORITY,
 )
 
+/** agencies 는 여기서 한 번 정렬해 [RiskLexicon.agencies] 가 항상 priority 순이라는 불변식을 만든다. */
 internal fun RiskLexiconDto.toDomain(): RiskLexicon = RiskLexicon(
     version = version,
     terms = terms.filter { it.term.isNotBlank() }.map { it.toDomain() },
     safePhrases = safePhrases.filter { it.isNotBlank() },
-    agencies = agencies.filter { it.name.isNotBlank() }.map { it.toDomain() },
+    agencies = agencies.filter { it.name.isNotBlank() }.map { it.toDomain() }.sortedBy { it.priority },
 )
 
 private fun RiskTermDto.toDomain(): RiskTerm = RiskTerm(
@@ -51,7 +52,6 @@ private fun SupportAgencyDto.toDomain(): SupportAgency = SupportAgency(
     name = name,
     description = description,
     phoneNumber = phoneNumber?.takeIf { it.isNotBlank() },
-    url = url?.takeIf { it.isNotBlank() },
     priority = priority,
 )
 

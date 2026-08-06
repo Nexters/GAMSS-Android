@@ -1,4 +1,4 @@
-package com.gamss.android.core.ui
+package com.gamss.android.feature.emotion
 
 import android.content.ActivityNotFoundException
 import android.content.Context

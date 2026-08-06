@@ -1,4 +1,4 @@
-package com.gamss.android.core.ui
+package com.gamss.android.feature.emotion.component
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -16,13 +15,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.unit.dp
+import com.gamss.android.core.designsystem.theme.GamssTheme
+import com.gamss.android.domain.safety.RiskLevel
 import com.gamss.android.domain.safety.SupportAgency
+import com.gamss.android.feature.emotion.R
 
 @Composable
-fun GamssSupportAgencyDialog(
+internal fun SupportAgencyDialog(
     agencies: List<SupportAgency>,
-    isBlocking: Boolean,
+    riskLevel: RiskLevel,
     onCallClick: (SupportAgency) -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -32,24 +33,18 @@ fun GamssSupportAgencyDialog(
         text = {
             Column(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(GamssTheme.spacing.spacing200),
             ) {
                 Text(
-                    text = stringResource(
-                        if (isBlocking) {
-                            R.string.safety_dialog_body_blocked
-                        } else {
-                            R.string.safety_dialog_body_notice
-                        },
-                    ),
-                    style = MaterialTheme.typography.bodyMedium,
+                    text = bodyTextFor(riskLevel),
+                    style = GamssTheme.typography.body4Regular,
                 )
                 agencies.forEach { agency ->
                     SupportAgencyRow(agency = agency, onCallClick = onCallClick)
                 }
                 Text(
                     text = stringResource(R.string.safety_dialog_emergency),
-                    style = MaterialTheme.typography.bodySmall,
+                    style = GamssTheme.typography.body5Medium,
                 )
             }
         },
@@ -60,6 +55,14 @@ fun GamssSupportAgencyDialog(
         },
     )
 }
+
+@Composable
+private fun bodyTextFor(riskLevel: RiskLevel): String = stringResource(
+    when (riskLevel) {
+        RiskLevel.CRITICAL -> R.string.safety_dialog_body_blocked
+        RiskLevel.WARNING, RiskLevel.NONE -> R.string.safety_dialog_body_notice
+    },
+)
 
 @Composable
 private fun SupportAgencyRow(
@@ -73,8 +76,8 @@ private fun SupportAgencyRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(text = agency.name, style = MaterialTheme.typography.titleSmall)
-            Text(text = agency.description, style = MaterialTheme.typography.bodySmall)
+            Text(text = agency.name, style = GamssTheme.typography.subtitle4)
+            Text(text = agency.description, style = GamssTheme.typography.body5Medium)
         }
         agency.phoneNumber?.let { phoneNumber ->
             TextButton(

@@ -19,8 +19,8 @@ class RiskTermMatcherTest {
         ),
         safePhrases = listOf("배고파죽", "죽고싶지않", "자살예방"),
         agencies = listOf(
-            SupportAgency("b", "청소년 상담전화", "청소년 전문 상담", "1388", null, 3),
-            SupportAgency("a", "자살예방 상담전화", "24시간 무료 전문 상담", "109", null, 1),
+            SupportAgency("a", "자살예방 상담전화", "24시간 무료 전문 상담", "109", 1),
+            SupportAgency("b", "청소년 상담전화", "청소년 전문 상담", "1388", 3),
         ),
     )
 
@@ -88,7 +88,7 @@ class RiskTermMatcherTest {
     }
 
     @Test
-    fun 감지되면_기관을_priority_순으로_반환한다() {
+    fun 감지되면_사전의_기관_목록을_그대로_반환한다() {
         val detection = matcher.match("자살", lexicon)
 
         assertEquals(listOf("자살예방 상담전화", "청소년 상담전화"), detection.agencies.map { it.name })
