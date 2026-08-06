@@ -20,6 +20,8 @@ class SettingViewModel @Inject constructor(
     override val container = container<SettingState, SettingSideEffect>(SettingState())
 
     fun loadUserInfo() = intent {
+        if (state.isLoading) return@intent
+
         reduce { state.copy(isLoading = true) }
 
         when (val result = getUserInfoUseCase()) {
@@ -42,6 +44,8 @@ class SettingViewModel @Inject constructor(
     }
 
     fun updateNickname() = intent {
+        if (state.isLoading) return@intent
+
         reduce { state.copy(isLoading = true) }
         when (val result = updateNicknameUseCase(state.nicknameInput)) {
             is AppResult.Success -> {
@@ -62,9 +66,15 @@ class SettingViewModel @Inject constructor(
     }
 
     fun secession() = intent {
+        if (state.isLoading) return@intent
+
         reduce { state.copy(isLoading = true) }
         when (secessionUseCase()) {
-            is AppResult.Success -> Unit // 화면 이동은 AuthRepository의 세션 상태 변경을 통해 처리된다.
+            is AppResult.Success -> {
+                reduce { state.copy(isLoading = false) }
+                // 화면 이동은 AuthRepository의 세션 상태 변경을 통해 처리된다.
+            }
+
             is AppResult.Failure -> {
                 reduce { state.copy(isLoading = false) }
                 postSideEffect(SettingSideEffect.SecessionFailure)

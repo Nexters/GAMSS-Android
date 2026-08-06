@@ -26,7 +26,7 @@ class UpdateNicknameUseCaseTest {
 
         val result = UpdateNicknameUseCase(repository)("가")
 
-        assertTrue((result as AppResult.Failure).throwable is NicknameUpdateException.InvalidNickname)
+        assertTrue((result as AppResult.Failure).throwable is NicknameUpdateException.InvalidLength)
         assertEquals(0, repository.updateCallCount)
     }
 
@@ -37,7 +37,7 @@ class UpdateNicknameUseCaseTest {
 
         val result = UpdateNicknameUseCase(repository)(nickname)
 
-        assertTrue((result as AppResult.Failure).throwable is NicknameUpdateException.InvalidNickname)
+        assertTrue((result as AppResult.Failure).throwable is NicknameUpdateException.InvalidLength)
         assertEquals(0, repository.updateCallCount)
     }
 

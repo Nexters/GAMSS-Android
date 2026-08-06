@@ -179,9 +179,13 @@ private fun Throwable.toUpdateNicknameFailureMessage(): String =
         is NicknameUpdateException.MissingNickname ->
             "닉네임을 입력해주세요"
 
+        is NicknameUpdateException.InvalidLength ->
+            "닉네임은 2~20자로 입력해주세요"
+
         is NicknameUpdateException.InvalidNickname ->
-            "닉네임은 2~20자이며 금칙어는 포함할 수 없어요"
+            "사용할 수 없는 닉네임이에요"
 
         is ApiException.Network -> "네트워크 연결을 확인해주세요"
+        is ApiException.Http -> message ?: "닉네임 변경에 실패했어요"
         else -> "닉네임 변경에 실패했어요"
     }
