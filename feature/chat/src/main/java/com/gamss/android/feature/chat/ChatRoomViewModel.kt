@@ -107,7 +107,7 @@ class ChatRoomViewModel @Inject constructor(
                 }
                 launchCommentReveal()
                 sent.commentStatus.toUserMessage()?.let { postSideEffect(ChatRoomSideEffect.ShowToast(it)) }
-                session.compactSummary()
+                session.finishSend()
             }
             is AppResult.Failure -> {
                 reduce { state.copy(isSending = false) }
