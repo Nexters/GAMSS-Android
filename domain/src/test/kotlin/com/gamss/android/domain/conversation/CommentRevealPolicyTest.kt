@@ -7,7 +7,6 @@ import kotlin.random.Random
 
 class CommentRevealPolicyTest {
 
-    /** nextLong 의 until 은 exclusive 다. 상한을 포함하려면 MAX + 1 을 넘겨야 한다. */
     private class CapturingRandom : Random() {
         var capturedUntil: Long? = null
             private set

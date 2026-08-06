@@ -28,7 +28,6 @@ class ConversationSummaryStore @Inject constructor(
 
     private val utterances = mutableListOf<String>()
 
-    /** 요약본이거나, 요약을 건너뛴 구간의 원문이다. */
     private val closedChunks = mutableListOf<String>()
 
     private val pendingChunk = mutableListOf<String>()
@@ -151,7 +150,6 @@ class ConversationSummaryStore @Inject constructor(
 
     private fun recentStartLocked(): Int = (utterances.size - RECENT_RAW_UTTERANCES).coerceAtLeast(0)
 
-    /** 예산에 맞을 때까지 오래된 항목부터 버리고 원래 순서로 돌려준다. */
     private fun List<String>.takeNewestFitting(budget: Int): List<String> {
         if (budget <= 0) return emptyList()
         var remaining = budget

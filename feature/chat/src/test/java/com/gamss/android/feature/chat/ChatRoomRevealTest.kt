@@ -54,7 +54,7 @@ class ChatRoomRevealTest {
             val afterSend = awaitState()
             assertEquals(listOf(USER_ID, COMMENT_ID_BASE + 0), afterSend.messages.map { it.id })
             assertEquals(listOf(COMMENT_ID_BASE + 1, COMMENT_ID_BASE + 2), afterSend.pendingComments.map { it.id })
-            assertTrue(afterSend.isReceiving)
+            assertTrue(afterSend.isAwaitingComments)
 
             val firstReveal = awaitState()
             assertEquals(COMMENT_ID_BASE + 1, firstReveal.messages.last().id)
@@ -63,7 +63,7 @@ class ChatRoomRevealTest {
             val secondReveal = awaitState()
             assertEquals(COMMENT_ID_BASE + 2, secondReveal.messages.last().id)
             assertTrue(secondReveal.pendingComments.isEmpty())
-            assertFalse(secondReveal.isReceiving)
+            assertFalse(secondReveal.isAwaitingComments)
 
             cancelAndIgnoreRemainingItems()
         }

@@ -10,7 +10,6 @@ import org.junit.Test
 
 class ConversationSummaryStoreTest {
 
-    /** 요약을 눈에 보이게 표시해 어느 구간이 압축됐는지 확인하고, 요약기에 들어간 입력을 기록한다. */
     private class MarkingSummarizer : DiarySummarizer {
         val inputs = mutableListOf<String>()
         val calls get() = inputs.size
@@ -21,7 +20,7 @@ class ConversationSummaryStoreTest {
         }
     }
 
-    /** 글자 하나를 토큰 하나로 센다. 예산을 넘기기 쉬워 청크 경계를 테스트로 만들 수 있다. */
+    /** 예산을 넘기기 쉬워 청크 경계를 테스트로 만들 수 있다. */
     private object CharTokenCounter : UtteranceTokenCounter {
         override suspend fun count(text: String): Int = text.length
     }

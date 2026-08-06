@@ -34,10 +34,7 @@ class ChatRoomViewModel @Inject constructor(
 
     private var started = false
 
-    /**
-     * 노출 중인 코루틴. 새 전송이 오면 취소하고 남은 댓글을 즉시 붙인다.
-     * 네트워크 응답 스레드에서 쓰고 이벤트 루프 스레드에서 읽으므로 @Volatile 이 필요하다.
-     */
+    /** 네트워크 응답 스레드에서 쓰고 이벤트 루프 스레드에서 읽으므로 @Volatile 이 필요하다. */
     @Volatile
     private var revealJob: Job? = null
 
@@ -118,7 +115,6 @@ class ChatRoomViewModel @Inject constructor(
                     state.copy(
                         isSending = false,
                         conversationId = sent.message.conversationId,
-                        // 첫 댓글은 서버 왕복이 대기 시간이라 바로 붙이고, 나머지는 간격을 두고 노출한다.
                         messages = state.messages + sent.message + sent.comments.take(1),
                         pendingComments = sent.comments.drop(1),
                         // 전송하는 동안 새로 입력한 내용은 남긴다.
@@ -138,7 +134,6 @@ class ChatRoomViewModel @Inject constructor(
         }
     }
 
-    /** 호출자 intent 와 별개 코루틴으로 띄운다. 취소 핸들이 필요해 [revealJob] 에 담는다. */
     private fun launchCommentReveal() {
         revealJob = intent {
             while (state.pendingComments.isNotEmpty()) {
@@ -158,10 +153,7 @@ class ChatRoomViewModel @Inject constructor(
         }
     }
 
-    /**
-     * 남은 댓글을 기다리지 않고 한꺼번에 붙인다. 호출자 intent 안에서 돈다.
-     * Orbit 의 subIntent 가 같은 역할이지만 @OrbitExperimental 이라 Syntax 확장으로 둔다.
-     */
+    /** Orbit 의 subIntent 가 같은 역할이지만 @OrbitExperimental 이라 Syntax 확장으로 둔다. */
     private suspend fun ChatRoomSyntax.flushPendingComments() {
         revealJob?.cancelAndJoin()
         revealJob = null
@@ -177,7 +169,6 @@ class ChatRoomViewModel @Inject constructor(
         }
     }
 
-    /** 생성이 실패해도 저장은 유지되므로 보낸 메시지를 되돌리지 않고 안내만 띄운다. */
     private fun CommentGenerationStatus.toUserMessage(): String? = when (this) {
         CommentGenerationStatus.DONE -> null
         CommentGenerationStatus.FAILED -> "답장을 받지 못했어요. 잠시 후 다시 보내볼까요?"

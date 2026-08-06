@@ -14,7 +14,7 @@ data class ChatRoomState(
     /** 조회 중 전송을 막는다. 뒤늦게 온 조회 결과가 방금 보낸 메시지를 덮어쓴다. */
     val canSend: Boolean get() = input.isNotBlank() && !isSending && !isLoading
 
-    val isReceiving: Boolean get() = isSending || pendingComments.isNotEmpty()
+    val isAwaitingComments: Boolean get() = isSending || pendingComments.isNotEmpty()
 }
 
 data class ReplyTarget(

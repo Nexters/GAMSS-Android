@@ -11,7 +11,6 @@ class SendMessageUseCase @Inject constructor(
     private val conversationRepository: ConversationRepository,
 ) : UseCase<SendMessageUseCase.Params, AppResult<SentMessage>> {
 
-    /** @param contextSummary 생성 컨텍스트로만 쓰이는 압축본. 첫 전송에는 없다. */
     data class Params(
         val conversationId: Long?,
         val content: String,

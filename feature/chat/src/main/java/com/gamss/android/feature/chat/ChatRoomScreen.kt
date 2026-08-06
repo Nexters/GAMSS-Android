@@ -93,8 +93,8 @@ private fun ChatRoomContent(
 ) {
     val listState = rememberLazyListState()
 
-    LaunchedEffect(state.messages.size, state.isReceiving) {
-        val itemCount = state.messages.size + if (state.isReceiving) 1 else 0
+    LaunchedEffect(state.messages.size, state.isAwaitingComments) {
+        val itemCount = state.messages.size + if (state.isAwaitingComments) 1 else 0
         if (itemCount > 0) {
             listState.animateScrollToItem(itemCount - 1)
         }
@@ -151,7 +151,7 @@ private fun ChatRoomContent(
                         onCharacterMessageClick = actions.onCharacterMessageClick,
                     )
                 }
-                if (state.isReceiving) {
+                if (state.isAwaitingComments) {
                     item { GeneratingIndicator() }
                 }
             }
