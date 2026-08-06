@@ -19,7 +19,6 @@ class SummarizeDiaryUseCase @Inject constructor(
         val text = params
             .map { it.trim() }
             .filter { it.isNotEmpty() }
-            // 이 결과가 카드 제목으로 노출되므로 연달아 같은 말을 한 경우를 접는다.
             .dropConsecutiveDuplicates()
             .joinToString(separator = " ")
         // 이미 충분히 짧으면 요약할 게 없고, 짧은 캐주얼 입력은 요약 모델(긴 문서 학습)의 분포 밖이라

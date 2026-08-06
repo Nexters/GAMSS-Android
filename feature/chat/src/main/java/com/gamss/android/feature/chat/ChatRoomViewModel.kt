@@ -34,11 +34,9 @@ class ChatRoomViewModel @Inject constructor(
 
     private var started = false
 
-    /** 네트워크 응답 스레드에서 쓰고 이벤트 루프 스레드에서 읽으므로 @Volatile 이 필요하다. */
     @Volatile
     private var revealJob: Job? = null
 
-    /** 화면 재구성으로 다시 호출돼도 재조회하지 않는다. */
     fun start(conversationId: Long?) {
         if (started) return
         started = true
@@ -51,12 +49,10 @@ class ChatRoomViewModel @Inject constructor(
         reduce { state.copy(conversationId = conversationId, isLoading = true) }
         when (val result = getMessages(conversationId)) {
             is AppResult.Success -> {
-                // 서버 목록엔 댓글이 다 들어 있다. 큐를 남기면 같은 댓글이 두 번 붙어 key 가 충돌한다.
                 reduce { state.copy(isLoading = false, messages = result.data, pendingComments = emptyList()) }
                 summaryStore.restore(result.data.userUtterances())
             }
             is AppResult.Failure -> {
-                // 이전 대화가 남아 있으면 다음 전송의 압축본에 섞인다.
                 summaryStore.reset()
                 reduce { state.copy(isLoading = false) }
                 postSideEffect(ChatRoomSideEffect.ShowToast(LOAD_FAILED))
@@ -64,7 +60,6 @@ class ChatRoomViewModel @Inject constructor(
         }
     }
 
-    /** 일반 intent 는 비동기라 글자가 유실된다. runBlocking 이므로 이 블록엔 reduce 만 둔다. */
     fun onInputChange(text: String) = blockingIntent {
         reduce { state.copy(input = text.take(MAX_MESSAGE_LENGTH)) }
     }
@@ -83,11 +78,9 @@ class ChatRoomViewModel @Inject constructor(
     }
 
     fun onSend() = intent {
-        // 앞선 노출이 남아 있으면 순서가 뒤엉키므로 먼저 다 붙이고 시작한다.
         flushPendingComments()
 
-        // 연타 중복 전송을 막으려면 검사와 isSending 설정이 한 reduce 안에 있어야 한다.
-        // reduce 는 CAS 재시도로 여러 번 실행되고 마지막 실행만 커밋되므로, 모든 경로에서 덮어쓴다.
+        // reduce 는 CAS 재시도로 여러 번 실행되고 마지막 실행만 커밋된다.
         var pending: PendingSend? = null
         reduce {
             pending = if (state.canSend) {
@@ -117,14 +110,12 @@ class ChatRoomViewModel @Inject constructor(
                         conversationId = sent.message.conversationId,
                         messages = state.messages + sent.message + sent.comments.take(1),
                         pendingComments = sent.comments.drop(1),
-                        // 전송하는 동안 새로 입력한 내용은 남긴다.
                         input = if (state.input == sending.content) "" else state.input,
                         replyTarget = state.replyTarget.takeIf { it?.messageId != sending.replyToMessageId },
                     )
                 }
                 launchCommentReveal()
                 sent.commentStatus.toUserMessage()?.let { postSideEffect(ChatRoomSideEffect.ShowToast(it)) }
-                // 요약기가 돌 수 있어 화면 갱신 뒤에 둔다.
                 summaryStore.add(sent.message.content)
             }
             is AppResult.Failure -> {
@@ -153,7 +144,6 @@ class ChatRoomViewModel @Inject constructor(
         }
     }
 
-    /** Orbit 의 subIntent 가 같은 역할이지만 @OrbitExperimental 이라 Syntax 확장으로 둔다. */
     private suspend fun ChatRoomSyntax.flushPendingComments() {
         revealJob?.cancelAndJoin()
         revealJob = null

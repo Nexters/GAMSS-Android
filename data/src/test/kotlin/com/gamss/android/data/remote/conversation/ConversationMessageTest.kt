@@ -54,7 +54,6 @@ class ConversationMessageTest {
             "JOY" to EmotionCharacter.JOY,
             "ANGER" to EmotionCharacter.ANGER,
             "ANXIETY" to EmotionCharacter.ANXIETY,
-            // 서버와 이름이 다른 유일한 캐릭터.
             "GRUMPY" to EmotionCharacter.PRICKLY,
             "WARM" to EmotionCharacter.WARM,
             "QUIRKY" to EmotionCharacter.QUIRKY,

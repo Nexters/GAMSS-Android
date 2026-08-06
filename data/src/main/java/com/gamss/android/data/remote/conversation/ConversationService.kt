@@ -11,7 +11,6 @@ import retrofit2.http.Path
 
 internal interface ConversationService {
 
-    /** 서버가 캐릭터 응답 생성까지 동기로 처리해 함께 준다. 폴링하지 않는다. */
     @POST("/api/conversations/messages")
     suspend fun saveMessage(@Body request: SaveMessageRequest): ApiResponse<SaveMessageResponse>
 

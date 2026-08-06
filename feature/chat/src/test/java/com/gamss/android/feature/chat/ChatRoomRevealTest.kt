@@ -26,7 +26,6 @@ import org.junit.Before
 import org.junit.Test
 import org.orbitmvi.orbit.test.test
 
-/** 간격 자체(1~3초)는 정책 테스트가 보고, 여기서는 순서와 큐 소진을 본다. */
 @OptIn(ExperimentalCoroutinesApi::class)
 class ChatRoomRevealTest {
 
@@ -155,7 +154,6 @@ class ChatRoomRevealTest {
             awaitState()
             expectSideEffect(ChatRoomSideEffect.ShowToast(SEND_FAILED_MESSAGE))
 
-            // 서버에 남지 않은 발화가 압축본에 들어가면 다음 대화 맥락이 어긋난다.
             assertEquals(listOf(null, null), repository.sentContextSummaries)
             expectNoItems()
         }

@@ -36,7 +36,6 @@ data class ConversationMessage(
 fun List<ConversationMessage>.userUtterances(): List<String> =
     filter { it.senderType == ConversationMessage.SENDER_USER }.map { it.content }
 
-/** 발신 주체를 해석할 수 없으면 잘못된 주체로 그리는 대신 null 을 돌려 목록에서 제외한다. */
 internal fun ConversationMessage.toDomain(): Message? = resolveSender()?.let(::toMessage)
 
 internal fun ConversationMessage.toSentUserMessage(): Message = toMessage(MessageSender.User)

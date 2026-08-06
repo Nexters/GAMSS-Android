@@ -20,7 +20,6 @@ class ConversationSummaryStoreTest {
         }
     }
 
-    /** 예산을 넘기기 쉬워 청크 경계를 테스트로 만들 수 있다. */
     private object CharTokenCounter : UtteranceTokenCounter {
         override suspend fun count(text: String): Int = text.length
     }
@@ -92,7 +91,6 @@ class ConversationSummaryStoreTest {
         val summarizer = MarkingSummarizer()
         val store = store(summarizer)
 
-        // 한 발화가 예산의 40%씩 차지해 청크 경계가 발화 중간에 걸린다.
         val chunky = "나".repeat(SUMMARY_CHUNK_TOKEN_BUDGET * 2 / 5)
         store.add("주제")
         repeat(8) { store.add(chunky) }
@@ -100,7 +98,6 @@ class ConversationSummaryStoreTest {
 
         assertTrue("요약이 한 번도 안 돌았다", summarizer.calls > 0)
         summarizer.inputs.forEach {
-            // 넘겨서 넣으면 요약기 입력 한계에서 잘려 그 발화가 압축본에서 사라진다.
             assertTrue("요약 입력이 예산 초과: ${it.length}", it.length <= SUMMARY_CHUNK_TOKEN_BUDGET)
         }
     }
@@ -143,7 +140,6 @@ class ConversationSummaryStoreTest {
         val summary = store.currentContextSummary()!!
         assertTrue(summary.startsWith("주제 나나나"))
         assertTrue(summary.endsWith("최근3 최근4 최근5"))
-        // 실패한 청크를 열어 두면 전송마다 요약을 재시도해 지연이 누적된다.
         assertEquals(callsAfterFirstChunk, failing.calls)
     }
 
@@ -224,7 +220,6 @@ class ConversationSummaryStoreTest {
         store.reset()
         assertNull(store.currentContextSummary())
 
-        // reset 후에도 정상 동작해야 한다(재진입 복원이 같은 인스턴스를 다시 채운다).
         listOf("새첫째", "새둘째").forEach { store.add(it) }
         assertEquals("새첫째 새둘째", store.currentContextSummary())
     }

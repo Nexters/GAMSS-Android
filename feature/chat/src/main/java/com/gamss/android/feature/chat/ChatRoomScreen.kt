@@ -108,14 +108,13 @@ private fun ChatRoomContent(
                 modifier = Modifier.padding(16.dp),
             )
         },
-        // 시스템 인셋은 GamssNavHost 의 Scaffold 가 이미 적용한다.
+        // 상위 Scaffold 가 인셋을 이미 적용해, imePadding 을 그대로 쓰면 이중 적용된다.
         contentWindowInsets = WindowInsets(0),
     ) { innerPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                // imePadding 을 그대로 쓰면 navigation bar 높이만큼 이중 적용된다.
                 .windowInsetsPadding(WindowInsets.ime.exclude(WindowInsets.navigationBars)),
         ) {
             LazyColumn(

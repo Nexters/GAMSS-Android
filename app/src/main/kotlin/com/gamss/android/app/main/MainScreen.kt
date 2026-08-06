@@ -51,7 +51,6 @@ fun MainScreen() {
                     entry<HomeKey> { HomeScreen() }
                     entry<CalendarKey> { CalendarScreen() }
                     entry<EmotionKey> { EmotionScreen() }
-                    // 검증용 화면이라 debug 빌드에서만 진입점을 등록한다.
                     if (BuildConfig.DEBUG) {
                         entry<ChatKey> {
                             ChattingListScreen(onChatClick = { navigator.navigate(ChatRoomKey()) })

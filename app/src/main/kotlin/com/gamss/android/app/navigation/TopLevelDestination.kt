@@ -29,7 +29,6 @@ val topLevelDestinations = buildList {
     add(TopLevelDestination(key = HomeKey, icon = Icons.Filled.Home, label = "홈"))
     add(TopLevelDestination(key = CalendarKey, icon = Icons.Filled.DateRange, label = "달력"))
     add(TopLevelDestination(key = EmotionKey, icon = Icons.Filled.Favorite, label = "감정"))
-    // 검증용 화면이라 debug 빌드에서만 진입한다. 진입점을 막을 뿐 코드는 release 에도 포함된다.
     if (BuildConfig.DEBUG) {
         add(TopLevelDestination(key = ChatKey, icon = Icons.Filled.Email, label = "대화"))
     }

@@ -7,7 +7,6 @@ sealed interface AppResult<out T> {
     data class Failure(val throwable: Throwable) : AppResult<Nothing>
 
     companion object {
-        /** 취소를 삼키면 취소된 스코프에서 이후 로직이 계속 돈다. */
         @Suppress("TooGenericExceptionCaught", "RethrowCaughtException")
         inline fun <T> of(block: () -> T): AppResult<T> =
             try {
