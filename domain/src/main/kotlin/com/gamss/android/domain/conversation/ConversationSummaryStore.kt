@@ -1,9 +1,8 @@
 package com.gamss.android.domain.conversation
 
+import com.gamss.android.domain.common.failSafe
 import com.gamss.android.domain.summary.DiarySummarizer
 import com.gamss.android.domain.summary.UtteranceTokenCounter
-import kotlinx.coroutines.currentCoroutineContext
-import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
@@ -111,12 +110,6 @@ class ConversationSummaryStore @Inject constructor(
 
     private suspend fun countTokens(utterance: String): Int =
         failSafe { tokenCounter.count(utterance) } ?: utterance.length
-
-    private suspend fun <T> failSafe(block: suspend () -> T): T? {
-        val result = runCatching { block() }
-        currentCoroutineContext().ensureActive()
-        return result.getOrNull()
-    }
 
     private fun clearLocked() {
         utterances.clear()
