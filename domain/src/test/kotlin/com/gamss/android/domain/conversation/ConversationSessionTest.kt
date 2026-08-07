@@ -71,6 +71,18 @@ class ConversationSessionTest {
     }
 
     @Test
+    fun 제목_지정이_계속_실패하면_재시도를_멈춘다() = runBlocking {
+        val repository = FakeConversationRepository(failingTitle = true)
+        val session = session(repository)
+
+        session.openWith(SEED)
+        repeat(5) { session.continueWith("계속 보내는 말") }
+
+        // 첫 시도 + 재시도 2회까지만.
+        assertEquals(3, repository.updatedTitles.size)
+    }
+
+    @Test
     fun 불러온_대화는_올리지_못한_제목을_버린다() = runBlocking {
         val repository = FakeConversationRepository(failingTitle = true)
         val session = session(repository)

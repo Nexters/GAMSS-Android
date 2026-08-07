@@ -1,6 +1,8 @@
 package com.gamss.android.domain.conversation
 
 import com.gamss.android.core.common.AppResult
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
@@ -65,37 +67,45 @@ class ConversationSession @Inject constructor(
 
     /**
      * 제목 지정과 요약이 돌 수 있어 호출자가 화면을 갱신한 뒤에 부른다.
-     * 둘 다 사용자를 기다리게 할 이유가 없는 뒷정리라 전송 왕복에 매달지 않는다.
+     * 둘은 서로를 기다릴 이유가 없다. 직렬로 두면 느린 제목 요청이 압축을 붙들어,
+     * 그 사이에 보낸 다음 발화가 압축 전 컨텍스트를 싣는다.
      */
-    suspend fun finishSend() {
-        assignPendingTitle()
-        summaryStore.compact()
+    suspend fun finishSend() = coroutineScope {
+        launch { assignPendingTitle() }
+        launch { summaryStore.compact() }
+        Unit
     }
 
     /**
      * 서버는 대화방을 제목 없이 만들고, 제목은 별도 요청으로만 붙는다.
-     * 지정이 실패해도 대화는 이어져야 하므로 결과를 삼키고 다음 뒷정리에서 한 번 더 시도한다.
+     * 지정이 실패해도 대화는 이어져야 하므로 결과를 삼키고 다음 뒷정리에서 다시 시도하되,
+     * 되돌아오지 않는 실패(권한·삭제된 방)에 매 전송마다 왕복을 붙이지 않도록 횟수를 제한한다.
      */
-    private suspend fun assignPendingTitle() = titleMutex.withLock {
-        val pending = pendingTitle ?: return@withLock
+    private suspend fun assignPendingTitle() {
+        // 꺼내면서 비워야 뒷정리가 겹쳐도 같은 제목을 두 번 보내지 않는다.
+        val pending = titleMutex.withLock { pendingTitle.also { pendingTitle = null } } ?: return
         val title = conversationTitleFrom(pending.seed)
-        if (title == null) {
             // 제목으로 쓸 글자가 없는 시드는 다시 시도해도 결과가 같다.
-            pendingTitle = null
-            return@withLock
-        }
+            ?: return
         val result = updateConversationTitle(
             UpdateConversationTitleUseCase.Params(conversationId = pending.conversationId, title = title),
         )
-        if (result is AppResult.Success) {
-            pendingTitle = null
+        if (result is AppResult.Failure && pending.attempts + 1 < MAX_TITLE_ATTEMPTS) {
+            titleMutex.withLock {
+                if (pendingTitle == null) pendingTitle = pending.copy(attempts = pending.attempts + 1)
+            }
         }
     }
 
     private data class PendingTitle(
         val conversationId: Long,
         val seed: String,
+        val attempts: Int = 0,
     )
+
+    private companion object {
+        const val MAX_TITLE_ATTEMPTS = 3
+    }
 }
 
 internal fun List<Message>.userUtterances(): List<String> =

@@ -3,7 +3,11 @@ package com.gamss.android.domain.conversation
 /** 목록에서 방을 한눈에 구분할 길이. 서버 상한(100자)보다 훨씬 짧게 잡는다. */
 const val MAX_CONVERSATION_TITLE_LENGTH = 20
 
+/** 이어 붙일지 판단하는 기준. 이보다 짧은 문장은 한 마디라 제목 구실을 못 한다. */
 private const val MIN_TITLE_LENGTH = 6
+
+/** 제목으로 쓸 만한 최소 길이. "팀장 탓"처럼 짧고 정확한 사실을 뒤 문장에 밀리게 하지 않는다. */
+private const val MIN_MEANINGFUL_LENGTH = 4
 
 private const val ELLIPSIS = "…"
 
@@ -43,13 +47,13 @@ private val EMOTION_STEMS = listOf(
     "짜증", "화나", "화났", "빡쳐", "빡치", "열받", "힘들", "힘드", "우울", "슬프", "슬퍼", "슬펐", "속상",
     "억울", "답답", "지치", "지쳐", "지친", "서럽", "서운", "불안", "무섭", "두렵", "외롭", "허무", "허탈",
     "괴롭", "괴로", "미치", "미쳐", "죽겠", "싫", "귀찮", "울었", "행복", "기쁘", "기뻐", "기뻤", "좋았",
-    "신난", "설레", "뿌듯",
+    "신난", "설레", "뿌듯", "고민",
 )
 
 private val EMOTION_ENDINGS = listOf(
     "다", "다고", "더라", "네", "어", "아", "워", "여", "지", "고", "군", "구나", "은데", "는데",
     "나", "나네", "난다", "났어", "나서", "어서", "아서", "워서", "었어", "았어", "웠어",
-    "해", "해서", "했어", "한다", "하다", "겠어", "겠다",
+    "해", "해서", "했어", "한다", "하다", "겠어", "겠다", "된다", "돼", "돼서", "됐어",
 )
 
 /**
@@ -73,18 +77,40 @@ private val EMOTION_WORDS: Set<String> = EMOTION_STEMS
  * 제목으로 쓸 글자가 없으면 null 이다. 호출자는 제목 지정을 건너뛴다(서버가 빈 제목을 거절한다).
  */
 fun conversationTitleFrom(seed: String): String? {
-    val sentences = seed.split(SENTENCE_DELIMITER)
-        .map { it.replace(WHITESPACE, " ").trim() }
-        .filter(String::isNotEmpty)
+    val sentences = seed.splitSentences()
     if (sentences.isEmpty()) return null
 
+    // 의문문은 도입부이거나 자문이라("대박인거 알려줄까?") 뒤에 오는 사실보다 뒤로 미룬다.
+    val (questions, statements) = sentences.filter { titleCandidate(it.text) != null }
+        .partition(Sentence::isQuestion)
+    val candidates = (statements + questions).mapNotNull { titleCandidate(it.text) }
+
     // 사실이 짧게 남는 문장에서 멈추면 뒤에 있는 진짜 사실을 놓친다("아 몰라. 팀장이 아이디어 가로챘어").
-    val candidates = sentences.mapNotNull(::titleCandidate)
-    val title = candidates.firstOrNull { it.length >= MIN_TITLE_LENGTH }
+    val title = candidates.firstOrNull { it.length >= MIN_MEANINGFUL_LENGTH }
         ?: candidates.firstOrNull()
-        ?: sentences.headline()
+        ?: sentences.map(Sentence::text).headline()
     return title.ellipsize()
 }
+
+private class Sentence(val text: String, val isQuestion: Boolean)
+
+/** 종결 부호를 함께 봐야 의문문을 가릴 수 있어 split 대신 경계를 직접 훑는다. */
+private fun String.splitSentences(): List<Sentence> {
+    val sentences = mutableListOf<Sentence>()
+    var start = 0
+    for (boundary in SENTENCE_DELIMITER.findAll(this)) {
+        sentences += Sentence(substring(start, boundary.range.first), boundary.value.any(Char::isQuestionMark))
+        start = boundary.range.last + 1
+    }
+    sentences += Sentence(substring(start), false)
+    return sentences.mapNotNull { sentence ->
+        sentence.text.replace(WHITESPACE, " ").trim()
+            .takeIf(String::isNotEmpty)
+            ?.let { Sentence(it, sentence.isQuestion) }
+    }
+}
+
+private fun Char.isQuestionMark(): Boolean = this == '?' || this == '？'
 
 /** 사실 어절이 하나도 없는 문장은 제목 후보가 아니다. 문장 중간·뒤는 건드리지 않는다. */
 private fun titleCandidate(sentence: String): String? {

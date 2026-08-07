@@ -6,12 +6,14 @@ import com.gamss.android.domain.conversation.GetConversationsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import org.orbitmvi.orbit.ContainerHost
 import org.orbitmvi.orbit.viewmodel.container
+import java.time.Clock
 import java.time.LocalDate
 import javax.inject.Inject
 
 @HiltViewModel
 class ChattingListViewModel @Inject constructor(
     private val getConversations: GetConversationsUseCase,
+    private val clock: Clock,
 ) : ViewModel(),
     ContainerHost<ChattingListState, ChattingListSideEffect> {
 
@@ -20,7 +22,7 @@ class ChattingListViewModel @Inject constructor(
     /** 방을 만들고 돌아오면 목록이 달라져 있어 화면에 들어올 때마다 부른다. */
     fun load() = intent {
         reduce { state.copy(isLoading = true) }
-        when (val result = getConversations(LocalDate.now())) {
+        when (val result = getConversations(LocalDate.now(clock))) {
             is AppResult.Success -> reduce { state.copy(isLoading = false, conversations = result.data) }
             is AppResult.Failure -> {
                 reduce { state.copy(isLoading = false) }

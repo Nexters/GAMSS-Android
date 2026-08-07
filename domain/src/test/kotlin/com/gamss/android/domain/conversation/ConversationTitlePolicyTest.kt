@@ -36,6 +36,23 @@ class ConversationTitlePolicyTest {
     }
 
     @Test
+    fun 짧고_정확한_사실은_뒤_문장에_밀리지_않는다() {
+        assertEquals("팀장 탓", conversationTitleFrom("팀장 탓. 아 진짜 몰라 어쩌라고"))
+        assertEquals("이직 확정", conversationTitleFrom("이직 확정. 근데 어떻게 해야 될지 모르겠어"))
+    }
+
+    @Test
+    fun 도입부_의문문보다_뒤에_오는_사실을_고른다() {
+        assertEquals("신 젤리를 먹었다", conversationTitleFrom("대박인거 알려줄까? 오늘 엄청 신 젤리를 먹었다"))
+        assertEquals("팀장이 또 그랬어", conversationTitleFrom("왜 나한테만 이래? 팀장이 또 그랬어"))
+    }
+
+    @Test
+    fun 의문문뿐이면_그대로_쓴다() {
+        assertEquals("이거 어떻게 해야 돼", conversationTitleFrom("이거 어떻게 해야 돼?"))
+    }
+
+    @Test
     fun 대화_시점과_겹치는_말만_앞머리에서_뗀다() {
         assertEquals("팀장이 화냈어", conversationTitleFrom("오늘 팀장이 화냈어"))
         assertEquals("어제 계약서 도장 잘못 찍었어", conversationTitleFrom("어제 계약서 도장 잘못 찍었어"))
@@ -62,9 +79,55 @@ class ConversationTitlePolicyTest {
 
     @Test
     fun 불규칙_활용_감정어도_걷어낸다() {
-        assertEquals("성적표 나왔어", conversationTitleFrom("아 슬퍼. 성적표 나왔어"))
-        assertEquals("합격 소식 들었어", conversationTitleFrom("진짜 기뻐. 합격 소식 들었어"))
+        // 앞머리를 실제로 걷어내는지 보려면 뒤 문장에 밀려 우연히 통과하지 않는 한 문장으로 확인해야 한다.
+        assertEquals("성적표 나왔어", conversationTitleFrom("슬퍼 성적표 나왔어"))
+        assertEquals("합격 소식 들었어", conversationTitleFrom("기뻐 합격 소식 들었어"))
         assertEquals("동생이 내 옷 입고 나갔어", conversationTitleFrom("화났어 동생이 내 옷 입고 나갔어"))
+        assertEquals("시험 망쳤어", conversationTitleFrom("슬펐어 시험 망쳤어"))
+    }
+
+    @Test
+    fun 어미_없이_쓰는_감정어도_걷어낸다() {
+        assertEquals("극복했어 드디어", conversationTitleFrom("우울 극복했어 드디어"))
+        assertEquals("왔어 진짜", conversationTitleFrom("현타 왔어 진짜"))
+        assertEquals("시험 망쳤어", conversationTitleFrom("멘붕 시험 망쳤어"))
+        assertEquals("동생이 또 그래", conversationTitleFrom("빡침 동생이 또 그래"))
+    }
+
+    @Test
+    fun 물음표와_느낌표와_말줄임표도_문장_경계다() {
+        assertEquals("지갑 잃어버렸어", conversationTitleFrom("아 진짜! 지갑 잃어버렸어"))
+        assertEquals("지갑 잃어버렸어", conversationTitleFrom("아 진짜… 지갑 잃어버렸어"))
+        assertEquals("지갑 잃어버렸어", conversationTitleFrom("아 진짜？ 지갑 잃어버렸어"))
+        assertEquals("지갑 잃어버렸어", conversationTitleFrom("아 진짜！ 지갑 잃어버렸어"))
+        assertEquals("지갑 잃어버렸어", conversationTitleFrom("아 진짜。 지갑 잃어버렸어"))
+        assertEquals("지갑 잃어버렸어", conversationTitleFrom("아 진짜\r지갑 잃어버렸어"))
+    }
+
+    @Test
+    fun 전각_물음표도_의문문으로_본다() {
+        assertEquals("신 젤리를 먹었다", conversationTitleFrom("대박인거 알려줄까？ 오늘 엄청 신 젤리를 먹었다"))
+    }
+
+    @Test
+    fun 자문하는_의문문은_뒤_문장에_사실이_없으면_그대로_쓴다() {
+        assertEquals("회사 그만둬야 할까", conversationTitleFrom("회사 그만둬야 할까? 진짜 고민된다"))
+    }
+
+    @Test
+    fun 후보가_모두_짧으면_그중_첫_번째를_쓴다() {
+        // 1순위(4자 이상)가 비어 2순위 폴백으로 내려가는 경로.
+        assertEquals("탓", conversationTitleFrom("아 진짜. 탓. 응"))
+    }
+
+    @Test
+    fun 세_글자_후보는_더_긴_뒤_후보에_밀린다() {
+        assertEquals("지갑 잃었어", conversationTitleFrom("아 어쩌지. 지갑 잃었어"))
+    }
+
+    @Test
+    fun 네_글자_후보는_뒤_후보에_밀리지_않는다() {
+        assertEquals("팀장 탓", conversationTitleFrom("팀장 탓. 지갑 잃었어"))
     }
 
     @Test
@@ -108,6 +171,12 @@ class ConversationTitlePolicyTest {
     @Test
     fun 감정뿐인_시드는_첫_문장을_쓰되_한_마디면_이어_붙인다() {
         assertEquals("짜증나 힘들어", conversationTitleFrom("짜증나. 힘들어."))
+    }
+
+    @Test
+    fun 감정뿐인_시드는_최소_길이를_넘는_순간_이어_붙이기를_멈춘다() {
+        // "속상해서"(4자)로는 모자라 한 문장을 더 붙이고, 8자가 되면 "우울해"는 붙이지 않는다.
+        assertEquals("속상해서 힘들어", conversationTitleFrom("속상해서. 힘들어. 우울해."))
     }
 
     @Test
