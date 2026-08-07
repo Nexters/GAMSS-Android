@@ -1,5 +1,7 @@
 package com.gamss.android.feature.chatSearch
 
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.paging.PagingData
@@ -19,7 +21,7 @@ import javax.inject.Inject
 @HiltViewModel
 @OptIn(ExperimentalCoroutinesApi::class)
 class SearchChattingViewModel @Inject constructor(
-    private val searchChattingRooms: SearchChattingRoomsUseCase,
+    private val searchChattingRoomsUseCase: SearchChattingRoomsUseCase,
 ) : ViewModel(), ContainerHost<SearchChattingState, SearchChattingSideEffect> {
 
     override val container = container<SearchChattingState, SearchChattingSideEffect>(
@@ -30,21 +32,24 @@ class SearchChattingViewModel @Inject constructor(
 
     val chattingRooms: Flow<PagingData<ChattingRoomSummary>> = searchRequests
         .filterNotNull()
-        .flatMapLatest { request -> searchChattingRooms(request.keyword) }
+        .flatMapLatest { request -> searchChattingRoomsUseCase(request.keyword) }
         .cachedIn(viewModelScope)
 
-    fun onKeywordChanged(keyword: String) = intent {
+    fun onKeywordChanged(keyword: TextFieldValue) = intent {
         reduce { state.copy(keyword = keyword) }
     }
 
     fun search() = intent {
-        val keyword = state.keyword.trim()
-        if (keyword.isEmpty()) return@intent
+        val keyword = state.keyword.text.trim()
+        if (keyword.length < MIN_SEARCH_KEYWORD_LENGTH) return@intent
 
         val nextGeneration = state.searchGeneration + 1
         reduce {
             state.copy(
-                keyword = keyword,
+                keyword = TextFieldValue(
+                    text = keyword,
+                    selection = TextRange(keyword.length),
+                ),
                 hasSearched = true,
                 searchGeneration = nextGeneration,
             )

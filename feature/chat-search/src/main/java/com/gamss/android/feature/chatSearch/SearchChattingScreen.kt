@@ -27,6 +27,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.paging.LoadState
@@ -57,7 +58,7 @@ fun SearchChattingScreen(
 fun SearchChattingContent(
     state: SearchChattingState,
     chattingRooms: LazyPagingItems<ChattingRoomSummary>,
-    onKeywordChanged: (String) -> Unit,
+    onKeywordChanged: (TextFieldValue) -> Unit,
     onSearch: () -> Unit,
 ) {
     val listState = rememberLazyListState()
@@ -87,7 +88,7 @@ fun SearchChattingContent(
 @Composable
 private fun SearchTopBar(
     state: SearchChattingState,
-    onKeywordChanged: (String) -> Unit,
+    onKeywordChanged: (TextFieldValue) -> Unit,
     onSearch: () -> Unit,
 ) {
     Column(
@@ -130,6 +131,11 @@ private fun SearchResultContent(
     listState: LazyListState,
     contentPadding: PaddingValues,
 ) {
+    if (!state.hasSearched) {
+        EmptyContent(contentPadding)
+        return
+    }
+
     when (val refresh = chattingRooms.loadState.refresh) {
         is LoadState.Loading -> LoadingContent(contentPadding)
         is LoadState.Error -> ErrorContent(
@@ -138,9 +144,10 @@ private fun SearchResultContent(
             onRetry = chattingRooms::retry,
         )
 
-        is LoadState.NotLoading -> when {
-            state.hasSearched && chattingRooms.itemCount == 0 -> EmptyContent(contentPadding)
-            else -> SearchResultList(
+        is LoadState.NotLoading -> if (chattingRooms.itemCount == 0) {
+            EmptyContent(contentPadding)
+        } else {
+            SearchResultList(
                 chattingRooms = chattingRooms,
                 listState = listState,
                 contentPadding = contentPadding,
@@ -240,7 +247,7 @@ private fun EmptyContent(contentPadding: PaddingValues) {
         contentAlignment = Alignment.Center,
     ) {
         Text(
-            text = "검색 결과가 없어요",
+            text = "대화방 데이터가 없어요",
             style = MaterialTheme.typography.bodyLarge,
         )
     }
