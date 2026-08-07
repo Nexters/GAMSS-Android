@@ -26,8 +26,8 @@ import com.gamss.android.feature.home.HomeScreen
 import com.gamss.android.feature.home.navigation.HomeKey
 
 @Composable
-fun MainScreen(isDebug: Boolean) {
-    val destinations = remember(isDebug) { topLevelDestinations(isDebug) }
+fun MainScreen(showsInternalTools: Boolean) {
+    val destinations = remember(showsInternalTools) { topLevelDestinations(showsInternalTools) }
     val navigationState = rememberNavigationState(
         startKey = HomeKey,
         topLevelKeys = remember(destinations) { destinations.keys() },
@@ -52,7 +52,7 @@ fun MainScreen(isDebug: Boolean) {
                     entry<HomeKey> { HomeScreen() }
                     entry<CalendarKey> { CalendarScreen() }
                     entry<EmotionKey> { EmotionScreen() }
-                    if (isDebug) {
+                    if (showsInternalTools) {
                         entry<ChatKey> {
                             ChattingListScreen(onChatClick = { navigator.navigate(ChatRoomKey(it)) })
                         }

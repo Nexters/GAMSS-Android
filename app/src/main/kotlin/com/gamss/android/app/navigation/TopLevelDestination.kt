@@ -24,11 +24,11 @@ data class TopLevelDestination(
     val label: String,
 )
 
-fun topLevelDestinations(isDebug: Boolean): List<TopLevelDestination> = buildList {
+fun topLevelDestinations(showsInternalTools: Boolean): List<TopLevelDestination> = buildList {
     add(TopLevelDestination(key = HomeKey, icon = Icons.Filled.Home, label = "홈"))
     add(TopLevelDestination(key = CalendarKey, icon = Icons.Filled.DateRange, label = "달력"))
     add(TopLevelDestination(key = EmotionKey, icon = Icons.Filled.Favorite, label = "감정"))
-    if (isDebug) {
+    if (showsInternalTools) {
         add(TopLevelDestination(key = ChatKey, icon = Icons.Filled.Email, label = "대화"))
     }
 }

@@ -20,4 +20,5 @@ object BuildInfoModule {
 
 private object AppBuildInfo : BuildInfo {
     override val isDebug: Boolean = BuildConfig.DEBUG
+    override val showsInternalTools: Boolean = BuildConfig.INTERNAL_TOOLS
 }
