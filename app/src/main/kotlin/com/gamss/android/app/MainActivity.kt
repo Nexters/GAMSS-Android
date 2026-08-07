@@ -21,7 +21,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             GamssTheme {
-                GamssRootNavHost(isDebug = buildInfo.isDebug)
+                GamssRootNavHost(showsInternalTools = buildInfo.showsInternalTools)
             }
         }
     }
