@@ -1,0 +1,46 @@
+# This file contains the fastlane.tools configuration
+# You can find the documentation at https://docs.fastlane.tools/
+#
+# For a list of all available actions, check out
+#
+#     https://docs.fastlane.tools/actions
+#
+# For a list of all available plugins, check out
+#
+#     https://docs.fastlane.tools/plugins/available-plugins
+#
+
+default_platform(:android)
+
+platform :android do
+  desc "Runs all the tests"
+  lane :test do
+    gradle(task: "test")
+  end
+
+  desc "Firebase App Distribution 에 베타 빌드 배포"
+  lane :distribute do
+    version_code = ENV["VERSION_CODE"]
+    UI.user_error!("VERSION_CODE environment variable is not set") unless version_code
+
+    firebase_app_id = ENV["FIREBASE_APP_ID"]
+    UI.user_error!("FIREBASE_APP_ID environment variable is not set") unless firebase_app_id
+
+    gradle(
+      task: "clean :app:bundleRelease",
+      properties: { "versionCode" => version_code }
+    )
+
+    firebase_app_distribution(
+      app: firebase_app_id,
+      service_credentials_file: ENV["FIREBASE_SERVICE_CREDENTIALS_FILE"],
+      android_artifact_type: "AAB",
+      android_artifact_path: File.expand_path("../app/build/outputs/bundle/release/app-release.aab", __dir__),
+      groups: ENV["FIREBASE_TESTER_GROUPS"],
+      release_notes: changelog_from_git_commits(
+        commits_count: 1,
+        pretty: "%s"
+      )
+    )
+  end
+end
