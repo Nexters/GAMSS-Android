@@ -1,6 +1,7 @@
 package com.gamss.android.data
 
 import androidx.paging.PagingSource
+import com.gamss.android.data.conversationsearch.ChattingSearchPagingSource
 import com.gamss.android.data.remote.chattingRoomSearch.ChattingRoomSearchService
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json

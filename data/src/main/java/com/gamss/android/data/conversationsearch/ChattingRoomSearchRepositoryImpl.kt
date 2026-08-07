@@ -1,10 +1,8 @@
-package com.gamss.android.data.repository
+package com.gamss.android.data.conversationsearch
 
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingData
-import com.gamss.android.data.ChattingSearchPagingSource
-import com.gamss.android.data.ChattingSearchPagingSource.Companion.DEFAULT_SIZE
 import com.gamss.android.data.remote.chattingRoomSearch.ChattingRoomSearchService
 import com.gamss.android.domain.chattingsearch.ChattingRoomSummary
 import com.gamss.android.domain.repository.ChattingRoomSearchRepository
@@ -20,8 +18,8 @@ internal class ChattingRoomSearchRepositoryImpl @Inject constructor(
     override fun searchChattingRooms(keyword: String): Flow<PagingData<ChattingRoomSummary>> =
         Pager(
             config = PagingConfig(
-                pageSize = DEFAULT_SIZE,
-                initialLoadSize = DEFAULT_SIZE,
+                pageSize = ChattingSearchPagingSource.DEFAULT_SIZE,
+                initialLoadSize = ChattingSearchPagingSource.DEFAULT_SIZE,
                 enablePlaceholders = false,
             ),
             pagingSourceFactory = {

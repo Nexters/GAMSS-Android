@@ -1,4 +1,4 @@
-package com.gamss.android.data
+package com.gamss.android.data.conversationsearch
 
 import androidx.paging.PagingSource
 import androidx.paging.PagingState
