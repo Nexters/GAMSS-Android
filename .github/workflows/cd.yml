@@ -2,7 +2,7 @@ name: CD
 
 on:
   push:
-    branches: [main]
+    branches: [feature/cd_setting]
   workflow_dispatch:
 
 concurrency:
