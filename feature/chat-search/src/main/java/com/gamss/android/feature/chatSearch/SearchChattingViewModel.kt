@@ -6,6 +6,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
+import com.gamss.android.core.common.AppResult
+import com.gamss.android.core.common.network.ApiException
+import com.gamss.android.domain.chattingsearch.ChattingRoomSearchException
 import com.gamss.android.domain.chattingsearch.ChattingRoomSummary
 import com.gamss.android.domain.chattingsearch.SearchChattingRoomsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -28,11 +31,11 @@ class SearchChattingViewModel @Inject constructor(
         SearchChattingState(),
     )
 
-    private val searchRequests = MutableStateFlow<SearchRequest?>(null)
+    private val searchResults = MutableStateFlow<Flow<PagingData<ChattingRoomSummary>>?>(null)
 
-    val chattingRooms: Flow<PagingData<ChattingRoomSummary>> = searchRequests
+    val chattingRooms: Flow<PagingData<ChattingRoomSummary>> = searchResults
         .filterNotNull()
-        .flatMapLatest { request -> searchChattingRoomsUseCase(request.keyword) }
+        .flatMapLatest { it }
         .cachedIn(viewModelScope)
 
     fun onKeywordChanged(keyword: TextFieldValue) = intent {
@@ -40,28 +43,33 @@ class SearchChattingViewModel @Inject constructor(
     }
 
     fun search() = intent {
-        if (!state.canSearch) {
-            postSideEffect(SearchChattingSideEffect.SearchFailure(SearchFailureReason.INVALID_INPUT))
-            return@intent
-        }
         val keyword = state.keyword.text.trim()
-
         val nextGeneration = state.searchGeneration + 1
-        reduce {
-            state.copy(
-                keyword = TextFieldValue(
-                    text = keyword,
-                    selection = TextRange(keyword.length),
-                ),
-                hasSearched = true,
-                searchGeneration = nextGeneration,
+
+        when (val result = searchChattingRoomsUseCase(keyword)) {
+            is AppResult.Success -> {
+                reduce {
+                    state.copy(
+                        keyword = TextFieldValue(
+                            text = keyword,
+                            selection = TextRange(keyword.length),
+                        ),
+                        hasSearched = true,
+                        searchGeneration = nextGeneration,
+                    )
+                }
+                searchResults.value = result.data
+            }
+
+            is AppResult.Failure -> postSideEffect(
+                SearchChattingSideEffect.SearchFailure(result.throwable.toSearchFailureReason()),
             )
         }
-        searchRequests.value = SearchRequest(keyword, nextGeneration)
     }
+}
 
-    private data class SearchRequest(
-        val keyword: String,
-        val generation: Long,
-    )
+internal fun Throwable.toSearchFailureReason(): SearchFailureReason = when (this) {
+    is ChattingRoomSearchException.InvalidKeyword -> SearchFailureReason.INVALID_INPUT
+    is ApiException.Network -> SearchFailureReason.NETWORK
+    else -> SearchFailureReason.UNKNOWN
 }

@@ -133,10 +133,7 @@ private fun SearchTopBar(
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                 keyboardActions = KeyboardActions(onSearch = { onSearch() }),
             )
-            Button(
-                onClick = onSearch,
-                enabled = state.canSearch,
-            ) {
+            Button(onClick = onSearch) {
                 Text("검색")
             }
         }
@@ -155,10 +152,10 @@ private fun SearchResultContent(
         return
     }
 
-    when (chattingRooms.loadState.refresh) {
+    when (val refresh = chattingRooms.loadState.refresh) {
         is LoadState.Loading -> LoadingContent(contentPadding)
         is LoadState.Error -> ErrorContent(
-            message = SearchFailureReason.UNKNOWN.toMessage(),
+            message = refresh.error.toSearchFailureReason().toMessage(),
             contentPadding = contentPadding,
             onRetry = chattingRooms::retry,
         )
@@ -199,11 +196,11 @@ private fun SearchResultList(
             }
         }
 
-        when (chattingRooms.loadState.append) {
+        when (val append = chattingRooms.loadState.append) {
             is LoadState.Loading -> item { AppendLoadingItem() }
             is LoadState.Error -> item {
                 AppendErrorItem(
-                    message = SearchFailureReason.UNKNOWN.toMessage(),
+                    message = append.error.toSearchFailureReason().toMessage(),
                     onRetry = chattingRooms::retry,
                 )
             }
