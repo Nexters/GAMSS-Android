@@ -44,7 +44,7 @@ class DeleteUserAccountUseCaseTest {
     }
 
     @Test
-    fun `회원 탈퇴 성공 후 로그아웃 실패 시 로그아웃 실패를 반환한다`() = runBlocking {
+    fun `회원 탈퇴 성공 후 로그아웃 실패해도 탈퇴 성공을 반환한다`() = runBlocking {
         val failure = IllegalStateException("logout failed")
         val userRepository = FakeUserRepository()
         val authRepository = FakeAuthRepository(
@@ -54,7 +54,7 @@ class DeleteUserAccountUseCaseTest {
 
         val result = useCase()
 
-        assertSame(failure, (result as AppResult.Failure).throwable)
+        assertTrue(result is AppResult.Success)
         assertEquals(1, authRepository.logoutCallCount)
     }
 
@@ -78,7 +78,7 @@ class DeleteUserAccountUseCaseTest {
             error("Not needed for this test")
 
         override suspend fun deleteUserAccount(): AppResult<Unit> {
-            callOrder += "deleteAccount"
+            callOrder += "deleteUserAccount"
             deleteUserAccountFailure?.let { throw it }
             return deleteUserAccountResult
         }

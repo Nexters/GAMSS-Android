@@ -10,9 +10,10 @@ class DeleteUserAccountUseCase @Inject constructor(
     private val authRepository: AuthRepository,
 ) : NoParamUseCase<AppResult<Unit>> {
     override suspend fun invoke(): AppResult<Unit> {
-        return when (val result = userRepository.deleteUserAccount()) {
-            is AppResult.Success -> authRepository.logout()
-            is AppResult.Failure -> result
-        }
+        val deleteResult = userRepository.deleteUserAccount()
+        if (deleteResult is AppResult.Failure) return deleteResult
+        
+        authRepository.logout()
+        return AppResult.Success(Unit)
     }
 }
