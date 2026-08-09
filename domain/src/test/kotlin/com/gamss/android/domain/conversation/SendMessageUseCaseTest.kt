@@ -50,6 +50,9 @@ class SendMessageUseCaseTest {
 
         override suspend fun getMessages(conversationId: Long): AppResult<List<Message>> =
             AppResult.Success(emptyList())
+
+        override suspend fun endConversation(conversationId: Long): AppResult<Unit> =
+            AppResult.Success(Unit)
     }
 
     @Test

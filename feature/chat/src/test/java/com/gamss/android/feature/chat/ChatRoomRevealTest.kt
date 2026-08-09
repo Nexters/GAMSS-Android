@@ -1,18 +1,5 @@
 package com.gamss.android.feature.chat
 
-import com.gamss.android.core.common.AppResult
-import com.gamss.android.domain.conversation.CommentGenerationStatus
-import com.gamss.android.domain.conversation.ConversationRepository
-import com.gamss.android.domain.conversation.ConversationSession
-import com.gamss.android.domain.conversation.ConversationSummaryStore
-import com.gamss.android.domain.conversation.GetMessagesUseCase
-import com.gamss.android.domain.conversation.Message
-import com.gamss.android.domain.conversation.MessageSender
-import com.gamss.android.domain.conversation.SendMessageUseCase
-import com.gamss.android.domain.conversation.SentMessage
-import com.gamss.android.domain.emotion.EmotionCharacter
-import com.gamss.android.domain.summary.DiarySummarizer
-import com.gamss.android.domain.summary.UtteranceTokenCounter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -161,85 +148,12 @@ class ChatRoomRevealTest {
     }
 
     private fun viewModel(commentCount: Int): ChatRoomViewModel =
-        viewModel(FakeConversationRepository(commentCount))
+        chatRoomViewModel(FakeConversationRepository(commentCount))
 
-    private fun viewModel(conversationRepository: FakeConversationRepository): ChatRoomViewModel {
-        return ChatRoomViewModel(
-            session = ConversationSession(
-                sendMessage = SendMessageUseCase(conversationRepository),
-                getMessages = GetMessagesUseCase(conversationRepository),
-                summaryStore = ConversationSummaryStore(
-                    summarizer = PassThroughSummarizer,
-                    tokenCounter = CharLengthTokenCounter,
-                ),
-            ),
-        )
-    }
-
-    private object PassThroughSummarizer : DiarySummarizer {
-        override suspend fun summarize(text: String): String = text
-    }
-
-    private object CharLengthTokenCounter : UtteranceTokenCounter {
-        override suspend fun count(text: String): Int = text.length
-    }
-
-    private class FakeConversationRepository(
-        private val commentCount: Int,
-        private val failing: Boolean = false,
-    ) : ConversationRepository {
-        private var sentCount = 0
-
-        val sentContextSummaries = mutableListOf<String?>()
-
-        override suspend fun sendMessage(
-            conversationId: Long?,
-            content: String,
-            replyToMessageId: Long?,
-            contextSummary: String?,
-        ): AppResult<SentMessage> {
-            sentContextSummaries += contextSummary
-            if (failing) return AppResult.Failure(IllegalStateException("send failed"))
-            val roomId = conversationId ?: ROOM_ID
-            return AppResult.Success(
-                SentMessage(
-                    message = message(
-                        id = USER_ID + sentCount++,
-                        conversationId = roomId,
-                        sender = MessageSender.User,
-                        content = content,
-                    ),
-                    commentStatus = CommentGenerationStatus.DONE,
-                    comments = List(commentCount) { index ->
-                        message(
-                            id = COMMENT_ID_BASE + index + (sentCount - 1) * COMMENT_ID_STRIDE,
-                            conversationId = roomId,
-                            sender = MessageSender.Character(EmotionCharacter.ANGER),
-                            content = "댓글 $index",
-                        )
-                    },
-                ),
-            )
-        }
-
-        override suspend fun getMessages(conversationId: Long): AppResult<List<Message>> =
-            AppResult.Success(emptyList())
-    }
+    private fun viewModel(conversationRepository: FakeConversationRepository): ChatRoomViewModel =
+        chatRoomViewModel(conversationRepository)
 
     private companion object {
-        const val INPUT = "오늘 억울한 일이 있었어"
         const val SEND_FAILED_MESSAGE = "메시지를 보내지 못했어요"
-        const val SECOND_INPUT = "팀장이 갑자기 일을 더 줬어"
-        const val ROOM_ID = 7L
-        const val USER_ID = 100L
-        const val COMMENT_ID_BASE = 200L
-        const val COMMENT_ID_STRIDE = 10L
-
-        fun message(id: Long, conversationId: Long, sender: MessageSender, content: String) = Message(
-            id = id,
-            conversationId = conversationId,
-            sender = sender,
-            content = content,
-        )
     }
 }
