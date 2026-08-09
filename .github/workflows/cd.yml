@@ -1,0 +1,87 @@
+name: CD
+
+on:
+  push:
+    branches: [develop]
+  workflow_dispatch:
+
+concurrency:
+  group: cd-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  distribute:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          validate-wrappers: true
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+          bundler-cache: true
+
+      - name: Prepare secret directories
+        run: mkdir -p fastlane/config keystore
+
+      - name: Write google-services.json
+        run: echo "${{ secrets.GOOGLE_SERVICES_JSON }}" | base64 -d > app/google-services.json
+
+      - name: Write local.properties
+        shell: bash
+        env:
+          DEV_BASE_URL: ${{ secrets.DEV_BASE_URL }}
+          PROD_BASE_URL: ${{ secrets.PROD_BASE_URL }}
+        run: |
+          : "${DEV_BASE_URL:?DEV_BASE_URL secret is not configured}"
+          : "${PROD_BASE_URL:?PROD_BASE_URL secret is not configured}"
+          printf 'DEV_BASE_URL=%s\n' "$DEV_BASE_URL" > local.properties
+          printf 'PROD_BASE_URL=%s\n' "$PROD_BASE_URL" >> local.properties
+
+      - name: Write Firebase service account key
+        run: echo "${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}" | base64 -d > fastlane/config/gamss-key.json
+
+      - name: Write release keystore
+        run: echo "${{ secrets.RELEASE_KEYSTORE }}" | base64 -d > keystore/release.jks
+
+      - name: Compute CI version
+        run: |
+          echo "VERSION_CODE=$((100000 + GITHUB_RUN_NUMBER))" >> "$GITHUB_ENV"
+
+      - name: Distribute to Firebase App Distribution
+        env:
+          RELEASE_KEYSTORE_PATH: ${{ github.workspace }}/keystore/release.jks
+          RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+          FIREBASE_SERVICE_CREDENTIALS_FILE: ${{ github.workspace }}/fastlane/config/gamss-key.json
+          FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
+          FIREBASE_TESTER_GROUPS: inner-tester
+        run: bundle exec fastlane android distribute
+
+      - name: Upload reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cd-reports
+          path: |
+            **/build/reports/**
+          if-no-files-found: ignore
+          retention-days: 7

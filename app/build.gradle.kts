@@ -18,7 +18,8 @@ android {
 
     defaultConfig {
         applicationId = "com.gamss.android"
-        versionCode = 1
+        // CD에서 fastlane이 -PversionCode= 로 CI 빌드 번호(GITHUB_RUN_NUMBER 기반)를 주입한다.
+        versionCode = (project.findProperty("versionCode") as String?)?.toIntOrNull() ?: 1
         versionName = "0.1.0"
 
         // 감정 분류 온디바이스 네이티브(DJL 토크나이저 + libc++_shared.so)는 arm64 실기기 대상만 패키징
@@ -34,6 +35,19 @@ android {
         noCompress += "onnx"
     }
 
+    val releaseKeystorePath = System.getenv("RELEASE_KEYSTORE_PATH")
+
+    signingConfigs {
+        if (releaseKeystorePath != null) {
+            create("release") {
+                storeFile = file(releaseKeystorePath)
+                storePassword = System.getenv("RELEASE_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("RELEASE_KEY_ALIAS")
+                keyPassword = System.getenv("RELEASE_KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         getByName("debug") {
             applicationIdSuffix = ".dev"
@@ -42,6 +56,9 @@ android {
         }
         getByName("release") {
             isMinifyEnabled = false
+            if (releaseKeystorePath != null) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
 }

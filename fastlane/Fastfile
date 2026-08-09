@@ -1,0 +1,34 @@
+default_platform(:android)
+
+platform :android do
+  desc "Runs all the tests"
+  lane :test do
+    gradle(task: "test")
+  end
+
+  desc "Firebase App Distribution 에 베타 빌드 배포"
+  lane :distribute do
+    version_code = ENV["VERSION_CODE"]
+    UI.user_error!("VERSION_CODE environment variable is not set") unless version_code
+
+    firebase_app_id = ENV["FIREBASE_APP_ID"]
+    UI.user_error!("FIREBASE_APP_ID environment variable is not set") unless firebase_app_id
+
+    gradle(
+      task: "clean :app:assembleRelease",
+      properties: { "versionCode" => version_code }
+    )
+
+    firebase_app_distribution(
+      app: firebase_app_id,
+      service_credentials_file: ENV["FIREBASE_SERVICE_CREDENTIALS_FILE"],
+      android_artifact_type: "APK",
+      android_artifact_path: File.expand_path("../app/build/outputs/apk/release/app-release.apk", __dir__),
+      groups: ENV["FIREBASE_TESTER_GROUPS"],
+      release_notes: changelog_from_git_commits(
+        commits_count: 1,
+        pretty: "%h %s"
+      )
+    )
+  end
+end
