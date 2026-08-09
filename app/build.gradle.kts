@@ -19,7 +19,8 @@ android {
 
     defaultConfig {
         applicationId = "com.gamss.android"
-        versionCode = 1
+        // CD에서 fastlane이 -PversionCode= 로 CI 빌드 번호(GITHUB_RUN_NUMBER 기반)를 주입한다.
+        versionCode = (project.findProperty("versionCode") as String?)?.toIntOrNull() ?: 1
         versionName = "0.1.0"
 
         // 감정 분류 온디바이스 네이티브(DJL 토크나이저 + libc++_shared.so)는 arm64 실기기 대상만 패키징
@@ -54,6 +55,32 @@ android {
         }
     }
 
+    val releaseKeystorePath = providers.environmentVariable("RELEASE_KEYSTORE_PATH").orNull
+    val releaseKeystorePassword = providers.environmentVariable("RELEASE_KEYSTORE_PASSWORD").orNull
+    val releaseKeyAlias = providers.environmentVariable("RELEASE_KEY_ALIAS").orNull
+    val releaseKeyPassword = providers.environmentVariable("RELEASE_KEY_PASSWORD").orNull
+    val hasCompleteReleaseSigningConfig = listOf(
+        releaseKeystorePath,
+        releaseKeystorePassword,
+        releaseKeyAlias,
+        releaseKeyPassword,
+    ).all { !it.isNullOrBlank() }
+
+    signingConfigs {
+        if (hasCompleteReleaseSigningConfig) {
+            val keystorePath = releaseKeystorePath.orEmpty()
+            val keystorePassword = releaseKeystorePassword.orEmpty()
+            val signingKeyAlias = releaseKeyAlias.orEmpty()
+            val signingKeyPassword = releaseKeyPassword.orEmpty()
+            create("release") {
+                storeFile = file(keystorePath)
+                storePassword = keystorePassword
+                keyAlias = signingKeyAlias
+                keyPassword = signingKeyPassword
+            }
+        }
+    }
+
     buildTypes {
         getByName("debug") {
             applicationIdSuffix = ".dev"
@@ -62,6 +89,9 @@ android {
         }
         getByName("release") {
             isMinifyEnabled = false
+            if (hasCompleteReleaseSigningConfig) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
 }
@@ -91,6 +121,8 @@ dependencies {
     implementation(libs.orbit.core)
     implementation(libs.orbit.viewmodel)
     implementation(libs.orbit.compose)
+
+    implementation(libs.kotlinx.coroutines.android)
 
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.crashlytics)

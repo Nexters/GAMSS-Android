@@ -1,5 +1,7 @@
 package com.gamss.android.feature.emotion
 
+import android.content.Context
+import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -20,9 +22,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.gamss.android.domain.emotion.EmotionResult
+import com.gamss.android.feature.emotion.component.SupportAgencyDialog
 import org.orbitmvi.orbit.compose.collectAsState
 
 private const val MAX_DIARY_LEN = 140
@@ -34,6 +38,16 @@ fun EmotionScreen(
     viewModel: EmotionViewModel = hiltViewModel(),
 ) {
     val state by viewModel.collectAsState()
+    val context = LocalContext.current
+
+    state.riskDetection?.let { detection ->
+        SupportAgencyDialog(
+            agencies = detection.agencies,
+            riskLevel = detection.level,
+            onCallClick = { agency -> context.dialOrNotify(agency.phoneNumber) },
+            onDismiss = viewModel::onRiskGuidanceDismiss,
+        )
+    }
 
     Scaffold(
         topBar = { TopAppBar(title = { Text("오늘의 일기 감정") }) },
@@ -76,6 +90,17 @@ fun EmotionScreen(
             state.error?.let { Text("오류: $it") }
             state.result?.let { ResultCard(it) }
         }
+    }
+}
+
+private fun Context.dialOrNotify(phoneNumber: String?) {
+    if (phoneNumber == null) return
+    if (!dial(phoneNumber)) {
+        Toast.makeText(
+            this,
+            getString(R.string.safety_call_unavailable, phoneNumber),
+            Toast.LENGTH_LONG,
+        ).show()
     }
 }
 
