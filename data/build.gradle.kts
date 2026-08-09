@@ -35,10 +35,6 @@ android {
         debug {
             buildConfigField("String", "BASE_URL", "\"$devBaseUrl\"")
         }
-        // 내부 배포본은 릴리즈 키로 서명하되 서버는 dev 를 본다.
-        create("internal") {
-            buildConfigField("String", "BASE_URL", "\"$devBaseUrl\"")
-        }
         release {
             buildConfigField("String", "BASE_URL", "\"$prodBaseUrl\"")
         }
