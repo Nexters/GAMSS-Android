@@ -20,9 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.gamss.android.core.common.network.ApiException
-import com.gamss.android.domain.user.NicknameUpdateException
-import com.gamss.android.domain.user.UpdateNicknameUseCase
+import com.gamss.android.domain.user.NicknamePolicy
 import com.gamss.android.domain.user.UserProfile
 import org.orbitmvi.orbit.compose.collectAsState
 import org.orbitmvi.orbit.compose.collectSideEffect
@@ -129,7 +127,7 @@ private fun UpdateNicknameSection(
             .padding(top = 8.dp),
         value = nicknameInput,
         onValueChange = { nickname ->
-            if (nickname.length <= UpdateNicknameUseCase.MAX_NICKNAME_LENGTH) {
+            if (nickname.length <= NicknamePolicy.MAX_LENGTH) {
                 onNicknameInputChange(nickname)
             }
         },
@@ -170,22 +168,15 @@ private fun SettingSideEffect.toMessage(): String =
     when (this) {
         SettingSideEffect.LoadUserInfoFailure -> "사용자 정보를 불러오지 못했어요"
         SettingSideEffect.UpdateNicknameSuccess -> "닉네임이 변경되었어요"
-        is SettingSideEffect.UpdateNicknameFailure -> throwable.toUpdateNicknameFailureMessage()
+        is SettingSideEffect.UpdateNicknameFailure -> reason.toMessage()
         SettingSideEffect.DeleteAccountFailure -> "회원 탈퇴에 실패했어요"
     }
 
-private fun Throwable.toUpdateNicknameFailureMessage(): String =
+private fun NicknameFailureReason.toMessage(): String =
     when (this) {
-        is NicknameUpdateException.MissingNickname ->
-            "닉네임을 입력해주세요"
-
-        is NicknameUpdateException.InvalidLength ->
-            "닉네임은 2~20자로 입력해주세요"
-
-        is NicknameUpdateException.InvalidNickname ->
-            "사용할 수 없는 닉네임이에요"
-
-        is ApiException.Network -> "네트워크 연결을 확인해주세요"
-        is ApiException.Http -> message ?: "닉네임 변경에 실패했어요"
-        else -> "닉네임 변경에 실패했어요"
+        NicknameFailureReason.MISSING -> "닉네임을 입력해주세요"
+        NicknameFailureReason.INVALID_LENGTH -> "닉네임은 2~20자로 입력해주세요"
+        NicknameFailureReason.INVALID_NICKNAME -> "사용할 수 없는 닉네임이에요"
+        NicknameFailureReason.NETWORK -> "네트워크 연결을 확인해주세요"
+        NicknameFailureReason.UNKNOWN -> "닉네임 변경에 실패했어요"
     }

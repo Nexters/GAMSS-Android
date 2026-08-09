@@ -33,7 +33,7 @@ class UpdateNicknameUseCaseTest {
     @Test
     fun `최대 길이보다 긴 닉네임은 유효하지 않은 닉네임 실패를 반환한다`() = runBlocking {
         val repository = FakeUserRepository()
-        val nickname = "가".repeat(UpdateNicknameUseCase.MAX_NICKNAME_LENGTH + 1)
+        val nickname = "가".repeat(NicknamePolicy.MAX_LENGTH + 1)
 
         val result = UpdateNicknameUseCase(repository)(nickname)
 

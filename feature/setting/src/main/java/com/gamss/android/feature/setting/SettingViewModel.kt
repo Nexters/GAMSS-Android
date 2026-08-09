@@ -2,8 +2,10 @@ package com.gamss.android.feature.setting
 
 import androidx.lifecycle.ViewModel
 import com.gamss.android.core.common.AppResult
-import com.gamss.android.domain.user.GetUserInfoUseCase
+import com.gamss.android.core.common.network.ApiException
 import com.gamss.android.domain.user.DeleteUserAccountUseCase
+import com.gamss.android.domain.user.GetUserInfoUseCase
+import com.gamss.android.domain.user.NicknameUpdateException
 import com.gamss.android.domain.user.UpdateNicknameUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import org.orbitmvi.orbit.ContainerHost
@@ -60,7 +62,7 @@ class SettingViewModel @Inject constructor(
 
             is AppResult.Failure -> {
                 reduce { state.copy(isLoading = false) }
-                postSideEffect(SettingSideEffect.UpdateNicknameFailure(result.throwable))
+                postSideEffect(SettingSideEffect.UpdateNicknameFailure(result.throwable.toNicknameFailureReason()))
             }
         }
     }
@@ -82,3 +84,12 @@ class SettingViewModel @Inject constructor(
         }
     }
 }
+
+private fun Throwable.toNicknameFailureReason(): NicknameFailureReason =
+    when (this) {
+        is NicknameUpdateException.MissingNickname -> NicknameFailureReason.MISSING
+        is NicknameUpdateException.InvalidLength -> NicknameFailureReason.INVALID_LENGTH
+        is NicknameUpdateException.InvalidNickname -> NicknameFailureReason.INVALID_NICKNAME
+        is ApiException.Network -> NicknameFailureReason.NETWORK
+        else -> NicknameFailureReason.UNKNOWN
+    }
