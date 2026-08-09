@@ -6,10 +6,10 @@ import kotlinx.serialization.Serializable
 @Serializable
 internal data class UserInfoResponse(
     val id: Long,
-    val email: String?,
-    val nickname: String?,
-    val status: String?,
-    val createdAt: String?,
+    val email: String? = null,
+    val nickname: String? = null,
+    val status: String? = null,
+    val createdAt: String? = null,
 )
 
 internal fun UserInfoResponse.toDomain(): UserProfile =
