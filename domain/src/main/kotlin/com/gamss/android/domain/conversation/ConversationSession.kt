@@ -20,7 +20,7 @@ class ConversationSession @Inject constructor(
     private var pendingTitle: PendingTitle? = null
 
     suspend fun restore(conversationId: Long): AppResult<List<Message>> {
-        titleMutex.withLock { pendingTitle = null }
+        clearPendingTitle()
         val result = getMessages(conversationId)
         when (result) {
             is AppResult.Success -> summaryStore.restore(result.data.userUtterances())
@@ -45,13 +45,13 @@ class ConversationSession @Inject constructor(
         )
         if (result is AppResult.Success) {
             summaryStore.append(result.data.message.content)
-            if (opensConversation) {
-                titleMutex.withLock {
-                    pendingTitle = PendingTitle(
+            opensConversation.takeIf { it }?.let {
+                savePendingTitle(
+                    PendingTitle(
                         conversationId = result.data.message.conversationId,
                         seed = result.data.message.content,
-                    )
-                }
+                    ),
+                )
             }
         }
         return result
@@ -60,27 +60,40 @@ class ConversationSession @Inject constructor(
     suspend fun finishSend() = coroutineScope {
         launch { assignPendingTitle() }
         launch { summaryStore.compact() }
-        Unit
     }
 
     private suspend fun assignPendingTitle() {
-        val pending = titleMutex.withLock { pendingTitle.also { pendingTitle = null } } ?: return
-        val title = conversationTitleFrom(pending.seed)
-            ?: return
+        val pending = takePendingTitle() ?: return
+        val title = conversationTitleFrom(pending.seed) ?: return
         val result = try {
             updateConversationTitle(
                 UpdateConversationTitleUseCase.Params(conversationId = pending.conversationId, title = title),
             )
         } catch (e: CancellationException) {
-            titleMutex.withLock {
-                if (pendingTitle == null) pendingTitle = pending
-            }
+            restorePendingTitle(pending)
             throw e
         }
-        if (result is AppResult.Failure && pending.attempts + 1 < MAX_TITLE_ATTEMPTS) {
-            titleMutex.withLock {
-                if (pendingTitle == null) pendingTitle = pending.copy(attempts = pending.attempts + 1)
+        if (result is AppResult.Failure) {
+            pending.nextAttempt()?.let { nextPending ->
+                restorePendingTitle(nextPending)
             }
+        }
+    }
+
+    private suspend fun clearPendingTitle() {
+        titleMutex.withLock { pendingTitle = null }
+    }
+
+    private suspend fun savePendingTitle(pending: PendingTitle) {
+        titleMutex.withLock { pendingTitle = pending }
+    }
+
+    private suspend fun takePendingTitle(): PendingTitle? =
+        titleMutex.withLock { pendingTitle.also { pendingTitle = null } }
+
+    private suspend fun restorePendingTitle(pending: PendingTitle) {
+        titleMutex.withLock {
+            pendingTitle = pendingTitle ?: pending
         }
     }
 
@@ -88,7 +101,10 @@ class ConversationSession @Inject constructor(
         val conversationId: Long,
         val seed: String,
         val attempts: Int = 0,
-    )
+    ) {
+        fun nextAttempt(): PendingTitle? =
+            copy(attempts = attempts + 1).takeIf { it.attempts < MAX_TITLE_ATTEMPTS }
+    }
 
     private companion object {
         const val MAX_TITLE_ATTEMPTS = 3

@@ -49,11 +49,12 @@ fun conversationTitleFrom(seed: String): String? {
     val sentences = seed.splitSentences()
     if (sentences.isEmpty()) return null
 
-    val (questions, statements) = sentences.filter { titleCandidate(it.text) != null }
-        .partition(Sentence::isQuestion)
-    val candidates = (statements + questions).mapNotNull { titleCandidate(it.text) }
+    val candidates = sentences
+        .mapNotNull { sentence -> titleCandidate(sentence.text)?.let { sentence to it } }
+        .sortedBy { (sentence) -> sentence.isQuestion }
+        .map { (_, title) -> title }
 
-    val title = candidates.firstOrNull { it.length >= MIN_MEANINGFUL_LENGTH }
+    val title = candidates.firstOrNull(String::isMeaningfulTitle)
         ?: candidates.firstOrNull()
         ?: sentences.map(Sentence::text).headline()
     return title.ellipsize()
@@ -62,14 +63,15 @@ fun conversationTitleFrom(seed: String): String? {
 private class Sentence(val text: String, val isQuestion: Boolean)
 
 private fun String.splitSentences(): List<Sentence> {
-    val sentences = mutableListOf<Sentence>()
     var start = 0
-    for (boundary in SENTENCE_DELIMITER.findAll(this)) {
-        sentences += Sentence(substring(start, boundary.range.first), boundary.value.any(Char::isQuestionMark))
-        start = boundary.range.last + 1
+    return buildList {
+        for (boundary in SENTENCE_DELIMITER.findAll(this@splitSentences)) {
+            add(Sentence(substring(start, boundary.range.first), boundary.value.any(Char::isQuestionMark)))
+            start = boundary.range.last + 1
+        }
+        add(Sentence(substring(start), false))
     }
-    sentences += Sentence(substring(start), false)
-    return sentences.mapNotNull { sentence ->
+        .mapNotNull { sentence ->
         sentence.text.replace(WHITESPACE, " ").trim()
             .takeIf(String::isNotEmpty)
             ?.let { Sentence(it, sentence.isQuestion) }
@@ -80,14 +82,18 @@ private fun Char.isQuestionMark(): Boolean = this == '?' || this == '？'
 
 private fun titleCandidate(sentence: String): String? {
     val words = sentence.split(' ')
-    if (words.none(::isFactual)) return null
-    return words.dropWhile { !isFactual(it) }.joinToString(" ")
+    val startIndex = words.indexOfFirst(::isFactual)
+    return startIndex.takeIf { it >= 0 }
+        ?.let(words::drop)
+        ?.joinToString(" ")
 }
 
 private fun isFactual(word: String): Boolean {
     val bare = word.replace(TRAILING_MARKS, "")
-    if (bare.isEmpty() || bare in WEAK_WORDS) return false
-    return !bare.isFiller() && !bare.stripFillerPrefixes().isFiller()
+    return bare.isNotEmpty() &&
+        bare !in WEAK_WORDS &&
+        !bare.isFiller() &&
+        !bare.stripFillerPrefixes().isFiller()
 }
 
 private fun String.isFiller(): Boolean = this in INTERJECTIONS || this in EMOTION_WORDS
@@ -101,12 +107,9 @@ private fun String.stripFillerPrefixes(): String {
 }
 
 private fun List<String>.headline(): String {
-    var headline = first()
-    for (sentence in drop(1)) {
-        if (headline.length >= MIN_TITLE_LENGTH) break
-        headline = "$headline $sentence"
+    return drop(1).fold(first()) { headline, sentence ->
+        headline.takeIf { it.length >= MIN_TITLE_LENGTH } ?: "$headline $sentence"
     }
-    return headline
 }
 
 private fun String.ellipsize(): String {
@@ -115,3 +118,5 @@ private fun String.ellipsize(): String {
     val end = if (this[limit - 1].isHighSurrogate()) limit - 1 else limit
     return take(end).trimEnd() + ELLIPSIS
 }
+
+private fun String.isMeaningfulTitle(): Boolean = length >= MIN_MEANINGFUL_LENGTH
