@@ -41,6 +41,7 @@ class RiskLexiconRepositoryImplTest {
 
         assertEquals(1, repository.getLexicon().version)
         coVerify(exactly = 0) { local.write(any(), any()) }
+        coVerify(exactly = 0) { local.markFetched(any()) }
     }
 
     @Test
@@ -60,6 +61,26 @@ class RiskLexiconRepositoryImplTest {
         val repository = repository()
         repository.refresh()
 
+        coVerify(exactly = 1) { local.markFetched(any()) }
+        coVerify(exactly = 0) { local.write(any(), any()) }
+        assertEquals(5, repository.getLexicon().version)
+    }
+
+    @Test
+    fun `원격 사전에 필수 필드가 비면 fetchedAt만 갱신하고 기존 사전을 유지한다`() = runTest {
+        coEvery { bundled.load() } returns dto(version = 5)
+        coEvery { local.read() } returns null
+        coEvery { remote.fetch() } returns RiskLexiconDto(
+            version = 9,
+            terms = emptyList(),
+            safePhrases = emptyList(),
+            agencies = emptyList(),
+        )
+
+        val repository = repository()
+        repository.refresh()
+
+        coVerify(exactly = 1) { local.markFetched(any()) }
         coVerify(exactly = 0) { local.write(any(), any()) }
         assertEquals(5, repository.getLexicon().version)
     }
@@ -73,6 +94,7 @@ class RiskLexiconRepositoryImplTest {
         val repository = repository()
         repository.refresh()
 
+        coVerify(exactly = 1) { local.markFetched(any()) }
         coVerify(exactly = 1) { local.write(any(), any()) }
         val lexicon = repository.getLexicon()
         assertEquals(9, lexicon.version)

@@ -5,6 +5,7 @@ import com.gamss.android.data.safety.model.RiskTermDto
 import com.gamss.android.data.safety.model.SupportAgencyDto
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Source
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import javax.inject.Provider
@@ -18,7 +19,7 @@ internal class FirestoreRiskLexiconDataSource @Inject constructor(
         firestoreProvider.get()
             .collection(COLLECTION)
             .document(DOCUMENT)
-            .get()
+            .get(Source.SERVER)
             .await()
             .takeIf { it.exists() }
             ?.toDto()
@@ -35,7 +36,6 @@ internal class FirestoreRiskLexiconDataSource @Inject constructor(
                 name = it.string(FIELD_NAME),
                 description = it.string(FIELD_DESCRIPTION),
                 phoneNumber = it[FIELD_PHONE_NUMBER] as? String,
-                url = it[FIELD_URL] as? String,
                 priority = (it[FIELD_PRIORITY] as? Number)?.toInt() ?: Int.MAX_VALUE,
             )
         },
@@ -60,7 +60,6 @@ internal class FirestoreRiskLexiconDataSource @Inject constructor(
         const val FIELD_NAME = "name"
         const val FIELD_DESCRIPTION = "description"
         const val FIELD_PHONE_NUMBER = "phoneNumber"
-        const val FIELD_URL = "url"
         const val FIELD_PRIORITY = "priority"
     }
 }
