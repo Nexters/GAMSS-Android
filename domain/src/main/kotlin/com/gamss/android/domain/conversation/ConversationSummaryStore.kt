@@ -24,7 +24,7 @@ class ConversationSummaryStore @Inject constructor(
 
     private var nextChunkCandidate = FIRST_CHUNK_CANDIDATE
 
-    /** 발화만 적재한다. 요약은 [compact] 에서 돈다. */
+    /** 발화만 적재한다. 전체 히스토리를 매번 재요약하지 않도록 압축/재사용은 [compact] 가 맡는다. */
     suspend fun append(utterance: String) {
         val trimmed = utterance.trim()
         if (trimmed.isEmpty()) return

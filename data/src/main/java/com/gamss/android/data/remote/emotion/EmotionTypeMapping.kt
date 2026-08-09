@@ -18,7 +18,7 @@ private val characterToServerType = serverTypeToCharacter.entries.associate { (t
 
 internal fun String?.toEmotionCharacter(): EmotionCharacter? =
     serverTypeToCharacter[this] ?: run {
-        Log.w(TAG, "Unknown emotionType=$this")
+        runCatching { Log.w(TAG, "Unknown emotionType=$this") }
         null
     }
 

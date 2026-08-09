@@ -319,6 +319,7 @@ private fun MessageBubble(
 ) {
     val character = (message.sender as? MessageSender.Character)?.character
     val isFromUser = message.sender is MessageSender.User
+    val isCharacterMessage = character != null
 
     Column(
         modifier = modifier.fillMaxWidth(),
@@ -354,7 +355,7 @@ private fun MessageBubble(
             },
             modifier = Modifier
                 .widthIn(max = BubbleMaxWidth)
-                .then(if (isFromUser) Modifier else Modifier.clickable { onCharacterMessageClick(message) }),
+                .then(if (isCharacterMessage) Modifier.clickable { onCharacterMessageClick(message) } else Modifier),
         ) {
             Text(
                 text = message.content,

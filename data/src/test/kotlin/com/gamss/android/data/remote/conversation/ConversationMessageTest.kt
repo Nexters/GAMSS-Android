@@ -3,6 +3,7 @@ package com.gamss.android.data.remote.conversation
 import com.gamss.android.data.remote.conversation.model.response.ConversationMessage
 import com.gamss.android.data.remote.conversation.model.response.toDomain
 import com.gamss.android.data.remote.conversation.model.response.userUtterances
+import com.gamss.android.domain.conversation.Message
 import com.gamss.android.domain.conversation.MessageSender
 import com.gamss.android.domain.emotion.EmotionCharacter
 import org.junit.Assert.assertEquals
@@ -64,5 +65,21 @@ class ConversationMessageTest {
 
             assertEquals(MessageSender.Character(character), domain?.sender)
         }
+    }
+
+    @Test
+    fun 미확인_emotionType도_메시지는_보존한다() {
+        val domain = msg(1, "CHARACTER", "정체불명 답장", emotionType = "MYSTERY").toDomain()
+
+        assertEquals(MessageSender.Unknown, domain.sender)
+        assertEquals("정체불명 답장", domain.content)
+    }
+
+    @Test
+    fun 미확인_senderType도_메시지는_보존한다() {
+        val domain = msg(1, "SYSTEM", "시스템 메시지").toDomain()
+
+        assertEquals(MessageSender.Unknown, domain.sender)
+        assertEquals("시스템 메시지", domain.content)
     }
 }
