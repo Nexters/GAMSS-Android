@@ -19,7 +19,7 @@
 
         <activity
             android:name=".debug.ChatSearchDebugActivity"
-            android:exported="true"
+            android:exported="false"
             android:theme="@style/Theme.GAMSS" />
     </application>
 

@@ -1,4 +1,4 @@
-package com.gamss.android.data.remote.chattingRoomSearch.model.response
+package com.gamss.android.data.remote.chattingsearch.model.response
 
 import com.gamss.android.domain.chattingsearch.ChattingRoomSearch
 import com.gamss.android.domain.chattingsearch.ChattingRoomSummary

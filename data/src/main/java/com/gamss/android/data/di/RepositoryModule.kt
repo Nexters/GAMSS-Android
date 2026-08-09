@@ -1,5 +1,6 @@
 package com.gamss.android.data.di
 
+import com.gamss.android.data.chattingsearch.ChattingRoomSearchRepositoryImpl
 import com.gamss.android.data.auth.AuthRepositoryImpl
 import com.gamss.android.data.local.auth.AuthTokenLocalDataSource
 import com.gamss.android.data.local.auth.EncryptedAuthTokenLocalDataSource

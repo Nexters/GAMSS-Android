@@ -1,17 +1,14 @@
-package com.gamss.android.data
+package com.gamss.android.data.chattingsearch
 
 import androidx.paging.PagingSource
-import com.gamss.android.data.conversationsearch.ChattingSearchPagingSource
-import com.gamss.android.data.remote.chattingRoomSearch.ChattingRoomSearchService
+import com.gamss.android.data.remote.chattingsearch.ChattingRoomSearchService
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import mockwebserver3.MockResponse
 import mockwebserver3.MockWebServer
 import okhttp3.MediaType.Companion.toMediaType
 import org.junit.After
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
+import org.junit.Assert
 import org.junit.Before
 import org.junit.Test
 import retrofit2.Retrofit
@@ -22,7 +19,7 @@ import retrofit2.converter.kotlinx.serialization.asConverterFactory
  * 페이지를 정상적으로 파싱·연결하고 무한 스크롤(추가 로딩)이 마지막 페이지에서
  * 올바르게 멈추는지 검증한다.
  */
-class ChattingSearchPagingSourceTest {
+class ChattingRoomSearchPagingSourceTest {
 
     private lateinit var server: MockWebServer
     private lateinit var service: ChattingRoomSearchService
@@ -57,18 +54,18 @@ class ChattingSearchPagingSourceTest {
         )
 
         val page = result as PagingSource.LoadResult.Page
-        assertEquals(2, page.data.size)
-        assertEquals(1001L, page.data[0].conversationId)
-        assertEquals("출근길에 느낀 답답함", page.data[0].title)
-        assertEquals("ACTIVE", page.data[0].status)
-        assertEquals("2026-08-04T08:12:00Z", page.data[0].createdAt)
-        assertNull(page.prevKey)
-        assertEquals(1, page.nextKey)
+        Assert.assertEquals(2, page.data.size)
+        Assert.assertEquals(1001L, page.data[0].conversationId)
+        Assert.assertEquals("출근길에 느낀 답답함", page.data[0].title)
+        Assert.assertEquals("ACTIVE", page.data[0].status)
+        Assert.assertEquals("2026-08-04T08:12:00Z", page.data[0].createdAt)
+        Assert.assertNull(page.prevKey)
+        Assert.assertEquals(1, page.nextKey)
 
         val request = server.takeRequest()
-        assertEquals("감정", request.url.queryParameter("keyword"))
-        assertEquals("0", request.url.queryParameter("page"))
-        assertEquals("20", request.url.queryParameter("size"))
+        Assert.assertEquals("감정", request.url.queryParameter("keyword"))
+        Assert.assertEquals("0", request.url.queryParameter("page"))
+        Assert.assertEquals("20", request.url.queryParameter("size"))
     }
 
     @Test
@@ -81,11 +78,11 @@ class ChattingSearchPagingSourceTest {
         )
 
         val page = result as PagingSource.LoadResult.Page
-        assertEquals(2, page.data.size)
-        assertEquals(1003L, page.data[0].conversationId)
-        assertEquals(0, page.prevKey)
-        assertEquals(2, page.nextKey)
-        assertEquals("1", server.takeRequest().url.queryParameter("page"))
+        Assert.assertEquals(2, page.data.size)
+        Assert.assertEquals(1003L, page.data[0].conversationId)
+        Assert.assertEquals(0, page.prevKey)
+        Assert.assertEquals(2, page.nextKey)
+        Assert.assertEquals("1", server.takeRequest().url.queryParameter("page"))
     }
 
     @Test
@@ -98,9 +95,9 @@ class ChattingSearchPagingSourceTest {
         )
 
         val page = result as PagingSource.LoadResult.Page
-        assertEquals(1, page.data.size)
-        assertEquals(1, page.prevKey)
-        assertNull(page.nextKey)
+        Assert.assertEquals(1, page.data.size)
+        Assert.assertEquals(1, page.prevKey)
+        Assert.assertNull(page.nextKey)
     }
 
     @Test
@@ -118,10 +115,10 @@ class ChattingSearchPagingSourceTest {
             PagingSource.LoadParams.Refresh(key = null, loadSize = 20, placeholdersEnabled = false),
         )
 
-        assertTrue(result is PagingSource.LoadResult.Error)
+        Assert.assertTrue(result is PagingSource.LoadResult.Error)
     }
 
-    private fun pagingSource() = ChattingSearchPagingSource(
+    private fun pagingSource() = ChattingRoomSearchPagingSource(
         chattingRoomSearchService = service,
         keyword = "감정",
     )

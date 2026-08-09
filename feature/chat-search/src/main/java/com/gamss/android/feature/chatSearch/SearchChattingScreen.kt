@@ -1,5 +1,6 @@
 package com.gamss.android.feature.chatSearch
 
+import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -24,8 +25,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
@@ -34,10 +39,9 @@ import androidx.paging.LoadState
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemKey
-import com.gamss.android.core.common.network.ApiException
 import com.gamss.android.domain.chattingsearch.ChattingRoomSummary
-import com.gamss.android.domain.model.SessionExpiredException
 import org.orbitmvi.orbit.compose.collectAsState
+import org.orbitmvi.orbit.compose.collectSideEffect
 
 @Composable
 fun SearchChattingScreen(
@@ -45,6 +49,14 @@ fun SearchChattingScreen(
 ) {
     val state by viewModel.collectAsState()
     val chattingRooms = viewModel.chattingRooms.collectAsLazyPagingItems()
+    val context = LocalContext.current
+
+    viewModel.collectSideEffect { sideEffect ->
+        when (sideEffect) {
+            is SearchChattingSideEffect.SearchFailure ->
+                Toast.makeText(context, sideEffect.reason.toMessage(), Toast.LENGTH_SHORT).show()
+        }
+    }
 
     SearchChattingContent(
         state = state,
@@ -63,8 +75,15 @@ fun SearchChattingContent(
 ) {
     val listState = rememberLazyListState()
 
+    // 화면 회전 등 구성 변경으로 Composition이 다시 만들어져도 이미 처리한 검색에 대해서는
+    // 스크롤을 맨 위로 되돌리지 않도록, 마지막으로 스크롤을 적용한 generation을 별도로 기억한다.
+    var scrolledGeneration by rememberSaveable { mutableLongStateOf(0L) }
+
     LaunchedEffect(state.searchGeneration) {
-        if (state.hasSearched) listState.scrollToItem(0)
+        if (state.hasSearched && state.searchGeneration != scrolledGeneration) {
+            listState.scrollToItem(0)
+            scrolledGeneration = state.searchGeneration
+        }
     }
 
     Scaffold(
@@ -132,20 +151,20 @@ private fun SearchResultContent(
     contentPadding: PaddingValues,
 ) {
     if (!state.hasSearched) {
-        EmptyContent(contentPadding)
+        MessageContent(message = "검색어를 입력해 채팅방을 찾아보세요", contentPadding = contentPadding)
         return
     }
 
-    when (val refresh = chattingRooms.loadState.refresh) {
+    when (chattingRooms.loadState.refresh) {
         is LoadState.Loading -> LoadingContent(contentPadding)
         is LoadState.Error -> ErrorContent(
-            message = refresh.error.toSearchFailureMessage(),
+            message = SearchFailureReason.UNKNOWN.toMessage(),
             contentPadding = contentPadding,
             onRetry = chattingRooms::retry,
         )
 
         is LoadState.NotLoading -> if (chattingRooms.itemCount == 0) {
-            EmptyContent(contentPadding)
+            MessageContent(message = "검색 결과가 없어요", contentPadding = contentPadding)
         } else {
             SearchResultList(
                 chattingRooms = chattingRooms,
@@ -180,11 +199,11 @@ private fun SearchResultList(
             }
         }
 
-        when (val append = chattingRooms.loadState.append) {
+        when (chattingRooms.loadState.append) {
             is LoadState.Loading -> item { AppendLoadingItem() }
             is LoadState.Error -> item {
                 AppendErrorItem(
-                    message = append.error.toSearchFailureMessage(),
+                    message = SearchFailureReason.UNKNOWN.toMessage(),
                     onRetry = chattingRooms::retry,
                 )
             }
@@ -238,7 +257,7 @@ private fun LoadingContent(contentPadding: PaddingValues) {
 }
 
 @Composable
-private fun EmptyContent(contentPadding: PaddingValues) {
+private fun MessageContent(message: String, contentPadding: PaddingValues) {
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -247,7 +266,7 @@ private fun EmptyContent(contentPadding: PaddingValues) {
         contentAlignment = Alignment.Center,
     ) {
         Text(
-            text = "대화방 데이터가 없어요",
+            text = message,
             style = MaterialTheme.typography.bodyLarge,
         )
     }
@@ -274,9 +293,9 @@ private fun ErrorContent(
     }
 }
 
-private fun Throwable.toSearchFailureMessage(): String = when (this) {
-    is SessionExpiredException -> "세션이 만료되었어요. 다시 로그인해 주세요"
-    is ApiException.Network -> "네트워크 연결을 확인해 주세요"
-    is ApiException.Http -> message ?: "채팅방 검색에 실패했어요"
-    else -> "채팅방 검색에 실패했어요"
-}
+private fun SearchFailureReason.toMessage(): String =
+    when (this) {
+        SearchFailureReason.NETWORK -> "네트워크 연결을 확인해 주세요"
+        SearchFailureReason.INVALID_INPUT -> "최소 2글자 이상 입력해주세요"
+        SearchFailureReason.UNKNOWN -> "채팅방 검색에 실패했어요"
+    }

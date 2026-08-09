@@ -1,6 +1,6 @@
 package com.gamss.android.data.di
 
-import com.gamss.android.data.remote.chattingRoomSearch.ChattingRoomSearchService
+import com.gamss.android.data.remote.chattingsearch.ChattingRoomSearchService
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -10,7 +10,7 @@ import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
-internal object SearchConversationModule {
+internal object ChattingRoomSearchModule {
     @Provides
     @Singleton
     fun provideChattingRoomSearchService(retrofit: Retrofit): ChattingRoomSearchService =

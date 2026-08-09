@@ -1,9 +1,9 @@
-package com.gamss.android.data.conversationsearch
+package com.gamss.android.data.chattingsearch
 
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingData
-import com.gamss.android.data.remote.chattingRoomSearch.ChattingRoomSearchService
+import com.gamss.android.data.remote.chattingsearch.ChattingRoomSearchService
 import com.gamss.android.domain.chattingsearch.ChattingRoomSummary
 import com.gamss.android.domain.repository.ChattingRoomSearchRepository
 import kotlinx.coroutines.flow.Flow
@@ -18,12 +18,12 @@ internal class ChattingRoomSearchRepositoryImpl @Inject constructor(
     override fun searchChattingRooms(keyword: String): Flow<PagingData<ChattingRoomSummary>> =
         Pager(
             config = PagingConfig(
-                pageSize = ChattingSearchPagingSource.DEFAULT_SIZE,
-                initialLoadSize = ChattingSearchPagingSource.DEFAULT_SIZE,
+                pageSize = ChattingRoomSearchPagingSource.DEFAULT_SIZE,
+                initialLoadSize = ChattingRoomSearchPagingSource.DEFAULT_SIZE,
                 enablePlaceholders = false,
             ),
             pagingSourceFactory = {
-                ChattingSearchPagingSource(
+                ChattingRoomSearchPagingSource(
                     chattingRoomSearchService = chattingRoomSearchService,
                     keyword = keyword,
                 )

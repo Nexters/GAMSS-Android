@@ -40,8 +40,11 @@ class SearchChattingViewModel @Inject constructor(
     }
 
     fun search() = intent {
+        if (!state.canSearch) {
+            postSideEffect(SearchChattingSideEffect.SearchFailure(SearchFailureReason.INVALID_INPUT))
+            return@intent
+        }
         val keyword = state.keyword.text.trim()
-        if (keyword.length < MIN_SEARCH_KEYWORD_LENGTH) return@intent
 
         val nextGeneration = state.searchGeneration + 1
         reduce {

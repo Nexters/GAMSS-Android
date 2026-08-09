@@ -1,14 +1,14 @@
-package com.gamss.android.data.conversationsearch
+package com.gamss.android.data.chattingsearch
 
 import androidx.paging.PagingSource
 import androidx.paging.PagingState
 import com.gamss.android.core.common.AppResult
-import com.gamss.android.data.remote.chattingRoomSearch.ChattingRoomSearchService
-import com.gamss.android.data.remote.chattingRoomSearch.model.response.toDomain
+import com.gamss.android.data.remote.chattingsearch.ChattingRoomSearchService
+import com.gamss.android.data.remote.chattingsearch.model.response.toDomain
 import com.gamss.android.data.repository.runCatchingApiCall
 import com.gamss.android.domain.chattingsearch.ChattingRoomSummary
 
-internal class ChattingSearchPagingSource(
+internal class ChattingRoomSearchPagingSource(
     private val chattingRoomSearchService: ChattingRoomSearchService,
     private val keyword: String,
 ) : PagingSource<Int, ChattingRoomSummary>() {
