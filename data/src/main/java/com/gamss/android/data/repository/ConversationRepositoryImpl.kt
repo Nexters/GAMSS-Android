@@ -54,10 +54,6 @@ internal class ConversationRepositoryImpl @Inject constructor(
             .mapNotNull(ConversationMessage::toDomain)
     }
 
-    /**
-     * 제목 지정은 화면 수명보다 오래 살아야 한다. 첫 발화 뒤 바로 화면을 떠나면 호출자가 취소되는데,
-     * 그때 요청까지 끊기면 그 방은 영영 제목 없이 남는다. 응답 본문은 쓰지 않는다.
-     */
     override suspend fun updateTitle(conversationId: Long, title: String): AppResult<Unit> =
         applicationScope.async {
             runCatchingApiCall {

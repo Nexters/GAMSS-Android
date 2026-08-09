@@ -3,6 +3,10 @@ package com.gamss.android.domain.conversation
 import com.gamss.android.core.common.AppResult
 import com.gamss.android.domain.summary.DiarySummarizer
 import com.gamss.android.domain.summary.UtteranceTokenCounter
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -71,6 +75,26 @@ class ConversationSessionTest {
     }
 
     @Test
+    fun 제목_지정_대기_중_취소되면_다음_뒷정리에서_다시_시도한다() = runBlocking {
+        val repository = FakeConversationRepository(blockingTitleUntilCancelled = true)
+        val session = session(repository)
+
+        session.send(conversationId = null, content = SEED, replyToMessageId = null)
+
+        val finishJob = launch { session.finishSend() }
+        repository.awaitTitleAttemptStart()
+        finishJob.cancelAndJoin()
+
+        assertEquals(1, repository.cancelledTitleAttempts)
+
+        repository.blockingTitleUntilCancelled = false
+        session.continueWith("팀장이 또 그랬어")
+
+        assertEquals(listOf(ROOM_ID to TITLE, ROOM_ID to TITLE), repository.updatedTitles)
+        assertEquals(listOf(ROOM_ID to TITLE), repository.committedTitles)
+    }
+
+    @Test
     fun 제목_지정이_계속_실패하면_재시도를_멈춘다() = runBlocking {
         val repository = FakeConversationRepository(failingTitle = true)
         val session = session(repository)
@@ -118,7 +142,6 @@ class ConversationSessionTest {
         )
     }
 
-    /** 새 대화를 열고 뒷정리까지 끝낸다. 화면(ChatRoomViewModel)이 하는 순서와 같다. */
     private suspend fun ConversationSession.openWith(content: String) {
         send(conversationId = null, content = content, replyToMessageId = null)
         finishSend()
@@ -149,10 +172,15 @@ class ConversationSessionTest {
 
     private class FakeConversationRepository(
         var failingTitle: Boolean = false,
+        var blockingTitleUntilCancelled: Boolean = false,
         private val failingSend: Boolean = false,
     ) : ConversationRepository {
 
         val updatedTitles = mutableListOf<Pair<Long, String>>()
+        val committedTitles = mutableListOf<Pair<Long, String>>()
+        var cancelledTitleAttempts = 0
+            private set
+        private var titleAttemptStarted = CompletableDeferred<Unit>()
 
         override suspend fun sendMessage(
             conversationId: Long?,
@@ -183,16 +211,29 @@ class ConversationSessionTest {
 
         override suspend fun updateTitle(conversationId: Long, title: String): AppResult<Unit> {
             updatedTitles += conversationId to title
+            titleAttemptStarted.complete(Unit)
+            if (blockingTitleUntilCancelled) {
+                try {
+                    awaitCancellation()
+                } finally {
+                    cancelledTitleAttempts++
+                }
+            }
             return if (failingTitle) {
                 AppResult.Failure(IllegalStateException("update title failed"))
             } else {
+                committedTitles += conversationId to title
                 AppResult.Success(Unit)
             }
+        }
+
+        suspend fun awaitTitleAttemptStart() {
+            titleAttemptStarted.await()
+            titleAttemptStarted = CompletableDeferred()
         }
     }
 
     private companion object {
-        /** 정책이 실제로 걷어내는 시드라야 세션과 정책이 물려 있는지 검증된다. */
         const val SEED = "아 진짜 짜증나 팀장이 아이디어 가로챘어"
         const val TITLE = "팀장이 아이디어 가로챘어"
         const val ROOM_ID = 7L

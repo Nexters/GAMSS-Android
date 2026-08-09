@@ -21,12 +21,8 @@ class ConversationRepositoryImplTest {
 
     private val conversationService: ConversationService = mockk()
 
-    /**
-     * 첫 발화 뒤 바로 화면을 떠나면 호출자가 취소된다. 그때 요청까지 끊기면 그 방은 영영 제목 없이 남는다.
-     */
     @Test
     fun `호출자가 취소돼도 제목 지정 요청은 끝까지 간다`() = runTest {
-        // MockK 는 호출 진입 시점에 기록하므로 coVerify 만으로는 "시작됐다"까지만 보증한다.
         var completed = false
         coEvery { conversationService.updateTitle(any(), any()) } coAnswers {
             delay(REQUEST_MILLIS)
