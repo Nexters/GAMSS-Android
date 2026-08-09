@@ -10,6 +10,8 @@ import com.gamss.android.domain.conversation.Message
 import com.gamss.android.domain.conversation.MessageSender
 import com.gamss.android.domain.conversation.nextCommentRevealGapMillis
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.text.BreakIterator
+import java.util.Locale
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.delay
@@ -56,7 +58,7 @@ class ChatRoomViewModel @Inject constructor(
     }
 
     fun onInputChange(text: String) = blockingIntent {
-        reduce { state.copy(input = text.take(MAX_MESSAGE_LENGTH)) }
+        reduce { state.copy(input = text.takeMessageInput(MAX_MESSAGE_LENGTH)) }
     }
 
     fun onReplyTargetSelect(message: Message) = intent {
@@ -244,4 +246,15 @@ class ChatRoomViewModel @Inject constructor(
         const val CARD_ALREADY_MADE = "이 대화의 카드는 이미 만들어졌어요"
         const val CARD_INPUT_MISSING = "카드를 만들 내용이 부족해요"
     }
+}
+
+private fun String.takeMessageInput(maxLength: Int): String {
+    if (maxLength <= 0) return ""
+    if (length <= maxLength) return this
+
+    val endExclusive = BreakIterator.getCharacterInstance(Locale.ROOT).run {
+        setText(this@takeMessageInput)
+        preceding(maxLength + 1).takeIf { it != BreakIterator.DONE } ?: 0
+    }
+    return substring(0, endExclusive)
 }

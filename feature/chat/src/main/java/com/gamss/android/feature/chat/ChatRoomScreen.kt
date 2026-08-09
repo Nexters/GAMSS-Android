@@ -318,7 +318,7 @@ private fun MessageBubble(
     modifier: Modifier = Modifier,
 ) {
     val character = (message.sender as? MessageSender.Character)?.character
-    val isFromUser = character == null
+    val isFromUser = message.sender is MessageSender.User
 
     Column(
         modifier = modifier.fillMaxWidth(),
