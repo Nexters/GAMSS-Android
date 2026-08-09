@@ -1,9 +1,8 @@
 package com.gamss.android.domain.conversation
 
+import com.gamss.android.domain.common.failSafe
 import com.gamss.android.domain.summary.DiarySummarizer
 import com.gamss.android.domain.summary.UtteranceTokenCounter
-import kotlinx.coroutines.currentCoroutineContext
-import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
@@ -25,7 +24,7 @@ class ConversationSummaryStore @Inject constructor(
 
     private var nextChunkCandidate = FIRST_CHUNK_CANDIDATE
 
-    /** 발화만 적재한다. 요약은 [compact] 에서 돈다. */
+    /** 발화만 적재한다. 전체 히스토리를 매번 재요약하지 않도록 압축/재사용은 [compact] 가 맡는다. */
     suspend fun append(utterance: String) {
         val trimmed = utterance.trim()
         if (trimmed.isEmpty()) return
@@ -111,12 +110,6 @@ class ConversationSummaryStore @Inject constructor(
 
     private suspend fun countTokens(utterance: String): Int =
         failSafe { tokenCounter.count(utterance) } ?: utterance.length
-
-    private suspend fun <T> failSafe(block: suspend () -> T): T? {
-        val result = runCatching { block() }
-        currentCoroutineContext().ensureActive()
-        return result.getOrNull()
-    }
 
     private fun clearLocked() {
         utterances.clear()

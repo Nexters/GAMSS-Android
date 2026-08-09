@@ -13,4 +13,5 @@ data class Message(
 sealed interface MessageSender {
     data object User : MessageSender
     data class Character(val character: EmotionCharacter) : MessageSender
+    data object Unknown : MessageSender
 }

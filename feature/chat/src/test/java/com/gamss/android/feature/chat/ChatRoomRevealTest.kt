@@ -1,20 +1,5 @@
 package com.gamss.android.feature.chat
 
-import com.gamss.android.core.common.AppResult
-import com.gamss.android.domain.conversation.CommentGenerationStatus
-import com.gamss.android.domain.conversation.Conversation
-import com.gamss.android.domain.conversation.ConversationRepository
-import com.gamss.android.domain.conversation.ConversationSession
-import com.gamss.android.domain.conversation.ConversationSummaryStore
-import com.gamss.android.domain.conversation.GetMessagesUseCase
-import com.gamss.android.domain.conversation.Message
-import com.gamss.android.domain.conversation.MessageSender
-import com.gamss.android.domain.conversation.SendMessageUseCase
-import com.gamss.android.domain.conversation.SentMessage
-import com.gamss.android.domain.conversation.UpdateConversationTitleUseCase
-import com.gamss.android.domain.emotion.EmotionCharacter
-import com.gamss.android.domain.summary.DiarySummarizer
-import com.gamss.android.domain.summary.UtteranceTokenCounter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -28,7 +13,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.orbitmvi.orbit.test.test
-import java.time.LocalDate
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class ChatRoomRevealTest {
@@ -140,6 +124,66 @@ class ChatRoomRevealTest {
     }
 
     @Test
+    fun 최대_길이_경계의_이모지는_절반만_잘리지_않는다() = runTest {
+        val viewModel = viewModel(commentCount = 1)
+        val text = "가".repeat(139) + GRINNING_FACE
+
+        viewModel.test(this) {
+            containerHost.onInputChange(text)
+
+            val updated = awaitState()
+            assertEquals("가".repeat(139), updated.input)
+
+            cancelAndIgnoreRemainingItems()
+        }
+    }
+
+    @Test
+    fun 최대_길이를_넘지_않는_이모지는_보존된다() = runTest {
+        val viewModel = viewModel(commentCount = 1)
+        val text = "가".repeat(138) + GRINNING_FACE
+
+        viewModel.test(this) {
+            containerHost.onInputChange(text)
+
+            val updated = awaitState()
+            assertEquals(text, updated.input)
+
+            cancelAndIgnoreRemainingItems()
+        }
+    }
+
+    @Test
+    fun 최대_길이_경계의_변형_선택자_이모지는_함께_잘린다() = runTest {
+        val viewModel = viewModel(commentCount = 1)
+        val text = "가".repeat(139) + RED_HEART
+
+        viewModel.test(this) {
+            containerHost.onInputChange(text)
+
+            val updated = awaitState()
+            assertEquals("가".repeat(139), updated.input)
+
+            cancelAndIgnoreRemainingItems()
+        }
+    }
+
+    @Test
+    fun 최대_길이_경계의_결합_이모지는_절반만_남지_않는다() = runTest {
+        val viewModel = viewModel(commentCount = 1)
+        val text = "가".repeat(136) + WOMAN_TECHNOLOGIST
+
+        viewModel.test(this) {
+            containerHost.onInputChange(text)
+
+            val updated = awaitState()
+            assertEquals("가".repeat(136), updated.input)
+
+            cancelAndIgnoreRemainingItems()
+        }
+    }
+
+    @Test
     fun 전송이_실패하면_압축본에_쌓이지_않는다() = runTest {
         val repository = FakeConversationRepository(commentCount = 1, failing = true)
         val viewModel = viewModel(repository)
@@ -182,97 +226,16 @@ class ChatRoomRevealTest {
     }
 
     private fun viewModel(commentCount: Int): ChatRoomViewModel =
-        viewModel(FakeConversationRepository(commentCount))
+        chatRoomViewModel(FakeConversationRepository(commentCount))
 
-    private fun viewModel(conversationRepository: FakeConversationRepository): ChatRoomViewModel {
-        return ChatRoomViewModel(
-            session = ConversationSession(
-                sendMessage = SendMessageUseCase(conversationRepository),
-                getMessages = GetMessagesUseCase(conversationRepository),
-                updateConversationTitle = UpdateConversationTitleUseCase(conversationRepository),
-                summaryStore = ConversationSummaryStore(
-                    summarizer = PassThroughSummarizer,
-                    tokenCounter = CharLengthTokenCounter,
-                ),
-            ),
-        )
-    }
-
-    private object PassThroughSummarizer : DiarySummarizer {
-        override suspend fun summarize(text: String): String = text
-    }
-
-    private object CharLengthTokenCounter : UtteranceTokenCounter {
-        override suspend fun count(text: String): Int = text.length
-    }
-
-    private class FakeConversationRepository(
-        private val commentCount: Int,
-        private val failing: Boolean = false,
-    ) : ConversationRepository {
-        private var sentCount = 0
-
-        val sentContextSummaries = mutableListOf<String?>()
-
-        val updatedTitles = mutableListOf<Pair<Long, String>>()
-
-        override suspend fun sendMessage(
-            conversationId: Long?,
-            content: String,
-            replyToMessageId: Long?,
-            contextSummary: String?,
-        ): AppResult<SentMessage> {
-            sentContextSummaries += contextSummary
-            if (failing) return AppResult.Failure(IllegalStateException("send failed"))
-            val roomId = conversationId ?: ROOM_ID
-            return AppResult.Success(
-                SentMessage(
-                    message = message(
-                        id = USER_ID + sentCount++,
-                        conversationId = roomId,
-                        sender = MessageSender.User,
-                        content = content,
-                    ),
-                    commentStatus = CommentGenerationStatus.DONE,
-                    comments = List(commentCount) { index ->
-                        message(
-                            id = COMMENT_ID_BASE + index + (sentCount - 1) * COMMENT_ID_STRIDE,
-                            conversationId = roomId,
-                            sender = MessageSender.Character(EmotionCharacter.ANGER),
-                            content = "댓글 $index",
-                        )
-                    },
-                ),
-            )
-        }
-
-        override suspend fun getConversations(date: LocalDate): AppResult<List<Conversation>> =
-            AppResult.Success(emptyList())
-
-        override suspend fun getMessages(conversationId: Long): AppResult<List<Message>> =
-            AppResult.Success(emptyList())
-
-        override suspend fun updateTitle(conversationId: Long, title: String): AppResult<Unit> {
-            updatedTitles += conversationId to title
-            return AppResult.Success(Unit)
-        }
-    }
+    private fun viewModel(conversationRepository: FakeConversationRepository): ChatRoomViewModel =
+        chatRoomViewModel(conversationRepository)
 
     private companion object {
-        const val INPUT = "오늘 억울한 일이 있었어"
         const val SEED_INPUT = "아 진짜 짜증나 지갑 잃어버렸어"
         const val SEND_FAILED_MESSAGE = "메시지를 보내지 못했어요"
-        const val SECOND_INPUT = "팀장이 갑자기 일을 더 줬어"
-        const val ROOM_ID = 7L
-        const val USER_ID = 100L
-        const val COMMENT_ID_BASE = 200L
-        const val COMMENT_ID_STRIDE = 10L
-
-        fun message(id: Long, conversationId: Long, sender: MessageSender, content: String) = Message(
-            id = id,
-            conversationId = conversationId,
-            sender = sender,
-            content = content,
-        )
+        const val GRINNING_FACE = "\uD83D\uDE00"
+        const val RED_HEART = "\u2764\uFE0F"
+        const val WOMAN_TECHNOLOGIST = "\uD83D\uDC69\u200D\uD83D\uDCBB"
     }
 }

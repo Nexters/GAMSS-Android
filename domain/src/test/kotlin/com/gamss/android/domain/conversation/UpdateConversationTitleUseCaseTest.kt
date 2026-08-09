@@ -92,5 +92,8 @@ class UpdateConversationTitleUseCaseTest {
             updatedTitle = conversationId to title
             return if (failing) AppResult.Failure(IllegalStateException("rejected")) else AppResult.Success(Unit)
         }
+
+        override suspend fun endConversation(conversationId: Long): AppResult<Unit> =
+            throw UnsupportedOperationException()
     }
 }

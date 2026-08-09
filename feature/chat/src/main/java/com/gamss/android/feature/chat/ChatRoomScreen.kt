@@ -26,15 +26,19 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
@@ -43,17 +47,24 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.gamss.android.domain.card.Card
 import com.gamss.android.domain.conversation.MAX_MESSAGE_LENGTH
 import com.gamss.android.domain.conversation.Message
 import com.gamss.android.domain.conversation.MessageSender
 import org.orbitmvi.orbit.compose.collectAsState
 import org.orbitmvi.orbit.compose.collectSideEffect
 
+/**
+ * @param onCardClose 카드 시트를 닫을 때 호출한다. 이 화면을 실제로 벗어나야 한다.
+ *  머무르면 카드 단계가 그대로라 시트가 다시 열린다.
+ */
 @Composable
 fun ChatRoomScreen(
     conversationId: Long?,
+    onCardClose: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: ChatRoomViewModel = hiltViewModel(),
 ) {
@@ -75,10 +86,69 @@ fun ChatRoomScreen(
             onSendClick = viewModel::onSend,
             onCharacterMessageClick = viewModel::onReplyTargetSelect,
             onReplyTargetClear = viewModel::onReplyTargetClear,
+            onEndClick = viewModel::onEndRequest,
         )
     }
 
     ChatRoomContent(state = state, actions = actions, modifier = modifier)
+
+    // else 를 두지 않아야 단계를 추가할 때 화면이 컴파일 에러로 알려준다.
+    when (val endFlow = state.endFlow) {
+        EndFlow.Confirming -> EndConversationDialog(
+            onConfirm = viewModel::onEndConfirm,
+            onDismiss = viewModel::onEndCancel,
+        )
+        is EndFlow.CardReady -> CardBottomSheet(card = endFlow.card, onDismiss = onCardClose)
+        EndFlow.NotStarted,
+        EndFlow.Ending,
+        EndFlow.CreatingCard,
+        EndFlow.CardFailedRetryable,
+        EndFlow.CardFailedFinal,
+        -> Unit
+    }
+}
+
+@Composable
+private fun EndConversationDialog(
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("대화를 끝낼까요?") },
+        text = { Text("끝내면 이 대화에 메시지를 더 보낼 수 없고, 감정 카드가 만들어져요.") },
+        confirmButton = { TextButton(onClick = onConfirm) { Text("끝내기") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("취소") } },
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CardBottomSheet(
+    card: Card,
+    onDismiss: () -> Unit,
+) {
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 32.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text(
+                text = card.character.displayName,
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            Text(text = card.summary, style = MaterialTheme.typography.titleMedium)
+            Text(
+                text = card.message,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
 }
 
 @Immutable
@@ -87,6 +157,7 @@ private data class ChatRoomActions(
     val onSendClick: () -> Unit,
     val onCharacterMessageClick: (Message) -> Unit,
     val onReplyTargetClear: () -> Unit,
+    val onEndClick: () -> Unit,
 )
 
 @Composable
@@ -107,10 +178,10 @@ private fun ChatRoomContent(
     Scaffold(
         modifier = modifier,
         topBar = {
-            Text(
-                text = "대화",
-                style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier.padding(16.dp),
+            ChatRoomTopBar(
+                endFlow = state.endFlow,
+                canEnd = state.canEnd,
+                onEndClick = actions.onEndClick,
             )
         },
         // 상위 Scaffold 가 인셋을 이미 적용해, imePadding 을 그대로 쓰면 이중 적용된다.
@@ -162,23 +233,78 @@ private fun ChatRoomContent(
 
             HorizontalDivider()
 
-            ChatRoomInputSection(state = state, actions = actions)
+            ChatRoomInputSection(
+                endFlow = state.endFlow,
+                input = state.input,
+                canSend = state.canSend,
+                replyTarget = state.replyTarget,
+                actions = actions,
+            )
+        }
+    }
+}
+
+@Composable
+private fun ChatRoomTopBar(
+    endFlow: EndFlow,
+    canEnd: Boolean,
+    onEndClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = 16.dp, end = 4.dp, top = 12.dp, bottom = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = "대화",
+            style = MaterialTheme.typography.titleLarge,
+            modifier = Modifier.weight(1f),
+        )
+        if (endFlow.isBusy) {
+            CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+        } else {
+            TextButton(onClick = onEndClick, enabled = canEnd) {
+                Text(
+                    when {
+                        endFlow == EndFlow.CardFailedRetryable -> "카드 다시 만들기"
+                        endFlow is EndFlow.Ended -> "끝난 대화"
+                        else -> "대화 끝내기"
+                    },
+                )
+            }
         }
     }
 }
 
 @Composable
 private fun ChatRoomInputSection(
-    state: ChatRoomState,
+    endFlow: EndFlow,
+    input: String,
+    canSend: Boolean,
+    replyTarget: ReplyTarget?,
     actions: ChatRoomActions,
 ) {
-    state.replyTarget?.let { replyTarget ->
-        ReplyTargetBanner(replyTarget = replyTarget, onClear = actions.onReplyTargetClear)
+    if (endFlow is EndFlow.Ended) {
+        Text(
+            text = "끝난 대화예요. 새 대화를 시작해 보세요.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+        )
+        return
+    }
+
+    replyTarget?.let {
+        ReplyTargetBanner(replyTarget = it, onClear = actions.onReplyTargetClear)
     }
 
     MessageInputBar(
-        input = state.input,
-        canSend = state.canSend,
+        input = input,
+        canSend = canSend,
         onInputChange = actions.onInputChange,
         onSendClick = actions.onSendClick,
     )
@@ -192,7 +318,8 @@ private fun MessageBubble(
     modifier: Modifier = Modifier,
 ) {
     val character = (message.sender as? MessageSender.Character)?.character
-    val isFromUser = character == null
+    val isFromUser = message.sender is MessageSender.User
+    val isCharacterMessage = character != null
 
     Column(
         modifier = modifier.fillMaxWidth(),
@@ -228,7 +355,7 @@ private fun MessageBubble(
             },
             modifier = Modifier
                 .widthIn(max = BubbleMaxWidth)
-                .then(if (isFromUser) Modifier else Modifier.clickable { onCharacterMessageClick(message) }),
+                .then(if (isCharacterMessage) Modifier.clickable { onCharacterMessageClick(message) } else Modifier),
         ) {
             Text(
                 text = message.content,

@@ -29,4 +29,9 @@ internal interface ConversationService {
         @Path("conversationId") conversationId: Long,
         @Body request: UpdateConversationTitleRequest,
     ): ApiResponse<ConversationResponse>
+
+    @POST("/api/conversations/{conversationId}/end")
+    suspend fun endConversation(
+        @Path("conversationId") conversationId: Long,
+    ): ApiResponse<Unit>
 }

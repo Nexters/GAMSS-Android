@@ -1,7 +1,17 @@
 package com.gamss.android.domain.conversation
 
 import com.gamss.android.core.common.AppResult
+import com.gamss.android.domain.card.Card
+import com.gamss.android.domain.card.CardRepository
+import com.gamss.android.domain.card.CreateCardUseCase
+import com.gamss.android.domain.card.CreateConversationCardUseCase
+import com.gamss.android.domain.emotion.ClassificationResult
+import com.gamss.android.domain.emotion.ConversationEmotionAccumulator
+import com.gamss.android.domain.emotion.EmotionCharacter
+import com.gamss.android.domain.emotion.EmotionClassifier
+import com.gamss.android.domain.emotion.EmotionLabel
 import com.gamss.android.domain.summary.DiarySummarizer
+import com.gamss.android.domain.summary.SummarizeDiaryUseCase
 import com.gamss.android.domain.summary.UtteranceTokenCounter
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.awaitCancellation
@@ -155,10 +165,16 @@ class ConversationSessionTest {
         sendMessage = SendMessageUseCase(repository),
         getMessages = GetMessagesUseCase(repository),
         updateConversationTitle = UpdateConversationTitleUseCase(repository),
+        endConversation = EndConversationUseCase(repository),
+        createConversationCard = CreateConversationCardUseCase(
+            summarizeDiary = SummarizeDiaryUseCase(PassThroughSummarizer),
+            createCard = CreateCardUseCase(NoOpCardRepository),
+        ),
         summaryStore = ConversationSummaryStore(
             summarizer = PassThroughSummarizer,
             tokenCounter = CharLengthTokenCounter,
         ),
+        emotionAccumulator = ConversationEmotionAccumulator(FlatClassifier),
     )
 
     private object PassThroughSummarizer : DiarySummarizer {
@@ -167,6 +183,21 @@ class ConversationSessionTest {
 
     private object CharLengthTokenCounter : UtteranceTokenCounter {
         override suspend fun count(text: String): Int = text.length
+    }
+
+    private object FlatClassifier : EmotionClassifier {
+        override suspend fun classify(text: String): ClassificationResult {
+            val scores = EmotionLabel.entries.associate { it.koLabel to 0.1f }
+            return ClassificationResult(EmotionLabel.ANGER.koLabel, 0.1f, scores)
+        }
+    }
+
+    private object NoOpCardRepository : CardRepository {
+        override suspend fun createCard(
+            conversationId: Long,
+            character: EmotionCharacter,
+            summary: String,
+        ): AppResult<Card> = AppResult.Success(Card(character = character, summary = summary, message = "대사"))
     }
 
     private class FakeConversationRepository(
@@ -225,6 +256,9 @@ class ConversationSessionTest {
                 AppResult.Success(Unit)
             }
         }
+
+        override suspend fun endConversation(conversationId: Long): AppResult<Unit> =
+            AppResult.Success(Unit)
 
         suspend fun awaitTitleAttemptStart() {
             titleAttemptStarted.await()

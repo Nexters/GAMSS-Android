@@ -16,4 +16,6 @@ interface ConversationRepository {
     suspend fun getMessages(conversationId: Long): AppResult<List<Message>>
 
     suspend fun updateTitle(conversationId: Long, title: String): AppResult<Unit>
+
+    suspend fun endConversation(conversationId: Long): AppResult<Unit>
 }

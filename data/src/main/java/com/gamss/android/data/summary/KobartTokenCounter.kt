@@ -18,15 +18,19 @@ internal class KobartTokenCounter @Inject constructor(
     private val mutex = Mutex()
     private var tokenizer: KobartTokenizer? = null
 
-    override suspend fun count(text: String): Int = countAll(listOf(text)).first()
+    override suspend fun count(text: String): Int = withContext(Dispatchers.Default) {
+        loadTokenizer().encode(text).ids.size
+    }
 
     override suspend fun countAll(texts: List<String>): List<Int> = withContext(Dispatchers.Default) {
-        mutex.withLock {
-            val loaded = tokenizer ?: KobartTokenizer.loadWithoutTruncation(
-                context = context,
-                tokenizerAsset = KobartSummarySpec.TOKENIZER_ASSET,
-            ).also { tokenizer = it }
-            texts.map { loaded.encode(it).ids.size }
-        }
+        val loaded = loadTokenizer()
+        texts.map { loaded.encode(it).ids.size }
+    }
+
+    private suspend fun loadTokenizer(): KobartTokenizer = mutex.withLock {
+        tokenizer ?: KobartTokenizer.loadWithoutTruncation(
+            context = context,
+            tokenizerAsset = KobartSummarySpec.TOKENIZER_ASSET,
+        ).also { tokenizer = it }
     }
 }

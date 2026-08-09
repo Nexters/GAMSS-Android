@@ -1,6 +1,10 @@
 package com.gamss.android.domain.conversation
 
 import com.gamss.android.core.common.AppResult
+import com.gamss.android.domain.card.Card
+import com.gamss.android.domain.card.CardNotRetryableException
+import com.gamss.android.domain.card.CreateConversationCardUseCase
+import com.gamss.android.domain.emotion.ConversationEmotionAccumulator
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
@@ -12,7 +16,10 @@ class ConversationSession @Inject constructor(
     private val sendMessage: SendMessageUseCase,
     private val getMessages: GetMessagesUseCase,
     private val updateConversationTitle: UpdateConversationTitleUseCase,
+    private val endConversation: EndConversationUseCase,
+    private val createConversationCard: CreateConversationCardUseCase,
     private val summaryStore: ConversationSummaryStore,
+    private val emotionAccumulator: ConversationEmotionAccumulator,
 ) {
 
     private val titleMutex = Mutex()
@@ -23,8 +30,15 @@ class ConversationSession @Inject constructor(
         clearPendingTitle()
         val result = getMessages(conversationId)
         when (result) {
-            is AppResult.Success -> summaryStore.restore(result.data.userUtterances())
-            is AppResult.Failure -> summaryStore.reset()
+            is AppResult.Success -> {
+                val utterances = result.data.userUtterances()
+                summaryStore.restore(utterances)
+                emotionAccumulator.restore(utterances)
+            }
+            is AppResult.Failure -> {
+                summaryStore.reset()
+                emotionAccumulator.reset()
+            }
         }
         return result
     }
@@ -45,6 +59,7 @@ class ConversationSession @Inject constructor(
         )
         if (result is AppResult.Success) {
             summaryStore.append(result.data.message.content)
+            emotionAccumulator.append(result.data.message.content)
             opensConversation.takeIf { it }?.let {
                 savePendingTitle(
                     PendingTitle(
@@ -59,7 +74,10 @@ class ConversationSession @Inject constructor(
 
     suspend fun finishSend() = coroutineScope {
         launch { assignPendingTitle() }
-        launch { summaryStore.compact() }
+        launch {
+            summaryStore.compact()
+            emotionAccumulator.classifyPending()
+        }
     }
 
     private suspend fun assignPendingTitle() {
@@ -108,6 +126,28 @@ class ConversationSession @Inject constructor(
 
     private companion object {
         const val MAX_TITLE_ATTEMPTS = 3
+    }
+
+    suspend fun end(conversationId: Long): AppResult<Unit> = endConversation(conversationId)
+
+    suspend fun createCard(conversationId: Long, messages: List<Message>): AppResult<Card> {
+        val classified = emotionAccumulator.classifyPending()
+        val emotion = emotionAccumulator.result()
+        if (emotion == null) {
+            val cause = if (classified) {
+                CardNotRetryableException.NoEmotion()
+            } else {
+                IllegalStateException("Emotion is not ready")
+            }
+            return AppResult.Failure(cause)
+        }
+        return createConversationCard(
+            CreateConversationCardUseCase.Params(
+                conversationId = conversationId,
+                character = emotion.character,
+                utterances = messages.userUtterances(),
+            ),
+        )
     }
 }
 
