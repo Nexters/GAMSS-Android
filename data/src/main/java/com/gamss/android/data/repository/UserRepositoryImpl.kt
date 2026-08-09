@@ -42,8 +42,8 @@ internal class UserRepositoryImpl @Inject constructor(
 private fun Throwable.toNicknameUpdateException(): Throwable =
     if (this is ApiException.Http) {
         when (code) {
-            ERROR_INVALID_INPUT -> NicknameUpdateException.MissingNickname()
-            ERROR_INVALID_NICKNAME -> NicknameUpdateException.InvalidNickname()
+            ERROR_INVALID_INPUT -> NicknameUpdateException.MissingNickname(cause = this)
+            ERROR_INVALID_NICKNAME -> NicknameUpdateException.InvalidNickname(cause = this)
             else -> this
         }
     } else {

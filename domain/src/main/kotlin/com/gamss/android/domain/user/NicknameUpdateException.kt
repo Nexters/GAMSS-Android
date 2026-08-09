@@ -1,7 +1,7 @@
 package com.gamss.android.domain.user
 
-sealed class NicknameUpdateException : RuntimeException() {
-    class MissingNickname : NicknameUpdateException()
-    class InvalidLength : NicknameUpdateException()
-    class InvalidNickname : NicknameUpdateException()
+sealed class NicknameUpdateException(cause: Throwable? = null) : RuntimeException(cause) {
+    class MissingNickname(cause: Throwable? = null) : NicknameUpdateException(cause)
+    class InvalidLength(cause: Throwable? = null) : NicknameUpdateException(cause)
+    class InvalidNickname(cause: Throwable? = null) : NicknameUpdateException(cause)
 }
