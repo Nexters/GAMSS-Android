@@ -19,7 +19,6 @@ class ChattingListViewModel @Inject constructor(
 
     override val container = container<ChattingListState, ChattingListSideEffect>(ChattingListState())
 
-    /** 방을 만들고 돌아오면 목록이 달라져 있어 화면에 들어올 때마다 부른다. */
     fun load() = intent {
         reduce { state.copy(isLoading = true) }
         when (val result = getConversations(LocalDate.now(clock))) {

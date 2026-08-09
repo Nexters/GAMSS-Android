@@ -21,15 +21,9 @@ import com.gamss.android.feature.login.LoginScreen
 import com.gamss.android.feature.login.navigation.LoginKey
 import org.orbitmvi.orbit.compose.collectAsState
 
-/**
- * 앱의 최상위 진입 지점.
- *
- * 앱 시작 시 저장된 세션을 확인하고, 로그인 이전 흐름과
- * Bottom Navigation 기반 메인 영역 사이의 root back stack을 관리한다.
- */
 @Composable
 fun GamssRootNavHost(
-    showsInternalTools: Boolean,
+    isDebug: Boolean,
     mainViewModel: MainViewModel = hiltViewModel(),
 ) {
     val sessionState by mainViewModel.collectAsState()
@@ -45,7 +39,7 @@ fun GamssRootNavHost(
         }
         else -> RootNavDisplay(
             sessionState = sessionState,
-            showsInternalTools = showsInternalTools,
+            isDebug = isDebug,
         )
     }
 }
@@ -53,7 +47,7 @@ fun GamssRootNavHost(
 @Composable
 private fun RootNavDisplay(
     sessionState: SessionState,
-    showsInternalTools: Boolean,
+    isDebug: Boolean,
 ) {
     val initialKey = if (sessionState == SessionState.Authenticated) MainKey else LoginKey
     val backStack = rememberNavBackStack(initialKey)
@@ -78,7 +72,7 @@ private fun RootNavDisplay(
                         googleWebClientId = stringResource(R.string.default_web_client_id),
                     )
                 }
-                entry<MainKey> { MainScreen(showsInternalTools = showsInternalTools) }
+                entry<MainKey> { MainScreen(isDebug = isDebug) }
             },
         ),
         onBack = {

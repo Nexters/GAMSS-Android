@@ -4,8 +4,6 @@ import com.gamss.android.core.common.AppResult
 import java.time.LocalDate
 
 interface ConversationRepository {
-
-    /** 그 날짜(KST)에 만들어진 방만 내려온다. */
     suspend fun getConversations(date: LocalDate): AppResult<List<Conversation>>
 
     suspend fun sendMessage(

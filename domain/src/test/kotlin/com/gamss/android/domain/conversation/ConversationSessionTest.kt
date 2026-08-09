@@ -102,7 +102,6 @@ class ConversationSessionTest {
         session.openWith(SEED)
         repeat(5) { session.continueWith("계속 보내는 말") }
 
-        // 첫 시도 + 재시도 2회까지만.
         assertEquals(3, repository.updatedTitles.size)
     }
 
