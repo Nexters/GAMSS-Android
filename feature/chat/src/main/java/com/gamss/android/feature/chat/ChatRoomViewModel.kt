@@ -10,8 +10,6 @@ import com.gamss.android.domain.conversation.Message
 import com.gamss.android.domain.conversation.MessageSender
 import com.gamss.android.domain.conversation.nextCommentRevealGapMillis
 import dagger.hilt.android.lifecycle.HiltViewModel
-import java.text.BreakIterator
-import java.util.Locale
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.delay
@@ -19,6 +17,8 @@ import org.orbitmvi.orbit.ContainerHost
 import org.orbitmvi.orbit.blockingIntent
 import org.orbitmvi.orbit.syntax.Syntax
 import org.orbitmvi.orbit.viewmodel.container
+import java.text.BreakIterator
+import java.util.Locale
 import javax.inject.Inject
 
 private typealias ChatRoomSyntax = Syntax<ChatRoomState, ChatRoomSideEffect>
@@ -249,12 +249,13 @@ class ChatRoomViewModel @Inject constructor(
 }
 
 private fun String.takeMessageInput(maxLength: Int): String {
-    if (maxLength <= 0) return ""
-    if (length <= maxLength) return this
-
-    val endExclusive = BreakIterator.getCharacterInstance(Locale.ROOT).run {
-        setText(this@takeMessageInput)
-        preceding(maxLength + 1).takeIf { it != BreakIterator.DONE } ?: 0
+    val endExclusive = when {
+        maxLength <= 0 -> 0
+        length <= maxLength -> length
+        else -> BreakIterator.getCharacterInstance(Locale.ROOT).run {
+            setText(this@takeMessageInput)
+            preceding(maxLength + 1).takeIf { it != BreakIterator.DONE } ?: 0
+        }
     }
     return substring(0, endExclusive)
 }
