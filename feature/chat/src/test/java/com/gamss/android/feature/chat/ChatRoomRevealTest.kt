@@ -10,8 +10,11 @@ import com.gamss.android.domain.conversation.MessageSender
 import com.gamss.android.domain.conversation.SendMessageUseCase
 import com.gamss.android.domain.conversation.SentMessage
 import com.gamss.android.domain.emotion.EmotionCharacter
+import com.gamss.android.domain.repository.TokenUsageRefreshNotifier
 import com.gamss.android.domain.summary.DiarySummarizer
 import com.gamss.android.domain.summary.UtteranceTokenCounter
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -174,7 +177,14 @@ class ChatRoomRevealTest {
                 summarizer = PassThroughSummarizer,
                 tokenCounter = CharLengthTokenCounter,
             ),
+            tokenUsageRefreshNotifier = NoOpTokenUsageRefreshNotifier,
         )
+    }
+
+    private object NoOpTokenUsageRefreshNotifier : TokenUsageRefreshNotifier {
+        override val refreshEvents: Flow<Unit> = emptyFlow()
+
+        override fun requestRefresh() = Unit
     }
 
     private object PassThroughSummarizer : DiarySummarizer {

@@ -9,6 +9,7 @@ import com.gamss.android.domain.conversation.MAX_MESSAGE_LENGTH
 import com.gamss.android.domain.conversation.Message
 import com.gamss.android.domain.conversation.MessageSender
 import com.gamss.android.domain.conversation.SendMessageUseCase
+import com.gamss.android.domain.repository.TokenUsageRefreshNotifier
 import com.gamss.android.domain.conversation.nextCommentRevealGapMillis
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
@@ -27,6 +28,7 @@ class ChatRoomViewModel @Inject constructor(
     private val sendMessage: SendMessageUseCase,
     private val getMessages: GetMessagesUseCase,
     private val summaryStore: ConversationSummaryStore,
+    private val tokenUsageRefreshNotifier: TokenUsageRefreshNotifier,
 ) : ViewModel(),
     ContainerHost<ChatRoomState, ChatRoomSideEffect> {
 
@@ -132,6 +134,7 @@ class ChatRoomViewModel @Inject constructor(
                 sent.commentStatus.toUserMessage()?.let { postSideEffect(ChatRoomSideEffect.ShowToast(it)) }
                 // 요약기가 돌 수 있어 화면 갱신 뒤에 둔다.
                 summaryStore.add(sent.message.content)
+                tokenUsageRefreshNotifier.requestRefresh()
             }
             is AppResult.Failure -> {
                 reduce { state.copy(isSending = false) }
