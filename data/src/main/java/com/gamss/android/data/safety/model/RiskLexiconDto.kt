@@ -26,7 +26,6 @@ internal data class SupportAgencyDto(
     val name: String = "",
     val description: String = "",
     val phoneNumber: String? = null,
-    val url: String? = null,
     val priority: Int = DEFAULT_PRIORITY,
 )
 
