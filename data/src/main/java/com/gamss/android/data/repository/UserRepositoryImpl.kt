@@ -26,9 +26,9 @@ internal class UserRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun secession(): AppResult<Unit> {
+    override suspend fun deleteUserAccount(): AppResult<Unit> {
         return runCatchingApiCall {
-            userService.secessionUser()
+            userService.deleteUserAccount()
         }
     }
 

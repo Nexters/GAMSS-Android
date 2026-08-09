@@ -4,5 +4,5 @@ sealed interface SettingSideEffect {
     data object LoadUserInfoFailure : SettingSideEffect
     data object UpdateNicknameSuccess : SettingSideEffect
     data class UpdateNicknameFailure(val throwable: Throwable) : SettingSideEffect
-    data object SecessionFailure : SettingSideEffect
+    data object DeleteAccountFailure : SettingSideEffect
 }

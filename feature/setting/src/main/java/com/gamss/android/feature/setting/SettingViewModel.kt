@@ -3,7 +3,7 @@ package com.gamss.android.feature.setting
 import androidx.lifecycle.ViewModel
 import com.gamss.android.core.common.AppResult
 import com.gamss.android.domain.user.GetUserInfoUseCase
-import com.gamss.android.domain.user.SecessionUseCase
+import com.gamss.android.domain.user.DeleteUserAccountUseCase
 import com.gamss.android.domain.user.UpdateNicknameUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import org.orbitmvi.orbit.ContainerHost
@@ -14,7 +14,7 @@ import javax.inject.Inject
 class SettingViewModel @Inject constructor(
     private val getUserInfoUseCase: GetUserInfoUseCase,
     private val updateNicknameUseCase: UpdateNicknameUseCase,
-    private val secessionUseCase: SecessionUseCase,
+    private val deleteUserAccountUseCase: DeleteUserAccountUseCase,
 ) : ViewModel(), ContainerHost<SettingState, SettingSideEffect> {
 
     override val container = container<SettingState, SettingSideEffect>(SettingState())
@@ -65,11 +65,11 @@ class SettingViewModel @Inject constructor(
         }
     }
 
-    fun secession() = intent {
+    fun deleteUserAccount() = intent {
         if (state.isLoading) return@intent
 
         reduce { state.copy(isLoading = true) }
-        when (secessionUseCase()) {
+        when (deleteUserAccountUseCase()) {
             is AppResult.Success -> {
                 reduce { state.copy(isLoading = false) }
                 // 화면 이동은 AuthRepository의 세션 상태 변경을 통해 처리된다.
@@ -77,7 +77,7 @@ class SettingViewModel @Inject constructor(
 
             is AppResult.Failure -> {
                 reduce { state.copy(isLoading = false) }
-                postSideEffect(SettingSideEffect.SecessionFailure)
+                postSideEffect(SettingSideEffect.DeleteAccountFailure)
             }
         }
     }

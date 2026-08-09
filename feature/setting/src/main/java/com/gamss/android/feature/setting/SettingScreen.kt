@@ -70,8 +70,8 @@ fun SettingScreen(
 
         HorizontalDivider(modifier = Modifier.padding(vertical = 24.dp))
 
-        SecessionSection(
-            onSecession = viewModel::secession,
+        deleteAccountSection(
+            onDeleteAccount = viewModel::deleteUserAccount,
             enabled = !state.isLoading,
         )
     }
@@ -147,8 +147,8 @@ private fun UpdateNicknameSection(
 }
 
 @Composable
-private fun SecessionSection(
-    onSecession: () -> Unit,
+private fun deleteAccountSection(
+    onDeleteAccount: () -> Unit,
     enabled: Boolean,
 ) {
     Text(
@@ -159,7 +159,7 @@ private fun SecessionSection(
         modifier = Modifier
             .fillMaxWidth()
             .padding(top = 8.dp),
-        onClick = onSecession,
+        onClick = onDeleteAccount,
         enabled = enabled,
     ) {
         Text("회원 탈퇴")
@@ -171,7 +171,7 @@ private fun SettingSideEffect.toMessage(): String =
         SettingSideEffect.LoadUserInfoFailure -> "사용자 정보를 불러오지 못했어요"
         SettingSideEffect.UpdateNicknameSuccess -> "닉네임이 변경되었어요"
         is SettingSideEffect.UpdateNicknameFailure -> throwable.toUpdateNicknameFailureMessage()
-        SettingSideEffect.SecessionFailure -> "회원 탈퇴에 실패했어요"
+        SettingSideEffect.DeleteAccountFailure -> "회원 탈퇴에 실패했어요"
     }
 
 private fun Throwable.toUpdateNicknameFailureMessage(): String =

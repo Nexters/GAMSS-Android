@@ -94,7 +94,7 @@ class UpdateNicknameUseCaseTest {
             return updateResult
         }
 
-        override suspend fun secession(): AppResult<Unit> =
+        override suspend fun deleteUserAccount(): AppResult<Unit> =
             error("Not needed for this test")
 
         override suspend fun getUserInfo(): AppResult<UserProfile> =

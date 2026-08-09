@@ -12,30 +12,30 @@ import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-class SecessionUseCaseTest {
+class DeleteUserAccountUseCaseTest {
 
     @Test
     fun `회원 탈퇴 성공 후 로그아웃을 호출한다`() = runBlocking {
         val callOrder = mutableListOf<String>()
         val userRepository = FakeUserRepository(callOrder = callOrder)
         val authRepository = FakeAuthRepository(callOrder = callOrder)
-        val useCase = SecessionUseCase(userRepository, authRepository)
+        val useCase = DeleteUserAccountUseCase(userRepository, authRepository)
 
         val result = useCase()
 
         assertTrue(result is AppResult.Success)
         assertEquals(1, authRepository.logoutCallCount)
-        assertEquals(listOf("secession", "logout"), callOrder)
+        assertEquals(listOf("deleteUserAccount", "logout"), callOrder)
     }
 
     @Test
     fun `회원 탈퇴 실패 시 로그아웃하지 않고 탈퇴 실패를 반환한다`() = runBlocking {
-        val failure = IllegalStateException("secession failed")
+        val failure = IllegalStateException("deleteUserAccount failed")
         val userRepository = FakeUserRepository(
-            secessionResult = AppResult.Failure(failure),
+            deleteUserAccountResult = AppResult.Failure(failure),
         )
         val authRepository = FakeAuthRepository()
-        val useCase = SecessionUseCase(userRepository, authRepository)
+        val useCase = DeleteUserAccountUseCase(userRepository, authRepository)
 
         val result = useCase()
 
@@ -50,7 +50,7 @@ class SecessionUseCaseTest {
         val authRepository = FakeAuthRepository(
             logoutResult = AppResult.Failure(failure),
         )
-        val useCase = SecessionUseCase(userRepository, authRepository)
+        val useCase = DeleteUserAccountUseCase(userRepository, authRepository)
 
         val result = useCase()
 
@@ -61,26 +61,26 @@ class SecessionUseCaseTest {
     @Test(expected = CancellationException::class)
     fun `회원 탈퇴 취소는 실패로 변환하지 않고 전파한다`() = runBlocking {
         val userRepository = FakeUserRepository(
-            secessionFailure = CancellationException(),
+            deleteUserAccountFailure = CancellationException(),
         )
         val authRepository = FakeAuthRepository()
 
-        SecessionUseCase(userRepository, authRepository)()
+        DeleteUserAccountUseCase(userRepository, authRepository)()
         Unit
     }
 
     private class FakeUserRepository(
-        private val secessionResult: AppResult<Unit> = AppResult.Success(Unit),
-        private val secessionFailure: Throwable? = null,
+        private val deleteUserAccountResult: AppResult<Unit> = AppResult.Success(Unit),
+        private val deleteUserAccountFailure: Throwable? = null,
         private val callOrder: MutableList<String> = mutableListOf(),
     ) : UserRepository {
         override suspend fun updateNickname(nickname: String): AppResult<UserProfile> =
             error("Not needed for this test")
 
-        override suspend fun secession(): AppResult<Unit> {
-            callOrder += "secession"
-            secessionFailure?.let { throw it }
-            return secessionResult
+        override suspend fun deleteUserAccount(): AppResult<Unit> {
+            callOrder += "deleteAccount"
+            deleteUserAccountFailure?.let { throw it }
+            return deleteUserAccountResult
         }
 
         override suspend fun getUserInfo(): AppResult<UserProfile> =

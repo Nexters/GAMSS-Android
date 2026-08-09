@@ -14,7 +14,7 @@ internal interface UserService {
     suspend fun updateNickname(@Body request: UpdateNicknameRequest): ApiResponse<UserInfoResponse>
 
     @DELETE("/api/members/me")
-    suspend fun secessionUser(): ApiResponse<String>
+    suspend fun deleteUserAccount(): ApiResponse<String>
 
     @GET("/api/members/me")
     suspend fun getUserInfo(): ApiResponse<UserInfoResponse>

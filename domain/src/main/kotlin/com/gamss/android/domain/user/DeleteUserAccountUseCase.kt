@@ -5,12 +5,12 @@ import com.gamss.android.domain.repository.AuthRepository
 import com.gamss.android.domain.usecase.NoParamUseCase
 import javax.inject.Inject
 
-class SecessionUseCase @Inject constructor(
+class DeleteUserAccountUseCase @Inject constructor(
     private val userRepository: UserRepository,
     private val authRepository: AuthRepository,
 ) : NoParamUseCase<AppResult<Unit>> {
     override suspend fun invoke(): AppResult<Unit> {
-        return when (val result = userRepository.secession()) {
+        return when (val result = userRepository.deleteUserAccount()) {
             is AppResult.Success -> authRepository.logout()
             is AppResult.Failure -> result
         }
