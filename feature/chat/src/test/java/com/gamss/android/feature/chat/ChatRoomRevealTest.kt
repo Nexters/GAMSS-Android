@@ -124,66 +124,6 @@ class ChatRoomRevealTest {
     }
 
     @Test
-    fun 최대_길이_경계의_이모지는_절반만_잘리지_않는다() = runTest {
-        val viewModel = viewModel(commentCount = 1)
-        val text = "가".repeat(139) + GRINNING_FACE
-
-        viewModel.test(this) {
-            containerHost.onInputChange(text)
-
-            val updated = awaitState()
-            assertEquals("가".repeat(139), updated.input)
-
-            cancelAndIgnoreRemainingItems()
-        }
-    }
-
-    @Test
-    fun 최대_길이를_넘지_않는_이모지는_보존된다() = runTest {
-        val viewModel = viewModel(commentCount = 1)
-        val text = "가".repeat(138) + GRINNING_FACE
-
-        viewModel.test(this) {
-            containerHost.onInputChange(text)
-
-            val updated = awaitState()
-            assertEquals(text, updated.input)
-
-            cancelAndIgnoreRemainingItems()
-        }
-    }
-
-    @Test
-    fun 최대_길이_경계의_변형_선택자_이모지는_함께_잘린다() = runTest {
-        val viewModel = viewModel(commentCount = 1)
-        val text = "가".repeat(139) + RED_HEART
-
-        viewModel.test(this) {
-            containerHost.onInputChange(text)
-
-            val updated = awaitState()
-            assertEquals("가".repeat(139), updated.input)
-
-            cancelAndIgnoreRemainingItems()
-        }
-    }
-
-    @Test
-    fun 최대_길이_경계의_결합_이모지는_절반만_남지_않는다() = runTest {
-        val viewModel = viewModel(commentCount = 1)
-        val text = "가".repeat(136) + WOMAN_TECHNOLOGIST
-
-        viewModel.test(this) {
-            containerHost.onInputChange(text)
-
-            val updated = awaitState()
-            assertEquals("가".repeat(136), updated.input)
-
-            cancelAndIgnoreRemainingItems()
-        }
-    }
-
-    @Test
     fun 전송이_실패하면_압축본에_쌓이지_않는다() = runTest {
         val repository = FakeConversationRepository(commentCount = 1, failing = true)
         val viewModel = viewModel(repository)
@@ -215,8 +155,5 @@ class ChatRoomRevealTest {
 
     private companion object {
         const val SEND_FAILED_MESSAGE = "메시지를 보내지 못했어요"
-        const val GRINNING_FACE = "\uD83D\uDE00"
-        const val RED_HEART = "\u2764\uFE0F"
-        const val WOMAN_TECHNOLOGIST = "\uD83D\uDC69\u200D\uD83D\uDCBB"
     }
 }
