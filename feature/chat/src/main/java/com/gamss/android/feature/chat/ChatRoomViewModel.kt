@@ -9,8 +9,8 @@ import com.gamss.android.domain.conversation.MAX_MESSAGE_LENGTH
 import com.gamss.android.domain.conversation.Message
 import com.gamss.android.domain.conversation.MessageSender
 import com.gamss.android.domain.conversation.SendMessageUseCase
-import com.gamss.android.domain.repository.TokenUsageRefreshNotifier
 import com.gamss.android.domain.conversation.nextCommentRevealGapMillis
+import com.gamss.android.domain.repository.TokenUsageRefreshNotifier
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancelAndJoin
@@ -132,9 +132,10 @@ class ChatRoomViewModel @Inject constructor(
                 }
                 launchCommentReveal()
                 sent.commentStatus.toUserMessage()?.let { postSideEffect(ChatRoomSideEffect.ShowToast(it)) }
+                // 요약기에서 취소되면 갱신 요청이 유실되므로 suspend 호출보다 앞에 둔다.
+                tokenUsageRefreshNotifier.requestRefresh()
                 // 요약기가 돌 수 있어 화면 갱신 뒤에 둔다.
                 summaryStore.add(sent.message.content)
-                tokenUsageRefreshNotifier.requestRefresh()
             }
             is AppResult.Failure -> {
                 reduce { state.copy(isSending = false) }

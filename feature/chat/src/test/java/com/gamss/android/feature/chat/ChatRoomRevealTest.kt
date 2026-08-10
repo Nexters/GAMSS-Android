@@ -13,10 +13,10 @@ import com.gamss.android.domain.emotion.EmotionCharacter
 import com.gamss.android.domain.repository.TokenUsageRefreshNotifier
 import com.gamss.android.domain.summary.DiarySummarizer
 import com.gamss.android.domain.summary.UtteranceTokenCounter
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -166,25 +166,70 @@ class ChatRoomRevealTest {
         }
     }
 
+    @Test
+    fun 전송이_성공하면_토큰_사용량_갱신을_요청한다() = runTest {
+        val notifier = RecordingTokenUsageRefreshNotifier()
+        val viewModel = viewModel(FakeConversationRepository(commentCount = 1), notifier)
+
+        viewModel.test(this) {
+            expectInitialState()
+            containerHost.onInputChange(INPUT)
+            skipItems(1) // input 반영
+            containerHost.onSend()
+            skipItems(1) // isSending = true
+            awaitState() // 전송 성공 반영
+
+            assertEquals(1, notifier.refreshCount)
+
+            cancelAndIgnoreRemainingItems()
+        }
+    }
+
+    @Test
+    fun 전송이_실패하면_토큰_사용량_갱신을_요청하지_않는다() = runTest {
+        val notifier = RecordingTokenUsageRefreshNotifier()
+        val repository = FakeConversationRepository(commentCount = 1, failing = true)
+        val viewModel = viewModel(repository, notifier)
+
+        viewModel.test(this) {
+            expectInitialState()
+            containerHost.onInputChange(INPUT)
+            skipItems(1) // input 반영
+            containerHost.onSend()
+            skipItems(1) // isSending = true
+            awaitState() // 실패 반영
+
+            assertEquals(0, notifier.refreshCount)
+
+            cancelAndIgnoreRemainingItems()
+        }
+    }
+
     private fun viewModel(commentCount: Int): ChatRoomViewModel =
         viewModel(FakeConversationRepository(commentCount))
 
-    private fun viewModel(conversationRepository: FakeConversationRepository): ChatRoomViewModel {
-        return ChatRoomViewModel(
-            sendMessage = SendMessageUseCase(conversationRepository),
-            getMessages = GetMessagesUseCase(conversationRepository),
-            summaryStore = ConversationSummaryStore(
-                summarizer = PassThroughSummarizer,
-                tokenCounter = CharLengthTokenCounter,
-            ),
-            tokenUsageRefreshNotifier = NoOpTokenUsageRefreshNotifier,
-        )
-    }
+    private fun viewModel(
+        conversationRepository: FakeConversationRepository,
+        tokenUsageRefreshNotifier: TokenUsageRefreshNotifier = RecordingTokenUsageRefreshNotifier(),
+    ): ChatRoomViewModel = ChatRoomViewModel(
+        sendMessage = SendMessageUseCase(conversationRepository),
+        getMessages = GetMessagesUseCase(conversationRepository),
+        summaryStore = ConversationSummaryStore(
+            summarizer = PassThroughSummarizer,
+            tokenCounter = CharLengthTokenCounter,
+        ),
+        tokenUsageRefreshNotifier = tokenUsageRefreshNotifier,
+    )
 
-    private object NoOpTokenUsageRefreshNotifier : TokenUsageRefreshNotifier {
+    private class RecordingTokenUsageRefreshNotifier : TokenUsageRefreshNotifier {
+        var refreshCount = 0
+            private set
+
         override val refreshEvents: Flow<Unit> = emptyFlow()
 
-        override fun requestRefresh() = Unit
+        override fun requestRefresh() {
+            refreshCount++
+        }
     }
 
     private object PassThroughSummarizer : DiarySummarizer {
