@@ -39,24 +39,22 @@ internal val GrayDark900 = Color(0xFFF2F5F8)
 internal val GrayDark950 = Color(0xFFFCFDFE)
 
 // Chromatic - Light
-internal val ChromaticLightPink = Color(0xFFFF7E9A)
-internal val ChromaticLightYellow = Color(0xFFFFD373)
-internal val ChromaticLightGreen = Color(0xFF36AF7C)
-internal val ChromaticLightPurple = Color(0xFFC08CEA)
-internal val ChromaticLightSkyblue = Color(0xFF66C3F1)
-internal val ChromaticLightApricot = Color(0xFFFB6F56)
+internal val ChromaticLightRed = Color(0xFFEF3535)
+internal val ChromaticLightApricot = Color(0xFFEC462B)
+internal val ChromaticLightYellow = Color(0xFFF1B235)
+internal val ChromaticLightGreen = Color(0xFF36AF48)
+internal val ChromaticLightTeal = Color(0xFF36B8BD)
+internal val ChromaticLightBlue = Color(0xFF376CE8)
+internal val ChromaticLightPurple = Color(0xFFA425E3)
 
 // Chromatic - Dark
+internal val ChromaticDarkRed = Color(0xFFFF4444)
+internal val ChromaticDarkApricot = Color(0xFFF15D47)
+internal val ChromaticDarkYellow = Color(0xFFFFC552)
 internal val ChromaticDarkGreen = Color(0xFF3BDB98)
-
-// Semantic - Light
-internal val SemanticLightRed = Color(0xFFEF3535)
-internal val SemanticLightBlue = Color(0xFF376CE8)
-
-// Semantic - Dark
-internal val SemanticDarkRed = Color(0xFFFF4444)
-internal val SemanticDarkBlue = Color(0xFF447CFF)
-
+internal val ChromaticDarkTeal = Color(0xFF44DFE5)
+internal val ChromaticDarkBlue = Color(0xFF5588FF)
+internal val ChromaticDarkPurple = Color(0xFFCC6DFC)
 @Immutable
 data class GamssColors(
     val white: Color,
@@ -74,14 +72,13 @@ data class GamssColors(
     val gray800: Color,
     val gray900: Color,
     val gray950: Color,
-    val pink: Color,
+    val red: Color,
+    val apricot: Color,
     val yellow: Color,
     val green: Color,
-    val purple: Color,
-    val skyblue: Color,
-    val apricot: Color,
-    val red: Color,
+    val teal: Color,
     val blue: Color,
+    val purple: Color,
 )
 
 val LightGamssColors = GamssColors(
@@ -100,14 +97,13 @@ val LightGamssColors = GamssColors(
     gray800 = GrayLight800,
     gray900 = GrayLight900,
     gray950 = GrayLight950,
-    pink = ChromaticLightPink,
+    red = ChromaticLightRed,
+    apricot = ChromaticLightApricot,
     yellow = ChromaticLightYellow,
     green = ChromaticLightGreen,
+    teal = ChromaticLightTeal,
+    blue = ChromaticLightBlue,
     purple = ChromaticLightPurple,
-    skyblue = ChromaticLightSkyblue,
-    apricot = ChromaticLightApricot,
-    red = SemanticLightRed,
-    blue = SemanticLightBlue,
 )
 
 val DarkGamssColors = GamssColors(
@@ -126,14 +122,13 @@ val DarkGamssColors = GamssColors(
     gray800 = GrayDark800,
     gray900 = GrayDark900,
     gray950 = GrayDark950,
-    pink = ChromaticLightPink,
-    yellow = ChromaticLightYellow,
+    red = ChromaticDarkRed,
+    apricot = ChromaticDarkApricot,
+    yellow = ChromaticDarkYellow,
     green = ChromaticDarkGreen,
-    purple = ChromaticLightPurple,
-    skyblue = ChromaticLightSkyblue,
-    apricot = ChromaticLightApricot,
-    red = SemanticDarkRed,
-    blue = SemanticDarkBlue,
+    teal = ChromaticDarkTeal,
+    blue = ChromaticDarkBlue,
+    purple = ChromaticDarkPurple,
 )
 
 val LocalGamssColors = staticCompositionLocalOf { LightGamssColors }
