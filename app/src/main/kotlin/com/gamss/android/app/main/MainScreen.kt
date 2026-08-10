@@ -8,15 +8,18 @@ import androidx.compose.ui.Modifier
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.ui.NavDisplay
 import com.gamss.android.app.navigation.Navigator
+import com.gamss.android.app.navigation.bottomBarItems
+import com.gamss.android.app.navigation.keys
 import com.gamss.android.app.navigation.rememberNavigationState
 import com.gamss.android.app.navigation.toEntries
-import com.gamss.android.app.navigation.topLevelBottomBarItems
-import com.gamss.android.app.navigation.topLevelDestinationKeys
+import com.gamss.android.app.navigation.topLevelDestinations
 import com.gamss.android.core.ui.GamssBottomBar
 import com.gamss.android.feature.calendar.CalendarScreen
 import com.gamss.android.feature.calendar.navigation.CalendarKey
+import com.gamss.android.feature.chat.ChatRoomScreen
 import com.gamss.android.feature.chat.ChattingListScreen
 import com.gamss.android.feature.chat.navigation.ChatKey
+import com.gamss.android.feature.chat.navigation.ChatRoomKey
 import com.gamss.android.feature.emotion.EmotionScreen
 import com.gamss.android.feature.emotion.navigation.EmotionKey
 import com.gamss.android.feature.home.HomeScreen
@@ -25,10 +28,11 @@ import com.gamss.android.feature.setting.SettingScreen
 import com.gamss.android.feature.setting.navigation.SettingKey
 
 @Composable
-fun MainScreen() {
+fun MainScreen(isDebug: Boolean) {
+    val destinations = remember(isDebug) { topLevelDestinations(isDebug) }
     val navigationState = rememberNavigationState(
         startKey = HomeKey,
-        topLevelKeys = topLevelDestinationKeys,
+        topLevelKeys = remember(destinations) { destinations.keys() },
     )
     val navigator = remember(navigationState) { Navigator(navigationState) }
 
@@ -36,7 +40,7 @@ fun MainScreen() {
         bottomBar = {
             if (navigationState.currentKey == navigationState.currentTopLevelKey) {
                 GamssBottomBar(
-                    items = topLevelBottomBarItems,
+                    items = remember(destinations) { destinations.bottomBarItems() },
                     selectedValue = navigationState.currentTopLevelKey,
                     onItemClick = navigator::navigate,
                 )
@@ -50,10 +54,20 @@ fun MainScreen() {
                     entry<HomeKey> {
                         HomeScreen(onNavigateToSetting = { navigator.navigate(SettingKey) })
                     }
-                    entry<ChatKey> { ChattingListScreen() }
                     entry<CalendarKey> { CalendarScreen() }
                     entry<EmotionKey> { EmotionScreen() }
                     entry<SettingKey> { SettingScreen() }
+                    if (isDebug) {
+                        entry<ChatKey> {
+                            ChattingListScreen(onChatClick = { navigator.navigate(ChatRoomKey(it)) })
+                        }
+                        entry<ChatRoomKey> { key ->
+                            ChatRoomScreen(
+                                conversationId = key.conversationId,
+                                onCardClose = navigator::goBack,
+                            )
+                        }
+                    }
                 },
             ),
             onBack = {

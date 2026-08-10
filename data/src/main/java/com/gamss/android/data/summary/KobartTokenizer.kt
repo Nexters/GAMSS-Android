@@ -36,6 +36,25 @@ internal class KobartTokenizer private constructor(
                 OPT_TRUNCATION to "true",
                 OPT_MAX_LENGTH to maxInput.toString(),
             )
+            return newInstance(context, tokenizerAsset, options)
+        }
+
+        /** 토큰 수를 재려면 절단이 없어야 한다. 절단하면 한계 이상은 전부 같은 값으로 보인다. */
+        fun loadWithoutTruncation(context: Context, tokenizerAsset: String): KobartTokenizer =
+            newInstance(
+                context = context,
+                tokenizerAsset = tokenizerAsset,
+                options = mapOf(
+                    OPT_SPECIAL_TOKENS to "true",
+                    OPT_TRUNCATION to "false",
+                ),
+            )
+
+        private fun newInstance(
+            context: Context,
+            tokenizerAsset: String,
+            options: Map<String, String>,
+        ): KobartTokenizer {
             val tokenizer = context.assets.open(tokenizerAsset).use { stream ->
                 HuggingFaceTokenizer.newInstance(stream, options)
             }

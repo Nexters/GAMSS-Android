@@ -1,14 +1,18 @@
 package com.gamss.android.core.common
 
+import kotlin.coroutines.cancellation.CancellationException
+
 sealed interface AppResult<out T> {
     data class Success<T>(val data: T) : AppResult<T>
     data class Failure(val throwable: Throwable) : AppResult<Nothing>
 
     companion object {
-        @Suppress("TooGenericExceptionCaught")
+        @Suppress("TooGenericExceptionCaught", "RethrowCaughtException")
         inline fun <T> of(block: () -> T): AppResult<T> =
             try {
                 Success(block())
+            } catch (e: CancellationException) {
+                throw e
             } catch (t: Throwable) {
                 Failure(t)
             }

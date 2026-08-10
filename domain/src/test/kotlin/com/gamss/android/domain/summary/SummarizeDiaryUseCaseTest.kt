@@ -10,7 +10,6 @@ import org.junit.Test
 
 class SummarizeDiaryUseCaseTest {
 
-    /** 호출 여부를 기록하는 fake 요약기. */
     private class RecordingSummarizer(val transform: (String) -> String) : DiarySummarizer {
         var called = false
             private set
@@ -47,5 +46,14 @@ class SummarizeDiaryUseCaseTest {
         val useCase = SummarizeDiaryUseCase(summarizer)
         assertNull(useCase(listOf("", "   ")).assertSuccess())
         assertFalse(summarizer.called)
+    }
+
+    @Test
+    fun 연달아_같은_발화는_한_번만_남긴다() = runBlocking {
+        val useCase = SummarizeDiaryUseCase(RecordingSummarizer { it })
+
+        val result = useCase(listOf("나 배고파", "배고파", "배고파", "그래서 뭐 먹지", "배고파")).assertSuccess()
+
+        assertEquals("나 배고파 배고파 그래서 뭐 먹지 배고파", result)
     }
 }

@@ -14,6 +14,7 @@ android {
 
     buildFeatures {
         resValues = true
+        buildConfig = true
     }
 
     defaultConfig {
@@ -35,15 +36,47 @@ android {
         noCompress += "onnx"
     }
 
-    val releaseKeystorePath = System.getenv("RELEASE_KEYSTORE_PATH")
+    packaging {
+        resources {
+            // DJL 토크나이저가 데스크톱 바이너리까지 배포한다. 안드로이드는 lib/arm64-v8a 만 쓴다.
+            excludes += setOf(
+                "native/lib/win-x86_64/**",
+                "native/lib/osx-aarch64/**",
+                "native/lib/osx-x86_64/**",
+                "native/lib/linux-x86_64/**",
+                "com/sun/jna/aix-ppc/**",
+                "com/sun/jna/aix-ppc64/**",
+                "com/sun/jna/win32-x86/**",
+                "com/sun/jna/win32-x86-64/**",
+                "com/sun/jna/darwin-aarch64/**",
+                "com/sun/jna/darwin-x86-64/**",
+                "META-INF/INDEX.LIST",
+            )
+        }
+    }
+
+    val releaseKeystorePath = providers.environmentVariable("RELEASE_KEYSTORE_PATH").orNull
+    val releaseKeystorePassword = providers.environmentVariable("RELEASE_KEYSTORE_PASSWORD").orNull
+    val releaseKeyAlias = providers.environmentVariable("RELEASE_KEY_ALIAS").orNull
+    val releaseKeyPassword = providers.environmentVariable("RELEASE_KEY_PASSWORD").orNull
+    val hasCompleteReleaseSigningConfig = listOf(
+        releaseKeystorePath,
+        releaseKeystorePassword,
+        releaseKeyAlias,
+        releaseKeyPassword,
+    ).all { !it.isNullOrBlank() }
 
     signingConfigs {
-        if (releaseKeystorePath != null) {
+        if (hasCompleteReleaseSigningConfig) {
+            val keystorePath = releaseKeystorePath.orEmpty()
+            val keystorePassword = releaseKeystorePassword.orEmpty()
+            val signingKeyAlias = releaseKeyAlias.orEmpty()
+            val signingKeyPassword = releaseKeyPassword.orEmpty()
             create("release") {
-                storeFile = file(releaseKeystorePath)
-                storePassword = System.getenv("RELEASE_KEYSTORE_PASSWORD")
-                keyAlias = System.getenv("RELEASE_KEY_ALIAS")
-                keyPassword = System.getenv("RELEASE_KEY_PASSWORD")
+                storeFile = file(keystorePath)
+                storePassword = keystorePassword
+                keyAlias = signingKeyAlias
+                keyPassword = signingKeyPassword
             }
         }
     }
@@ -56,7 +89,7 @@ android {
         }
         getByName("release") {
             isMinifyEnabled = false
-            if (releaseKeystorePath != null) {
+            if (hasCompleteReleaseSigningConfig) {
                 signingConfig = signingConfigs.getByName("release")
             }
         }

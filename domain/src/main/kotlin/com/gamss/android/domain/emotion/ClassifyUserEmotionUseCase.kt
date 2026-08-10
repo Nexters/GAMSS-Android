@@ -26,15 +26,6 @@ class ClassifyUserEmotionUseCase @Inject constructor(
                 summed[label] = (summed[label] ?: 0f) + score
             }
         }
-        val normalized = summed.mapValues { it.value / utterances.size }
-        val top = normalized.maxByOrNull { it.value }
-        top?.let {
-            val label = EmotionLabel.fromKoLabel(it.key)
-            EmotionResult(
-                label = label,
-                character = EmotionCharacter.fromEmotionLabel(label),
-                distribution = ClassificationResult(it.key, it.value, normalized),
-            )
-        }
+        aggregateEmotion(summed, utterances.size)
     }
 }

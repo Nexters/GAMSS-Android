@@ -1,5 +1,9 @@
 package com.gamss.android.data.remote.conversation.model.response
 
+import android.util.Log
+import com.gamss.android.data.remote.emotion.toEmotionCharacter
+import com.gamss.android.domain.conversation.Message
+import com.gamss.android.domain.conversation.MessageSender
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -21,6 +25,7 @@ data class ConversationMessage(
 ) {
     companion object {
         const val SENDER_USER = "USER"
+        const val SENDER_CHARACTER = "CHARACTER"
     }
 }
 
@@ -30,3 +35,34 @@ data class ConversationMessage(
  */
 fun List<ConversationMessage>.userUtterances(): List<String> =
     filter { it.senderType == ConversationMessage.SENDER_USER }.map { it.content }
+
+internal fun ConversationMessage.toDomain(): Message = toMessage(resolveSender())
+
+internal fun ConversationMessage.toSentUserMessage(): Message = toMessage(MessageSender.User)
+
+private fun ConversationMessage.toMessage(sender: MessageSender): Message = Message(
+    id = id,
+    conversationId = conversationId,
+    sender = sender,
+    content = content,
+    repliesToMessageId = repliesToMessageId,
+)
+
+private fun ConversationMessage.resolveSender(): MessageSender = when (senderType) {
+    ConversationMessage.SENDER_USER -> MessageSender.User
+    ConversationMessage.SENDER_CHARACTER ->
+        emotionType.toEmotionCharacter()?.let(MessageSender::Character) ?: run {
+            logUnknown("Unknown emotionType=$emotionType (messageId=$id)")
+            MessageSender.Unknown
+        }
+    else -> {
+        logUnknown("Unknown senderType=$senderType (messageId=$id)")
+        MessageSender.Unknown
+    }
+}
+
+private fun logUnknown(message: String) {
+    runCatching { Log.w(TAG, message) }
+}
+
+private const val TAG = "ConversationMapper"

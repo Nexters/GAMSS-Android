@@ -17,7 +17,8 @@ val localProperties = Properties().apply {
 fun resolveBaseUrl(key: String): String {
     val value = localProperties.getProperty(key)
     require(value.isNotBlank()) { "Missing $key in local.properties" }
-    return value.trim()
+    // Retrofit 은 '/' 로 끝나지 않는 baseUrl 을 거부한다. 런타임이 아니라 빌드에서 걸러낸다.
+    return value.trim().removeSuffix("/") + "/"
 }
 
 val devBaseUrl = resolveBaseUrl("DEV_BASE_URL")
@@ -29,7 +30,7 @@ android {
     buildFeatures {
         buildConfig = true
     }
-    
+
     buildTypes {
         debug {
             buildConfigField("String", "BASE_URL", "\"$devBaseUrl\"")
@@ -37,7 +38,7 @@ android {
         release {
             buildConfigField("String", "BASE_URL", "\"$prodBaseUrl\"")
         }
-    }    
+    }
 
     androidResources {
         // .onnx 를 비압축 저장해야 assets.openFd + mmap 로드 가능(androidTest APK 는 이 모듈 설정을 따른다).
@@ -64,15 +65,12 @@ dependencies {
     implementation(libs.firebase.firestore)
     implementation(libs.kotlinx.coroutines.play.services)
 
-    testImplementation(libs.junit)
-    testImplementation(libs.mockk)
-    testImplementation(libs.kotlinx.coroutines.test)
-    testImplementation(libs.okhttp.mockwebserver)
-    androidTestImplementation(libs.androidx.junit)
-    androidTestImplementation(libs.androidx.test.runner)
-
     // 온디바이스 감정 분류(KoELECTRA INT8) — LiteRT 추론 + DJL WordPiece 토크나이저
-    implementation(libs.litert)
+    implementation(libs.litert) {
+        // 모델을 assets 에 직접 넣으므로 AI Pack 배포가 필요 없다.
+        // 이게 끌고 오는 WorkManager 가 콜드스타트마다 초기화된다.
+        exclude(group = "com.google.android.play", module = "ai-delivery")
+    }
     implementation(platform(libs.djl.bom))
     implementation(libs.djl.huggingface.tokenizers)
     runtimeOnly(libs.djl.android.tokenizer.native)
@@ -81,8 +79,11 @@ dependencies {
     implementation(libs.onnxruntime.android)
 
     testImplementation(libs.junit)
+    testImplementation(libs.mockk)
+    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.okhttp.mockwebserver)
 
     androidTestImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
-    androidTestImplementation("androidx.test:runner:1.6.2")
+    androidTestImplementation(libs.androidx.test.runner)
 }

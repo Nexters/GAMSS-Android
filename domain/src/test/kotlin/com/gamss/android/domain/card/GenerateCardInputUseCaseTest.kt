@@ -37,7 +37,7 @@ class GenerateCardInputUseCaseTest {
         val useCase = useCase(label = "슬픔", summary = "요약본")
         val result = useCase(listOf("강아지가 떠났어", "너무 슬퍼")).assertSuccess()
         assertEquals(EmotionLabel.SADNESS, result?.emotion)
-        assertEquals(EmotionCharacter.SADNESS, result?.character)
+        assertEquals(EmotionCharacter.WARM, result?.character)
         // 짧은 입력이라 요약은 게이팅되어 결합 원문이 그대로 요약이 된다.
         assertEquals("강아지가 떠났어 너무 슬퍼", result?.summary)
     }

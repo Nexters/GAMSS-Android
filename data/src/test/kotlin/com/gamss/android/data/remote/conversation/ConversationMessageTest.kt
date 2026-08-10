@@ -1,17 +1,25 @@
 package com.gamss.android.data.remote.conversation
 
 import com.gamss.android.data.remote.conversation.model.response.ConversationMessage
+import com.gamss.android.data.remote.conversation.model.response.toDomain
 import com.gamss.android.data.remote.conversation.model.response.userUtterances
+import com.gamss.android.domain.conversation.MessageSender
+import com.gamss.android.domain.emotion.EmotionCharacter
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class ConversationMessageTest {
 
-    private fun msg(id: Long, sender: String, content: String) = ConversationMessage(
+    private fun msg(
+        id: Long,
+        sender: String,
+        content: String,
+        emotionType: String? = null,
+    ) = ConversationMessage(
         id = id,
         conversationId = 1,
         senderType = sender,
-        emotionType = null,
+        emotionType = emotionType,
         content = content,
         repliesToMessageId = null,
         rootMessageId = null,
@@ -30,5 +38,47 @@ class ConversationMessageTest {
             listOf("오늘 억울한 일이 있었어", "그러게 그냥 맛있는거 먹고 쉬려고"),
             messages.userUtterances(),
         )
+    }
+
+    @Test
+    fun USER_메시지는_사용자_발신으로_옮긴다() {
+        val domain = msg(1, "USER", "오늘 억울한 일이 있었어").toDomain()
+
+        assertEquals(MessageSender.User, domain?.sender)
+        assertEquals("오늘 억울한 일이 있었어", domain?.content)
+    }
+
+    @Test
+    fun 서버_emotionType_여섯_종을_캐릭터로_옮긴다() {
+        val expected = mapOf(
+            "JOY" to EmotionCharacter.JOY,
+            "ANGER" to EmotionCharacter.ANGER,
+            "ANXIETY" to EmotionCharacter.ANXIETY,
+            "GRUMPY" to EmotionCharacter.PRICKLY,
+            "WARM" to EmotionCharacter.WARM,
+            "QUIRKY" to EmotionCharacter.QUIRKY,
+        )
+
+        expected.forEach { (emotionType, character) ->
+            val domain = msg(1, "CHARACTER", "그래서 어쩌라고", emotionType = emotionType).toDomain()
+
+            assertEquals(MessageSender.Character(character), domain?.sender)
+        }
+    }
+
+    @Test
+    fun 미확인_emotionType도_메시지는_보존한다() {
+        val domain = msg(1, "CHARACTER", "정체불명 답장", emotionType = "MYSTERY").toDomain()
+
+        assertEquals(MessageSender.Unknown, domain.sender)
+        assertEquals("정체불명 답장", domain.content)
+    }
+
+    @Test
+    fun 미확인_senderType도_메시지는_보존한다() {
+        val domain = msg(1, "SYSTEM", "시스템 메시지").toDomain()
+
+        assertEquals(MessageSender.Unknown, domain.sender)
+        assertEquals("시스템 메시지", domain.content)
     }
 }

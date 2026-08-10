@@ -24,16 +24,18 @@ data class TopLevelDestination(
     val label: String,
 )
 
-val topLevelDestinations = listOf(
-    TopLevelDestination(key = HomeKey, icon = Icons.Filled.Home, label = "홈"),
-    TopLevelDestination(key = ChatKey, icon = Icons.Filled.Email, label = "대화"),
-    TopLevelDestination(key = CalendarKey, icon = Icons.Filled.DateRange, label = "달력"),
-    TopLevelDestination(key = EmotionKey, icon = Icons.Filled.Favorite, label = "감정"),
-)
+fun topLevelDestinations(isDebug: Boolean): List<TopLevelDestination> = buildList {
+    add(TopLevelDestination(key = HomeKey, icon = Icons.Filled.Home, label = "홈"))
+    add(TopLevelDestination(key = CalendarKey, icon = Icons.Filled.DateRange, label = "달력"))
+    add(TopLevelDestination(key = EmotionKey, icon = Icons.Filled.Favorite, label = "감정"))
+    if (isDebug) {
+        add(TopLevelDestination(key = ChatKey, icon = Icons.Filled.Email, label = "대화"))
+    }
+}
 
-val topLevelDestinationKeys = topLevelDestinations.map { it.key }.toSet()
+fun List<TopLevelDestination>.keys(): Set<NavKey> = map { it.key }.toSet()
 
-val topLevelBottomBarItems: List<GamssBottomBarItem<NavKey>> = topLevelDestinations.map { destination ->
+fun List<TopLevelDestination>.bottomBarItems(): List<GamssBottomBarItem<NavKey>> = map { destination ->
     GamssBottomBarItem(
         value = destination.key,
         icon = destination.icon,

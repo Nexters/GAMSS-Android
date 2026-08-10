@@ -1,11 +1,13 @@
 package com.gamss.android.data.di
 
 import android.util.Log
+import com.gamss.android.core.common.BuildInfo
 import com.gamss.android.data.BuildConfig
 import com.gamss.android.data.auth.AUTHORIZATION_HEADER
 import com.gamss.android.data.auth.TokenAuthenticator
 import com.gamss.android.data.auth.TokenInterceptor
 import com.gamss.android.data.remote.auth.AuthService
+import com.gamss.android.data.remote.gamssJson
 import com.gamss.android.data.remote.user.UserService
 import dagger.Module
 import dagger.Provides
@@ -26,19 +28,16 @@ internal object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideJson(): Json = Json {
-        ignoreUnknownKeys = true
-        coerceInputValues = true
-    }
+    fun provideJson(): Json = gamssJson
 
     @Provides
     @Singleton
-    fun provideLoggingInterceptor(): HttpLoggingInterceptor =
+    fun provideLoggingInterceptor(buildInfo: BuildInfo): HttpLoggingInterceptor =
         HttpLoggingInterceptor { message ->
             Log.d(HTTP_LOG_TAG, message.redactTokenValues())
         }.apply {
             redactHeader(AUTHORIZATION_HEADER)
-            level = if (BuildConfig.DEBUG) {
+            level = if (buildInfo.isDebug) {
                 HttpLoggingInterceptor.Level.BODY
             } else {
                 HttpLoggingInterceptor.Level.NONE
