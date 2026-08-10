@@ -22,11 +22,6 @@ internal class KobartTokenCounter @Inject constructor(
         loadTokenizer().encode(text).ids.size
     }
 
-    override suspend fun countAll(texts: List<String>): List<Int> = withContext(Dispatchers.Default) {
-        val loaded = loadTokenizer()
-        texts.map { loaded.encode(it).ids.size }
-    }
-
     private suspend fun loadTokenizer(): KobartTokenizer = mutex.withLock {
         tokenizer ?: KobartTokenizer.loadWithoutTruncation(
             context = context,
