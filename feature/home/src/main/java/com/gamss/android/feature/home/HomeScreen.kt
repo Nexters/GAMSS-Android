@@ -5,16 +5,15 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ProgressIndicatorDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -49,12 +48,12 @@ fun HomeScreen(
                 .padding(innerPadding),
         ) {
             TokenUsageIndicator(
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .statusBarsPadding()
-                    .padding(top = 16.dp, end = 16.dp),
                 tokenUsage = state.tokenUsage,
                 isLoading = state.isTokenUsageLoading,
+                // innerPadding 에 이미 상태바 inset 이 들어 있어 따로 더하지 않는다.
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = 16.dp, end = 16.dp),
             )
 
             if (state.isLoading) {
@@ -87,68 +86,74 @@ fun HomeScreen(
 
 @Composable
 private fun TokenUsageIndicator(
-    modifier: Modifier = Modifier,
     tokenUsage: TokenUsageUiModel?,
     isLoading: Boolean,
+    modifier: Modifier = Modifier,
 ) {
-    if (!isLoading && tokenUsage == null) return
+    if (tokenUsage == null && !isLoading) return
 
     Surface(
         modifier = modifier,
         shape = MaterialTheme.shapes.medium,
         tonalElevation = 2.dp,
     ) {
-        if (isLoading) {
-            Box(
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(18.dp),
-                    strokeWidth = 2.dp,
-                )
-            }
-        } else if (tokenUsage != null) {
-            val displayText = tokenUsage.toDisplayText()
-            Card {
-                Column(
-                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
-                ) {
-                    Text(
-                        text = "오늘 토큰",
-                        style = MaterialTheme.typography.labelMedium,
-                    )
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Text(
-                        text = displayText.headline,
-                        style = MaterialTheme.typography.titleMedium,
-                    )
-                    displayText.supportingText?.let { supportingText ->
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = supportingText,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                    tokenUsage.usageRatio?.let { usageRatio ->
-                        val progress = usageRatio.coerceIn(0f, 1f)
-                        Spacer(modifier = Modifier.height(10.dp))
-                        if (tokenUsage.exceeded) {
-                            LinearProgressIndicator(
-                                progress = { progress },
-                                modifier = Modifier.fillMaxWidth(),
-                                color = MaterialTheme.colorScheme.error,
-                            )
-                        } else {
-                            LinearProgressIndicator(
-                                progress = { progress },
-                                modifier = Modifier.fillMaxWidth(),
-                            )
-                        }
-                    }
-                }
-            }
+        // 이미 아는 사용량이 있으면 갱신 중에도 지우지 않고 그대로 보여준다.
+        when {
+            tokenUsage != null -> TokenUsageContent(tokenUsage)
+            else -> TokenUsagePlaceholder()
+        }
+    }
+}
+
+@Composable
+private fun TokenUsagePlaceholder() {
+    Box(
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        CircularProgressIndicator(
+            modifier = Modifier.size(18.dp),
+            strokeWidth = 2.dp,
+        )
+    }
+}
+
+@Composable
+private fun TokenUsageContent(tokenUsage: TokenUsageUiModel) {
+    val displayText = tokenUsage.toDisplayText()
+
+    Column(
+        modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+    ) {
+        Text(
+            text = "오늘 토큰",
+            style = MaterialTheme.typography.labelMedium,
+        )
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(
+            text = displayText.headline,
+            style = MaterialTheme.typography.titleMedium,
+        )
+        displayText.supportingText?.let { supportingText ->
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = supportingText,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        tokenUsage.usageRatio?.let { usageRatio ->
+            Spacer(modifier = Modifier.height(10.dp))
+            LinearProgressIndicator(
+                progress = { usageRatio.coerceIn(0f, 1f) },
+                // fillMaxWidth 로 두면 배지 전체가 화면 폭까지 늘어난다.
+                modifier = Modifier.width(96.dp),
+                color = if (tokenUsage.exceeded) {
+                    MaterialTheme.colorScheme.error
+                } else {
+                    ProgressIndicatorDefaults.linearColor
+                },
+            )
         }
     }
 }
