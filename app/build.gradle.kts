@@ -74,6 +74,7 @@ dependencies {
     implementation(projects.feature.calendar)
     implementation(projects.feature.emotion)
     implementation(projects.feature.login)
+    implementation(projects.feature.setting)
 
     implementation(libs.compose.material.icons.core)
     implementation(libs.androidx.activity.compose)
