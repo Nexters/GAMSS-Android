@@ -1,6 +1,7 @@
 package com.gamss.android.data.repository
 
 import com.gamss.android.core.common.AppResult
+import com.gamss.android.core.common.network.ApiException
 import com.gamss.android.data.remote.conversation.ConversationService
 import com.gamss.android.data.remote.conversation.model.request.SaveMessageRequest
 import com.gamss.android.data.remote.conversation.model.response.ConversationMessage
@@ -52,4 +53,31 @@ internal class ConversationRepositoryImpl @Inject constructor(
                 }
         }
     }
+
+    override suspend fun deleteConversation(conversationId: Long): AppResult<Unit> {
+        val result = runCatchingApiCall {
+            val response = conversationService.deleteConversation(conversationId)
+            // 응답 본문을 버리는 호출이라 envelope 를 직접 본다. 되돌릴 수 없는 작업을
+            // 200 + success:false 때문에 지웠다고 보고하면 복구할 방법이 없다.
+            if (!response.success) {
+                throw ApiException.Http(
+                    httpStatus = HTTP_OK,
+                    code = response.error?.code,
+                    message = response.error?.message.orEmpty(),
+                )
+            }
+        }
+        return when (result) {
+            is AppResult.Success -> AppResult.Success(Unit)
+            // 이미 지워진 방이면 목표는 달성된 상태다. 실패로 흘리면 재시도가 영원히 같은 오류를 받는다.
+            is AppResult.Failure ->
+                if (result.throwable.hasErrorCode(CONVERSATION_ALREADY_DELETED)) {
+                    AppResult.Success(Unit)
+                } else {
+                    result
+                }
+        }
+    }
 }
+
+private const val HTTP_OK = 200

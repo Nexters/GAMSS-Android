@@ -5,6 +5,7 @@ import com.gamss.android.data.remote.conversation.model.response.ConversationMes
 import com.gamss.android.data.remote.conversation.model.response.SaveMessageResponse
 import com.gamss.android.data.remote.model.response.ApiResponse
 import retrofit2.http.Body
+import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.POST
 import retrofit2.http.Path
@@ -20,6 +21,12 @@ internal interface ConversationService {
     /** 응답 본문은 쓰지 않는다. 서버 스키마가 바뀌어도 종료가 실패로 뒤집히지 않게 [Unit] 으로 받는다. */
     @POST("/api/conversations/{conversationId}/end")
     suspend fun endConversation(
+        @Path("conversationId") conversationId: Long,
+    ): ApiResponse<Unit>
+
+    /** 종료 여부와 무관하게 지울 수 있다. 응답 본문은 쓰지 않는다. */
+    @DELETE("/api/conversations/{conversationId}")
+    suspend fun deleteConversation(
         @Path("conversationId") conversationId: Long,
     ): ApiResponse<Unit>
 }
