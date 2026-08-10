@@ -98,23 +98,16 @@ private fun TokenUsageIndicator(
         tonalElevation = 2.dp,
     ) {
         // 이미 아는 사용량이 있으면 갱신 중에도 지우지 않고 그대로 보여준다.
-        when {
-            tokenUsage != null -> TokenUsageContent(tokenUsage)
-            else -> TokenUsagePlaceholder()
+        if (tokenUsage != null) {
+            TokenUsageContent(tokenUsage)
+        } else {
+            CircularProgressIndicator(
+                modifier = Modifier
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
+                    .size(18.dp),
+                strokeWidth = 2.dp,
+            )
         }
-    }
-}
-
-@Composable
-private fun TokenUsagePlaceholder() {
-    Box(
-        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        CircularProgressIndicator(
-            modifier = Modifier.size(18.dp),
-            strokeWidth = 2.dp,
-        )
     }
 }
 

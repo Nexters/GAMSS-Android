@@ -6,32 +6,18 @@ import kotlin.math.roundToInt
 
 data class TokenUsageUiModel(
     val usedTokens: Long,
+    /** 0 이하 한도는 무제한으로 보아 null 로 정규화한 값만 담는다. */
     val dailyLimit: Long?,
-    val usageRatio: Float?,
     val exceeded: Boolean,
-    val displayMode: TokenUsageDisplayMode,
+) {
+    val usageRatio: Float? get() = dailyLimit?.let { usedTokens.toFloat() / it }
+}
+
+internal fun DailyTokenUsage.toUiModel() = TokenUsageUiModel(
+    usedTokens = usedTokens,
+    dailyLimit = dailyLimit?.takeIf { it > 0 },
+    exceeded = exceeded,
 )
-
-enum class TokenUsageDisplayMode {
-    PERCENT,
-    ABSOLUTE,
-    PERCENT_WITH_ABSOLUTE,
-}
-
-internal fun DailyTokenUsage.toUiModel(
-    displayMode: TokenUsageDisplayMode,
-): TokenUsageUiModel {
-    val effectiveDailyLimit = dailyLimit?.takeIf { it > 0 }
-    val usageRatio = effectiveDailyLimit?.let { usedTokens.toFloat() / it.toFloat() }
-
-    return TokenUsageUiModel(
-        usedTokens = usedTokens,
-        dailyLimit = effectiveDailyLimit,
-        usageRatio = usageRatio,
-        exceeded = exceeded,
-        displayMode = displayMode,
-    )
-}
 
 internal data class TokenUsageDisplayText(
     val headline: String,
@@ -39,22 +25,14 @@ internal data class TokenUsageDisplayText(
 )
 
 internal fun TokenUsageUiModel.toDisplayText(locale: Locale = Locale.getDefault()): TokenUsageDisplayText {
-    val absoluteText = dailyLimit?.let {
-        "${usedTokens.formatTokenCount(locale)} / ${it.formatTokenCount(locale)}"
-    } ?: usedTokens.formatTokenCount(locale)
-    val percentText = usageRatio?.let { "${(it * 100).roundToInt()}%" }
+    val absoluteText = dailyLimit
+        ?.let { "${usedTokens.formatTokenCount(locale)} / ${it.formatTokenCount(locale)}" }
+        ?: usedTokens.formatTokenCount(locale)
 
-    return when (displayMode) {
-        TokenUsageDisplayMode.PERCENT -> TokenUsageDisplayText(
-            headline = percentText ?: absoluteText,
-            supportingText = dailyLimit?.let { absoluteText },
-        )
-        TokenUsageDisplayMode.ABSOLUTE -> TokenUsageDisplayText(absoluteText, null)
-        TokenUsageDisplayMode.PERCENT_WITH_ABSOLUTE -> TokenUsageDisplayText(
-            headline = percentText ?: absoluteText,
-            supportingText = dailyLimit?.let { absoluteText },
-        )
-    }
+    return TokenUsageDisplayText(
+        headline = usageRatio?.let { "${(it * 100).roundToInt()}%" } ?: absoluteText,
+        supportingText = absoluteText.takeIf { usageRatio != null },
+    )
 }
 
 private fun Long.formatTokenCount(locale: Locale): String = String.format(locale, "%,d", this)

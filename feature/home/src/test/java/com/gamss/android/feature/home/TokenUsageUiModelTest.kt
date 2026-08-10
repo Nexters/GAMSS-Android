@@ -15,12 +15,11 @@ class TokenUsageUiModelTest {
             usedTokens = 12_000,
             dailyLimit = 100_000,
             exceeded = false,
-        ).toUiModel(TokenUsageDisplayMode.PERCENT_WITH_ABSOLUTE)
+        ).toUiModel()
 
         assertEquals(12_000L, uiModel.usedTokens)
         assertEquals(100_000L, uiModel.dailyLimit)
         assertEquals(0.12f, requireNotNull(uiModel.usageRatio), 0.0001f)
-        assertEquals(TokenUsageDisplayMode.PERCENT_WITH_ABSOLUTE, uiModel.displayMode)
         assertFalse(uiModel.exceeded)
     }
 
@@ -30,7 +29,7 @@ class TokenUsageUiModelTest {
             usedTokens = 125_000,
             dailyLimit = 100_000,
             exceeded = true,
-        ).toUiModel(TokenUsageDisplayMode.PERCENT)
+        ).toUiModel()
 
         val usageRatio = requireNotNull(uiModel.usageRatio)
 
@@ -45,7 +44,7 @@ class TokenUsageUiModelTest {
                 usedTokens = 12_000,
                 dailyLimit = dailyLimit,
                 exceeded = false,
-            ).toUiModel(TokenUsageDisplayMode.ABSOLUTE)
+            ).toUiModel()
 
             assertNull(uiModel.dailyLimit)
             assertNull(uiModel.usageRatio)
@@ -53,31 +52,22 @@ class TokenUsageUiModelTest {
     }
 
     @Test
-    fun `formatter supports all display modes and unlimited fallback`() {
-        val finiteUsage = DailyTokenUsage(
-            usedTokens = 12_000,
-            dailyLimit = 100_000,
-            exceeded = false,
-        )
-
-        val percent = finiteUsage.toUiModel(TokenUsageDisplayMode.PERCENT).toDisplayText(Locale.US)
-        val absolute = finiteUsage.toUiModel(TokenUsageDisplayMode.ABSOLUTE).toDisplayText(Locale.US)
-        val combined = finiteUsage.toUiModel(TokenUsageDisplayMode.PERCENT_WITH_ABSOLUTE)
+    fun `formatter shows percent with the absolute count and falls back when unlimited`() {
+        val finite = DailyTokenUsage(usedTokens = 12_000, dailyLimit = 100_000, exceeded = false)
+            .toUiModel()
             .toDisplayText(Locale.US)
-        val unlimited = DailyTokenUsage(12_000, null, false)
-            .toUiModel(TokenUsageDisplayMode.PERCENT)
+        val unlimited = DailyTokenUsage(usedTokens = 12_000, dailyLimit = null, exceeded = false)
+            .toUiModel()
             .toDisplayText(Locale.US)
 
-        assertEquals(TokenUsageDisplayText("12%", "12,000 / 100,000"), percent)
-        assertEquals(TokenUsageDisplayText("12,000 / 100,000", null), absolute)
-        assertEquals(TokenUsageDisplayText("12%", "12,000 / 100,000"), combined)
+        assertEquals(TokenUsageDisplayText("12%", "12,000 / 100,000"), finite)
         assertEquals(TokenUsageDisplayText("12,000", null), unlimited)
     }
 
     @Test
     fun `formatter preserves exceeded percent above one hundred`() {
         val displayText = DailyTokenUsage(125_000, 100_000, true)
-            .toUiModel(TokenUsageDisplayMode.PERCENT)
+            .toUiModel()
             .toDisplayText(Locale.US)
 
         assertEquals(TokenUsageDisplayText("125%", "125,000 / 100,000"), displayText)

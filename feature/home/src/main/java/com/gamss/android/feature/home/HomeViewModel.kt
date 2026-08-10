@@ -23,7 +23,6 @@ class HomeViewModel @Inject constructor(
 
     override val container = container<HomeState, HomeSideEffect>(HomeState())
 
-    @Volatile
     private var tokenUsageJob: Job? = null
 
     init {
@@ -46,25 +45,25 @@ class HomeViewModel @Inject constructor(
 
     fun logout() = intent {
         when (logoutUseCase()) {
-            is AppResult.Success -> Unit
+            is AppResult.Success -> Unit // 화면 이동은 AuthRepository의 세션 상태 변경을 통해 처리된다.
             is AppResult.Failure -> postSideEffect(HomeSideEffect.ShowToast("로그아웃에 실패했어요"))
         }
     }
 
-    fun refreshDailyTokenUsage() {
+    private fun refreshDailyTokenUsage() {
         tokenUsageJob?.cancel()
         tokenUsageJob = intent {
             reduce { state.copy(isTokenUsageLoading = true) }
 
-            val result = getDailyTokenUsageUseCase()
+            val usage = when (val result = getDailyTokenUsageUseCase()) {
+                is AppResult.Success -> result.data.toUiModel()
+                is AppResult.Failure -> null
+            }
 
             reduce {
                 state.copy(
                     isTokenUsageLoading = false,
-                    tokenUsage = when (result) {
-                        is AppResult.Success -> result.data.toUiModel(state.tokenUsageDisplayMode)
-                        is AppResult.Failure -> state.tokenUsage
-                    },
+                    tokenUsage = usage ?: state.tokenUsage,
                 )
             }
         }
