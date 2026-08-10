@@ -1,13 +1,12 @@
-package com.gamss.android.domain.repository
+package com.gamss.android.domain.auth
 
 import com.gamss.android.core.common.AppResult
-import com.gamss.android.domain.model.SessionState
 import kotlinx.coroutines.flow.StateFlow
 
 interface AuthRepository {
     val sessionState: StateFlow<SessionState>
 
-    suspend fun login(googleIdToken: String): AppResult<Unit>
+    suspend fun login(googleIdToken: String): AppResult<LoginResult>
 
     suspend fun reissueTokens(): AppResult<Unit>
 

@@ -1,4 +1,4 @@
-package com.gamss.android.data.repository
+package com.gamss.android.data.auth
 
 import android.util.Log
 import com.gamss.android.core.common.AppResult
@@ -9,9 +9,11 @@ import com.gamss.android.data.local.auth.model.StoredAuthTokens
 import com.gamss.android.data.remote.auth.AuthService
 import com.gamss.android.data.remote.auth.model.request.LoginRequest
 import com.gamss.android.data.remote.auth.model.request.RefreshTokenRequest
-import com.gamss.android.domain.model.SessionExpiredException
-import com.gamss.android.domain.model.SessionState
-import com.gamss.android.domain.repository.AuthRepository
+import com.gamss.android.data.repository.runCatchingApiCall
+import com.gamss.android.domain.auth.LoginResult
+import com.gamss.android.domain.auth.SessionExpiredException
+import com.gamss.android.domain.auth.SessionState
+import com.gamss.android.domain.auth.AuthRepository
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
 import kotlinx.coroutines.CancellationException
@@ -35,7 +37,7 @@ internal class AuthRepositoryImpl @Inject constructor(
     private val _sessionState = MutableStateFlow<SessionState>(SessionState.Loading)
     override val sessionState: StateFlow<SessionState> = _sessionState.asStateFlow()
 
-    override suspend fun login(googleIdToken: String): AppResult<Unit> {
+    override suspend fun login(googleIdToken: String): AppResult<LoginResult> {
         val result = runCatchingApiCall(treatUnauthorizedAsSessionExpired = false) {
             val credential = GoogleAuthProvider.getCredential(googleIdToken, null)
 
@@ -58,6 +60,7 @@ internal class AuthRepositoryImpl @Inject constructor(
                     refreshToken = loginResponse.refreshToken,
                 ),
             )
+            LoginResult(isFirstLogin = loginResponse.isFirstLogin)
         }
         if (result is AppResult.Success) {
             _sessionState.value = SessionState.Authenticated

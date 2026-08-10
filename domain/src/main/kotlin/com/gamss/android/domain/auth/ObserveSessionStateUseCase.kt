@@ -1,7 +1,5 @@
-package com.gamss.android.domain.usecase
+package com.gamss.android.domain.auth
 
-import com.gamss.android.domain.model.SessionState
-import com.gamss.android.domain.repository.AuthRepository
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 

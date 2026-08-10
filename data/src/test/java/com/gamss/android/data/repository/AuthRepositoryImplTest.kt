@@ -1,13 +1,14 @@
 package com.gamss.android.data.repository
 
 import com.gamss.android.core.common.AppResult
+import com.gamss.android.data.auth.AuthRepositoryImpl
 import com.gamss.android.data.local.auth.AuthTokenLocalDataSource
 import com.gamss.android.data.local.auth.model.StoredAuthTokens
 import com.gamss.android.data.remote.auth.AuthService
 import com.gamss.android.data.remote.auth.model.request.RefreshTokenRequest
 import com.gamss.android.data.remote.auth.model.response.LoginResponse
 import com.gamss.android.data.remote.model.response.ApiResponse
-import com.gamss.android.domain.model.SessionState
+import com.gamss.android.domain.auth.SessionState
 import com.google.firebase.auth.FirebaseAuth
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -187,6 +188,7 @@ class AuthRepositoryImplTest {
         data = LoginResponse(
             accessToken = "new-access-token",
             refreshToken = "new-refresh-token",
+            isFirstLogin = false,
         ),
     )
 }

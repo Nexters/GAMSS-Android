@@ -9,4 +9,6 @@ internal data class LoginResponse(
     val accessToken: String,
     @SerialName("refreshToken")
     val refreshToken: String,
+    @SerialName("isFirstLogin")
+    val isFirstLogin: Boolean
 )

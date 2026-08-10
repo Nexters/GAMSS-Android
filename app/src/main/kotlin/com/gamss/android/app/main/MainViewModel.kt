@@ -1,9 +1,9 @@
 package com.gamss.android.app.main
 
 import androidx.lifecycle.ViewModel
-import com.gamss.android.domain.model.SessionState
-import com.gamss.android.domain.usecase.ObserveSessionStateUseCase
-import com.gamss.android.domain.usecase.RestoreSessionUseCase
+import com.gamss.android.domain.auth.SessionState
+import com.gamss.android.domain.auth.ObserveSessionStateUseCase
+import com.gamss.android.domain.auth.RestoreSessionUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import org.orbitmvi.orbit.ContainerHost
 import org.orbitmvi.orbit.viewmodel.container
