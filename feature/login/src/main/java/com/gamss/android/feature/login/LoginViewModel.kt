@@ -3,8 +3,8 @@ package com.gamss.android.feature.login
 import androidx.lifecycle.ViewModel
 import com.gamss.android.core.common.AppResult
 import com.gamss.android.core.common.network.ApiException
-import com.gamss.android.domain.auth.SessionExpiredException
 import com.gamss.android.domain.auth.LoginUseCase
+import com.gamss.android.domain.auth.SessionExpiredException
 import dagger.hilt.android.lifecycle.HiltViewModel
 import org.orbitmvi.orbit.ContainerHost
 import org.orbitmvi.orbit.viewmodel.container
@@ -24,7 +24,7 @@ class LoginViewModel @Inject constructor(
             is AppResult.Success -> {
                 reduce { state.copy(isLoading = false) }
                 if (result.data.isFirstLogin) {
-                    // TODO: 온보딩 화면이 정의되면 첫 로그인 사용자를 온보딩 플로우로 이동시킨다.
+                    // 온보딩 화면이 정의되면 첫 로그인 사용자를 온보딩 플로우로 이동시킨다.
                 }
             }
 
