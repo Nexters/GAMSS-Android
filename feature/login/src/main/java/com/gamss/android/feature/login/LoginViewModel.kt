@@ -17,7 +17,7 @@ class LoginViewModel @Inject constructor(
 
     override val container = container<LoginState, LoginSideEffect>(LoginState())
 
-    fun login(googleIdToken: String) = intent {
+    private fun login(googleIdToken: String) = intent {
         reduce { state.copy(isLoading = true) }
 
         when (val result = loginUseCase(googleIdToken)) {
