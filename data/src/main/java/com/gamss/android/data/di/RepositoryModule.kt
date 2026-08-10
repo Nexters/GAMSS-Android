@@ -25,6 +25,10 @@ import kotlinx.coroutines.SupervisorJob
 import javax.inject.Qualifier
 import javax.inject.Singleton
 
+/**
+ * 특정 화면의 생명주기와 무관하게 앱 프로세스 동안 유지되어야 하는 작업(세션 무효화 등)에 사용한다.
+ * SupervisorJob이라 한 작업의 실패가 다른 작업을 취소시키지 않는다.
+ */
 @Qualifier
 @Retention(AnnotationRetention.BINARY)
 internal annotation class ApplicationScope
@@ -34,11 +38,13 @@ internal annotation class ApplicationScope
 internal abstract class RepositoryModule {
 
     @Binds
-    abstract fun bindAuthRepository(authRepositoryImpl: AuthRepositoryImpl): AuthRepository
+    abstract fun bindAuthRepository(
+        authRepositoryImpl: AuthRepositoryImpl
+    ): AuthRepository
 
     @Binds
     abstract fun bindConversationRepository(
-        conversationRepositoryImpl: ConversationRepositoryImpl,
+        conversationRepositoryImpl: ConversationRepositoryImpl
     ): ConversationRepository
 
     @Binds
@@ -52,13 +58,19 @@ internal abstract class RepositoryModule {
     ): AuthTokenLocalDataSource
 
     @Binds
-    abstract fun bindTokenCipher(tinkTokenCipher: TinkTokenCipher): TokenCipher
+    abstract fun bindTokenCipher(
+        tinkTokenCipher: TinkTokenCipher,
+    ): TokenCipher
 
     @Binds
-    abstract fun bindTokenProvider(tokenProviderImpl: TokenProviderImpl): TokenProvider
+    abstract fun bindTokenProvider(
+        tokenProviderImpl: TokenProviderImpl,
+    ): TokenProvider
 
     @Binds
-    abstract fun bindUserRepository(userRepositoryImpl: UserRepositoryImpl): UserRepository
+    abstract fun bindUserRepository(
+        userRepositoryImpl: UserRepositoryImpl,
+    ): UserRepository
 
     companion object {
         @Provides
