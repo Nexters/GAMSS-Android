@@ -4,8 +4,8 @@ import com.gamss.android.core.common.AppResult
 import com.gamss.android.domain.model.DailyTokenUsage
 import com.gamss.android.domain.model.SessionState
 import com.gamss.android.domain.repository.AuthRepository
-import com.gamss.android.domain.repository.DailyTokenUsageRepository
 import com.gamss.android.domain.repository.TokenUsageRefreshNotifier
+import com.gamss.android.domain.repository.UserRepository
 import com.gamss.android.domain.usecase.GetDailyTokenUsageUseCase
 import com.gamss.android.domain.usecase.LogoutUseCase
 import kotlinx.coroutines.Dispatchers
@@ -43,7 +43,7 @@ class HomeTokenUsageRefreshTest {
 
     @Test
     fun 갱신_이벤트가_오면_사용량을_다시_조회한다() = runTest {
-        val repository = FakeDailyTokenUsageRepository(usedTokens = listOf(12_000, 20_000))
+        val repository = FakeUserRepository(usedTokens = listOf(12_000, 20_000))
         val notifier = FakeTokenUsageRefreshNotifier()
         val viewModel = viewModel(repository, notifier)
 
@@ -59,7 +59,7 @@ class HomeTokenUsageRefreshTest {
 
     @Test
     fun 갱신이_실패하면_마지막으로_아는_사용량을_유지한다() = runTest {
-        val repository = FakeDailyTokenUsageRepository(usedTokens = listOf(12_000), failAfterFirst = true)
+        val repository = FakeUserRepository(usedTokens = listOf(12_000), failAfterFirst = true)
         val notifier = FakeTokenUsageRefreshNotifier()
         val viewModel = viewModel(repository, notifier)
 
@@ -74,7 +74,7 @@ class HomeTokenUsageRefreshTest {
     }
 
     private fun viewModel(
-        repository: FakeDailyTokenUsageRepository,
+        repository: FakeUserRepository,
         notifier: TokenUsageRefreshNotifier,
     ) = HomeViewModel(
         logoutUseCase = LogoutUseCase(FakeAuthRepository),
@@ -92,10 +92,10 @@ class HomeTokenUsageRefreshTest {
         }
     }
 
-    private class FakeDailyTokenUsageRepository(
+    private class FakeUserRepository(
         private val usedTokens: List<Long>,
         private val failAfterFirst: Boolean = false,
-    ) : DailyTokenUsageRepository {
+    ) : UserRepository {
         private val calls = MutableStateFlow(0)
 
         val callCount: Int get() = calls.value
@@ -103,6 +103,10 @@ class HomeTokenUsageRefreshTest {
         suspend fun awaitCalls(count: Int) {
             calls.first { it >= count }
         }
+
+        override suspend fun updateNickname(nickname: String): AppResult<String> = AppResult.Success(nickname)
+
+        override suspend fun secession(): AppResult<Unit> = AppResult.Success(Unit)
 
         override suspend fun getDailyTokenUsage(): AppResult<DailyTokenUsage> {
             val index = calls.value

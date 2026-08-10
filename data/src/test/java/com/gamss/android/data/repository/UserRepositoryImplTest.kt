@@ -16,7 +16,7 @@ import org.junit.Test
 import retrofit2.HttpException
 import retrofit2.Response
 
-class DailyTokenUsageRepositoryImplTest {
+class UserRepositoryImplTest {
 
     private val userService: UserService = mockk()
 
@@ -57,7 +57,7 @@ class DailyTokenUsageRepositoryImplTest {
         assertTrue((result as AppResult.Failure).throwable is SessionExpiredException)
     }
 
-    private fun repository() = DailyTokenUsageRepositoryImpl(userService)
+    private fun repository() = UserRepositoryImpl(userService)
 
     private fun httpException(statusCode: Int): HttpException {
         val errorBody = "{}".toResponseBody("application/json".toMediaType())

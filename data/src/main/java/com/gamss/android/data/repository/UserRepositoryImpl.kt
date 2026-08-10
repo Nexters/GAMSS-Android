@@ -3,6 +3,7 @@ package com.gamss.android.data.repository
 import com.gamss.android.core.common.AppResult
 import com.gamss.android.data.remote.user.UserService
 import com.gamss.android.data.remote.user.model.request.UpdateNicknameRequest
+import com.gamss.android.domain.model.DailyTokenUsage
 import com.gamss.android.domain.repository.UserRepository
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -22,6 +23,13 @@ internal class UserRepositoryImpl @Inject constructor(
     override suspend fun secession(): AppResult<Unit> {
         return runCatchingApiCall {
             userService.secessionUser()
+        }
+    }
+
+    override suspend fun getDailyTokenUsage(): AppResult<DailyTokenUsage> {
+        return runCatchingApiCall {
+            val response = userService.getDailyTokenUsage()
+            checkNotNull(response.data) { "No available daily token usage data" }.toDomain()
         }
     }
 }

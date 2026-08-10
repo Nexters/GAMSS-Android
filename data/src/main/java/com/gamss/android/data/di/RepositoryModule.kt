@@ -8,12 +8,10 @@ import com.gamss.android.data.local.auth.TokenProvider
 import com.gamss.android.data.local.auth.TokenProviderImpl
 import com.gamss.android.data.repository.AuthRepositoryImpl
 import com.gamss.android.data.repository.ConversationRepositoryImpl
-import com.gamss.android.data.repository.DailyTokenUsageRepositoryImpl
 import com.gamss.android.data.repository.TokenUsageRefreshNotifierImpl
 import com.gamss.android.data.repository.UserRepositoryImpl
 import com.gamss.android.domain.conversation.ConversationRepository
 import com.gamss.android.domain.repository.AuthRepository
-import com.gamss.android.domain.repository.DailyTokenUsageRepository
 import com.gamss.android.domain.repository.TokenUsageRefreshNotifier
 import com.gamss.android.domain.repository.UserRepository
 import dagger.Binds
@@ -42,11 +40,6 @@ internal abstract class RepositoryModule {
     abstract fun bindConversationRepository(
         conversationRepositoryImpl: ConversationRepositoryImpl,
     ): ConversationRepository
-
-    @Binds
-    abstract fun bindDailyTokenUsageRepository(
-        dailyTokenUsageRepositoryImpl: DailyTokenUsageRepositoryImpl,
-    ): DailyTokenUsageRepository
 
     @Binds
     abstract fun bindTokenUsageRefreshNotifier(
