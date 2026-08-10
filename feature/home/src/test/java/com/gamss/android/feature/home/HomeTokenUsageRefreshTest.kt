@@ -52,9 +52,10 @@ class HomeTokenUsageRefreshTest {
 
         notifier.requestRefresh()
 
-        val refreshed = viewModel.container.stateFlow.first { it.tokenUsage?.usedTokens == 20_000L }
+        repository.awaitCalls(2)
+
+        val refreshed = viewModel.container.stateFlow.first { !it.isTokenUsageLoading }
         assertEquals(20_000L, refreshed.tokenUsage?.usedTokens)
-        assertEquals(2, repository.callCount)
     }
 
     @Test

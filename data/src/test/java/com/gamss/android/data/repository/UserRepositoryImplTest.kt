@@ -8,13 +8,9 @@ import com.gamss.android.domain.model.SessionExpiredException
 import io.mockk.coEvery
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
-import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.ResponseBody.Companion.toResponseBody
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import retrofit2.HttpException
-import retrofit2.Response
 
 class UserRepositoryImplTest {
 
@@ -58,9 +54,4 @@ class UserRepositoryImplTest {
     }
 
     private fun repository() = UserRepositoryImpl(userService)
-
-    private fun httpException(statusCode: Int): HttpException {
-        val errorBody = "{}".toResponseBody("application/json".toMediaType())
-        return HttpException(Response.error<ApiResponse<DailyTokenUsageDataResponse>>(statusCode, errorBody))
-    }
 }

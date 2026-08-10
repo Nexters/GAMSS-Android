@@ -17,14 +17,10 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
-import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.ResponseBody.Companion.toResponseBody
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import retrofit2.HttpException
-import retrofit2.Response
 import java.io.IOException
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -193,9 +189,4 @@ class AuthRepositoryImplTest {
             refreshToken = "new-refresh-token",
         ),
     )
-
-    private fun httpException(statusCode: Int): HttpException {
-        val errorBody = "{}".toResponseBody("application/json".toMediaType())
-        return HttpException(Response.error<ApiResponse<LoginResponse>>(statusCode, errorBody))
-    }
 }
