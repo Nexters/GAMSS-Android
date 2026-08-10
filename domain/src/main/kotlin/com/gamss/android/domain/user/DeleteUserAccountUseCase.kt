@@ -1,7 +1,7 @@
 package com.gamss.android.domain.user
 
 import com.gamss.android.core.common.AppResult
-import com.gamss.android.domain.repository.AuthRepository
+import com.gamss.android.domain.auth.AuthRepository
 import com.gamss.android.domain.usecase.NoParamUseCase
 import javax.inject.Inject
 
