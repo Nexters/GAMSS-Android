@@ -1,4 +1,4 @@
-package com.gamss.android.data.remote.token.model.response
+package com.gamss.android.data.remote.user.model.response
 
 import com.gamss.android.domain.model.DailyTokenUsage
 import kotlinx.serialization.Serializable

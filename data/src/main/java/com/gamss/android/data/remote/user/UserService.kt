@@ -2,8 +2,10 @@ package com.gamss.android.data.remote.user
 
 import com.gamss.android.data.remote.model.response.ApiResponse
 import com.gamss.android.data.remote.user.model.request.UpdateNicknameRequest
+import com.gamss.android.data.remote.user.model.response.DailyTokenUsageDataResponse
 import retrofit2.http.Body
 import retrofit2.http.DELETE
+import retrofit2.http.GET
 import retrofit2.http.PATCH
 
 internal interface UserService {
@@ -13,4 +15,7 @@ internal interface UserService {
 
     @DELETE("/api/members/me")
     suspend fun secessionUser(): ApiResponse<String>
+
+    @GET("/api/members/me/token-usage")
+    suspend fun getDailyTokenUsage(): ApiResponse<DailyTokenUsageDataResponse>
 }

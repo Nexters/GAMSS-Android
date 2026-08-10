@@ -2,8 +2,8 @@ package com.gamss.android.data.repository
 
 import com.gamss.android.core.common.AppResult
 import com.gamss.android.data.remote.model.response.ApiResponse
-import com.gamss.android.data.remote.token.TokenUsageService
-import com.gamss.android.data.remote.token.model.response.DailyTokenUsageDataResponse
+import com.gamss.android.data.remote.user.UserService
+import com.gamss.android.data.remote.user.model.response.DailyTokenUsageDataResponse
 import com.gamss.android.domain.model.SessionExpiredException
 import io.mockk.coEvery
 import io.mockk.mockk
@@ -18,11 +18,11 @@ import retrofit2.Response
 
 class DailyTokenUsageRepositoryImplTest {
 
-    private val tokenUsageService: TokenUsageService = mockk()
+    private val userService: UserService = mockk()
 
     @Test
     fun `token usage data is mapped to the domain model`() = runTest {
-        coEvery { tokenUsageService.getDailyTokenUsage() } returns ApiResponse(
+        coEvery { userService.getDailyTokenUsage() } returns ApiResponse(
             success = true,
             data = DailyTokenUsageDataResponse(
                 usedTokens = 12_000,
@@ -40,7 +40,7 @@ class DailyTokenUsageRepositoryImplTest {
 
     @Test
     fun `missing data is returned as failure`() = runTest {
-        coEvery { tokenUsageService.getDailyTokenUsage() } returns ApiResponse(success = true)
+        coEvery { userService.getDailyTokenUsage() } returns ApiResponse(success = true)
 
         val result = repository().getDailyTokenUsage()
 
@@ -49,7 +49,7 @@ class DailyTokenUsageRepositoryImplTest {
 
     @Test
     fun `unauthorized response is mapped to session expiration`() = runTest {
-        coEvery { tokenUsageService.getDailyTokenUsage() } throws httpException(401)
+        coEvery { userService.getDailyTokenUsage() } throws httpException(401)
 
         val result = repository().getDailyTokenUsage()
 
@@ -57,7 +57,7 @@ class DailyTokenUsageRepositoryImplTest {
         assertTrue((result as AppResult.Failure).throwable is SessionExpiredException)
     }
 
-    private fun repository() = DailyTokenUsageRepositoryImpl(tokenUsageService)
+    private fun repository() = DailyTokenUsageRepositoryImpl(userService)
 
     private fun httpException(statusCode: Int): HttpException {
         val errorBody = "{}".toResponseBody("application/json".toMediaType())
