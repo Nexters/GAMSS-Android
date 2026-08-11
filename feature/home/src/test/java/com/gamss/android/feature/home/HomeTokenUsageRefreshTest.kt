@@ -5,9 +5,10 @@ import com.gamss.android.domain.model.DailyTokenUsage
 import com.gamss.android.domain.model.SessionState
 import com.gamss.android.domain.repository.AuthRepository
 import com.gamss.android.domain.repository.TokenUsageRefreshNotifier
-import com.gamss.android.domain.repository.UserRepository
 import com.gamss.android.domain.usecase.GetDailyTokenUsageUseCase
 import com.gamss.android.domain.usecase.LogoutUseCase
+import com.gamss.android.domain.user.UserProfile
+import com.gamss.android.domain.user.UserRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -51,7 +52,6 @@ class HomeTokenUsageRefreshTest {
         assertEquals(12_000L, loaded.tokenUsage?.usedTokens)
 
         notifier.requestRefresh()
-
         repository.awaitCalls(2)
 
         val refreshed = viewModel.container.stateFlow.first { !it.isTokenUsageLoading }
@@ -105,9 +105,13 @@ class HomeTokenUsageRefreshTest {
             calls.first { it >= count }
         }
 
-        override suspend fun updateNickname(nickname: String): AppResult<String> = AppResult.Success(nickname)
+        override suspend fun updateNickname(nickname: String): AppResult<UserProfile> =
+            AppResult.Success(userProfile(nickname))
 
-        override suspend fun secession(): AppResult<Unit> = AppResult.Success(Unit)
+        override suspend fun deleteUserAccount(): AppResult<Unit> = AppResult.Success(Unit)
+
+        override suspend fun getUserInfo(): AppResult<UserProfile> =
+            AppResult.Success(userProfile("감쓰"))
 
         override suspend fun getDailyTokenUsage(): AppResult<DailyTokenUsage> {
             val index = calls.value
@@ -123,6 +127,14 @@ class HomeTokenUsageRefreshTest {
                 ),
             )
         }
+
+        private fun userProfile(nickname: String) = UserProfile(
+            id = 1L,
+            email = "user@gamss.com",
+            nickname = nickname,
+            status = "ACTIVE",
+            createdAt = "2026-08-05T00:00:00Z",
+        )
     }
 
     private object FakeAuthRepository : AuthRepository {

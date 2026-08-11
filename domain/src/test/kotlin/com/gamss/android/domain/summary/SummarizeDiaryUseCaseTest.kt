@@ -10,7 +10,6 @@ import org.junit.Test
 
 class SummarizeDiaryUseCaseTest {
 
-    /** 호출 여부를 기록하는 fake 요약기. */
     private class RecordingSummarizer(val transform: (String) -> String) : DiarySummarizer {
         var called = false
             private set

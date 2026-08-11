@@ -62,10 +62,15 @@ dependencies {
 
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.auth)
+    implementation(libs.firebase.firestore)
     implementation(libs.kotlinx.coroutines.play.services)
 
     // 온디바이스 감정 분류(KoELECTRA INT8) — LiteRT 추론 + DJL WordPiece 토크나이저
-    implementation(libs.litert)
+    implementation(libs.litert) {
+        // 모델을 assets 에 직접 넣으므로 AI Pack 배포가 필요 없다.
+        // 이게 끌고 오는 WorkManager 가 콜드스타트마다 초기화된다.
+        exclude(group = "com.google.android.play", module = "ai-delivery")
+    }
     implementation(platform(libs.djl.bom))
     implementation(libs.djl.huggingface.tokenizers)
     runtimeOnly(libs.djl.android.tokenizer.native)

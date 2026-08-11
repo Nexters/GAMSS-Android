@@ -2,7 +2,7 @@ package com.gamss.android.domain.usecase
 
 import com.gamss.android.core.common.AppResult
 import com.gamss.android.domain.model.DailyTokenUsage
-import com.gamss.android.domain.repository.UserRepository
+import com.gamss.android.domain.user.UserRepository
 import javax.inject.Inject
 
 class GetDailyTokenUsageUseCase @Inject constructor(

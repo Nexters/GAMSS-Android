@@ -8,3 +8,9 @@ local.properties
 */build/
 .worktree-*
 app/google-services.json
+
+# fastlane secrets (release keystore)
+fastlane/report.xml
+keystore/
+*.keystore
+*.jks

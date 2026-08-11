@@ -54,7 +54,6 @@ class ConversationMessageTest {
             "JOY" to EmotionCharacter.JOY,
             "ANGER" to EmotionCharacter.ANGER,
             "ANXIETY" to EmotionCharacter.ANXIETY,
-            // 서버와 이름이 다른 유일한 캐릭터.
             "GRUMPY" to EmotionCharacter.PRICKLY,
             "WARM" to EmotionCharacter.WARM,
             "QUIRKY" to EmotionCharacter.QUIRKY,
@@ -65,5 +64,21 @@ class ConversationMessageTest {
 
             assertEquals(MessageSender.Character(character), domain?.sender)
         }
+    }
+
+    @Test
+    fun 미확인_emotionType도_메시지는_보존한다() {
+        val domain = msg(1, "CHARACTER", "정체불명 답장", emotionType = "MYSTERY").toDomain()
+
+        assertEquals(MessageSender.Unknown, domain.sender)
+        assertEquals("정체불명 답장", domain.content)
+    }
+
+    @Test
+    fun 미확인_senderType도_메시지는_보존한다() {
+        val domain = msg(1, "SYSTEM", "시스템 메시지").toDomain()
+
+        assertEquals(MessageSender.Unknown, domain.sender)
+        assertEquals("시스템 메시지", domain.content)
     }
 }

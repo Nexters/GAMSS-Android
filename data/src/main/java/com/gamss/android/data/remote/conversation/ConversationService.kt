@@ -11,10 +11,15 @@ import retrofit2.http.Path
 
 internal interface ConversationService {
 
-    /** 서버가 캐릭터 응답 생성까지 동기로 처리해 함께 준다. 폴링하지 않는다. */
     @POST("/api/conversations/messages")
     suspend fun saveMessage(@Body request: SaveMessageRequest): ApiResponse<SaveMessageResponse>
 
     @GET("/api/conversations/{conversationId}/messages")
     suspend fun getMessages(@Path("conversationId") conversationId: Long): ApiResponse<List<ConversationMessage>>
+
+    /** 응답 본문은 쓰지 않는다. 서버 스키마가 바뀌어도 종료가 실패로 뒤집히지 않게 [Unit] 으로 받는다. */
+    @POST("/api/conversations/{conversationId}/end")
+    suspend fun endConversation(
+        @Path("conversationId") conversationId: Long,
+    ): ApiResponse<Unit>
 }

@@ -9,6 +9,7 @@ import dagger.Module
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 
+/** kobart asset 은 debug 소스셋에만 있다. release 에서 요약을 요청하면 실패한다. */
 @Module
 @InstallIn(SingletonComponent::class)
 internal abstract class SummaryModule {

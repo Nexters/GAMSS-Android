@@ -36,8 +36,7 @@ data class ConversationMessage(
 fun List<ConversationMessage>.userUtterances(): List<String> =
     filter { it.senderType == ConversationMessage.SENDER_USER }.map { it.content }
 
-/** 발신 주체를 해석할 수 없으면 잘못된 주체로 그리는 대신 null 을 돌려 목록에서 제외한다. */
-internal fun ConversationMessage.toDomain(): Message? = resolveSender()?.let(::toMessage)
+internal fun ConversationMessage.toDomain(): Message = toMessage(resolveSender())
 
 internal fun ConversationMessage.toSentUserMessage(): Message = toMessage(MessageSender.User)
 
@@ -49,13 +48,21 @@ private fun ConversationMessage.toMessage(sender: MessageSender): Message = Mess
     repliesToMessageId = repliesToMessageId,
 )
 
-private fun ConversationMessage.resolveSender(): MessageSender? = when (senderType) {
+private fun ConversationMessage.resolveSender(): MessageSender = when (senderType) {
     ConversationMessage.SENDER_USER -> MessageSender.User
-    ConversationMessage.SENDER_CHARACTER -> emotionType.toEmotionCharacter()?.let(MessageSender::Character)
+    ConversationMessage.SENDER_CHARACTER ->
+        emotionType.toEmotionCharacter()?.let(MessageSender::Character) ?: run {
+            logUnknown("Unknown emotionType=$emotionType (messageId=$id)")
+            MessageSender.Unknown
+        }
     else -> {
-        Log.w(TAG, "Unknown senderType=$senderType (messageId=$id)")
-        null
+        logUnknown("Unknown senderType=$senderType (messageId=$id)")
+        MessageSender.Unknown
     }
+}
+
+private fun logUnknown(message: String) {
+    runCatching { Log.w(TAG, message) }
 }
 
 private const val TAG = "ConversationMapper"

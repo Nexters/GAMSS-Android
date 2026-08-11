@@ -52,8 +52,8 @@ cd GAMSS-Android
 sdk.dir=/path/to/Android/sdk
 
 # 필수. 없으면 빌드가 실패한다.
-DEV_BASE_URL=https://dev-api.gamss.kr/
-PROD_BASE_URL=https://api.gamss.kr/
+DEV_BASE_URL=<debug-base-url>
+PROD_BASE_URL=<release-base-url>
 ```
 
 `DEV_BASE_URL`은 debug 빌드, `PROD_BASE_URL`은 release 빌드의 `BuildConfig.BASE_URL`이 된다.

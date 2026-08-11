@@ -1,6 +1,7 @@
 package com.gamss.android.feature.chat
 
 import com.gamss.android.domain.conversation.Message
+import com.gamss.android.domain.conversation.MessageSender
 
 data class ChatRoomState(
     val conversationId: Long? = null,
@@ -10,11 +11,20 @@ data class ChatRoomState(
     val replyTarget: ReplyTarget? = null,
     val isLoading: Boolean = false,
     val isSending: Boolean = false,
+    val endFlow: EndFlow = EndFlow.NotStarted,
 ) {
-    /** 조회 중 전송을 막는다. 뒤늦게 온 조회 결과가 방금 보낸 메시지를 덮어쓴다. */
-    val canSend: Boolean get() = input.isNotBlank() && !isSending && !isLoading
+    /** 종료 흐름이 시작된 뒤로는 막는다. 종료 API 가 도는 중에 보내면 저장 여부가 갈린다. */
+    val canSend: Boolean
+        get() = input.isNotBlank() && !isSending && !isLoading && endFlow == EndFlow.NotStarted
 
-    val isReceiving: Boolean get() = isSending || pendingComments.isNotEmpty()
+    val isAwaitingComments: Boolean get() = isSending || pendingComments.isNotEmpty()
+
+    /** 보낸 메시지가 있어야 카드를 만들 감정과 요약이 나온다. 종료 단계와 무관한 조건이다. */
+    val endPreconditionsMet: Boolean
+        get() = conversationId != null && !isSending &&
+            messages.any { it.sender == MessageSender.User }
+
+    val canEnd: Boolean get() = endFlow.acceptsEndRequest && endPreconditionsMet
 }
 
 data class ReplyTarget(

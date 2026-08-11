@@ -7,13 +7,15 @@ import com.gamss.android.data.local.auth.TokenCipher
 import com.gamss.android.data.local.auth.TokenProvider
 import com.gamss.android.data.local.auth.TokenProviderImpl
 import com.gamss.android.data.repository.AuthRepositoryImpl
+import com.gamss.android.data.repository.CardRepositoryImpl
 import com.gamss.android.data.repository.ConversationRepositoryImpl
 import com.gamss.android.data.repository.TokenUsageRefreshNotifierImpl
 import com.gamss.android.data.repository.UserRepositoryImpl
+import com.gamss.android.domain.card.CardRepository
 import com.gamss.android.domain.conversation.ConversationRepository
 import com.gamss.android.domain.repository.AuthRepository
 import com.gamss.android.domain.repository.TokenUsageRefreshNotifier
-import com.gamss.android.domain.repository.UserRepository
+import com.gamss.android.domain.user.UserRepository
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -46,6 +48,11 @@ internal abstract class RepositoryModule {
     abstract fun bindConversationRepository(
         conversationRepositoryImpl: ConversationRepositoryImpl
     ): ConversationRepository
+
+    @Binds
+    abstract fun bindCardRepository(
+        cardRepositoryImpl: CardRepositoryImpl
+    ): CardRepository
 
     @Binds
     abstract fun bindTokenUsageRefreshNotifier(

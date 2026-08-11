@@ -8,7 +8,6 @@ import com.gamss.android.domain.usecase.GetDailyTokenUsageUseCase
 import com.gamss.android.domain.usecase.LogoutUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.orbitmvi.orbit.ContainerHost
 import org.orbitmvi.orbit.viewmodel.container
@@ -26,21 +25,14 @@ class HomeViewModel @Inject constructor(
     private var tokenUsageJob: Job? = null
 
     init {
-        loadGreeting()
         refreshDailyTokenUsage()
         viewModelScope.launch {
             tokenUsageRefreshNotifier.refreshEvents.collect { refreshDailyTokenUsage() }
         }
     }
 
-    fun loadGreeting() = intent {
-        reduce { state.copy(isLoading = true) }
-
-        delay(500)
-        val mockGreeting = "오늘 하루는 어땠나요?"
-
-        reduce { state.copy(isLoading = false, greeting = mockGreeting) }
-        postSideEffect(HomeSideEffect.ShowToast("불러오기 완료"))
+    fun navigateToSetting() = intent {
+        postSideEffect(HomeSideEffect.NavigateToSetting)
     }
 
     fun logout() = intent {
