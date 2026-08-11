@@ -1,6 +1,7 @@
 package com.gamss.android.domain.user
 
 import com.gamss.android.core.common.AppResult
+import com.gamss.android.domain.model.DailyTokenUsage
 import com.gamss.android.domain.model.SessionState
 import com.gamss.android.domain.repository.AuthRepository
 import kotlinx.coroutines.CancellationException
@@ -84,6 +85,9 @@ class DeleteUserAccountUseCaseTest {
         }
 
         override suspend fun getUserInfo(): AppResult<UserProfile> =
+            error("Not needed for this test")
+
+        override suspend fun getDailyTokenUsage(): AppResult<DailyTokenUsage> =
             error("Not needed for this test")
     }
 
