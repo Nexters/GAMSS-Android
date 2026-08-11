@@ -1,0 +1,106 @@
+package com.gamss.android.feature.setting.nicknamechange
+
+import android.widget.Toast
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.gamss.android.core.designsystem.button.GamssButton
+import com.gamss.android.core.designsystem.button.GamssButtonVariant
+import com.gamss.android.core.designsystem.textfield.GamssTextField
+import com.gamss.android.core.designsystem.theme.GamssTheme
+import com.gamss.android.core.designsystem.topnavigation.GamssTopNavigation
+import com.gamss.android.domain.user.NicknamePolicy
+import com.gamss.android.feature.setting.R
+import org.orbitmvi.orbit.compose.collectAsState
+import org.orbitmvi.orbit.compose.collectSideEffect
+
+@Composable
+fun NicknameChangeScreen(
+    currentNickname: String,
+    onBackClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    viewModel: NicknameChangeViewModel = hiltViewModel(),
+) {
+    val state by viewModel.collectAsState()
+    val context = LocalContext.current
+
+    LaunchedEffect(currentNickname) { viewModel.start(currentNickname) }
+
+    viewModel.collectSideEffect { sideEffect ->
+        when (sideEffect) {
+            NicknameChangeSideEffect.UpdateSuccess -> {
+                Toast.makeText(context, "닉네임이 변경되었어요", Toast.LENGTH_SHORT).show()
+                onBackClick()
+            }
+
+            is NicknameChangeSideEffect.UpdateFailure -> {
+                Toast.makeText(context, sideEffect.reason.toMessage(), Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    val trimmedInput = state.nicknameInput.trim()
+    val canSave = trimmedInput.isNotEmpty() &&
+        trimmedInput != state.originalNickname &&
+        trimmedInput.length in NicknamePolicy.MIN_LENGTH..NicknamePolicy.MAX_LENGTH
+
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .imePadding(),
+    ) {
+        GamssTopNavigation(
+            title = stringResource(R.string.account_info_nickname_change),
+            showLeftIcon = true,
+            onLeftIconClick = onBackClick,
+        )
+
+        GamssTextField(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(
+                    horizontal = 18.dp,
+                    vertical = GamssTheme.spacing.spacing400,
+                ),
+            label = stringResource(R.string.account_info_nickname_change),
+            value = state.nicknameInput,
+            onValueChange = { nickname ->
+                if (nickname.length <= NicknamePolicy.MAX_LENGTH) {
+                    viewModel.onNicknameInputChange(nickname)
+                }
+            },
+        )
+
+        Spacer(modifier = Modifier.weight(1f))
+
+        GamssButton(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(18.dp),
+            label = stringResource(R.string.nickname_change_save),
+            onClick = viewModel::saveNickname,
+            variant = if (canSave) GamssButtonVariant.Primary else GamssButtonVariant.Neutral,
+            enabled = canSave,
+        )
+    }
+}
+
+private fun NicknameFailureReason.toMessage(): String =
+    when (this) {
+        NicknameFailureReason.MISSING -> "닉네임을 입력해주세요"
+        NicknameFailureReason.INVALID_LENGTH -> "닉네임은 2~20자로 입력해주세요"
+        NicknameFailureReason.INVALID_NICKNAME -> "사용할 수 없는 닉네임이에요"
+        NicknameFailureReason.NETWORK -> "네트워크 연결을 확인해주세요"
+        NicknameFailureReason.UNKNOWN -> "닉네임 변경에 실패했어요"
+    }
