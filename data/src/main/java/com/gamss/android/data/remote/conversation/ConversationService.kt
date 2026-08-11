@@ -24,7 +24,7 @@ internal interface ConversationService {
         @Path("conversationId") conversationId: Long,
     ): ApiResponse<Unit>
 
-    /** 종료 여부와 무관하게 지울 수 있다. 응답 본문은 쓰지 않는다. */
+    /** 종료 여부와 무관하게 지울 수 있다. envelope 의 success 만 보고 data 는 쓰지 않는다. */
     @DELETE("/api/conversations/{conversationId}")
     suspend fun deleteConversation(
         @Path("conversationId") conversationId: Long,

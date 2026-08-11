@@ -7,9 +7,7 @@ package com.gamss.android.domain.conversation
 data class DeleteConversationsResult(
     val deletedIds: List<Long>,
     val failures: List<ConversationDeletionFailure>,
-) {
-    val hasFailures: Boolean get() = failures.isNotEmpty()
-}
+)
 
 data class ConversationDeletionFailure(
     val conversationId: Long,

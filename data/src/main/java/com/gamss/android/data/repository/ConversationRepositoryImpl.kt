@@ -1,7 +1,6 @@
 package com.gamss.android.data.repository
 
 import com.gamss.android.core.common.AppResult
-import com.gamss.android.core.common.network.ApiException
 import com.gamss.android.data.remote.conversation.ConversationService
 import com.gamss.android.data.remote.conversation.model.request.SaveMessageRequest
 import com.gamss.android.data.remote.conversation.model.response.ConversationMessage
@@ -56,16 +55,7 @@ internal class ConversationRepositoryImpl @Inject constructor(
 
     override suspend fun deleteConversation(conversationId: Long): AppResult<Unit> {
         val result = runCatchingApiCall {
-            val response = conversationService.deleteConversation(conversationId)
-            // 응답 본문을 버리는 호출이라 envelope 를 직접 본다. 되돌릴 수 없는 작업을
-            // 200 + success:false 때문에 지웠다고 보고하면 복구할 방법이 없다.
-            if (!response.success) {
-                throw ApiException.Http(
-                    httpStatus = HTTP_OK,
-                    code = response.error?.code,
-                    message = response.error?.message.orEmpty(),
-                )
-            }
+            conversationService.deleteConversation(conversationId).throwIfFailed()
         }
         return when (result) {
             is AppResult.Success -> AppResult.Success(Unit)
@@ -79,5 +69,3 @@ internal class ConversationRepositoryImpl @Inject constructor(
         }
     }
 }
-
-private const val HTTP_OK = 200

@@ -34,7 +34,6 @@ class ConversationRepositoryImplTest {
         coVerify(exactly = 1) { conversationService.deleteConversation(ROOM_ID) }
     }
 
-    /** 이미 지워진 방이면 목표는 달성된 상태다. 실패로 흘리면 재시도가 영원히 같은 오류를 받는다. */
     @Test
     fun `이미 삭제된 방은 성공으로 본다`() = runTest {
         coEvery { conversationService.deleteConversation(ROOM_ID) } throws
@@ -89,7 +88,6 @@ class ConversationRepositoryImplTest {
         assertTrue((result as AppResult.Failure).throwable is ApiException.Network)
     }
 
-    /** 세션 만료는 흡수되지 않고 그대로 올라가야 유스케이스가 재로그인 신호로 승격할 수 있다. */
     @Test
     fun `인증 만료는 세션 만료 실패로 전한다`() = runTest {
         coEvery { conversationService.deleteConversation(ROOM_ID) } throws
@@ -113,7 +111,18 @@ class ConversationRepositoryImplTest {
         assertEquals("CONVERSATION_NOT_FOUND", ((result as AppResult.Failure).throwable as ApiException).code)
     }
 
-    /** 200 + success:false 도 흡수 분기를 그대로 탄다. */
+    /** 호출부의 `message ?: 기본문구` 폴백이 동작하도록 빈 문자열을 남기지 않는다. */
+    @Test
+    fun `200이고 success가 false인데 에러 정보가 없어도 메시지를 남긴다`() = runTest {
+        coEvery { conversationService.deleteConversation(ROOM_ID) } returns ApiResponse(success = false)
+
+        val result = repository.deleteConversation(ROOM_ID)
+
+        val throwable = (result as AppResult.Failure).throwable
+        assertTrue(throwable is ApiException)
+        assertTrue(throwable.message.orEmpty().isNotBlank())
+    }
+
     @Test
     fun `200이어도 이미 삭제된 방 코드면 성공으로 본다`() = runTest {
         coEvery { conversationService.deleteConversation(ROOM_ID) } returns ApiResponse(

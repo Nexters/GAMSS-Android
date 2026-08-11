@@ -4,11 +4,12 @@ import com.gamss.android.core.common.AppResult
 import com.gamss.android.domain.model.SessionExpiredException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -24,7 +25,7 @@ class DeleteConversationsUseCaseTest {
         assertTrue(repository.deletedIds.isEmpty())
         val data = (result as AppResult.Success).data
         assertTrue(data.deletedIds.isEmpty())
-        assertFalse(data.hasFailures)
+        assertTrue(data.failures.isEmpty())
     }
 
     @Test
@@ -68,10 +69,7 @@ class DeleteConversationsUseCaseTest {
         assertEquals(listOf(1L, 2L), (throwable as ConversationsDeletionException).failures.map { it.conversationId })
     }
 
-    /**
-     * 같은 예외 인스턴스를 여러 id 가 공유하는 건 흔하다. 이걸 addSuppressed 로 합치면
-     * self-suppression 으로 죽는다.
-     */
+    /** 같은 예외 인스턴스를 여러 id 가 공유하는 건 흔하다. addSuppressed 로 합치면 self-suppression 으로 죽는다. */
     @Test
     fun 같은_예외_인스턴스가_여러_id에서_나와도_죽지_않는다() = runTest {
         val shared = IllegalStateException("delete failed")
@@ -100,6 +98,21 @@ class DeleteConversationsUseCaseTest {
         DeleteConversationsUseCase(repository)(listOf(1L, 2L, 3L))
 
         assertEquals(listOf(1L, 2L, 3L), repository.deletedIds)
+    }
+
+    /**
+     * 리포지토리 자체 타임아웃은 CancellationException 이라 그대로 올리면 배치 전체가 취소되고
+     * 이미 지운 방 목록까지 사라진다. 남의 취소는 그 id 하나의 실패여야 한다.
+     */
+    @Test
+    fun 리포지토리_한_건이_타임아웃돼도_나머지는_지운다() = runTest {
+        val repository = RecordingRepository(timingOutIds = setOf(2L))
+
+        val result = DeleteConversationsUseCase(repository)(listOf(1L, 2L, 3L))
+
+        val data = (result as AppResult.Success).data
+        assertEquals(listOf(1L, 3L), data.deletedIds)
+        assertEquals(listOf(2L), data.failures.map { it.conversationId })
     }
 
     /** 세션 만료가 부분 성공에 묻히면 호출부가 재로그인 시점을 놓친다. */
@@ -131,7 +144,8 @@ class DeleteConversationsUseCaseTest {
         gate.complete(Unit)
         caller.join()
 
-        assertEquals(MAX_CONCURRENT_DELETES_FOR_TEST, peak)
+        assertEquals(MAX_CONCURRENT_DELETES, peak)
+        assertEquals(ids, repository.deletedIds)
     }
 
     @Test
@@ -145,12 +159,14 @@ class DeleteConversationsUseCaseTest {
         gate.complete(Unit)
         caller.join()
 
-        assertEquals(MAX_CONCURRENT_DELETES_FOR_TEST, repository.deletedIds.size)
+        assertTrue(caller.isCancelled)
+        assertEquals(MAX_CONCURRENT_DELETES, repository.deletedIds.size)
     }
 
     private class RecordingRepository(
         private val failingIds: Set<Long> = emptySet(),
         private val throwingIds: Set<Long> = emptySet(),
+        private val timingOutIds: Set<Long> = emptySet(),
         private val failure: () -> AppResult.Failure = { AppResult.Failure(IllegalStateException("delete failed")) },
         private val gate: CompletableDeferred<Unit>? = null,
     ) : ConversationRepository {
@@ -167,6 +183,7 @@ class DeleteConversationsUseCaseTest {
             peakInFlight = maxOf(peakInFlight, inFlight)
             try {
                 gate?.await()
+                if (conversationId in timingOutIds) withTimeout(TIMEOUT_MILLIS) { delay(TIMEOUT_MILLIS * 2) }
                 check(conversationId !in throwingIds) { "delete exploded" }
                 return if (conversationId in failingIds) failure() else AppResult.Success(Unit)
             } finally {
@@ -186,9 +203,9 @@ class DeleteConversationsUseCaseTest {
 
         override suspend fun endConversation(conversationId: Long): AppResult<Unit> =
             throw UnsupportedOperationException()
-    }
 
-    private companion object {
-        const val MAX_CONCURRENT_DELETES_FOR_TEST = 4
+        private companion object {
+            const val TIMEOUT_MILLIS = 10L
+        }
     }
 }
