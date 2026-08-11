@@ -21,7 +21,6 @@ import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.time.LocalDate
 
 class ConversationSessionTest {
 
@@ -233,7 +232,7 @@ class ConversationSessionTest {
             )
         }
 
-        override suspend fun getConversations(date: LocalDate): AppResult<List<Conversation>> =
+        override suspend fun getOngoingConversations(): AppResult<List<Conversation>> =
             AppResult.Success(emptyList())
 
         override suspend fun getMessages(conversationId: Long): AppResult<List<Message>> =

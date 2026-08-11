@@ -117,7 +117,7 @@ internal class FakeConversationRepository(
     override suspend fun getMessages(conversationId: Long): AppResult<List<Message>> =
         AppResult.Success(emptyList())
 
-    override suspend fun getConversations(date: java.time.LocalDate): AppResult<List<Conversation>> =
+    override suspend fun getOngoingConversations(): AppResult<List<Conversation>> =
         AppResult.Success(emptyList())
 
     override suspend fun updateTitle(conversationId: Long, title: String): AppResult<Unit> {

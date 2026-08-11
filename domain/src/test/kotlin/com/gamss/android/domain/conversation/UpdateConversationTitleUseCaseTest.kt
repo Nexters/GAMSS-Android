@@ -6,7 +6,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.time.LocalDate
 
 class UpdateConversationTitleUseCaseTest {
 
@@ -82,7 +81,7 @@ class UpdateConversationTitleUseCaseTest {
             contextSummary: String?,
         ): AppResult<SentMessage> = throw UnsupportedOperationException()
 
-        override suspend fun getConversations(date: LocalDate): AppResult<List<Conversation>> =
+        override suspend fun getOngoingConversations(): AppResult<List<Conversation>> =
             throw UnsupportedOperationException()
 
         override suspend fun getMessages(conversationId: Long): AppResult<List<Message>> =

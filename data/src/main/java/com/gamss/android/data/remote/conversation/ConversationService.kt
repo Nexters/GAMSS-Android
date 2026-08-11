@@ -11,12 +11,11 @@ import retrofit2.http.GET
 import retrofit2.http.PATCH
 import retrofit2.http.POST
 import retrofit2.http.Path
-import retrofit2.http.Query
 
 internal interface ConversationService {
 
-    @GET("/api/conversations")
-    suspend fun getConversations(@Query("date") date: String): ApiResponse<List<ConversationResponse>>
+    @GET("/api/conversations/incomplete")
+    suspend fun getIncompleteConversations(): ApiResponse<List<ConversationResponse>>
 
     @POST("/api/conversations/messages")
     suspend fun saveMessage(@Body request: SaveMessageRequest): ApiResponse<SaveMessageResponse>

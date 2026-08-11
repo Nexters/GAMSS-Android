@@ -2,18 +2,15 @@ package com.gamss.android.feature.chat
 
 import androidx.lifecycle.ViewModel
 import com.gamss.android.core.common.AppResult
-import com.gamss.android.domain.conversation.GetConversationsUseCase
+import com.gamss.android.domain.conversation.GetOngoingConversationsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import org.orbitmvi.orbit.ContainerHost
 import org.orbitmvi.orbit.viewmodel.container
-import java.time.Clock
-import java.time.LocalDate
 import javax.inject.Inject
 
 @HiltViewModel
 class ChattingListViewModel @Inject constructor(
-    private val getConversations: GetConversationsUseCase,
-    private val clock: Clock,
+    private val getOngoingConversations: GetOngoingConversationsUseCase,
 ) : ViewModel(),
     ContainerHost<ChattingListState, ChattingListSideEffect> {
 
@@ -21,7 +18,7 @@ class ChattingListViewModel @Inject constructor(
 
     fun load() = intent {
         reduce { state.copy(isLoading = true) }
-        when (val result = getConversations(LocalDate.now(clock))) {
+        when (val result = getOngoingConversations()) {
             is AppResult.Success -> reduce { state.copy(isLoading = false, conversations = result.data) }
             is AppResult.Failure -> {
                 reduce { state.copy(isLoading = false) }

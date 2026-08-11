@@ -63,7 +63,7 @@ fun ChattingListScreen(
             when {
                 state.isLoading -> CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
                 state.conversations.isEmpty() -> Text(
-                    text = "오늘 나눈 대화가 없어요",
+                    text = "진행 중인 대화가 없어요",
                     modifier = Modifier.align(Alignment.Center),
                 )
                 else -> LazyColumn {

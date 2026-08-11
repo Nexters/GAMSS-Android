@@ -15,7 +15,6 @@ import com.gamss.android.domain.conversation.Message
 import com.gamss.android.domain.conversation.SentMessage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.async
-import java.time.LocalDate
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -25,8 +24,8 @@ internal class ConversationRepositoryImpl @Inject constructor(
     @ApplicationScope private val applicationScope: CoroutineScope,
 ) : ConversationRepository {
 
-    override suspend fun getConversations(date: LocalDate): AppResult<List<Conversation>> = runCatchingApiCall {
-        val response = conversationService.getConversations(date.toString())
+    override suspend fun getOngoingConversations(): AppResult<List<Conversation>> = runCatchingApiCall {
+        val response = conversationService.getIncompleteConversations()
         checkNotNull(response.data) { "No available conversation data" }
             .mapNotNull(ConversationResponse::toDomain)
     }

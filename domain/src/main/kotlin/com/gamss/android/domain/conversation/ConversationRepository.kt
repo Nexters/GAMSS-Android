@@ -1,10 +1,10 @@
 package com.gamss.android.domain.conversation
 
 import com.gamss.android.core.common.AppResult
-import java.time.LocalDate
 
 interface ConversationRepository {
-    suspend fun getConversations(date: LocalDate): AppResult<List<Conversation>>
+    /** 아직 종료하지 않은 방만 최신순으로 온다. 종료·삭제된 방과 카드가 만들어진 방은 빠진다. */
+    suspend fun getOngoingConversations(): AppResult<List<Conversation>>
 
     suspend fun sendMessage(
         conversationId: Long?,

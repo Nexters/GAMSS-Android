@@ -7,7 +7,6 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.time.LocalDate
 
 class SendMessageUseCaseTest {
 
@@ -49,7 +48,7 @@ class SendMessageUseCaseTest {
             )
         }
 
-        override suspend fun getConversations(date: LocalDate): AppResult<List<Conversation>> =
+        override suspend fun getOngoingConversations(): AppResult<List<Conversation>> =
             AppResult.Success(emptyList())
 
         override suspend fun getMessages(conversationId: Long): AppResult<List<Message>> =
