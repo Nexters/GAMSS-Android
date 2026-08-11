@@ -147,6 +147,49 @@ class ChatRoomRevealTest {
         }
     }
 
+    @Test
+    fun 전송이_성공하면_토큰_사용량_갱신을_요청한다() = runTest {
+        val notifier = RecordingTokenUsageRefreshNotifier()
+        val viewModel = chatRoomViewModel(
+            conversationRepository = FakeConversationRepository(commentCount = 1),
+            tokenUsageRefreshNotifier = notifier,
+        )
+
+        viewModel.test(this) {
+            containerHost.onInputChange(INPUT)
+            skipItems(1) // input 반영
+            containerHost.onSend()
+            skipItems(1) // isSending = true
+            awaitState() // 전송 성공 반영
+
+            assertEquals(1, notifier.refreshCount)
+
+            cancelAndIgnoreRemainingItems()
+        }
+    }
+
+    @Test
+    fun 전송이_실패하면_토큰_사용량_갱신을_요청하지_않는다() = runTest {
+        val notifier = RecordingTokenUsageRefreshNotifier()
+        val viewModel = chatRoomViewModel(
+            conversationRepository = FakeConversationRepository(commentCount = 1, failing = true),
+            tokenUsageRefreshNotifier = notifier,
+        )
+
+        viewModel.test(this) {
+            containerHost.onInputChange(INPUT)
+            awaitState()
+            containerHost.onSend()
+            awaitState()
+            awaitState()
+            expectSideEffect(ChatRoomSideEffect.ShowToast(SEND_FAILED_MESSAGE))
+
+            assertEquals(0, notifier.refreshCount)
+
+            cancelAndIgnoreRemainingItems()
+        }
+    }
+
     private fun viewModel(commentCount: Int): ChatRoomViewModel =
         chatRoomViewModel(FakeConversationRepository(commentCount))
 

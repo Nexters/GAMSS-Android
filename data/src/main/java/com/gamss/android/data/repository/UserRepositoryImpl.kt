@@ -6,6 +6,7 @@ import com.gamss.android.core.common.network.ApiException
 import com.gamss.android.data.remote.user.UserService
 import com.gamss.android.data.remote.user.model.request.UpdateNicknameRequest
 import com.gamss.android.data.remote.user.model.response.toDomain
+import com.gamss.android.domain.model.DailyTokenUsage
 import com.gamss.android.domain.user.NicknameUpdateException
 import com.gamss.android.domain.user.UserProfile
 import com.gamss.android.domain.user.UserRepository
@@ -35,6 +36,13 @@ internal class UserRepositoryImpl @Inject constructor(
     override suspend fun getUserInfo(): AppResult<UserProfile> {
         return runCatchingApiCall {
             checkNotNull(userService.getUserInfo().data) { "No available user info data" }.toDomain()
+        }
+    }
+
+    override suspend fun getDailyTokenUsage(): AppResult<DailyTokenUsage> {
+        return runCatchingApiCall {
+            val response = userService.getDailyTokenUsage()
+            checkNotNull(response.data) { "No available daily token usage data" }.toDomain()
         }
     }
 }

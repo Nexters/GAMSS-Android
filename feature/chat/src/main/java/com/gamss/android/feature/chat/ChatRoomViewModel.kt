@@ -9,6 +9,7 @@ import com.gamss.android.domain.conversation.Message
 import com.gamss.android.domain.conversation.MessageSender
 import com.gamss.android.domain.conversation.nextCommentRevealGapMillis
 import com.gamss.android.domain.conversation.takeWithinMessageLimit
+import com.gamss.android.domain.repository.TokenUsageRefreshNotifier
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancelAndJoin
@@ -24,6 +25,7 @@ private typealias ChatRoomSyntax = Syntax<ChatRoomState, ChatRoomSideEffect>
 @HiltViewModel
 class ChatRoomViewModel @Inject constructor(
     private val session: ConversationSession,
+    private val tokenUsageRefreshNotifier: TokenUsageRefreshNotifier,
 ) : ViewModel(),
     ContainerHost<ChatRoomState, ChatRoomSideEffect> {
 
@@ -108,6 +110,7 @@ class ChatRoomViewModel @Inject constructor(
                 }
                 launchCommentReveal()
                 sent.commentStatus.toUserMessage()?.let { postSideEffect(ChatRoomSideEffect.ShowToast(it)) }
+                tokenUsageRefreshNotifier.requestRefresh()
                 session.compact()
             }
             is AppResult.Failure -> {

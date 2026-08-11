@@ -20,10 +20,13 @@ import com.gamss.android.domain.emotion.ConversationEmotionAccumulator
 import com.gamss.android.domain.emotion.EmotionCharacter
 import com.gamss.android.domain.emotion.EmotionClassifier
 import com.gamss.android.domain.emotion.EmotionLabel
+import com.gamss.android.domain.repository.TokenUsageRefreshNotifier
 import com.gamss.android.domain.summary.DiarySummarizer
 import com.gamss.android.domain.summary.SummarizeDiaryUseCase
 import com.gamss.android.domain.summary.UtteranceTokenCounter
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
 
 /**
  * 채팅 ViewModel 조립을 한 곳에 둔다. 테스트마다 따로 조립하면 세션 구성이 갈라진다.
@@ -35,7 +38,9 @@ internal fun chatRoomViewModel(
     cardRepository: CardRepository = CountingCardRepository(),
     summarizer: DiarySummarizer = PassThroughSummarizer,
     classifier: EmotionClassifier = FlatClassifier,
+    tokenUsageRefreshNotifier: TokenUsageRefreshNotifier = RecordingTokenUsageRefreshNotifier(),
 ): ChatRoomViewModel = ChatRoomViewModel(
+    tokenUsageRefreshNotifier = tokenUsageRefreshNotifier,
     session = ConversationSession(
         sendMessage = SendMessageUseCase(conversationRepository),
         getMessages = GetMessagesUseCase(conversationRepository),
@@ -51,6 +56,18 @@ internal fun chatRoomViewModel(
         emotionAccumulator = ConversationEmotionAccumulator(classifier),
     ),
 )
+
+/** 갱신 요청 횟수만 센다. 홈 쪽 수신은 feature:home 테스트가 본다. */
+internal class RecordingTokenUsageRefreshNotifier : TokenUsageRefreshNotifier {
+    var refreshCount = 0
+        private set
+
+    override val refreshEvents: Flow<Unit> = emptyFlow()
+
+    override fun requestRefresh() {
+        refreshCount++
+    }
+}
 
 internal object PassThroughSummarizer : DiarySummarizer {
     override suspend fun summarize(text: String): String = text

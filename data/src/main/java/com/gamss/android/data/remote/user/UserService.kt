@@ -2,6 +2,7 @@ package com.gamss.android.data.remote.user
 
 import com.gamss.android.data.remote.model.response.ApiResponse
 import com.gamss.android.data.remote.user.model.request.UpdateNicknameRequest
+import com.gamss.android.data.remote.user.model.response.DailyTokenUsageDataResponse
 import com.gamss.android.data.remote.user.model.response.UserInfoResponse
 import retrofit2.http.Body
 import retrofit2.http.DELETE
@@ -18,4 +19,7 @@ internal interface UserService {
 
     @GET("/api/members/me")
     suspend fun getUserInfo(): ApiResponse<UserInfoResponse>
+
+    @GET("/api/members/me/token-usage")
+    suspend fun getDailyTokenUsage(): ApiResponse<DailyTokenUsageDataResponse>
 }
