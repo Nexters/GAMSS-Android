@@ -1,42 +1,45 @@
 package com.gamss.android.domain.card
 
 import com.gamss.android.core.common.AppResult
-import com.gamss.android.domain.assertSuccess
-import com.gamss.android.domain.repository.CardRepository
+import com.gamss.android.domain.emotion.EmotionCharacter
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertSame
 import org.junit.Test
 
 class GetCardUseCaseTest {
 
-    @Test
-    fun `cardId로 카드 조회를 위임한다`() = runBlocking {
-        val repository = FakeCardRepository()
-        val useCase = GetCardUseCase(repository)
-
-        val result = useCase(7).assertSuccess()
-
-        assertEquals(7L, repository.requestedCardId)
-        assertEquals(7L, result.id)
-    }
-
-    private class FakeCardRepository : CardRepository {
+    private class RecordingRepository : CardRepository {
         var requestedCardId: Long? = null
             private set
 
+        val card = Card(
+            character = EmotionCharacter.ANGER,
+            summary = "요약",
+            message = "대사",
+            id = 7L,
+        )
+
+        override suspend fun createCard(
+            conversationId: Long,
+            character: EmotionCharacter,
+            summary: String,
+        ): AppResult<Card> =
+            AppResult.Failure(UnsupportedOperationException("not used"))
+
         override suspend fun getCard(cardId: Long): AppResult<Card> {
             requestedCardId = cardId
-            return AppResult.Success(
-                Card(
-                    id = cardId,
-                    conversationId = 1,
-                    emotion = "ANGER",
-                    emotionLabel = "분노",
-                    summary = "오늘 비가 와서 짜증나고 찝찝하다",
-                    message = "얘 오늘 건들면 안 됨.",
-                    date = "2026-07-23",
-                ),
-            )
+            return AppResult.Success(card)
         }
+    }
+
+    @Test
+    fun cardId를_repository에_그대로_위임한다() = runBlocking {
+        val repository = RecordingRepository()
+
+        val result = GetCardUseCase(repository)(7L)
+
+        assertEquals(7L, repository.requestedCardId)
+        assertSame(repository.card, (result as AppResult.Success).data)
     }
 }
