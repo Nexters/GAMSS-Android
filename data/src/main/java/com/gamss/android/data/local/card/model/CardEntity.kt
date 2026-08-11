@@ -4,6 +4,7 @@ import androidx.room3.ColumnInfo
 import androidx.room3.Entity
 import androidx.room3.Index
 import androidx.room3.PrimaryKey
+import com.gamss.android.data.remote.emotion.toEmotionCharacter
 import com.gamss.android.domain.card.Card
 
 @Entity(
@@ -35,11 +36,12 @@ internal data class CardEntity(
 
 internal fun CardEntity.toDomain(): Card =
     Card(
+        character = checkNotNull(emotion.toEmotionCharacter()) { "Unknown card emotion=$emotion" },
+        summary = summary,
+        message = message,
         id = id,
         conversationId = conversationId,
         emotion = emotion,
         emotionLabel = emotionLabel,
-        summary = summary,
-        message = message,
         date = date,
     )
