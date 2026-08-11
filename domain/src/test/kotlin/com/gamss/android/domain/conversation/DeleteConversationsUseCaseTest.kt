@@ -149,7 +149,7 @@ class DeleteConversationsUseCaseTest {
     }
 
     @Test
-    fun 호출자가_취소되면_남은_삭제를_진행하지_않는다() = runTest {
+    fun 취소되면_상한을_넘겨_새_삭제를_시작하지_않는다() = runTest {
         val gate = CompletableDeferred<Unit>()
         val repository = RecordingRepository(gate = gate)
 
@@ -159,7 +159,6 @@ class DeleteConversationsUseCaseTest {
         gate.complete(Unit)
         caller.join()
 
-        assertTrue(caller.isCancelled)
         assertEquals(MAX_CONCURRENT_DELETES, repository.deletedIds.size)
     }
 

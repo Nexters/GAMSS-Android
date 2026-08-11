@@ -123,6 +123,22 @@ class ConversationRepositoryImplTest {
         assertTrue(throwable.message.orEmpty().isNotBlank())
     }
 
+    /**
+     * 같은 인증 실패가 4xx 로 오면 세션 만료가 된다. envelope 로 왔다고 일반 실패로 흘리면
+     * 유스케이스의 세션 만료 승격을 우회해 재로그인 신호가 부분 성공에 묻힌다.
+     */
+    @Test
+    fun `200이어도 인증 만료 코드면 세션 만료로 전한다`() = runTest {
+        coEvery { conversationService.deleteConversation(ROOM_ID) } returns ApiResponse(
+            success = false,
+            error = ApiError(code = "EXPIRED_TOKEN", message = "만료"),
+        )
+
+        val result = repository.deleteConversation(ROOM_ID)
+
+        assertTrue((result as AppResult.Failure).throwable is SessionExpiredException)
+    }
+
     @Test
     fun `200이어도 이미 삭제된 방 코드면 성공으로 본다`() = runTest {
         coEvery { conversationService.deleteConversation(ROOM_ID) } returns ApiResponse(
@@ -147,6 +163,19 @@ class ConversationRepositoryImplTest {
         val result = repository.endConversation(ROOM_ID)
 
         assertTrue(result is AppResult.Success)
+    }
+
+    /** 종료도 응답 본문을 쓰지 않아 삭제와 같은 구멍이 있었다. 종료된 줄 알고 카드 생성으로 넘어가면 안 된다. */
+    @Test
+    fun `200이어도 success가 false면 종료 실패로 전한다`() = runTest {
+        coEvery { conversationService.endConversation(ROOM_ID) } returns ApiResponse(
+            success = false,
+            error = ApiError(code = "CONVERSATION_NOT_FOUND", message = "없는 방"),
+        )
+
+        val result = repository.endConversation(ROOM_ID)
+
+        assertEquals("CONVERSATION_NOT_FOUND", ((result as AppResult.Failure).throwable as ApiException).code)
     }
 
     private fun httpException(status: Int, code: String): HttpException {

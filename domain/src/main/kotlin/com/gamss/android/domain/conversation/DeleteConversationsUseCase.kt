@@ -60,9 +60,11 @@ class DeleteConversationsUseCase @Inject constructor(
     }
 
     /**
-     * 한 건의 실패가 형제 코루틴을 취소시키면 이미 지운 방 목록이 통째로 사라지고, 아직 응답을 못 받은
-     * 요청도 끊긴다. 그래서 이 배치가 취소된 경우에만 취소를 전파하고, 리포지토리 자체 타임아웃처럼
-     * 남의 취소는 그 id 하나의 실패로 접는다.
+     * 리포지토리 자체 타임아웃 같은 남의 취소를 그대로 올리면 이미 지운 방 목록이 통째로 사라지고,
+     * 아직 응답을 못 받은 요청도 끊긴다. 그래서 값으로 접는다.
+     *
+     * 이 배치 자신의 취소는 [isActive] 검사 없이도 [coroutineScope] 와 [awaitAll] 이 전파한다.
+     * 검사는 스코프 구조가 바뀌었을 때(supervisorScope, 외부 스코프 등)를 위한 방어다.
      */
     @Suppress("TooGenericExceptionCaught")
     private suspend fun deleteCatching(semaphore: Semaphore, id: Long): AppResult<Unit> =

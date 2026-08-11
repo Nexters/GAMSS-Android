@@ -40,7 +40,9 @@ internal class ConversationRepositoryImpl @Inject constructor(
     }
 
     override suspend fun endConversation(conversationId: Long): AppResult<Unit> {
-        val result = runCatchingApiCall { conversationService.endConversation(conversationId) }
+        val result = runCatchingApiCall {
+            conversationService.endConversation(conversationId).throwIfFailed()
+        }
         return when (result) {
             is AppResult.Success -> AppResult.Success(Unit)
             // 이미 종료된 방이면 목표는 달성된 상태다. 실패로 흘리면 카드 생성으로 넘어갈 수 없다.
