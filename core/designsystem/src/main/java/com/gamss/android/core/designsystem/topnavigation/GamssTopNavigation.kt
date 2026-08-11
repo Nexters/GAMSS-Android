@@ -46,30 +46,16 @@ fun GamssTopNavigation(
     title: String,
     modifier: Modifier = Modifier,
     backgroundColor: Color = if (isSystemInDarkTheme()) GamssTheme.colors.black else GamssTheme.colors.white,
-    ignoresSafeArea: Boolean = false,
     showLeftIcon: Boolean = false,
     showRightIcon: Boolean = false,
     onLeftIconClick: () -> Unit = {},
     onRightIconClick: () -> Unit = {},
 ) {
-    val safeAreaModifier = if (ignoresSafeArea) {
-        // 배경을 상태바 뒤까지 먼저 그린 뒤, 콘텐츠만 상태바 아래로 내립니다.
-        Modifier
-            .background(backgroundColor)
-            .windowInsetsPadding(WindowInsets.statusBars)
-    } else {
-        // 상태바 인셋 + 6dp 여백을 먼저 확보한 뒤에만 배경을 그립니다.
-        Modifier
-            .windowInsetsPadding(WindowInsets.statusBars)
-            .padding(top = 6.dp)
-            .background(backgroundColor)
-    }
-
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .then(safeAreaModifier)
             .height(64.dp)
+            .background(backgroundColor)
             .padding(horizontal = 18.dp, vertical = GamssTheme.spacing.spacing200),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
