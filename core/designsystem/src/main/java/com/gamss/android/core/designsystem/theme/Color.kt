@@ -61,6 +61,8 @@ internal val SemanticDarkBlue = Color(0xFF447CFF)
 data class GamssColors(
     val white: Color,
     val black: Color,
+    // 화면 최하단 배경. gray025 와 달리 라이트에서 순백, 다크에서 순검정으로 반전한다.
+    val background: Color,
     val gray025: Color,
     val gray050: Color,
     val gray075: Color,
@@ -87,6 +89,7 @@ data class GamssColors(
 val LightGamssColors = GamssColors(
     white = White,
     black = Black,
+    background = White,
     gray025 = GrayLight025,
     gray050 = GrayLight050,
     gray075 = GrayLight075,
@@ -113,6 +116,7 @@ val LightGamssColors = GamssColors(
 val DarkGamssColors = GamssColors(
     white = White,
     black = Black,
+    background = Black,
     gray025 = GrayDark025,
     gray050 = GrayDark050,
     gray075 = GrayDark075,
