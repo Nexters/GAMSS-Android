@@ -93,6 +93,13 @@ android {
                 signingConfig = signingConfigs.getByName("release")
             }
         }
+        create("internal") {
+            initWith(getByName("release"))
+            isDebuggable = true
+            versionNameSuffix = "-internal"
+            signingConfig = signingConfigs.getByName("debug")
+            matchingFallbacks += listOf("release")
+        }
     }
 }
 
