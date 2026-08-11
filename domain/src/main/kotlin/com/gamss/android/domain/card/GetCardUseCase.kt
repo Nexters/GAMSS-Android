@@ -1,7 +1,6 @@
 package com.gamss.android.domain.card
 
 import com.gamss.android.core.common.AppResult
-import com.gamss.android.domain.repository.CardRepository
 import com.gamss.android.domain.usecase.UseCase
 import javax.inject.Inject
 
