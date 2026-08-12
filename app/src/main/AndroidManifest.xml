@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET"/>
 
@@ -19,10 +20,17 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.GAMSS">
 
+        <!--
+            세로 고정. targetSdk 36 에서는 sw600dp 이상 화면에서 이 설정이 무시되므로
+            태블릿과 폴더블에서는 가로가 될 수 있다. 화면 레이아웃은 그 경우도 견뎌야 한다.
+            lint 가 같은 이유로 두 경고를 내지만, 폰에서의 세로 고정은 의도한 동작이라 억제한다.
+        -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:theme="@style/Theme.GAMSS">
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.GAMSS"
+            tools:ignore="DiscouragedApi,LockedOrientationActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
