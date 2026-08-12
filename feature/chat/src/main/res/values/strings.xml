@@ -7,7 +7,9 @@
     <string name="chat_room_risk_dialog_dialog_title">혼자 감당하지 않아도 괜찮아요.</string>
     <string name="chat_room_risk_dialog_dialog_subTitle">대화에서 도움이 필요하다는 신호가 확인됐어요.\n전문가와 이야기해 보는 걸 추천드려요.</string>
     <string name="chat_room_risk_dialog_additional_info">24시간 상담이 가능해요. 누르면 바로 연결돼요.</string>
+    <string name="chat_room_risk_dialog_emergency_button_label">긴급 도움이 필요해요</string>
     <string name="chat_room_risk_dialog_confirm_button_label">감정 확인하기</string>
-    <string name="chat_room_end_dialog_dismiss_button_label">뒤로가기</string>
-    <string name="safety_agency_call_description">%1$s에 전화하기</string>
+    <string name="safety_agency_call_description">%1$s %2$s에 전화하기</string>
+    <string name="safety_emergency_call_description">119에 전화하기</string>
+    <string name="safety_call_unavailable">전화 앱을 열 수 없어요. %1$s로 직접 전화해 주세요.</string>
 </resources>

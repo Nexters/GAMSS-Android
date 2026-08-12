@@ -23,6 +23,10 @@ import com.gamss.android.domain.emotion.EmotionCharacter
 import com.gamss.android.domain.emotion.EmotionClassifier
 import com.gamss.android.domain.emotion.EmotionLabel
 import com.gamss.android.domain.repository.TokenUsageRefreshNotifier
+import com.gamss.android.domain.safety.DetectRiskInTextUseCase
+import com.gamss.android.domain.safety.RiskLexicon
+import com.gamss.android.domain.safety.RiskLexiconRepository
+import com.gamss.android.domain.safety.RiskTermMatcher
 import com.gamss.android.domain.summary.DiarySummarizer
 import com.gamss.android.domain.summary.SummarizeDiaryUseCase
 import com.gamss.android.domain.summary.UtteranceTokenCounter
@@ -43,6 +47,10 @@ internal fun chatRoomViewModel(
     tokenUsageRefreshNotifier: TokenUsageRefreshNotifier = RecordingTokenUsageRefreshNotifier(),
 ): ChatRoomViewModel = ChatRoomViewModel(
     tokenUsageRefreshNotifier = tokenUsageRefreshNotifier,
+    detectRiskInText = DetectRiskInTextUseCase(
+        repository = NoRiskLexiconRepository,
+        matcher = RiskTermMatcher(),
+    ),
     session = ConversationSession(
         sendMessage = SendMessageUseCase(conversationRepository),
         getMessages = GetMessagesUseCase(conversationRepository),
@@ -59,6 +67,17 @@ internal fun chatRoomViewModel(
         emotionAccumulator = ConversationEmotionAccumulator(classifier),
     ),
 )
+
+private object NoRiskLexiconRepository : RiskLexiconRepository {
+    override suspend fun getLexicon() = RiskLexicon(
+        version = 0,
+        terms = emptyList(),
+        safePhrases = emptyList(),
+        agencies = emptyList(),
+    )
+
+    override suspend fun refresh() = Unit
+}
 
 /** 갱신 요청 횟수만 센다. 홈 쪽 수신은 feature:home 테스트가 본다. */
 internal class RecordingTokenUsageRefreshNotifier : TokenUsageRefreshNotifier {
