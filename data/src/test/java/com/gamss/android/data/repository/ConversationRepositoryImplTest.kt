@@ -5,7 +5,7 @@ import com.gamss.android.core.common.network.ApiException
 import com.gamss.android.data.remote.conversation.ConversationService
 import com.gamss.android.data.remote.model.response.ApiError
 import com.gamss.android.data.remote.model.response.ApiResponse
-import com.gamss.android.domain.model.SessionExpiredException
+import com.gamss.android.domain.auth.SessionExpiredException
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
@@ -176,6 +176,28 @@ class ConversationRepositoryImplTest {
         val result = repository.endConversation(ROOM_ID)
 
         assertEquals("CONVERSATION_NOT_FOUND", ((result as AppResult.Failure).throwable as ApiException).code)
+    }
+
+    @Test
+    fun `종료 중 인증 만료는 세션 만료 실패로 전한다`() = runTest {
+        coEvery { conversationService.endConversation(ROOM_ID) } throws
+            httpException(UNAUTHORIZED, "EXPIRED_TOKEN")
+
+        val result = repository.endConversation(ROOM_ID)
+
+        assertTrue((result as AppResult.Failure).throwable is SessionExpiredException)
+    }
+
+    @Test
+    fun `종료도 200이어도 인증 만료 코드면 세션 만료로 전한다`() = runTest {
+        coEvery { conversationService.endConversation(ROOM_ID) } returns ApiResponse(
+            success = false,
+            error = ApiError(code = "EXPIRED_TOKEN", message = "만료"),
+        )
+
+        val result = repository.endConversation(ROOM_ID)
+
+        assertTrue((result as AppResult.Failure).throwable is SessionExpiredException)
     }
 
     private fun httpException(status: Int, code: String): HttpException {

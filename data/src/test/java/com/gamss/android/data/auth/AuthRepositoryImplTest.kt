@@ -1,4 +1,4 @@
-package com.gamss.android.data.repository
+package com.gamss.android.data.auth
 
 import com.gamss.android.core.common.AppResult
 import com.gamss.android.data.local.auth.AuthTokenLocalDataSource
@@ -7,7 +7,8 @@ import com.gamss.android.data.remote.auth.AuthService
 import com.gamss.android.data.remote.auth.model.request.RefreshTokenRequest
 import com.gamss.android.data.remote.auth.model.response.LoginResponse
 import com.gamss.android.data.remote.model.response.ApiResponse
-import com.gamss.android.domain.model.SessionState
+import com.gamss.android.data.repository.httpException
+import com.gamss.android.domain.auth.SessionState
 import com.google.firebase.auth.FirebaseAuth
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -17,14 +18,10 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
-import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.ResponseBody.Companion.toResponseBody
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import retrofit2.HttpException
-import retrofit2.Response
 import java.io.IOException
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -191,11 +188,7 @@ class AuthRepositoryImplTest {
         data = LoginResponse(
             accessToken = "new-access-token",
             refreshToken = "new-refresh-token",
+            isFirstLogin = false,
         ),
     )
-
-    private fun httpException(statusCode: Int): HttpException {
-        val errorBody = "{}".toResponseBody("application/json".toMediaType())
-        return HttpException(Response.error<ApiResponse<LoginResponse>>(statusCode, errorBody))
-    }
 }

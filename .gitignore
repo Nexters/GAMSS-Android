@@ -9,10 +9,6 @@ local.properties
 .worktree-*
 app/google-services.json
 
-# 작업 플랜·인수인계 문서는 로컬 참고용이라 올리지 않는다
-PLAN-*.md
-handover.md
-
 # fastlane secrets (release keystore)
 fastlane/report.xml
 keystore/

@@ -1,7 +1,7 @@
 package com.gamss.android.domain.conversation
 
 import com.gamss.android.core.common.AppResult
-import com.gamss.android.domain.model.SessionExpiredException
+import com.gamss.android.domain.auth.SessionExpiredException
 import com.gamss.android.domain.usecase.UseCase
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async

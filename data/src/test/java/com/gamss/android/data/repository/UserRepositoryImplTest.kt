@@ -5,7 +5,9 @@ import com.gamss.android.core.common.network.ApiException
 import com.gamss.android.data.remote.model.response.ApiResponse
 import com.gamss.android.data.remote.user.UserService
 import com.gamss.android.data.remote.user.model.request.UpdateNicknameRequest
+import com.gamss.android.data.remote.user.model.response.DailyTokenUsageDataResponse
 import com.gamss.android.data.remote.user.model.response.UserInfoResponse
+import com.gamss.android.domain.auth.SessionExpiredException
 import com.gamss.android.domain.user.NicknameUpdateException
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -97,6 +99,41 @@ class UserRepositoryImplTest {
         repository.updateNickname("감쓰")
     }
 
+    @Test
+    fun `일일 토큰 사용량 응답을 도메인 모델로 변환한다`() = runTest {
+        coEvery { userService.getDailyTokenUsage() } returns ApiResponse(
+            success = true,
+            data = DailyTokenUsageDataResponse(
+                usedTokens = 12_000,
+                dailyLimit = 100_000,
+                exceeded = false,
+            ),
+        )
+
+        val result = repository.getDailyTokenUsage()
+
+        assertEquals(12_000L, (result as AppResult.Success).data.usedTokens)
+        assertEquals(100_000L, result.data.dailyLimit)
+    }
+
+    @Test
+    fun `일일 토큰 사용량 데이터가 없으면 실패로 돌려준다`() = runTest {
+        coEvery { userService.getDailyTokenUsage() } returns ApiResponse(success = true)
+
+        val result = repository.getDailyTokenUsage()
+
+        assertTrue(result is AppResult.Failure)
+    }
+
+    @Test
+    fun `일일 토큰 사용량 조회의 401 응답은 세션 만료로 변환한다`() = runTest {
+        coEvery { userService.getDailyTokenUsage() } throws httpException(UNAUTHORIZED)
+
+        val result = repository.getDailyTokenUsage()
+
+        assertTrue((result as AppResult.Failure).throwable is SessionExpiredException)
+    }
+
     private fun httpException(code: String): HttpException {
         val errorBody = """{"success":false,"error":{"code":"$code","message":"failed"}}"""
             .toResponseBody("application/json".toMediaType())
@@ -115,5 +152,6 @@ class UserRepositoryImplTest {
 
     private companion object {
         const val BAD_REQUEST = 400
+        const val UNAUTHORIZED = 401
     }
 }

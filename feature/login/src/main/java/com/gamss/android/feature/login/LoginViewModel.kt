@@ -3,8 +3,8 @@ package com.gamss.android.feature.login
 import androidx.lifecycle.ViewModel
 import com.gamss.android.core.common.AppResult
 import com.gamss.android.core.common.network.ApiException
-import com.gamss.android.domain.model.SessionExpiredException
-import com.gamss.android.domain.usecase.LoginUseCase
+import com.gamss.android.domain.auth.LoginUseCase
+import com.gamss.android.domain.auth.SessionExpiredException
 import dagger.hilt.android.lifecycle.HiltViewModel
 import org.orbitmvi.orbit.ContainerHost
 import org.orbitmvi.orbit.viewmodel.container
@@ -17,12 +17,15 @@ class LoginViewModel @Inject constructor(
 
     override val container = container<LoginState, LoginSideEffect>(LoginState())
 
-    fun login(googleIdToken: String) = intent {
+    private fun login(googleIdToken: String) = intent {
         reduce { state.copy(isLoading = true) }
 
         when (val result = loginUseCase(googleIdToken)) {
             is AppResult.Success -> {
                 reduce { state.copy(isLoading = false) }
+                if (result.data.isFirstLogin) {
+                    // 온보딩 화면이 정의되면 첫 로그인 사용자를 온보딩 플로우로 이동시킨다.
+                }
             }
 
             is AppResult.Failure -> {
@@ -32,13 +35,37 @@ class LoginViewModel @Inject constructor(
         }
     }
 
+    fun requestGoogleSignIn() = intent {
+        reduce {
+            state.copy(
+                isLoading = true,
+                googleSignInRequestId = (state.googleSignInRequestId ?: 0L) + 1L,
+            )
+        }
+    }
+
+    fun onGoogleCredentialResolved(googleIdToken: String) = intent {
+        reduce { state.copy(googleSignInRequestId = null) }
+        login(googleIdToken)
+    }
+
     fun onGoogleSignInFailed() = intent {
-        reduce { state.copy(isLoading = false) }
+        reduce {
+            state.copy(
+                isLoading = false,
+                googleSignInRequestId = null,
+            )
+        }
         postSideEffect(LoginSideEffect.ShowToast("Google 로그인에 실패했어요"))
     }
 
     fun onGoogleSignInCancelled() = intent {
-        reduce { state.copy(isLoading = false) }
+        reduce {
+            state.copy(
+                isLoading = false,
+                googleSignInRequestId = null,
+            )
+        }
     }
 
     private fun Throwable.toLoginFailureMessage(): String = when (this) {

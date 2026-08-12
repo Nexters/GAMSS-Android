@@ -1,8 +1,10 @@
 package com.gamss.android.domain.user
 
 import com.gamss.android.core.common.AppResult
-import com.gamss.android.domain.model.SessionState
-import com.gamss.android.domain.repository.AuthRepository
+import com.gamss.android.domain.auth.AuthRepository
+import com.gamss.android.domain.auth.LoginResult
+import com.gamss.android.domain.auth.SessionState
+import com.gamss.android.domain.model.DailyTokenUsage
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -85,6 +87,9 @@ class DeleteUserAccountUseCaseTest {
 
         override suspend fun getUserInfo(): AppResult<UserProfile> =
             error("Not needed for this test")
+
+        override suspend fun getDailyTokenUsage(): AppResult<DailyTokenUsage> =
+            error("Not needed for this test")
     }
 
     private class FakeAuthRepository(
@@ -97,7 +102,7 @@ class DeleteUserAccountUseCaseTest {
         var logoutCallCount: Int = 0
             private set
 
-        override suspend fun login(googleIdToken: String): AppResult<Unit> =
+        override suspend fun login(googleIdToken: String): AppResult<LoginResult> =
             error("Not needed for this test")
 
         override suspend fun reissueTokens(): AppResult<Unit> =

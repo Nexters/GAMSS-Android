@@ -1,6 +1,7 @@
 package com.gamss.android.domain.user
 
 import com.gamss.android.core.common.AppResult
+import com.gamss.android.domain.model.DailyTokenUsage
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
@@ -98,6 +99,9 @@ class UpdateNicknameUseCaseTest {
             error("Not needed for this test")
 
         override suspend fun getUserInfo(): AppResult<UserProfile> =
+            error("Not needed for this test")
+
+        override suspend fun getDailyTokenUsage(): AppResult<DailyTokenUsage> =
             error("Not needed for this test")
     }
 

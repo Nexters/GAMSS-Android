@@ -1,7 +1,7 @@
-package com.gamss.android.domain.usecase
+package com.gamss.android.domain.auth
 
 import com.gamss.android.core.common.AppResult
-import com.gamss.android.domain.repository.AuthRepository
+import com.gamss.android.domain.usecase.NoParamUseCase
 import javax.inject.Inject
 
 class LogoutUseCase @Inject constructor(

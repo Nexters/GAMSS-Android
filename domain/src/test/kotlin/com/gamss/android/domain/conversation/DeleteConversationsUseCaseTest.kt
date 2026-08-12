@@ -1,7 +1,7 @@
 package com.gamss.android.domain.conversation
 
 import com.gamss.android.core.common.AppResult
-import com.gamss.android.domain.model.SessionExpiredException
+import com.gamss.android.domain.auth.SessionExpiredException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
