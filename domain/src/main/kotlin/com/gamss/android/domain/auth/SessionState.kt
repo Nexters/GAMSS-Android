@@ -1,4 +1,4 @@
-package com.gamss.android.domain.model
+package com.gamss.android.domain.auth
 
 sealed interface SessionState {
     data object Loading : SessionState

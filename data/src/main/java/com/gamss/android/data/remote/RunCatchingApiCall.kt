@@ -1,9 +1,9 @@
-package com.gamss.android.data.repository
+package com.gamss.android.data.remote
 
 import com.gamss.android.core.common.AppResult
 import com.gamss.android.core.common.network.ApiException
 import com.gamss.android.data.remote.model.response.ApiError
-import com.gamss.android.domain.model.SessionExpiredException
+import com.gamss.android.domain.auth.SessionExpiredException
 import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json

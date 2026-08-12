@@ -1,12 +1,13 @@
 package com.gamss.android.feature.home
 
 import com.gamss.android.core.common.AppResult
+import com.gamss.android.domain.auth.AuthRepository
+import com.gamss.android.domain.auth.LoginResult
+import com.gamss.android.domain.auth.LogoutUseCase
+import com.gamss.android.domain.auth.SessionState
 import com.gamss.android.domain.model.DailyTokenUsage
-import com.gamss.android.domain.model.SessionState
-import com.gamss.android.domain.repository.AuthRepository
 import com.gamss.android.domain.repository.TokenUsageRefreshNotifier
 import com.gamss.android.domain.usecase.GetDailyTokenUsageUseCase
-import com.gamss.android.domain.usecase.LogoutUseCase
 import com.gamss.android.domain.user.UserProfile
 import com.gamss.android.domain.user.UserRepository
 import kotlinx.coroutines.Dispatchers
@@ -140,7 +141,8 @@ class HomeTokenUsageRefreshTest {
     private object FakeAuthRepository : AuthRepository {
         override val sessionState: StateFlow<SessionState> = MutableStateFlow(SessionState.Authenticated)
 
-        override suspend fun login(googleIdToken: String): AppResult<Unit> = AppResult.Success(Unit)
+        override suspend fun login(googleIdToken: String): AppResult<LoginResult> =
+            AppResult.Success(LoginResult(isFirstLogin = false))
 
         override suspend fun reissueTokens(): AppResult<Unit> = AppResult.Success(Unit)
 

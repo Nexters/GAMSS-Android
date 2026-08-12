@@ -1,4 +1,4 @@
-package com.gamss.android.domain.model
+package com.gamss.android.domain.auth
 
 /**
  * refreshToken이 없거나 서버가 거부해 세션을 더 이상 유지할 수 없을 때 발생한다.

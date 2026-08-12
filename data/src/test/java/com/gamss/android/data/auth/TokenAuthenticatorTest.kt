@@ -2,7 +2,7 @@ package com.gamss.android.data.auth
 
 import com.gamss.android.core.common.AppResult
 import com.gamss.android.data.local.auth.TokenProvider
-import com.gamss.android.domain.repository.AuthRepository
+import com.gamss.android.domain.auth.AuthRepository
 import dagger.Lazy
 import io.mockk.coEvery
 import io.mockk.coVerify

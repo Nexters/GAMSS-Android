@@ -7,7 +7,7 @@ import com.gamss.android.data.remote.user.UserService
 import com.gamss.android.data.remote.user.model.request.UpdateNicknameRequest
 import com.gamss.android.data.remote.user.model.response.DailyTokenUsageDataResponse
 import com.gamss.android.data.remote.user.model.response.UserInfoResponse
-import com.gamss.android.domain.model.SessionExpiredException
+import com.gamss.android.domain.auth.SessionExpiredException
 import com.gamss.android.domain.user.NicknameUpdateException
 import io.mockk.coEvery
 import io.mockk.coVerify
