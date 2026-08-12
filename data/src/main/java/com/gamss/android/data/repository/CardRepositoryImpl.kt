@@ -5,6 +5,7 @@ import com.gamss.android.data.remote.card.CardService
 import com.gamss.android.data.remote.card.model.request.CreateCardRequest
 import com.gamss.android.data.remote.card.model.response.toDomain
 import com.gamss.android.data.remote.emotion.toServerEmotionType
+import com.gamss.android.data.remote.runCatchingApiCall
 import com.gamss.android.domain.card.Card
 import com.gamss.android.domain.card.CardNotRetryableException
 import com.gamss.android.domain.card.CardRepository

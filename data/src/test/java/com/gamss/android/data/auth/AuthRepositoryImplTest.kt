@@ -7,6 +7,7 @@ import com.gamss.android.data.remote.auth.AuthService
 import com.gamss.android.data.remote.auth.model.request.RefreshTokenRequest
 import com.gamss.android.data.remote.auth.model.response.LoginResponse
 import com.gamss.android.data.remote.model.response.ApiResponse
+import com.gamss.android.data.repository.httpException
 import com.gamss.android.domain.auth.SessionState
 import com.google.firebase.auth.FirebaseAuth
 import io.mockk.coEvery

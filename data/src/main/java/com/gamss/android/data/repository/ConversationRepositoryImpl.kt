@@ -5,6 +5,7 @@ import com.gamss.android.data.remote.conversation.ConversationService
 import com.gamss.android.data.remote.conversation.model.request.SaveMessageRequest
 import com.gamss.android.data.remote.conversation.model.response.ConversationMessage
 import com.gamss.android.data.remote.conversation.model.response.toDomain
+import com.gamss.android.data.remote.runCatchingApiCall
 import com.gamss.android.domain.conversation.ConversationRepository
 import com.gamss.android.domain.conversation.Message
 import com.gamss.android.domain.conversation.SentMessage
