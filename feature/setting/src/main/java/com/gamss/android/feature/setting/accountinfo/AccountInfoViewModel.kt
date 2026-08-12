@@ -19,7 +19,6 @@ class AccountInfoViewModel @Inject constructor(
 
     override val container = container<AccountInfoState, AccountInfoSideEffect>(AccountInfoState())
 
-    // AccountInfoScreen의 LaunchedEffect(Unit)에서 화면이 보일 때마다 호출한다.
     fun loadUserInfo() = intent {
         if (state.isLoading) return@intent
 

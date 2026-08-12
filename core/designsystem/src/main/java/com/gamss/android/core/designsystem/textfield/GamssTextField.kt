@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -13,7 +14,7 @@ import com.gamss.android.core.designsystem.theme.GamssTheme
 
 /**
  * 라벨 텍스트 + [OutlinedTextField] 조합의 입력 필드.
- * 라벨이 필드 위에 별도로 표시되는 형태로, Figma에서 "닉네임 변경" 화면 등에 쓰인다.
+ * 라벨이 필드 위에 별도로 표시되는 형태
  */
 @Composable
 fun GamssTextField(
@@ -26,7 +27,7 @@ fun GamssTextField(
     Column(modifier = modifier) {
         Text(
             text = label,
-            style = GamssTheme.typography.body1Medium,
+            style = GamssTheme.typography.body4Medium,
             color = GamssTheme.colors.gray950,
         )
         Spacer(modifier = Modifier.height(GamssTheme.spacing.spacing200))
@@ -35,6 +36,10 @@ fun GamssTextField(
             value = value,
             onValueChange = onValueChange,
             singleLine = singleLine,
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = GamssTheme.colors.gray200,
+                unfocusedBorderColor = GamssTheme.colors.gray200,
+            ),
         )
     }
 }

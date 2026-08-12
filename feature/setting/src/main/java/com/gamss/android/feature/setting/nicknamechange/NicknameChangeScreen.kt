@@ -90,7 +90,7 @@ fun NicknameChangeScreen(
                 .padding(18.dp),
             label = stringResource(R.string.nickname_change_save),
             onClick = viewModel::saveNickname,
-            variant = if (canSave) GamssButtonVariant.Primary else GamssButtonVariant.Neutral,
+            variant = GamssButtonVariant.Primary,
             enabled = canSave,
         )
     }

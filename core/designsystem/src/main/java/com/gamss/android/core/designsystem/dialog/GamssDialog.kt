@@ -1,11 +1,11 @@
 package com.gamss.android.core.designsystem.dialog
 
+import android.content.res.Configuration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -14,68 +14,68 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.gamss.android.core.designsystem.button.GamssButton
 import com.gamss.android.core.designsystem.button.GamssButtonVariant
 import com.gamss.android.core.designsystem.theme.GamssTheme
 
 /**
- * Figma: 각종 포폴 이력서 > Dialog (node-id=561-392)
+ * 제목과 선택적인 설명, 한 개 또는 두 개의 액션으로 구성된 GAMSS 공용 다이얼로그입니다.
  *
- * title + 좌우 2버튼으로 구성된 확인용 다이얼로그. 오른쪽 버튼([dismissButtonLabel])은
- * 항상 [GamssButtonVariant.Primary]로, "계속 사용하기"처럼 다이얼로그를 닫는 동작을
- * 담당한다. 왼쪽 버튼([actionButtonLabel])은 실제로 확인해야 할 동작(로그아웃, 탈퇴 등)이라
- * 위험도에 따라 [actionButtonVariant]를 [GamssButtonVariant.Neutral] 또는
- * [GamssButtonVariant.Destructive]로 선택한다.
+ * [primaryAction]은 단독으로 사용하면 전체 너비를 차지하고, [secondaryAction]이 있으면
+ * 보조 액션은 왼쪽, 주요 액션은 오른쪽에 동일한 너비로 배치됩니다. 액션 실행 후 다이얼로그를
+ * 닫을지는 호출 화면이 각 액션의 `onClick`에서 결정합니다.
  */
+@Suppress("LongParameterList")
 @Composable
-fun GamssConfirmDialog(
+fun GamssDialog(
     title: String,
-    actionButtonLabel: String,
-    dismissButtonLabel: String,
-    onActionClick: () -> Unit,
-    onDismissClick: () -> Unit,
+    primaryAction: GamssDialogAction,
+    onDismissRequest: () -> Unit,
     modifier: Modifier = Modifier,
-    actionButtonVariant: GamssButtonVariant = GamssButtonVariant.Neutral,
-    onDismissRequest: () -> Unit = onDismissClick,
+    subtitle: String? = null,
+    secondaryAction: GamssDialogAction? = null,
 ) {
     Dialog(onDismissRequest = onDismissRequest) {
-        GamssConfirmDialogContent(
-            modifier = modifier,
+        GamssDialogContent(
             title = title,
-            actionButtonLabel = actionButtonLabel,
-            dismissButtonLabel = dismissButtonLabel,
-            onActionClick = onActionClick,
-            onDismissClick = onDismissClick,
-            actionButtonVariant = actionButtonVariant,
+            primaryAction = primaryAction,
+            modifier = modifier,
+            subtitle = subtitle,
+            secondaryAction = secondaryAction,
         )
     }
 }
 
 @Composable
-private fun GamssConfirmDialogContent(
+private fun GamssDialogContent(
     title: String,
-    actionButtonLabel: String,
-    dismissButtonLabel: String,
-    onActionClick: () -> Unit,
-    onDismissClick: () -> Unit,
+    primaryAction: GamssDialogAction,
     modifier: Modifier = Modifier,
-    actionButtonVariant: GamssButtonVariant = GamssButtonVariant.Neutral,
+    subtitle: String? = null,
+    secondaryAction: GamssDialogAction? = null,
 ) {
+    val visibleSubtitle = subtitle?.takeIf(String::isNotBlank)
+    val contentSpacing = if (visibleSubtitle == null) {
+        GamssTheme.spacing.spacing600
+    } else {
+        GamssTheme.spacing.spacing400
+    }
+
     Column(
         modifier = modifier
             .fillMaxWidth()
             .background(
-                color = GamssTheme.colors.white,
+                color = GamssTheme.colors.gray025,
                 shape = RoundedCornerShape(GamssTheme.radius.radius300),
             )
             .padding(
-                top = GamssTheme.spacing.spacing400,
                 start = GamssTheme.spacing.spacing400,
+                top = contentSpacing,
                 end = GamssTheme.spacing.spacing400,
-                bottom = GamssTheme.spacing.spacing300,
+                bottom = GamssTheme.spacing.spacing400,
             ),
-        verticalArrangement = Arrangement.spacedBy(GamssTheme.spacing.spacing400),
     ) {
         Text(
             text = title,
@@ -83,56 +83,118 @@ private fun GamssConfirmDialogContent(
             color = GamssTheme.colors.gray950,
         )
 
-        Row(
-            modifier = Modifier.height(IntrinsicSize.Max),
-            horizontalArrangement = Arrangement.spacedBy(GamssTheme.spacing.spacing100),
-        ) {
-            GamssButton(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxHeight(),
-                label = actionButtonLabel,
-                variant = actionButtonVariant,
-                onClick = onActionClick,
-            )
-            GamssButton(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxHeight(),
-                label = dismissButtonLabel,
-                variant = GamssButtonVariant.Primary,
-                onClick = onDismissClick,
+        if (visibleSubtitle != null) {
+            Spacer(modifier = Modifier.height(GamssTheme.spacing.spacing100))
+            Text(
+                text = visibleSubtitle,
+                style = GamssTheme.typography.body4Medium,
+                color = GamssTheme.colors.gray500,
             )
         }
-    }
-}
 
-@Preview(name = "Logout", showBackground = true)
-@Composable
-private fun GamssConfirmDialogLogoutPreview() {
-    GamssTheme {
-        GamssConfirmDialogContent(
-            title = "로그아웃 하시겠습니까?",
-            actionButtonLabel = "로그아웃",
-            dismissButtonLabel = "마저 사용하기",
-            onActionClick = {},
-            onDismissClick = {},
-            actionButtonVariant = GamssButtonVariant.Neutral,
+        Spacer(modifier = Modifier.height(contentSpacing))
+
+        DialogActions(
+            primaryAction = primaryAction,
+            secondaryAction = secondaryAction,
         )
     }
 }
 
-@Preview(name = "Withdraw", showBackground = true)
 @Composable
-private fun GamssConfirmDialogWithdrawPreview() {
-    GamssTheme {
-        GamssConfirmDialogContent(
-            title = "탈퇴 하시겠습니까?",
-            actionButtonLabel = "탈퇴하기",
-            dismissButtonLabel = "마저 사용하기",
-            onActionClick = {},
-            onDismissClick = {},
-            actionButtonVariant = GamssButtonVariant.Destructive,
+private fun DialogActions(
+    primaryAction: GamssDialogAction,
+    secondaryAction: GamssDialogAction?,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(GamssTheme.spacing.spacing100),
+    ) {
+        if (secondaryAction != null) {
+            GamssDialogButton(
+                modifier = Modifier.weight(1f),
+                action = secondaryAction,
+            )
+        }
+        GamssDialogButton(
+            modifier = Modifier.weight(1f),
+            action = primaryAction,
+        )
+    }
+}
+
+@Composable
+private fun GamssDialogButton(
+    action: GamssDialogAction,
+    modifier: Modifier = Modifier,
+) {
+    GamssButton(
+        modifier = modifier,
+        label = action.label,
+        onClick = action.onClick,
+        variant = action.variant,
+        enabled = action.enabled,
+    )
+}
+
+@Preview(name = "Light", showBackground = true, widthDp = 360)
+@Suppress("UnusedPrivateMember")
+@Composable
+private fun GamssDialogLightPreview() {
+    GamssTheme(darkTheme = false) {
+        GamssDialogPreviewContent()
+    }
+}
+
+@Preview(
+    name = "Dark",
+    showBackground = true,
+    backgroundColor = 0xFF000000,
+    widthDp = 360,
+    uiMode = Configuration.UI_MODE_NIGHT_YES,
+)
+@Suppress("UnusedPrivateMember")
+@Composable
+private fun GamssDialogDarkPreview() {
+    GamssTheme(darkTheme = true) {
+        GamssDialogPreviewContent()
+    }
+}
+
+@Composable
+private fun GamssDialogPreviewContent() {
+    val primaryAction = GamssDialogAction(label = "Text", onClick = {})
+    val secondaryAction = GamssDialogAction(
+        label = "Text",
+        onClick = {},
+        variant = GamssButtonVariant.Secondary,
+    )
+
+    Column(
+        modifier = Modifier
+            .background(GamssTheme.colors.gray050)
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        GamssDialogContent(
+            title = "Title",
+            subtitle = "Subtitle",
+            primaryAction = primaryAction,
+            secondaryAction = secondaryAction,
+        )
+        GamssDialogContent(
+            title = "Title",
+            subtitle = "Subtitle",
+            primaryAction = primaryAction,
+        )
+        GamssDialogContent(
+            title = "Title",
+            primaryAction = primaryAction,
+            secondaryAction = secondaryAction,
+        )
+        GamssDialogContent(
+            title = "Title",
+            primaryAction = primaryAction,
         )
     }
 }

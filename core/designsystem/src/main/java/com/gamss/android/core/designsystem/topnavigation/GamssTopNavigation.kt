@@ -1,20 +1,17 @@
 package com.gamss.android.core.designsystem.topnavigation
 
 import android.content.res.Configuration
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBars
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -23,90 +20,197 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.gamss.android.core.designsystem.R
 import com.gamss.android.core.designsystem.theme.GamssTheme
 
+enum class GamssTopNavigationTitleAlignment {
+    Start,
+    Center,
+}
+
+sealed interface GamssTopNavigationContent {
+    data object Logo : GamssTopNavigationContent
+
+    data class Title(
+        val text: String,
+        val alignment: GamssTopNavigationTitleAlignment = GamssTopNavigationTitleAlignment.Start,
+    ) : GamssTopNavigationContent
+}
+
 /**
- * Figma 사양(node-id=559-210):
- * - 기본적으로 상단 Safety area(상태바)와 6dp 띄어서 배치됩니다.
- * - [backgroundColor]를 화면 배경색과 동일하게 맞춰 사용하는 경우, [ignoresSafeArea]를 true로 설정해
- *   배경이 상태바 뒤까지 이어지도록 해야 이음새 없이 자연스럽습니다.
+ * GAMSS 화면 상단에서 사용하는 내비게이션입니다.
  *
- * 주의: [ignoresSafeArea] = true로 배경을 상태바 뒤까지 확장하는 경우, 상태바 아이콘(시계/배터리 등)의
- * 명암 대비는 이 컴포넌트가 자동으로 맞춰주지 않습니다. 상태바 아이콘 색은 Activity/Window 전역 상태라
- * 재사용되는 leaf 컴포넌트가 SideEffect로 임의 변경하면 화면 간 충돌·미리보기 오작동 위험이 있어
- * 의도적으로 다루지 않았습니다. [backgroundColor]가 어두우면 해당 화면(Activity)에서 직접
- * `WindowInsetsControllerCompat(window, view).isAppearanceLightStatusBars`를 false로,
- * 밝으면 true로 화면 진입 시 한 번 설정해 주세요.
+ * 컴포넌트 위에는 디자인 가이드의 Safety area 간격 6dp가 포함됩니다. 실제 상태바 inset은
+ * 이 컴포넌트가 소비하지 않으므로, 화면의 [androidx.compose.material3.Scaffold] 또는 상위 레이아웃에서
+ * 처리해 주세요. 화면과 자연스럽게 이어지는 내비게이션은 [backgroundColor]에 화면 배경색이나
+ * [Color.Transparent]를 전달해 사용할 수 있습니다.
+ *
+ * [content]로 로고, 왼쪽 정렬 제목, 중앙 정렬 날짜/제목 형태를 선택할 수 있습니다.
  */
+@Suppress("LongParameterList")
 @Composable
 fun GamssTopNavigation(
-    title: String,
+    content: GamssTopNavigationContent,
     modifier: Modifier = Modifier,
-    backgroundColor: Color = if (isSystemInDarkTheme()) GamssTheme.colors.black else GamssTheme.colors.white,
+    backgroundColor: Color = if (isSystemInDarkTheme()) {
+        GamssTheme.colors.black
+    } else {
+        GamssTheme.colors.white
+    },
     showLeftIcon: Boolean = false,
     showRightIcon: Boolean = false,
+    leftIconContentDescription: String? = null,
+    rightIconContentDescription: String? = null,
     onLeftIconClick: () -> Unit = {},
     onRightIconClick: () -> Unit = {},
 ) {
-    Row(
+    Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(64.dp)
+            .padding(top = GamssTheme.spacing.spacing075)
             .background(backgroundColor)
-            .padding(horizontal = 18.dp, vertical = GamssTheme.spacing.spacing200),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
+            .height(TopNavigationHeight),
     ) {
         TopNavigationIconSlot(
+            modifier = Modifier
+                .padding(start = TopNavigationContentHorizontalPadding)
+                .align(Alignment.CenterStart),
             visible = showLeftIcon,
             iconRes = R.drawable.ic_left_chevron,
-            contentDescription = null,
+            contentDescription = leftIconContentDescription,
             onClick = onLeftIconClick,
         )
 
-        Text(
-            text = title,
-            style = GamssTheme.typography.subtitle2,
-            color = GamssTheme.colors.gray900,
+        TopNavigationContent(
+            modifier = when (content) {
+                GamssTopNavigationContent.Logo ->
+                    Modifier
+                        .padding(start = TopNavigationContentHorizontalPadding)
+                        .align(Alignment.CenterStart)
+
+                is GamssTopNavigationContent.Title ->
+                    when (content.alignment) {
+                        GamssTopNavigationTitleAlignment.Start ->
+                            Modifier
+                                .padding(
+                                    start = if (showLeftIcon) {
+                                        TopNavigationTitleStartWithIcon
+                                    } else {
+                                        TopNavigationContentHorizontalPadding
+                                    },
+                                    end = TopNavigationTitleEndPadding,
+                                )
+                                .align(Alignment.CenterStart)
+
+                        GamssTopNavigationTitleAlignment.Center ->
+                            Modifier.align(Alignment.Center)
+                    }
+            },
+            content = content,
         )
 
         TopNavigationIconSlot(
+            modifier = Modifier
+                .padding(end = TopNavigationContentHorizontalPadding)
+                .align(Alignment.CenterEnd),
             visible = showRightIcon,
             iconRes = R.drawable.ic_right_chevron,
-            contentDescription = null,
+            contentDescription = rightIconContentDescription,
             onClick = onRightIconClick,
         )
     }
 }
 
 /**
- * 아이콘이 보이지 않을 때도 24dp 슬롯 자체는 항상 차지하도록 유지합니다.
- * 그래야 좌우 슬롯 폭이 항상 동일해 [Arrangement.SpaceBetween] 안에서 title이 흔들리지 않고
- * 가운데 고정됩니다.
+ * 문자열 제목을 사용하는 화면을 위한 간단한 API입니다.
  */
+@Suppress("LongParameterList")
+@Composable
+fun GamssTopNavigation(
+    title: String,
+    modifier: Modifier = Modifier,
+    titleAlignment: GamssTopNavigationTitleAlignment = GamssTopNavigationTitleAlignment.Start,
+    backgroundColor: Color = if (isSystemInDarkTheme()) {
+        GamssTheme.colors.black
+    } else {
+        GamssTheme.colors.white
+    },
+    showLeftIcon: Boolean = false,
+    showRightIcon: Boolean = false,
+    leftIconContentDescription: String? = null,
+    rightIconContentDescription: String? = null,
+    onLeftIconClick: () -> Unit = {},
+    onRightIconClick: () -> Unit = {},
+) {
+    GamssTopNavigation(
+        content = GamssTopNavigationContent.Title(
+            text = title,
+            alignment = titleAlignment,
+        ),
+        modifier = modifier,
+        backgroundColor = backgroundColor,
+        showLeftIcon = showLeftIcon,
+        showRightIcon = showRightIcon,
+        leftIconContentDescription = leftIconContentDescription,
+        rightIconContentDescription = rightIconContentDescription,
+        onLeftIconClick = onLeftIconClick,
+        onRightIconClick = onRightIconClick,
+    )
+}
+
+@Composable
+private fun TopNavigationContent(
+    content: GamssTopNavigationContent,
+    modifier: Modifier = Modifier,
+) {
+    when (content) {
+        GamssTopNavigationContent.Logo -> Image(
+            modifier = modifier.size(width = LogoWidth, height = LogoHeight),
+            painter = painterResource(
+                if (isSystemInDarkTheme()) {
+                    R.drawable.ic_logo_dark
+                } else {
+                    R.drawable.ic_logo_light
+                },
+            ),
+            contentDescription = null,
+        )
+
+        is GamssTopNavigationContent.Title -> Text(
+            modifier = modifier,
+            text = content.text,
+            style = GamssTheme.typography.subtitle2,
+            color = GamssTheme.colors.gray900,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
 @Composable
 private fun TopNavigationIconSlot(
     visible: Boolean,
     iconRes: Int,
-    contentDescription: String? = null,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    contentDescription: String? = null,
 ) {
-    Box(
-        modifier = Modifier.size(24.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        if (visible) {
+    if (visible) {
+        Box(
+            modifier = modifier
+                .size(IconTouchTargetSize)
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = onClick,
+                ),
+            contentAlignment = Alignment.Center,
+        ) {
             Icon(
-                modifier = Modifier
-                    .size(24.dp)
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = onClick,
-                    ),
+                modifier = Modifier.size(IconSize),
                 painter = painterResource(iconRes),
                 contentDescription = contentDescription,
                 tint = GamssTheme.colors.gray900,
@@ -116,17 +220,54 @@ private fun TopNavigationIconSlot(
 }
 
 @Preview(name = "Light", showBackground = true)
+@Suppress("UnusedPrivateMember")
 @Composable
 private fun GamssTopNavigationLightPreview() {
-    GamssTheme {
-        GamssTopNavigation(title = "Title", showLeftIcon = true, showRightIcon = true)
+    GamssTheme(darkTheme = false) {
+        TopNavigationPreviewContent()
     }
 }
 
-@Preview(name = "Dark", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Preview(
+    name = "Dark",
+    showBackground = true,
+    backgroundColor = 0xFF000000,
+    uiMode = Configuration.UI_MODE_NIGHT_YES,
+)
+@Suppress("UnusedPrivateMember")
 @Composable
 private fun GamssTopNavigationDarkPreview() {
-    GamssTheme {
-        GamssTopNavigation(title = "Title")
+    GamssTheme(darkTheme = true) {
+        TopNavigationPreviewContent()
     }
 }
+
+@Composable
+private fun TopNavigationPreviewContent() {
+    Column {
+        GamssTopNavigation(
+            content = GamssTopNavigationContent.Logo,
+            showRightIcon = true,
+        )
+        GamssTopNavigation(
+            title = "YY.MM.DD",
+            titleAlignment = GamssTopNavigationTitleAlignment.Center,
+            showLeftIcon = true,
+            showRightIcon = true,
+        )
+        GamssTopNavigation(
+            title = "Title",
+            showLeftIcon = true,
+            showRightIcon = true,
+        )
+    }
+}
+
+private val TopNavigationHeight = 64.dp
+private val TopNavigationContentHorizontalPadding = 18.dp
+private val TopNavigationTitleStartWithIcon = 60.dp
+private val TopNavigationTitleEndPadding = 60.dp
+private val IconTouchTargetSize = 24.dp
+private val IconSize = 24.dp
+private val LogoWidth = 79.dp
+private val LogoHeight = 26.dp

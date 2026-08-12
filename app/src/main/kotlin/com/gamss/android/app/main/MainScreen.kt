@@ -5,7 +5,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.ui.NavDisplay
 import com.gamss.android.app.navigation.Navigator
@@ -71,7 +70,6 @@ fun MainScreen(isDebug: Boolean) {
                             onAccountInfoClick = { navigator.navigate(AccountInfoKey) },
                             onServiceTermsClick = { navigator.navigate(ServiceTermsKey) },
                             onPrivacyPolicyClick = { navigator.navigate(PrivacyPolicyKey) },
-                            context = LocalContext.current
                         )
                     }
                     entry<AccountInfoKey> {
