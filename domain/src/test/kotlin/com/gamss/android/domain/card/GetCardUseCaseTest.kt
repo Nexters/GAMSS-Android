@@ -31,6 +31,9 @@ class GetCardUseCaseTest {
             requestedCardId = cardId
             return AppResult.Success(card)
         }
+
+        override suspend fun clearCachedCards(): AppResult<Unit> =
+            AppResult.Failure(UnsupportedOperationException("not used"))
     }
 
     @Test

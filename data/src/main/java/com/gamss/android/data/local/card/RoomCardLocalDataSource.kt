@@ -15,4 +15,8 @@ internal class RoomCardLocalDataSource @Inject constructor(
     override suspend fun upsert(card: CardEntity) {
         cardDao.upsert(card)
     }
+
+    override suspend fun deleteAll() {
+        cardDao.deleteAll()
+    }
 }
