@@ -12,6 +12,10 @@ import org.junit.runner.RunWith
 /**
  * 온디바이스 원문 요약 검증. 실기기에서 kobart INT8(ONNX Runtime Mobile)로 한국어 일기를 요약하고
  * 각 결과를 "SUMMARY_EVAL" 태그로 로그에 남긴다. (Python 레퍼런스 출력과 품질 비교용)
+ *
+ * 모델은 이제 :models:summary-pack(on-demand 애셋팩)에서 내려받는다. 실제 Play 배포 없이
+ * 로컬에서 돌리려면 `bundletool build-apks --local-testing` 으로 만든 로컬 테스트 APK 를 설치해야
+ * 애셋팩이 채워진다(그냥 :data:connectedAndroidTest 만으로는 팩이 비어 있어 실패한다).
  */
 @RunWith(AndroidJUnit4::class)
 class SummaryOnDeviceEvalTest {
@@ -24,7 +28,7 @@ class SummaryOnDeviceEvalTest {
     )
 
     @Test
-    fun summarizeOnDevice() {
+    fun summarizeOnDevice() = runBlocking {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         OnnxKobartSummarizer.load(context).use { summarizer ->
             Log.i(TAG, "===SUMMARY_EVAL_START=== total=${diaries.size}")

@@ -9,7 +9,8 @@ import dagger.Module
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 
-/** kobart asset 은 debug 소스셋에만 있다. release 에서 요약을 요청하면 실패한다. */
+/** kobart 모델은 :models:summary-pack(on-demand 애셋팩)에서 내려받는다. 다운로드 전 요약을 요청하면
+ * [com.gamss.android.data.model.ModelPackUnavailableException] 로 실패한다. */
 @Module
 @InstallIn(SingletonComponent::class)
 internal abstract class SummaryModule {
