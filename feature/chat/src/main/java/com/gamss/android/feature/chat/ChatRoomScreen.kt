@@ -43,7 +43,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -58,6 +61,7 @@ import org.orbitmvi.orbit.compose.collectAsState
 import org.orbitmvi.orbit.compose.collectSideEffect
 
 /**
+ * @param initialMessage 홈에서 적어 온 첫 걱정. 새 대화로 들어올 때만 채워진다.
  * @param onCardClose 카드 시트를 닫을 때 호출한다. 이 화면을 실제로 벗어나야 한다.
  *  머무르면 카드 단계가 그대로라 시트가 다시 열린다.
  */
@@ -66,12 +70,20 @@ fun ChatRoomScreen(
     conversationId: Long?,
     onCardClose: () -> Unit,
     modifier: Modifier = Modifier,
+    initialMessage: String? = null,
     viewModel: ChatRoomViewModel = hiltViewModel(),
 ) {
     val state by viewModel.collectAsState()
     val context = LocalContext.current
 
-    LaunchedEffect(conversationId) { viewModel.start(conversationId) }
+    // ViewModel 의 중복 전송 가드는 프로세스가 죽으면 함께 사라진다. 반면 NavKey 는 복원되므로
+    // 소비 여부를 화면 저장 상태에 남겨야 같은 문구가 새 대화로 한 번 더 나가지 않는다.
+    var initialMessageConsumed by rememberSaveable { mutableStateOf(false) }
+
+    LaunchedEffect(conversationId) {
+        viewModel.start(conversationId, initialMessage.takeUnless { initialMessageConsumed })
+        initialMessageConsumed = true
+    }
 
     viewModel.collectSideEffect { sideEffect ->
         when (sideEffect) {

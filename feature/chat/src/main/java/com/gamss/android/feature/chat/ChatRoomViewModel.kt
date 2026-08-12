@@ -36,11 +36,20 @@ class ChatRoomViewModel @Inject constructor(
     @Volatile
     private var revealJob: Job? = null
 
-    fun start(conversationId: Long?) {
+    /**
+     * @param initialMessage 홈에서 적어 온 첫 걱정. 새 대화일 때만 그대로 이어서 보낸다.
+     *  [started] 가드가 있어 화면이 다시 그려져도 두 번 보내지 않는다.
+     */
+    fun start(conversationId: Long?, initialMessage: String? = null) {
         if (started) return
         started = true
         if (conversationId != null) {
             loadMessages(conversationId)
+            return
+        }
+        if (!initialMessage.isNullOrBlank()) {
+            onInputChange(initialMessage)
+            onSend()
         }
     }
 

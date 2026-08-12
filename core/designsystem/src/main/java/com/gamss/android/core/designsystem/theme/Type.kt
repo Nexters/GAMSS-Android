@@ -15,6 +15,11 @@ internal val pretendardFamily = FontFamily(
     Font(R.font.pretendard_regular, FontWeight.Normal),
 )
 
+// 디자인은 픽셀체(Moneygraphy Pixel)와 손글씨체(BM kkubulim)를 쓰지만 폰트 파일을 아직 받지 못했다.
+// 폰트가 들어오면 아래 두 값만 실제 FontFamily 로 교체하면 된다.
+internal val pixelFamily = pretendardFamily
+internal val handwritingFamily = pretendardFamily
+
 object GamssFontSize {
     val fontSize25 = 10.sp
     val fontSize50 = 12.sp
@@ -65,8 +70,9 @@ private fun gamssTextStyle(
     fontSize: TextUnit,
     lineHeight: TextUnit,
     letterSpacing: TextUnit,
+    fontFamily: FontFamily = pretendardFamily,
 ) = TextStyle(
-    fontFamily = pretendardFamily,
+    fontFamily = fontFamily,
     fontWeight = fontWeight,
     fontSize = fontSize,
     lineHeight = lineHeight,
@@ -253,5 +259,23 @@ object GamssTypography {
         fontSize = GamssFontSize.fontSize25,
         lineHeight = GamssLineHeight.lineHeight025,
         letterSpacing = GamssLetterSpacing.letterSpacing150,
+    )
+
+    /** 홈 인사말처럼 픽셀체로 찍는 문구. [title2] 와 크기는 같고 패밀리만 다르다. */
+    val pixelTitle2 = gamssTextStyle(
+        fontWeight = GamssFontWeight.fontWeight400,
+        fontSize = GamssFontSize.fontSize400,
+        lineHeight = GamssLineHeight.lineHeight200,
+        letterSpacing = GamssLetterSpacing.letterSpacing100,
+        fontFamily = pixelFamily,
+    )
+
+    /** 포스트잇에 손으로 적은 듯한 문구. */
+    val handwritingBody4 = gamssTextStyle(
+        fontWeight = GamssFontWeight.fontWeight200,
+        fontSize = GamssFontSize.fontSize75,
+        lineHeight = GamssLineHeight.lineHeight075,
+        letterSpacing = GamssLetterSpacing.letterSpacing150,
+        fontFamily = handwritingFamily,
     )
 }

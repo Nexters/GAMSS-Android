@@ -28,4 +28,7 @@ object GamssTheme {
 
     val radius: GamssRadius
         get() = GamssRadius
+
+    val sticker: GamssStickerColors
+        get() = GamssStickerColors
 }
