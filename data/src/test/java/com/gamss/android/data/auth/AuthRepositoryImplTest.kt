@@ -1,7 +1,6 @@
-package com.gamss.android.data.repository
+package com.gamss.android.data.auth
 
 import com.gamss.android.core.common.AppResult
-import com.gamss.android.data.auth.AuthRepositoryImpl
 import com.gamss.android.data.local.auth.AuthTokenLocalDataSource
 import com.gamss.android.data.local.auth.model.StoredAuthTokens
 import com.gamss.android.data.remote.auth.AuthService

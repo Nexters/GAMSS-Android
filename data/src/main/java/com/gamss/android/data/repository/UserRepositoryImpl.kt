@@ -3,6 +3,7 @@ package com.gamss.android.data.repository
 import com.gamss.android.core.common.AppResult
 import com.gamss.android.core.common.mapFailure
 import com.gamss.android.core.common.network.ApiException
+import com.gamss.android.data.remote.runCatchingApiCall
 import com.gamss.android.data.remote.user.UserService
 import com.gamss.android.data.remote.user.model.request.UpdateNicknameRequest
 import com.gamss.android.data.remote.user.model.response.toDomain

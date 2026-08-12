@@ -1,4 +1,4 @@
-package com.gamss.android.data.repository
+package com.gamss.android.data.remote
 
 import com.gamss.android.core.common.AppResult
 import com.gamss.android.core.common.network.ApiException

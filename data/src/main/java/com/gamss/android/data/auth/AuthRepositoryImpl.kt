@@ -9,7 +9,7 @@ import com.gamss.android.data.local.auth.model.StoredAuthTokens
 import com.gamss.android.data.remote.auth.AuthService
 import com.gamss.android.data.remote.auth.model.request.LoginRequest
 import com.gamss.android.data.remote.auth.model.request.RefreshTokenRequest
-import com.gamss.android.data.repository.runCatchingApiCall
+import com.gamss.android.data.remote.runCatchingApiCall
 import com.gamss.android.domain.auth.AuthRepository
 import com.gamss.android.domain.auth.LoginResult
 import com.gamss.android.domain.auth.SessionExpiredException
