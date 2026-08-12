@@ -6,6 +6,7 @@ import com.gamss.android.data.remote.conversation.model.request.SaveMessageReque
 import com.gamss.android.data.remote.conversation.model.response.ConversationMessage
 import com.gamss.android.data.remote.conversation.model.response.toDomain
 import com.gamss.android.data.remote.runCatchingApiCall
+import com.gamss.android.data.remote.throwIfFailed
 import com.gamss.android.domain.conversation.ConversationRepository
 import com.gamss.android.domain.conversation.Message
 import com.gamss.android.domain.conversation.SentMessage
@@ -41,12 +42,30 @@ internal class ConversationRepositoryImpl @Inject constructor(
     }
 
     override suspend fun endConversation(conversationId: Long): AppResult<Unit> {
-        val result = runCatchingApiCall { conversationService.endConversation(conversationId) }
+        val result = runCatchingApiCall {
+            conversationService.endConversation(conversationId).throwIfFailed()
+        }
         return when (result) {
             is AppResult.Success -> AppResult.Success(Unit)
             // 이미 종료된 방이면 목표는 달성된 상태다. 실패로 흘리면 카드 생성으로 넘어갈 수 없다.
             is AppResult.Failure ->
                 if (result.throwable.hasErrorCode(CONVERSATION_ALREADY_ENDED)) {
+                    AppResult.Success(Unit)
+                } else {
+                    result
+                }
+        }
+    }
+
+    override suspend fun deleteConversation(conversationId: Long): AppResult<Unit> {
+        val result = runCatchingApiCall {
+            conversationService.deleteConversation(conversationId).throwIfFailed()
+        }
+        return when (result) {
+            is AppResult.Success -> AppResult.Success(Unit)
+            // 이미 지워진 방이면 목표는 달성된 상태다. 실패로 흘리면 재시도가 영원히 같은 오류를 받는다.
+            is AppResult.Failure ->
+                if (result.throwable.hasErrorCode(CONVERSATION_ALREADY_DELETED)) {
                     AppResult.Success(Unit)
                 } else {
                     result

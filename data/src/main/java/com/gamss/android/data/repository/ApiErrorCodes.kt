@@ -10,4 +10,5 @@ internal fun Throwable.hasErrorCode(code: String): Boolean =
     this is ApiException && this.code == code
 
 internal const val CONVERSATION_ALREADY_ENDED = "CONVERSATION_ALREADY_ENDED"
+internal const val CONVERSATION_ALREADY_DELETED = "CONVERSATION_ALREADY_DELETED"
 internal const val CARD_ALREADY_EXISTS = "CARD_ALREADY_EXISTS"
