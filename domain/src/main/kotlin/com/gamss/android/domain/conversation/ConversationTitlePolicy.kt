@@ -72,10 +72,10 @@ private fun String.splitSentences(): List<Sentence> {
         add(Sentence(substring(start), false))
     }
         .mapNotNull { sentence ->
-        sentence.text.replace(WHITESPACE, " ").trim()
-            .takeIf(String::isNotEmpty)
-            ?.let { Sentence(it, sentence.isQuestion) }
-    }
+            sentence.text.replace(WHITESPACE, " ").trim()
+                .takeIf(String::isNotEmpty)
+                ?.let { Sentence(it, sentence.isQuestion) }
+        }
 }
 
 private fun Char.isQuestionMark(): Boolean = this == '?' || this == '？'

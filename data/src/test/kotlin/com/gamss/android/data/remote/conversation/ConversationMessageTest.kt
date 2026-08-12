@@ -3,7 +3,6 @@ package com.gamss.android.data.remote.conversation
 import com.gamss.android.data.remote.conversation.model.response.ConversationMessage
 import com.gamss.android.data.remote.conversation.model.response.toDomain
 import com.gamss.android.data.remote.conversation.model.response.userUtterances
-import com.gamss.android.domain.conversation.Message
 import com.gamss.android.domain.conversation.MessageSender
 import com.gamss.android.domain.emotion.EmotionCharacter
 import org.junit.Assert.assertEquals

@@ -12,6 +12,8 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
 
+/** 한 대화의 전송·복원·제목·종료·카드 생성 순서를 한곳에서 지키는 역할이라 의존이 그만큼 필요하다. */
+@Suppress("LongParameterList")
 class ConversationSession @Inject constructor(
     private val sendMessage: SendMessageUseCase,
     private val getMessages: GetMessagesUseCase,
