@@ -8,7 +8,7 @@ import androidx.navigation3.runtime.NavKey
 import com.gamss.android.app.R
 import com.gamss.android.core.designsystem.component.GamssBottomBarItem
 import com.gamss.android.core.designsystem.component.GamssIcons
-import com.gamss.android.feature.calendar.navigation.CalendarKey
+import com.gamss.android.feature.archive.navigation.ArchiveKey
 import com.gamss.android.feature.chat.navigation.ChatKey
 import com.gamss.android.feature.home.navigation.HomeKey
 
@@ -29,7 +29,7 @@ data class TopLevelDestination(
  */
 fun topLevelDestinations(): List<TopLevelDestination> = listOf(
     TopLevelDestination(
-        key = CalendarKey,
+        key = ArchiveKey,
         iconRes = GamssIcons.TabArchive,
         labelRes = R.string.tab_archive,
         requiresCardFeature = true,

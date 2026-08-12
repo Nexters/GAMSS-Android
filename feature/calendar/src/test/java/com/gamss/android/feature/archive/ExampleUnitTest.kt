@@ -1,4 +1,4 @@
-package com.gamss.android.feature.calendar
+package com.gamss.android.feature.archive
 
 import org.junit.Assert.assertEquals
 import org.junit.Test

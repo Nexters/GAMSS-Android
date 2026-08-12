@@ -26,8 +26,8 @@ import com.gamss.android.app.navigation.visibleIn
 import com.gamss.android.core.designsystem.component.GamssBottomBar
 import com.gamss.android.core.designsystem.component.GamssPaperBackground
 import com.gamss.android.core.designsystem.theme.GamssTheme
-import com.gamss.android.feature.calendar.CalendarScreen
-import com.gamss.android.feature.calendar.navigation.CalendarKey
+import com.gamss.android.feature.archive.ArchiveScreen
+import com.gamss.android.feature.archive.navigation.ArchiveKey
 import com.gamss.android.feature.chat.ChatRoomScreen
 import com.gamss.android.feature.chat.ChattingListScreen
 import com.gamss.android.feature.chat.navigation.ChatKey
@@ -99,7 +99,9 @@ private fun mainEntryProvider(navigator: Navigator) = entryProvider {
             onOpenConversation = { conversationId -> navigator.navigate(ChatRoomKey(conversationId)) },
         )
     }
-    entry<CalendarKey> { CalendarScreen() }
+    entry<ArchiveKey> {
+        ArchiveScreen(onNavigateToSetting = { navigator.navigate(SettingKey) })
+    }
     entry<SettingKey> {
         SettingScreen(
             onBackClick = navigator::goBack,

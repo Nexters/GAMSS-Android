@@ -1,4 +1,4 @@
-package com.gamss.android.feature.calendar
+package com.gamss.android.feature.archive
 
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -19,6 +19,6 @@ class ExampleInstrumentedTest {
     fun useAppContext() {
         // Context of the app under test.
         val appContext = InstrumentationRegistry.getInstrumentation().targetContext
-        assertEquals("com.gamss.android.feature.calendar.test", appContext.packageName)
+        assertEquals("com.gamss.android.feature.archive.test", appContext.packageName)
     }
 }

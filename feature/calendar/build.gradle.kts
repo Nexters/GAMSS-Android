@@ -3,14 +3,10 @@ plugins {
 }
 
 android {
-    namespace = "com.gamss.android.feature.calendar"
+    namespace = "com.gamss.android.feature.archive"
 }
 
 dependencies {
     implementation(projects.core.ui)
-
-    implementation(libs.calendar.compose) {
-        exclude(group = "androidx.compose.ui", module = "ui-tooling")
-    }
     implementation(libs.compose.material.icons.core)
 }
