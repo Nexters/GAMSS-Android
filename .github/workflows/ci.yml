@@ -30,7 +30,7 @@ jobs:
           - name: test
             task: test
           - name: build
-            task: assembleRelease
+            task: assembleRelease assembleInternal
           - name: build-debug
             task: assembleDebug
 
@@ -81,4 +81,15 @@ jobs:
             **/build/reports/**
             **/build/test-results/**
           if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Upload APKs
+        if: ${{ success() && matrix.name == 'build' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-apks
+          path: |
+            app/build/outputs/apk/release/*.apk
+            app/build/outputs/apk/internal/*.apk
+          if-no-files-found: error
           retention-days: 7

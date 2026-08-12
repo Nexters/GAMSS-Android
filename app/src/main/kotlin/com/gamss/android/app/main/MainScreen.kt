@@ -24,6 +24,8 @@ import com.gamss.android.feature.emotion.EmotionScreen
 import com.gamss.android.feature.emotion.navigation.EmotionKey
 import com.gamss.android.feature.home.HomeScreen
 import com.gamss.android.feature.home.navigation.HomeKey
+import com.gamss.android.feature.setting.SettingScreen
+import com.gamss.android.feature.setting.navigation.SettingKey
 
 @Composable
 fun MainScreen(isDebug: Boolean) {
@@ -49,9 +51,12 @@ fun MainScreen(isDebug: Boolean) {
             modifier = Modifier.padding(innerPadding),
             entries = navigationState.toEntries(
                 entryProvider = entryProvider {
-                    entry<HomeKey> { HomeScreen() }
+                    entry<HomeKey> {
+                        HomeScreen(onNavigateToSetting = { navigator.navigate(SettingKey) })
+                    }
                     entry<CalendarKey> { CalendarScreen() }
                     entry<EmotionKey> { EmotionScreen() }
+                    entry<SettingKey> { SettingScreen() }
                     if (isDebug) {
                         entry<ChatKey> {
                             ChattingListScreen(onChatClick = { navigator.navigate(ChatRoomKey(it)) })

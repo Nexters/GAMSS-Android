@@ -25,4 +25,11 @@ inline fun <T, R> AppResult<T>.map(transform: (T) -> R): AppResult<R> =
         is AppResult.Failure -> this
     }
 
+inline fun <T> AppResult<T>.mapFailure(
+    transform: (Throwable) -> Throwable,
+): AppResult<T> = when (this) {
+    is AppResult.Success -> this
+    is AppResult.Failure -> AppResult.Failure(transform(throwable))
+}
+
 fun <T> AppResult<T>.getOrNull(): T? = (this as? AppResult.Success)?.data

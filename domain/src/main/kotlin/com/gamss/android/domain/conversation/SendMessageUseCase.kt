@@ -4,8 +4,6 @@ import com.gamss.android.core.common.AppResult
 import com.gamss.android.domain.usecase.UseCase
 import javax.inject.Inject
 
-const val MAX_MESSAGE_LENGTH = 140
-
 class SendMessageUseCase @Inject constructor(
     private val conversationRepository: ConversationRepository,
 ) : UseCase<SendMessageUseCase.Params, AppResult<SentMessage>> {

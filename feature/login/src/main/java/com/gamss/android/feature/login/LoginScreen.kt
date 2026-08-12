@@ -14,12 +14,14 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.gamss.android.feature.login.auth.GoogleCredentialResult
 import com.gamss.android.feature.login.auth.rememberGoogleCredentialLauncher
 import org.orbitmvi.orbit.compose.collectAsState
 import org.orbitmvi.orbit.compose.collectSideEffect
@@ -32,6 +34,21 @@ fun LoginScreen(
     val state by viewModel.collectAsState()
     val context = LocalContext.current
     val googleCredentialLauncher = rememberGoogleCredentialLauncher(googleWebClientId)
+
+    LaunchedEffect(state.googleSignInRequestId) {
+        if (state.googleSignInRequestId == null) return@LaunchedEffect
+
+        when (val result = googleCredentialLauncher.launch()) {
+            is GoogleCredentialResult.Success ->
+                viewModel.onGoogleCredentialResolved(result.idToken)
+
+            GoogleCredentialResult.Cancelled ->
+                viewModel.onGoogleSignInCancelled()
+
+            GoogleCredentialResult.Failure ->
+                viewModel.onGoogleSignInFailed()
+        }
+    }
 
     viewModel.collectSideEffect { sideEffect ->
         when (sideEffect) {
@@ -61,13 +78,7 @@ fun LoginScreen(
                 Spacer(modifier = Modifier.height(32.dp))
                 Button(
                     modifier = Modifier.fillMaxWidth(),
-                    onClick = {
-                        googleCredentialLauncher.launch(
-                            onSuccess = viewModel::login,
-                            onCancel = viewModel::onGoogleSignInCancelled,
-                            onFailure = viewModel::onGoogleSignInFailed,
-                        )
-                    },
+                    onClick = viewModel::requestGoogleSignIn,
                 ) {
                     Text("Google로 로그인")
                 }

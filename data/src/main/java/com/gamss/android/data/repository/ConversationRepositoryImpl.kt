@@ -10,6 +10,7 @@ import com.gamss.android.data.remote.conversation.model.response.ConversationMes
 import com.gamss.android.data.remote.conversation.model.response.ConversationResponse
 import com.gamss.android.data.remote.conversation.model.response.toDomain
 import com.gamss.android.domain.conversation.Conversation
+import com.gamss.android.data.remote.runCatchingApiCall
 import com.gamss.android.domain.conversation.ConversationRepository
 import com.gamss.android.domain.conversation.Message
 import com.gamss.android.domain.conversation.SentMessage

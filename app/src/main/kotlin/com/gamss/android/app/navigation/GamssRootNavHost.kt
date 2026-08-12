@@ -16,7 +16,7 @@ import androidx.navigation3.ui.NavDisplay
 import com.gamss.android.app.R
 import com.gamss.android.app.main.MainScreen
 import com.gamss.android.app.main.MainViewModel
-import com.gamss.android.domain.model.SessionState
+import com.gamss.android.domain.auth.SessionState
 import com.gamss.android.feature.login.LoginScreen
 import com.gamss.android.feature.login.navigation.LoginKey
 import org.orbitmvi.orbit.compose.collectAsState
