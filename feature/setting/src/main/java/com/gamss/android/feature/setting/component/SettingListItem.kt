@@ -14,6 +14,7 @@ import androidx.compose.ui.unit.dp
 import com.gamss.android.core.designsystem.modifier.noRippleClickableIfNotNull
 import com.gamss.android.core.designsystem.theme.GamssTheme
 
+@Suppress("LongParameterList")
 @Composable
 fun SettingListItem(
     title: String,

@@ -44,7 +44,7 @@ fun ServiceTermsScreen(
                 CircularProgressIndicator()
             }
         } else {
-            // TODO: 서비스 이용약관 콘텐츠 연동
+            // 서비스 이용약관 콘텐츠 연동 전 임시 화면
             Text(
                 modifier = Modifier.padding(18.dp),
                 text = "준비 중이에요",

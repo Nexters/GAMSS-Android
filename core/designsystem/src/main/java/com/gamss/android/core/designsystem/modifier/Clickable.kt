@@ -11,8 +11,12 @@ import androidx.compose.ui.Modifier
  * 아예 붙이지 않는 것이 의미상 정확하므로 이 확장 함수를 사용합니다.
  */
 fun Modifier.noRippleClickableIfNotNull(onClick: (() -> Unit)?): Modifier =
-    if (onClick != null) clickable(
-        onClick = onClick,
-        indication = null,
-        interactionSource = null
-    ) else this
+    if (onClick != null) {
+        clickable(
+            onClick = onClick,
+            indication = null,
+            interactionSource = null,
+        )
+    } else {
+        this
+    }

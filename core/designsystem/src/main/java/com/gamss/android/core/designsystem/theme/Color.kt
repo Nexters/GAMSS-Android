@@ -55,6 +55,7 @@ internal val ChromaticDarkGreen = Color(0xFF3BDB98)
 internal val ChromaticDarkTeal = Color(0xFF44DFE5)
 internal val ChromaticDarkBlue = Color(0xFF5588FF)
 internal val ChromaticDarkPurple = Color(0xFFCC6DFC)
+
 @Immutable
 data class GamssColors(
     val white: Color,

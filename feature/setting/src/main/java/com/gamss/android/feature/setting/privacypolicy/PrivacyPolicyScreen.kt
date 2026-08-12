@@ -44,7 +44,7 @@ fun PrivacyPolicyScreen(
                 CircularProgressIndicator()
             }
         } else {
-            // TODO: 개인정보 처리방침 콘텐츠 연동
+            // 개인정보 처리방침 콘텐츠 연동 전 임시 화면
             Text(
                 modifier = Modifier.padding(18.dp),
                 text = "준비 중이에요",

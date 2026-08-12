@@ -46,6 +46,7 @@ fun GamssTextField(
 
 @Preview(name = "GamssTextField", showBackground = true)
 @Composable
+@Suppress("UnusedPrivateMember")
 private fun GamssTextFieldPreview() {
     GamssTheme {
         GamssTextField(
