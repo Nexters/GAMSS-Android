@@ -28,10 +28,10 @@ android {
         }
     }
 
-    androidResources {
-        noCompress += "tflite"
-        noCompress += "onnx"
-    }
+    // 온디바이스 모델(.tflite/.onnx)은 더 이상 base 앱에 번들되지 않는다.
+    // Play Asset Delivery(on-demand) 애셋팩으로 분리되어 필요 시점에만 기기로 내려받힌다.
+    // 애셋팩은 다운로드 후 로컬 파일로 추출되므로(APK zip 엔트리가 아님) noCompress 설정이 필요 없다.
+    assetPacks += setOf(":models:emotion-pack", ":models:summary-pack")
 
     packaging {
         resources {
