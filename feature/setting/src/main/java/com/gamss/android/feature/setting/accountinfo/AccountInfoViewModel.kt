@@ -2,7 +2,7 @@ package com.gamss.android.feature.setting.accountinfo
 
 import androidx.lifecycle.ViewModel
 import com.gamss.android.core.common.AppResult
-import com.gamss.android.domain.usecase.LogoutUseCase
+import com.gamss.android.domain.auth.LogoutUseCase
 import com.gamss.android.domain.user.DeleteUserAccountUseCase
 import com.gamss.android.domain.user.GetUserInfoUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
