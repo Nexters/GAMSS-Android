@@ -24,6 +24,11 @@ include(":app")
 include(":domain")
 include(":data")
 
+// Play Asset Delivery(on-demand) 로 배포되는 대용량 온디바이스 모델 전용 애셋팩.
+// 코드 없이 assets 만 담으며, app 모듈의 assetPacks 에 등록되어 필요 시점에 개별 다운로드된다.
+include(":models:emotion-pack")
+include(":models:summary-pack")
+
 include(":core:common")
 include(":core:ui")
 include(":feature:home")

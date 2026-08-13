@@ -3,6 +3,7 @@ package com.gamss.android.data.emotion
 import android.util.Log
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import kotlinx.coroutines.runBlocking
 import org.json.JSONObject
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -11,12 +12,16 @@ import org.junit.runner.RunWith
  * 온디바이스 감정 분류 정량 평가.
  * androidTest assets 의 라벨된 문장 세트를 실기기에서 KoELECTRA INT8(LiteRT)로 분류하고,
  * 각 예측을 "EMO_EVAL" 태그로 로그에 남긴다. (원본 HF 모델 결과와 오프라인 비교용)
+ *
+ * 모델은 이제 :models:emotion-pack(on-demand 애셋팩)에서 내려받는다. 실제 Play 배포 없이
+ * 로컬에서 돌리려면 `bundletool build-apks --local-testing` 으로 만든 로컬 테스트 APK 를 설치해야
+ * 애셋팩이 채워진다(그냥 :data:connectedAndroidTest 만으로는 팩이 비어 있어 실패한다).
  */
 @RunWith(AndroidJUnit4::class)
 class EmotionOnDeviceEvalTest {
 
     @Test
-    fun evaluateTestSetOnDevice() {
+    fun evaluateTestSetOnDevice() = runBlocking {
         val instr = InstrumentationRegistry.getInstrumentation()
         // 테스트 세트: 테스트 APK(자기 자신) assets 에서 로드
         val json = instr.context.assets.open("emotion_testset.json")
@@ -24,7 +29,7 @@ class EmotionOnDeviceEvalTest {
         val root = JSONObject(json)
         val samples = root.getJSONArray("samples")
 
-        // 모델: 병합된 main assets 의 emotion_int8.tflite 로드.
+        // 모델: :models:emotion-pack 애셋팩에서 emotion_int8.tflite 를 내려받아 로드.
         // 네이티브 Interpreter/토크나이저 핸들을 쥐므로, 예외가 나도 닫히게 use 로 감싼다.
         LiteRtClassifier.load(instr.targetContext, EmotionModelSpec.SPEC).use { classifier ->
             var correct = 0
