@@ -7,9 +7,15 @@ package com.gamss.android.feature.webview
  */
 object GamssWebUrl {
 
-    const val SERVICE_TERMS =
+    /**
+     * 서비스 이용약관과 개인정보 처리방침이 함께 실린 Notion 문서.
+     *
+     * 두 항목이 별도 문서로 분리되면 아래 두 상수를 각각 다른 주소로 바꾼다.
+     */
+    private const val TERMS_AND_PRIVACY =
         "https://shadow-bridge-c40.notion.site/GAMSS-3bb88bba374f80549b3ef9fdfacb7584"
 
-    // 전용 페이지가 아직 없어 워크스페이스 루트를 가리킨다. 페이지가 나오면 이 주소만 바꾼다.
-    const val PRIVACY_POLICY = "https://shadow-bridge-c40.notion.site/"
+    const val SERVICE_TERMS = TERMS_AND_PRIVACY
+
+    const val PRIVACY_POLICY = TERMS_AND_PRIVACY
 }
