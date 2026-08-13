@@ -1,6 +1,7 @@
 package com.gamss.android.data.summary
 
 import android.content.Context
+import com.gamss.android.data.model.OnDemandModelAssets
 import com.gamss.android.domain.summary.DiarySummarizer
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -27,5 +28,13 @@ class AndroidDiarySummarizer @Inject constructor(
             val ready = summarizer ?: OnnxKobartSummarizer.load(context).also { summarizer = it }
             ready.summarize(text)
         }
+    }
+
+    /**
+     * [summarizer] 캐시/mutex 와 무관하게 애셋팩 다운로드만 미리 걸어둔다. summarize() 와 같은
+     * mutex 를 타면 아직 안 끝난 prefetch 가 실제 요약 요청을 불필요하게 막게 된다.
+     */
+    override suspend fun prefetch() {
+        OnDemandModelAssets(context).prefetch(KobartSummarySpec.PACK_NAME)
     }
 }

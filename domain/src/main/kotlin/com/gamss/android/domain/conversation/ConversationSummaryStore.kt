@@ -60,6 +60,9 @@ class ConversationSummaryStore @Inject constructor(
 
     suspend fun reset() = stateMutex.withLock { clearLocked() }
 
+    /** 모델 다운로드를 미리 걸어둔다. 실패해도 무시 — 실제 요약 시점에 정식 경로로 다시 시도된다. */
+    suspend fun prefetch() = summarizer.prefetch()
+
     suspend fun compact() = compactionMutex.withLock {
         var hasCandidate = true
         while (hasCandidate) {

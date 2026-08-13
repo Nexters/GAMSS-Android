@@ -57,6 +57,9 @@ class ConversationEmotionAccumulator @Inject constructor(
         aggregateEmotion(summed, utteranceCount)
     }
 
+    /** 모델 다운로드를 미리 걸어둔다. 실패해도 무시 — 실제 분류 시점에 정식 경로로 다시 시도된다. */
+    suspend fun prefetch() = classifier.prefetch()
+
     private suspend fun nextPending(): String? = stateMutex.withLock { pending.firstOrNull() }
 
     /** @return 다음 발화로 넘어가도 되면 true. 이 자리를 남기고 멈춰야 하면 false. */

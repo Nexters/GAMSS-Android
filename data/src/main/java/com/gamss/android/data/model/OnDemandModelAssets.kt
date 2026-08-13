@@ -10,6 +10,8 @@ import com.google.android.play.core.assetpacks.model.AssetPackStatus
 import com.google.android.play.core.ktx.requestFetch
 import com.google.android.play.core.ktx.requestPackStates
 import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.filter
@@ -26,9 +28,10 @@ internal class ModelPackUnavailableException(message: String) : Exception(messag
  * 필요 시점에 내려받고 [AssetLocation](로컬 파일 경로 + 오프셋/길이)을 돌려주는 공용 헬퍼.
  * emotion(:models:emotion-pack), summary(:models:summary-pack) 두 모델 로더가 이 경로를 공유한다.
  *
- * WAITING_FOR_WIFI 상태의 셀룰러 확인 다이얼로그(showCellularDataConfirmation)는
- * Activity 가 있어야 띄울 수 있어 데이터 계층인 이 클래스에서는 처리하지 않는다. 지금은 예외로
- * 실패 처리하고, 다운로드 진행률/Wi-Fi 확인을 사용자에게 보여주는 UI 흐름은 후속 작업으로 분리한다.
+ * WAITING_FOR_WIFI 상태의 셀룰러 확인 다이얼로그(requestCellularDataConfirmation)는 Activity 가
+ * 있어야 띄울 수 있는데, data 모듈은 feature 모듈에서 볼 수 없어(둘 다 아는 Android 공용 모듈이
+ * 없음) 지금은 예외로 실패 처리한다. 다운로드 진행률/Wi-Fi 확인을 사용자에게 보여주는 UI 흐름은
+ * 후속 작업으로 분리한다.
  */
 internal class OnDemandModelAssets(context: Context) {
 
@@ -43,17 +46,34 @@ internal class OnDemandModelAssets(context: Context) {
             )
     }
 
+    /**
+     * [packName] 다운로드를 미리 걸어둔다. 결과를 기다리는 호출자가 없어도 안전하다 — 실패해도
+     * 예외를 던지지 않고 무시되며, 실제로 필요한 시점([resolve])에 다시 확인·재시도된다. 이미
+     * 진행 중이거나 완료된 팩에 걸어도 중복 다운로드가 생기지 않는다(Play Core 가 팩 이름 기준으로
+     * 중복 fetch 요청을 하나로 묶는다).
+     *
+     * 취소는 삼키지 않는다 — 그냥 runCatching 만 쓰면 [kotlinx.coroutines.CancellationException] 도
+     * 잡혀서 취소가 조용히 성공한 것처럼 보인다.
+     */
+    suspend fun prefetch(packName: String) {
+        runCatching { ensureInstalled(packName) }
+        currentCoroutineContext().ensureActive()
+    }
+
     private suspend fun ensureInstalled(packName: String) {
         val current = manager.requestPackStates(listOf(packName)).packStates()[packName]
         if (current?.status() == AssetPackStatus.COMPLETED) return
 
-        manager.requestFetch(listOf(packName))
         awaitCompletion(packName)
     }
 
+    /**
+     * 리스너를 등록한 뒤에야 fetch 를 요청한다(순서가 중요하다). 먼저 fetch 를 요청하고 나중에
+     * 리스너를 등록하면, 그 사이에 팩이 종료 상태(COMPLETED/FAILED 등)로 전이될 경우 그 갱신을
+     * 놓쳐 아래 first{} 가 끝나지 않는(영구 suspend) 레이스가 생긴다.
+     */
     private suspend fun awaitCompletion(packName: String) {
-        val final = packStateUpdates()
-            .filter { it.name() == packName }
+        val final = packStateUpdates(packName)
             .first { state -> state.status() in TERMINAL_STATUSES }
         if (final.status() != AssetPackStatus.COMPLETED) {
             throw failureFor(packName, final)
@@ -67,14 +87,19 @@ internal class OnDemandModelAssets(context: Context) {
             AssetPackStatus.CANCELED -> "다운로드가 취소됐습니다."
             else -> "알 수 없는 상태(${state.status()})"
         }
+        // 이 실패는 호출부(감정 분류·요약)에서 대화를 막지 않으려고 조용히 삼켜진다. 그래서 얼마나
+        // 자주 겪는지(특히 셀룰러 상태에서의 WAITING_FOR_WIFI) 알 방법이 없는데, 원격 로깅 시스템이
+        // 붙으면 여기서 packName/state.status()/state.errorCode() 를 남기도록 연결할 예정이다.
         return ModelPackUnavailableException("애셋팩 '$packName' $reason")
     }
 
-    private fun packStateUpdates(): Flow<AssetPackState> = callbackFlow {
+    private fun packStateUpdates(packName: String): Flow<AssetPackState> = callbackFlow {
         val listener = AssetPackStateUpdateListener { state -> trySend(state) }
         manager.registerListener(listener)
+        // 리스너가 등록된 뒤에 요청해야 fetch 직후의 상태 전이를 놓치지 않는다.
+        manager.requestFetch(listOf(packName))
         awaitClose { manager.unregisterListener(listener) }
-    }
+    }.filter { it.name() == packName }
 
     private companion object {
         val TERMINAL_STATUSES = setOf(

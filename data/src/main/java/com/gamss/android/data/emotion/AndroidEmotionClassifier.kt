@@ -1,6 +1,7 @@
 package com.gamss.android.data.emotion
 
 import android.content.Context
+import com.gamss.android.data.model.OnDemandModelAssets
 import com.gamss.android.domain.emotion.ClassificationResult
 import com.gamss.android.domain.emotion.EmotionClassifier
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -28,5 +29,13 @@ class AndroidEmotionClassifier @Inject constructor(
             val ready = classifier ?: LiteRtClassifier.load(context, EmotionModelSpec.SPEC).also { classifier = it }
             ready.classify(text)
         }
+    }
+
+    /**
+     * [classifier] 캐시/mutex 와 무관하게 애셋팩 다운로드만 미리 걸어둔다. classify() 와 같은
+     * mutex 를 타면 아직 안 끝난 prefetch 가 실제 분류 요청을 불필요하게 막게 된다.
+     */
+    override suspend fun prefetch() {
+        OnDemandModelAssets(context).prefetch(EmotionModelSpec.PACK_NAME)
     }
 }
