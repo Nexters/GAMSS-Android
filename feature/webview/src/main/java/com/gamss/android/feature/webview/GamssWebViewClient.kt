@@ -13,9 +13,6 @@ import android.webkit.WebViewClient
 
 private const val TAG = "GamssWebView"
 
-/**
- * 로딩 상태를 밖으로 알리고, 허용 호스트 밖의 주소는 외부 앱으로 넘기는 웹뷰 클라이언트.
- */
 internal class GamssWebViewClient(
     private val onLoadingChange: (Boolean) -> Unit,
     private val onError: () -> Unit,
@@ -42,8 +39,7 @@ internal class GamssWebViewClient(
 
     override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
         val url = request.url.toString()
-        // 하위 프레임까지 가로채면 문서에 박힌 임베드가 통째로 외부 앱으로 튄다.
-        // 호스트 허용 정책은 최상위 이동에만 적용한다.
+        // 호스트 허용 정책은 최상위 이동에만 적용한다. 하위 프레임까지 가로채면 임베드가 외부 앱으로 튄다.
         val handledByWebView = !request.isForMainFrame || WebViewUrlPolicy.isInAppUrl(url)
 
         if (!handledByWebView && WebViewUrlPolicy.isExternallyOpenable(url)) {
@@ -54,7 +50,7 @@ internal class GamssWebViewClient(
     }
 }
 
-// 받을 앱이 없는 스킴은 무시한다. 웹뷰가 대신 열게 두면 허용 호스트 정책이 무의미해진다.
+// 웹뷰가 대신 열게 두면 허용 호스트 정책이 무의미해지므로, 받을 앱이 없으면 그냥 무시한다.
 @Suppress("SwallowedException")
 private fun Context.openExternally(uri: Uri) {
     val intent = Intent(Intent.ACTION_VIEW, uri).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)

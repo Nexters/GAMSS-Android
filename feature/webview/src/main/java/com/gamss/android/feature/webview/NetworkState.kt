@@ -12,8 +12,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 
 /**
- * 현재 인터넷 연결 여부를 구독한다.
- *
  * 캐시 모드를 정하는 데만 쓰이므로 검증된 연결까지 따지지 않고 인터넷 가능 여부만 본다.
  */
 @Composable
@@ -35,7 +33,7 @@ internal fun rememberIsOnline(): Boolean {
             }
 
             override fun onLost(network: Network) {
-                // 다른 망으로 전환 중일 수 있으므로 끊겼다고 단정하지 않고 다시 조회한다.
+                // 다른 망으로 전환 중일 수 있어 끊겼다고 단정하지 않는다.
                 isOnline = connectivityManager.hasInternet()
             }
         }

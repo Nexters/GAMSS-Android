@@ -12,14 +12,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
 
-/**
- * 앱 공통 웹뷰.
- *
- * 화면 전체를 차지하는 웹 페이지뿐 아니라 화면 일부에 끼워 넣는 용도로도 쓸 수 있다.
- *
- * 캐시는 세 겹으로 동작한다. 온라인에서는 서버 캐시 헤더를 따르고, 오프라인에서는 디스크 캐시를
- * 먼저 쓰며, 백스택에서 돌아왔을 때는 저장해 둔 히스토리와 스크롤 위치를 복원해 재로딩을 건너뛴다.
- */
 @Composable
 fun GamssWebView(
     url: String,
@@ -28,9 +20,9 @@ fun GamssWebView(
 ) {
     val cacheMode = WebViewCachePolicy.cacheModeFor(rememberIsOnline()).toWebSettingsValue()
 
-    // 주소가 바뀌면 히스토리와 저장 상태가 이어지면 안 되므로 웹뷰를 새로 만든다.
+    // 주소가 바뀌면 히스토리와 저장 상태가 이어지면 안 된다.
     key(url) {
-        // 저장 시점에 살아 있는 WebView에서 상태를 뽑아야 구성 변경과 프로세스 종료를 모두 넘긴다.
+        // 저장 시점에 살아 있는 WebView에서 뽑아야 구성 변경과 프로세스 종료를 모두 넘긴다.
         val savedState = rememberSaveable(
             saver = Saver<Bundle, Bundle>(
                 save = { state.saveInto(it) },
@@ -67,8 +59,7 @@ fun GamssWebView(
                 state.saveInto(savedState)
                 state.detach()
                 webView.stopLoading()
-                // destroy 는 뷰 트리에서 떼어낸 뒤 호출해야 한다.
-                // AndroidView 는 이 블록을 먼저 부르고 나중에 떼므로 여기서 직접 뗀다.
+                // destroy 는 뷰 트리에서 뗀 뒤 호출해야 한다. AndroidView 는 이 블록을 먼저 부른다.
                 (webView.parent as? ViewGroup)?.removeView(webView)
                 webView.destroy()
             },
@@ -82,12 +73,10 @@ private fun WebView.configureForGamss(cacheMode: Int) {
         javaScriptEnabled = true
         domStorageEnabled = true
         this.cacheMode = cacheMode
-        // 원격 문서에 로컬 파일과 content provider를 열어줄 이유가 없다.
+        // 원격 문서에 로컬 리소스를 열어주지 않고, 새 창으로 허용 호스트 검사를 우회하지 못하게 막는다.
         allowFileAccess = false
         allowContentAccess = false
-        // https 문서가 http 리소스를 섞어 받지 않게 막는다.
         mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
-        // 새 창은 허용 호스트 검사를 우회하는 경로가 되므로 열지 않는다.
         setSupportMultipleWindows(false)
         javaScriptCanOpenWindowsAutomatically = false
     }

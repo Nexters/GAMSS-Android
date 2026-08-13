@@ -80,10 +80,5 @@ private fun SettingDivider() {
 private fun Context.appVersion(): String =
     packageManager.getPackageInfo(packageName, 0).versionName.orEmpty()
 
-/**
- * 서비스 이용약관 항목 노출 여부.
- *
- * 현재는 약관과 개인정보 처리방침이 한 문서에 함께 실려 있어 목록에 두 번 나올 이유가 없다.
- * 문서가 분리되면 이 값을 `true` 로 되돌리면 된다. 화면 진입 경로와 웹뷰 연결은 그대로 살아 있다.
- */
+// 약관과 처리방침이 한 문서에 함께 실려 있다. 문서가 분리되면 true 로 되돌린다.
 private const val SHOW_SERVICE_TERMS = false

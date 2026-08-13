@@ -20,8 +20,6 @@ import com.gamss.android.core.designsystem.theme.GamssTheme
 import com.gamss.android.core.designsystem.topnavigation.GamssTopNavigation
 
 /**
- * [GamssWebPage] 하나를 전체 화면으로 여는 공통 웹뷰 화면.
- *
  * 도메인 호출이 없어 상태가 전부 View 계층에 머무르므로 ViewModel을 두지 않는다.
  */
 @Composable

@@ -3,8 +3,6 @@ package com.gamss.android.feature.webview
 import java.net.URI
 
 /**
- * 웹뷰가 직접 열 주소, 외부 앱으로 넘길 주소, 어느 쪽도 아닌 주소를 가르는 규칙.
- *
  * 허용 목록에 없는 호스트를 앱 안에서 열면 피싱과 탈취 경로가 된다.
  * 안드로이드 API에 의존하지 않게 두어 단위 테스트로 검증한다.
  */
@@ -12,11 +10,7 @@ object WebViewUrlPolicy {
 
     private val IN_APP_SCHEMES = setOf("http", "https")
 
-    /**
-     * 외부 앱에 넘겨도 되는 스킴.
-     *
-     * 원격 문서가 임의의 앱 딥링크(`market:`, `sms:`, 사설 스킴)를 띄우지 못하게 좁혀 둔다.
-     */
+    // 원격 문서가 임의의 앱 딥링크(market:, sms:, 사설 스킴)를 띄우지 못하게 좁혀 둔다.
     private val EXTERNAL_SCHEMES = setOf("http", "https", "mailto", "tel")
 
     fun isInAppUrl(url: String, allowedHosts: Set<String> = GamssWebPage.ALLOWED_HOSTS): Boolean {
