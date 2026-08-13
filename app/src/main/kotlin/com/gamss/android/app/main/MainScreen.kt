@@ -1,11 +1,19 @@
 package com.gamss.android.app.main
 
+import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.ui.NavDisplay
 import com.gamss.android.app.navigation.Navigator
@@ -39,7 +47,10 @@ import com.gamss.android.feature.webview.WebViewScreen
 import com.gamss.android.feature.webview.navigation.WebViewKey
 
 @Composable
-fun MainScreen(useCardFeature: Boolean) {
+fun MainScreen(
+    useCardFeature: Boolean,
+    modelDownloadPromptViewModel: ModelDownloadPromptViewModel = hiltViewModel(),
+) {
     val destinations = remember { topLevelDestinations() }
     val visibleDestinations = remember(destinations, useCardFeature) { destinations.visibleIn(useCardFeature) }
     val navigationState = rememberNavigationState(
@@ -48,6 +59,9 @@ fun MainScreen(useCardFeature: Boolean) {
     )
     val navigator = remember(navigationState) { Navigator(navigationState) }
     val entries = remember(navigator) { mainEntryProvider(navigator) }
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    ModelDownloadConfirmationEffect(modelDownloadPromptViewModel, snackbarHostState)
 
     // 배경/탭바 에셋이 라이트 전용이라 다크 시안이 나올 때까지 셸은 라이트로 고정한다.
     GamssTheme(darkTheme = false) {
@@ -55,6 +69,7 @@ fun MainScreen(useCardFeature: Boolean) {
         GamssPaperBackground {
             Scaffold(
                 containerColor = Color.Transparent,
+                snackbarHost = { SnackbarHost(snackbarHostState) },
                 bottomBar = {
                     if (navigationState.currentKey == navigationState.currentTopLevelKey) {
                         GamssBottomBar(
@@ -115,7 +130,10 @@ private fun mainEntryProvider(navigator: Navigator) = entryProvider {
         WebViewScreen(page = key.page, onBackClick = navigator::goBack)
     }
     entry<ChatKey> {
-        ChattingListScreen(onChatClick = { navigator.navigate(ChatRoomKey(conversationId = it)) })
+        ChattingListScreen(
+            onChatClick = { navigator.navigate(ChatRoomKey(conversationId = it)) },
+            onMenuClick = { navigator.navigate(SettingKey) },
+        )
     }
     entry<ChatRoomKey> { key ->
         ChatRoomScreen(
@@ -126,3 +144,33 @@ private fun mainEntryProvider(navigator: Navigator) = entryProvider {
         )
     }
 }
+
+/**
+ * emotion/summary 온디바이스 모델 중 하나라도 셀룰러/크기 확인이 필요해지면 스낵바를 띄운다.
+ * 상태 기반이라 한 세션에서 여러 번(예: emotion 이 먼저, summary 가 나중에) 뜰 수 있다 —
+ * [needsUserConfirmation] 가 다시 true 가 될 때마다 재노출된다.
+ */
+@Composable
+private fun ModelDownloadConfirmationEffect(
+    viewModel: ModelDownloadPromptViewModel,
+    snackbarHostState: SnackbarHostState,
+) {
+    val activity = LocalActivity.current
+    val needsConfirmation by viewModel.needsUserConfirmation.collectAsState()
+
+    LaunchedEffect(needsConfirmation, activity) {
+        if (!needsConfirmation || activity == null) return@LaunchedEffect
+
+        val result = snackbarHostState.showSnackbar(
+            message = MODEL_DOWNLOAD_MESSAGE,
+            actionLabel = MODEL_DOWNLOAD_ACTION,
+            withDismissAction = true,
+        )
+        if (result == SnackbarResult.ActionPerformed) {
+            viewModel.onConfirmDownload(activity)
+        }
+    }
+}
+
+private const val MODEL_DOWNLOAD_MESSAGE = "추가 다운로드가 필요해요"
+private const val MODEL_DOWNLOAD_ACTION = "모바일 데이터로 받기"

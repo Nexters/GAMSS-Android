@@ -1,6 +1,6 @@
 package com.gamss.android.domain.conversation
 
-const val MAX_CONVERSATION_TITLE_LENGTH = 20
+const val MAX_CONVERSATION_TITLE_LENGTH = 25
 
 private const val MIN_TITLE_LENGTH = 6
 

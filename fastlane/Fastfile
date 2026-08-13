@@ -14,16 +14,21 @@ platform :android do
     firebase_app_id = ENV["FIREBASE_APP_ID"]
     UI.user_error!("FIREBASE_APP_ID environment variable is not set") unless firebase_app_id
 
+    # Firebase App Distribution 은 Play Store 설치 경로가 아니라서 Play Asset Delivery(on-demand/
+    # fast-follow)로 배포되는 온디바이스 모델(emotion/summary pack)을 못 받아온다. 그래서 이 배포용
+    # 빌드만 installTimeModels 로 두 팩을 install-time 전환해 AAB 안에 그대로 박는다(~400MB) —
+    # 테스터가 설치하자마자 모든 기능을 바로 쓸 수 있다. Play Console 배포용(작은 크기, on-demand/
+    # fast-follow 유지)은 이 플래그 없이 cd.yml 의 "Build release AAB" 스텝이 따로 만든다.
     gradle(
-      task: "clean :app:assembleRelease",
-      properties: { "versionCode" => version_code }
+      task: "clean :app:bundleRelease",
+      properties: { "versionCode" => version_code, "installTimeModels" => true }
     )
 
     firebase_app_distribution(
       app: firebase_app_id,
       service_credentials_file: ENV["FIREBASE_SERVICE_CREDENTIALS_FILE"],
-      android_artifact_type: "APK",
-      android_artifact_path: File.expand_path("../app/build/outputs/apk/release/app-release.apk", __dir__),
+      android_artifact_type: "AAB",
+      android_artifact_path: File.expand_path("../app/build/outputs/bundle/release/app-release.aab", __dir__),
       groups: ENV["FIREBASE_TESTER_GROUPS"],
       release_notes: changelog_from_git_commits(
         commits_count: 1,

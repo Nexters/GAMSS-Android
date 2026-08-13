@@ -1,9 +1,12 @@
 package com.gamss.android.data.summary
 
 import android.content.Context
+import com.gamss.android.data.model.OnDemandModelAssets
+import com.gamss.android.domain.model.ModelDownloadStatus
 import com.gamss.android.domain.summary.DiarySummarizer
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -28,4 +31,16 @@ class AndroidDiarySummarizer @Inject constructor(
             ready.summarize(text)
         }
     }
+
+    /**
+     * [summarizer] 캐시/mutex 와 무관하게 애셋팩 다운로드만 미리 걸어둔다. summarize() 와 같은
+     * mutex 를 타면 아직 안 끝난 prefetch 가 실제 요약 요청을 불필요하게 막게 된다.
+     */
+    override suspend fun prefetch() {
+        OnDemandModelAssets(context).prefetch(KobartSummarySpec.PACK_NAME)
+    }
+
+    /** UI(app 루트)가 셀룰러/크기 확인 배너를 띄울지 판단하는 데 쓴다. */
+    override val downloadStatus: Flow<ModelDownloadStatus>
+        get() = OnDemandModelAssets(context).statusFlow(KobartSummarySpec.PACK_NAME)
 }

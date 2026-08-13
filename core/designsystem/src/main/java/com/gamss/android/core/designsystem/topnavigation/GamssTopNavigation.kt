@@ -1,10 +1,9 @@
 package com.gamss.android.core.designsystem.topnavigation
 
 import android.content.res.Configuration
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,7 +14,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -24,6 +22,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.gamss.android.core.designsystem.R
+import com.gamss.android.core.designsystem.modifier.noRippleClickableIfNotNull
 import com.gamss.android.core.designsystem.theme.GamssTheme
 
 enum class GamssTopNavigationTitleAlignment {
@@ -31,7 +30,22 @@ enum class GamssTopNavigationTitleAlignment {
     Center,
 }
 
+/**
+ * 내비게이션 아이콘 슬롯에 그릴 글리프입니다. 드로어블 리소스를 외부로 노출하지 않기 위해 열거형으로 둡니다.
+ */
+enum class GamssTopNavigationIcon(@DrawableRes internal val drawableRes: Int) {
+    LeftChevron(R.drawable.ic_left_chevron),
+    RightChevron(R.drawable.ic_right_chevron),
+    Menu(R.drawable.ic_menu),
+}
+
 sealed interface GamssTopNavigationContent {
+    /**
+     * 로고도 제목도 두지 않는 형태입니다. 선택 모드처럼 좌우 아이콘만 남기는 화면에 사용합니다.
+     * 빈 [Title]로 대신하면 접근성 트리에 빈 텍스트 노드가 남으므로 별도 형태로 둡니다.
+     */
+    data object None : GamssTopNavigationContent
+
     data object Logo : GamssTopNavigationContent
 
     data class Title(
@@ -49,6 +63,7 @@ sealed interface GamssTopNavigationContent {
  * [Color.Transparent]를 전달해 사용할 수 있습니다.
  *
  * [content]로 로고, 왼쪽 정렬 제목, 중앙 정렬 날짜/제목 형태를 선택할 수 있습니다.
+ * 오른쪽 아이콘의 글리프는 [rightIcon]으로 바꿀 수 있습니다.
  */
 @Suppress("LongParameterList")
 @Composable
@@ -66,6 +81,7 @@ fun GamssTopNavigation(
     rightIconContentDescription: String? = null,
     onLeftIconClick: () -> Unit = {},
     onRightIconClick: () -> Unit = {},
+    rightIcon: GamssTopNavigationIcon = GamssTopNavigationIcon.RightChevron,
 ) {
     Box(
         modifier = modifier
@@ -79,13 +95,15 @@ fun GamssTopNavigation(
                 .padding(start = TopNavigationContentHorizontalPadding)
                 .align(Alignment.CenterStart),
             visible = showLeftIcon,
-            iconRes = R.drawable.ic_left_chevron,
+            icon = GamssTopNavigationIcon.LeftChevron,
             contentDescription = leftIconContentDescription,
             onClick = onLeftIconClick,
         )
 
         TopNavigationContent(
             modifier = when (content) {
+                GamssTopNavigationContent.None -> Modifier.align(Alignment.CenterStart)
+
                 GamssTopNavigationContent.Logo ->
                     Modifier
                         .padding(start = TopNavigationContentHorizontalPadding)
@@ -117,7 +135,7 @@ fun GamssTopNavigation(
                 .padding(end = TopNavigationContentHorizontalPadding)
                 .align(Alignment.CenterEnd),
             visible = showRightIcon,
-            iconRes = R.drawable.ic_right_chevron,
+            icon = rightIcon,
             contentDescription = rightIconContentDescription,
             onClick = onRightIconClick,
         )
@@ -144,6 +162,7 @@ fun GamssTopNavigation(
     rightIconContentDescription: String? = null,
     onLeftIconClick: () -> Unit = {},
     onRightIconClick: () -> Unit = {},
+    rightIcon: GamssTopNavigationIcon = GamssTopNavigationIcon.RightChevron,
 ) {
     GamssTopNavigation(
         content = GamssTopNavigationContent.Title(
@@ -158,6 +177,7 @@ fun GamssTopNavigation(
         rightIconContentDescription = rightIconContentDescription,
         onLeftIconClick = onLeftIconClick,
         onRightIconClick = onRightIconClick,
+        rightIcon = rightIcon,
     )
 }
 
@@ -167,6 +187,8 @@ private fun TopNavigationContent(
     modifier: Modifier = Modifier,
 ) {
     when (content) {
+        GamssTopNavigationContent.None -> Unit
+
         GamssTopNavigationContent.Logo -> Image(
             modifier = modifier.size(width = LogoWidth, height = LogoHeight),
             painter = painterResource(
@@ -193,7 +215,7 @@ private fun TopNavigationContent(
 @Composable
 private fun TopNavigationIconSlot(
     visible: Boolean,
-    iconRes: Int,
+    icon: GamssTopNavigationIcon,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     contentDescription: String? = null,
@@ -202,16 +224,12 @@ private fun TopNavigationIconSlot(
         Box(
             modifier = modifier
                 .size(IconTouchTargetSize)
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                    onClick = onClick,
-                ),
+                .noRippleClickableIfNotNull(onClick),
             contentAlignment = Alignment.Center,
         ) {
             Icon(
                 modifier = Modifier.size(IconSize),
-                painter = painterResource(iconRes),
+                painter = painterResource(icon.drawableRes),
                 contentDescription = contentDescription,
                 tint = GamssTheme.colors.gray900,
             )
@@ -248,6 +266,11 @@ private fun TopNavigationPreviewContent() {
         GamssTopNavigation(
             content = GamssTopNavigationContent.Logo,
             showRightIcon = true,
+        )
+        GamssTopNavigation(
+            content = GamssTopNavigationContent.Logo,
+            showRightIcon = true,
+            rightIcon = GamssTopNavigationIcon.Menu,
         )
         GamssTopNavigation(
             title = "YY.MM.DD",

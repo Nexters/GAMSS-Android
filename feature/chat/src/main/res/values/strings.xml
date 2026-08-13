@@ -12,4 +12,19 @@
     <string name="safety_agency_call_description">%1$s %2$s에 전화하기</string>
     <string name="safety_emergency_call_description">119에 전화하기</string>
     <string name="safety_call_unavailable">전화 앱을 열 수 없어요. %1$s로 직접 전화해 주세요.</string>
+
+    <string name="chatting_list_delete_action">삭제하기</string>
+    <string name="chatting_list_delete_dialog_title">대화를 정말 삭제할까요?</string>
+    <string name="chatting_list_delete_dialog_subtitle">대화를 이어갈 수 없으며, 카드를 생성할 수 없습니다.\n채팅은 영구적으로 삭제됩니다.</string>
+    <string name="chatting_list_delete_dialog_confirm">삭제하기</string>
+    <string name="chatting_list_delete_dialog_dismiss">뒤로가기</string>
+    <string name="chatting_list_menu_content_description">메뉴</string>
+    <string name="chatting_list_selection_cancel">선택 취소</string>
+    <string name="chatting_list_untitled">제목 없는 대화</string>
+    <string name="chatting_list_empty">아직 나눈 대화가 없어요</string>
+    <string name="chatting_list_load_failed">대화 목록을 불러오지 못했어요</string>
+    <string name="chatting_list_delete_succeeded">선택한 대화를 삭제했어요</string>
+    <string name="chatting_list_delete_partially_failed">대화 %1$d개를 삭제하지 못했어요</string>
+    <string name="chatting_list_delete_failed">대화를 삭제하지 못했어요</string>
+    <string name="chatting_list_session_expired">세션이 만료되었어요. 다시 로그인해 주세요</string>
 </resources>
