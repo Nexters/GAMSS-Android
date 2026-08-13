@@ -65,7 +65,7 @@ dependencies {
     implementation(libs.litert) {
         // 모델은 Play Asset Delivery(범용 on-demand 애셋팩)로 내려받는다.
         // LiteRT 자체 모델 배포 API(ai-delivery)는 쓰지 않는다 — 콜드스타트마다 WorkManager 를
-        // 초기화시켜서 제외하고, 대신 asset-delivery-ktx 로 직접 다운로드 상태를 제어한다.
+        // 초기화시켜서 제외하고, 대신 asset-delivery 로 직접 다운로드 상태를 제어한다.
         exclude(group = "com.google.android.play", module = "ai-delivery")
     }
     implementation(platform(libs.djl.bom))
@@ -77,7 +77,7 @@ dependencies {
 
     // 감정/요약 모델(.tflite, .onnx)을 담은 on-demand 애셋팩(:models:emotion-pack, :models:summary-pack)을
     // 런타임에 요청·추적·로컬 경로 조회하는 데 사용.
-    implementation(libs.play.asset.delivery.ktx)
+    implementation(libs.play.asset.delivery)
 
     testImplementation(libs.junit)
     testImplementation(libs.mockk)

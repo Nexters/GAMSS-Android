@@ -8,9 +8,6 @@ import com.google.android.play.core.assetpacks.AssetPackManagerFactory
 import com.google.android.play.core.assetpacks.AssetPackState
 import com.google.android.play.core.assetpacks.AssetPackStateUpdateListener
 import com.google.android.play.core.assetpacks.model.AssetPackStatus
-import com.google.android.play.core.ktx.requestFetch
-import com.google.android.play.core.ktx.requestPackStates
-import com.google.android.play.core.ktx.requestProgressFlow
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
@@ -18,7 +15,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.tasks.await
 import java.io.RandomAccessFile
 import java.nio.MappedByteBuffer
 import java.nio.channels.FileChannel
@@ -65,7 +62,7 @@ internal class OnDemandModelAssets(context: Context) {
     }
 
     private suspend fun ensureInstalled(packName: String) {
-        val current = manager.requestPackStates(listOf(packName)).packStates()[packName]
+        val current = manager.getPackStates(listOf(packName)).await().packStates()[packName]
         if (current?.status() == AssetPackStatus.COMPLETED) return
 
         awaitCompletion(packName)
@@ -102,7 +99,11 @@ internal class OnDemandModelAssets(context: Context) {
         val listener = AssetPackStateUpdateListener { state -> trySend(state) }
         manager.registerListener(listener)
         // 리스너가 등록된 뒤에 요청해야 fetch 직후의 상태 전이를 놓치지 않는다.
-        manager.requestFetch(listOf(packName))
+        manager.fetch(listOf(packName))
+            .addOnSuccessListener { states ->
+                states.packStates()[packName]?.let { state -> trySend(state) }
+            }
+            .addOnFailureListener { error -> close(error) }
         awaitClose { manager.unregisterListener(listener) }
     }.filter { it.name() == packName }
 
@@ -111,10 +112,23 @@ internal class OnDemandModelAssets(context: Context) {
      * 직접 요청하지 않는다 — 순수 관찰용이라 UI 가 구독해도 다운로드가 새로 시작되진 않는다
      * (이미 fetch 가 걸려 있어야 진행 상태가 바뀐다).
      */
-    fun statusFlow(packName: String): Flow<ModelDownloadStatus> =
-        manager.requestProgressFlow(listOf(packName))
-            .filter { it.name() == packName }
-            .map { it.status().toDomainStatus() }
+    fun statusFlow(packName: String): Flow<ModelDownloadStatus> = callbackFlow {
+        val listener = AssetPackStateUpdateListener { state ->
+            if (state.name() == packName) {
+                trySend(state.status().toDomainStatus())
+            }
+        }
+        manager.registerListener(listener)
+        manager.getPackStates(listOf(packName))
+            .addOnSuccessListener { states ->
+                states.packStates()[packName]?.let { state ->
+                    trySend(state.status().toDomainStatus())
+                }
+            }
+            // Play Store 밖에서 설치한 debug APK 등 상태 조회가 불가능한 환경도 앱을 종료시키지 않는다.
+            .addOnFailureListener { trySend(ModelDownloadStatus.FAILED) }
+        awaitClose { manager.unregisterListener(listener) }
+    }
 
     private fun Int.toDomainStatus(): ModelDownloadStatus = when (this) {
         AssetPackStatus.COMPLETED -> ModelDownloadStatus.COMPLETED
