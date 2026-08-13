@@ -7,6 +7,7 @@ import androidx.compose.ui.graphics.Color
 // Base
 internal val White = Color(0xFFFFFFFF)
 internal val Black = Color(0xFF000000)
+internal val Gray1000 = Color(0xFF1A1C20)
 
 // Gray - Light
 internal val GrayLight025 = Color(0xFFFDFEFF)
@@ -60,6 +61,10 @@ internal val ChromaticDarkPurple = Color(0xFFCC6DFC)
 data class GamssColors(
     val white: Color,
     val black: Color,
+    // Figma 의 Gray/Gray1000. 라이트와 다크가 같은 값이라 gray025~gray950 과 달리 반전하지 않는다.
+    val gray1000: Color,
+    // 화면 최하단 배경. gray025 와 달리 라이트에서 순백, 다크에서 순검정으로 반전한다.
+    val background: Color,
     val gray025: Color,
     val gray050: Color,
     val gray075: Color,
@@ -85,6 +90,8 @@ data class GamssColors(
 val LightGamssColors = GamssColors(
     white = White,
     black = Black,
+    gray1000 = Gray1000,
+    background = White,
     gray025 = GrayLight025,
     gray050 = GrayLight050,
     gray075 = GrayLight075,
@@ -110,6 +117,8 @@ val LightGamssColors = GamssColors(
 val DarkGamssColors = GamssColors(
     white = White,
     black = Black,
+    gray1000 = Gray1000,
+    background = Black,
     gray025 = GrayDark025,
     gray050 = GrayDark050,
     gray075 = GrayDark075,
