@@ -88,9 +88,9 @@ internal class LiteRtClassifier private constructor(
         private const val NAME_ATTENTION_MASK = "attention_mask"
         private const val NAME_TOKEN_TYPE = "token_type"
 
-        fun load(context: Context, spec: ClassifierSpec): LiteRtClassifier = LiteRtClassifier(
-            model = LiteRtModel.load(context, spec.modelAsset),
-            tokenizer = WordPieceTokenizer.load(context, spec.tokenizerAsset, spec.seqLen),
+        suspend fun load(context: Context, spec: ClassifierSpec): LiteRtClassifier = LiteRtClassifier(
+            model = LiteRtModel.load(context, spec.packName, spec.modelAsset),
+            tokenizer = WordPieceTokenizer.load(context, spec.packName, spec.tokenizerAsset, spec.seqLen),
             labels = spec.labels,
         )
 

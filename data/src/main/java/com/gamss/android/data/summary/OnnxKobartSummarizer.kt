@@ -4,11 +4,11 @@ import ai.onnxruntime.OnnxTensor
 import ai.onnxruntime.OrtEnvironment
 import ai.onnxruntime.OrtSession
 import android.content.Context
+import com.gamss.android.data.model.OnDemandModelAssets
+import com.gamss.android.data.model.mmap
 import java.io.Closeable
-import java.io.FileInputStream
 import java.nio.LongBuffer
 import java.nio.MappedByteBuffer
-import java.nio.channels.FileChannel
 
 /**
  * kobart(BART) 요약 ONNX 추론 코어. 인코더 1회 실행 후 no-past 디코더를 반복하는
@@ -136,12 +136,13 @@ internal class OnnxKobartSummarizer private constructor(
         private const val OUT_LAST_HIDDEN = "last_hidden_state"
         private const val OUT_LOGITS = "logits"
 
-        fun load(context: Context): OnnxKobartSummarizer {
+        suspend fun load(context: Context): OnnxKobartSummarizer {
             val env = OrtEnvironment.getEnvironment()
-            val encoder = env.createSession(mapAsset(context, KobartSummarySpec.ENCODER_ASSET))
-            val decoder = env.createSession(mapAsset(context, KobartSummarySpec.DECODER_ASSET))
+            val encoder = env.createSession(mapModelFile(context, KobartSummarySpec.ENCODER_ASSET))
+            val decoder = env.createSession(mapModelFile(context, KobartSummarySpec.DECODER_ASSET))
             val tokenizer = KobartTokenizer.load(
                 context,
+                KobartSummarySpec.PACK_NAME,
                 KobartSummarySpec.TOKENIZER_ASSET,
                 KobartSummarySpec.MAX_INPUT_TOKENS,
             )
@@ -149,14 +150,11 @@ internal class OnnxKobartSummarizer private constructor(
         }
 
         /**
-         * APK 내 비압축 .onnx 를 mmap 해 힙에 통째로 올리지 않고 로드한다(99MB 연속 힙 할당·2배 복사 회피).
-         * fd 를 닫아도 매핑은 유지되며 createSession 이 그래프를 네이티브로 역직렬화한다.
+         * :models:summary-pack 이 내려받은 로컬 .onnx 를 mmap 해 힙에 통째로 올리지 않고 로드한다
+         * (99MB 연속 힙 할당·2배 복사 회피). 파일 핸들을 닫아도 매핑은 유지되며 createSession 이
+         * 그래프를 네이티브로 역직렬화한다. 팩 미다운로드 시 여기서 내려받길 기다린다.
          */
-        private fun mapAsset(context: Context, name: String): MappedByteBuffer =
-            context.assets.openFd(name).use { afd ->
-                FileInputStream(afd.fileDescriptor).use { fis ->
-                    fis.channel.map(FileChannel.MapMode.READ_ONLY, afd.startOffset, afd.declaredLength)
-                }
-            }
+        private suspend fun mapModelFile(context: Context, assetPath: String): MappedByteBuffer =
+            OnDemandModelAssets(context).resolve(KobartSummarySpec.PACK_NAME, assetPath).mmap()
     }
 }

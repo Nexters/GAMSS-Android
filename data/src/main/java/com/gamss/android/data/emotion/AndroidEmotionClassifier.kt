@@ -1,10 +1,13 @@
 package com.gamss.android.data.emotion
 
 import android.content.Context
+import com.gamss.android.data.model.OnDemandModelAssets
 import com.gamss.android.domain.emotion.ClassificationResult
 import com.gamss.android.domain.emotion.EmotionClassifier
+import com.gamss.android.domain.model.ModelDownloadStatus
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -29,4 +32,16 @@ class AndroidEmotionClassifier @Inject constructor(
             ready.classify(text)
         }
     }
+
+    /**
+     * [classifier] 캐시/mutex 와 무관하게 애셋팩 다운로드만 미리 걸어둔다. classify() 와 같은
+     * mutex 를 타면 아직 안 끝난 prefetch 가 실제 분류 요청을 불필요하게 막게 된다.
+     */
+    override suspend fun prefetch() {
+        OnDemandModelAssets(context).prefetch(EmotionModelSpec.PACK_NAME)
+    }
+
+    /** UI(app 루트)가 셀룰러/크기 확인 배너를 띄울지 판단하는 데 쓴다. */
+    override val downloadStatus: Flow<ModelDownloadStatus>
+        get() = OnDemandModelAssets(context).statusFlow(EmotionModelSpec.PACK_NAME)
 }

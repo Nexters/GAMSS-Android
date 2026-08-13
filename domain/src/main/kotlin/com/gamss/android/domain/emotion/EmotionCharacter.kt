@@ -9,9 +9,9 @@ enum class EmotionCharacter(val displayName: String) {
     JOY("기쁨"),
     ANGER("분노"),
     ANXIETY("불안"),
+    SADNESS("슬픔"),
     QUIRKY("엉뚱"),
     PRICKLY("까칠"),
-    WARM("다정"),
     ;
 
     companion object {
@@ -22,7 +22,7 @@ enum class EmotionCharacter(val displayName: String) {
             EmotionLabel.ANXIETY -> ANXIETY
             EmotionLabel.EMBARRASSED -> QUIRKY
             EmotionLabel.HURT -> PRICKLY
-            EmotionLabel.SADNESS -> WARM
+            EmotionLabel.SADNESS -> SADNESS
         }
     }
 }

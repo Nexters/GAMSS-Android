@@ -34,6 +34,10 @@ complexity:
   LongMethod:
     active: true
     threshold: 80
+  # Composable 은 슬롯과 기본값 파라미터가 많은 게 정상이라 기본 임계치를 적용하지 않는다.
+  LongParameterList:
+    active: true
+    ignoreAnnotated: ['Composable']
   TooManyFunctions:
     active: true
     thresholdInFiles: 30

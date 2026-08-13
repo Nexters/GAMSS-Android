@@ -25,6 +25,7 @@ internal class KobartTokenCounter @Inject constructor(
     private suspend fun loadTokenizer(): KobartTokenizer = mutex.withLock {
         tokenizer ?: KobartTokenizer.loadWithoutTruncation(
             context = context,
+            packName = KobartSummarySpec.PACK_NAME,
             tokenizerAsset = KobartSummarySpec.TOKENIZER_ASSET,
         ).also { tokenizer = it }
     }

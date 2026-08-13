@@ -1,7 +1,10 @@
 package com.gamss.android.feature.chat
 
+import android.content.ActivityNotFoundException
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.widget.Toast
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -17,12 +20,10 @@ import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Close
@@ -36,7 +37,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -47,13 +47,20 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.gamss.android.core.designsystem.component.chat.ChatReplyQuote
+import com.gamss.android.core.designsystem.component.chat.ChatSender
+import com.gamss.android.core.designsystem.component.chat.GamssReceivedChatBubble
+import com.gamss.android.core.designsystem.component.chat.GamssSentChatBubble
+import com.gamss.android.core.designsystem.theme.GamssTheme
 import com.gamss.android.domain.card.Card
 import com.gamss.android.domain.conversation.MAX_MESSAGE_LENGTH
 import com.gamss.android.domain.conversation.Message
 import com.gamss.android.domain.conversation.MessageSender
+import com.gamss.android.feature.chat.component.SupportAgencyDialog
 import org.orbitmvi.orbit.compose.collectAsState
 import org.orbitmvi.orbit.compose.collectSideEffect
 
@@ -63,7 +70,7 @@ import org.orbitmvi.orbit.compose.collectSideEffect
  */
 @Composable
 fun ChatRoomScreen(
-    conversationId: Long?,
+    conversationId: Long,
     onCardClose: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: ChatRoomViewModel = hiltViewModel(),
@@ -92,6 +99,17 @@ fun ChatRoomScreen(
 
     ChatRoomContent(state = state, actions = actions, modifier = modifier)
 
+    state.riskDetection?.let { detection ->
+        SupportAgencyDialog(
+            agencies = detection.agencies,
+            onCallClick = { agency -> context.dialOrNotify(agency.phoneNumber) },
+            onEmergencyCallClick = { context.dialOrNotify(EMERGENCY_PHONE_NUMBER) },
+            // 감정 결과 화면으로 이동하는 별도 계약이 생기기 전까지는 안내만 닫는다.
+            onConfirm = viewModel::onRiskDialogDismiss,
+            onDismiss = viewModel::onRiskDialogDismiss,
+        )
+    }
+
     // else 를 두지 않아야 단계를 추가할 때 화면이 컴파일 에러로 알려준다.
     when (val endFlow = state.endFlow) {
         EndFlow.Confirming -> EndConversationDialog(
@@ -108,6 +126,7 @@ fun ChatRoomScreen(
     }
 }
 
+// 디자인 컴포넌트로 대체하기
 @Composable
 private fun EndConversationDialog(
     onConfirm: () -> Unit,
@@ -115,13 +134,22 @@ private fun EndConversationDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("대화를 끝낼까요?") },
-        text = { Text("끝내면 이 대화에 메시지를 더 보낼 수 없고, 감정 카드가 만들어져요.") },
-        confirmButton = { TextButton(onClick = onConfirm) { Text("끝내기") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("취소") } },
+        title = { Text(stringResource(R.string.chat_room_end_dialog_title)) },
+        text = { Text(stringResource(R.string.chat_room_end_dialog_subTitle)) },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text(stringResource(R.string.chat_room_end_dialog_confirm_button_label))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.chat_room_end_dialog_dismiss_button_label))
+            }
+        },
     )
 }
 
+// 카드생성 bottomsheet
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun CardBottomSheet(
@@ -178,9 +206,11 @@ private fun ChatRoomContent(
     Scaffold(
         modifier = modifier,
         topBar = {
+            // 디자인 컴포넌트 적용 예정
             ChatRoomTopBar(
                 endFlow = state.endFlow,
                 canEnd = state.canEnd,
+                showEndButton = state.useChatEndFeature,
                 onEndClick = actions.onEndClick,
             )
         },
@@ -198,8 +228,8 @@ private fun ChatRoomContent(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth(),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(horizontal = 18.dp, vertical = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 if (state.messages.isEmpty()) {
                     item {
@@ -222,6 +252,7 @@ private fun ChatRoomContent(
                 items(state.messages, key = { it.id }) { message ->
                     MessageBubble(
                         message = message,
+                        messages = state.messages,
                         isReplyTarget = state.replyTarget?.messageId == message.id,
                         onCharacterMessageClick = actions.onCharacterMessageClick,
                     )
@@ -248,6 +279,7 @@ private fun ChatRoomContent(
 private fun ChatRoomTopBar(
     endFlow: EndFlow,
     canEnd: Boolean,
+    showEndButton: Boolean,
     onEndClick: () -> Unit,
 ) {
     Row(
@@ -261,17 +293,19 @@ private fun ChatRoomTopBar(
             style = MaterialTheme.typography.titleLarge,
             modifier = Modifier.weight(1f),
         )
-        if (endFlow.isBusy) {
-            CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
-        } else {
-            TextButton(onClick = onEndClick, enabled = canEnd) {
-                Text(
-                    when {
-                        endFlow == EndFlow.CardFailedRetryable -> "카드 다시 만들기"
-                        endFlow is EndFlow.Ended -> "끝난 대화"
-                        else -> "대화 끝내기"
-                    },
-                )
+        if (showEndButton) {
+            if (endFlow.isBusy) {
+                CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+            } else {
+                TextButton(onClick = onEndClick, enabled = canEnd) {
+                    Text(
+                        when {
+                            endFlow == EndFlow.CardFailedRetryable -> "카드 다시 만들기"
+                            endFlow is EndFlow.Ended -> "끝난 대화"
+                            else -> "대화 끝내기"
+                        },
+                    )
+                }
             }
         }
     }
@@ -310,60 +344,67 @@ private fun ChatRoomInputSection(
     )
 }
 
+/**
+ * @param messages 답장 대상 메시지의 내용을 찾기 위한 전체 목록. [Message.repliesToMessageId] 가
+ *  가리키는 메시지가 이 목록에 없으면(예: 아직 로드되지 않은 과거 메시지) 답장 인용 없이 표시한다.
+ */
 @Composable
 private fun MessageBubble(
     message: Message,
+    messages: List<Message>,
     isReplyTarget: Boolean,
     onCharacterMessageClick: (Message) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val character = (message.sender as? MessageSender.Character)?.character
-    val isFromUser = message.sender is MessageSender.User
-    val isCharacterMessage = character != null
+    val replyQuote = message.repliesToMessageId
+        ?.let { targetId -> messages.find { it.id == targetId } }
+        ?.toReplyQuote()
 
-    Column(
-        modifier = modifier.fillMaxWidth(),
-        horizontalAlignment = if (isFromUser) Alignment.End else Alignment.Start,
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .then(
+                if (isReplyTarget) {
+                    Modifier.background(GamssTheme.colors.blue.copy(alpha = 0.12f))
+                } else {
+                    Modifier
+                },
+            ),
     ) {
-        if (character != null) {
-            Text(
-                text = character.displayName,
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(bottom = 2.dp, start = 4.dp),
+        when (val sender = message.sender) {
+            MessageSender.User -> GamssSentChatBubble(
+                message = message.content,
+                time = message.createdTime,
+                replyQuote = replyQuote,
+                modifier = Modifier.align(Alignment.CenterEnd),
             )
-        } else if (message.repliesToMessageId != null) {
-            Text(
-                text = "↩ 답장",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(bottom = 2.dp, end = 4.dp),
+            is MessageSender.Character -> GamssReceivedChatBubble(
+                sender = ChatSender(name = sender.character.displayName),
+                message = message.content,
+                time = message.createdTime,
+                replyQuote = replyQuote,
+                modifier = Modifier
+                    .align(Alignment.CenterStart)
+                    .clickable { onCharacterMessageClick(message) },
             )
-        }
-
-        Surface(
-            shape = RoundedCornerShape(16.dp),
-            color = if (isFromUser) {
-                MaterialTheme.colorScheme.primaryContainer
-            } else {
-                MaterialTheme.colorScheme.surfaceVariant
-            },
-            border = if (isReplyTarget) {
-                BorderStroke(width = 2.dp, color = MaterialTheme.colorScheme.primary)
-            } else {
-                null
-            },
-            modifier = Modifier
-                .widthIn(max = BubbleMaxWidth)
-                .then(if (isCharacterMessage) Modifier.clickable { onCharacterMessageClick(message) } else Modifier),
-        ) {
-            Text(
-                text = message.content,
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+            MessageSender.Unknown -> GamssReceivedChatBubble(
+                sender = ChatSender(name = ""),
+                message = message.content,
+                time = message.createdTime,
+                replyQuote = replyQuote,
+                modifier = Modifier.align(Alignment.CenterStart),
             )
         }
     }
+}
+
+private fun Message.toReplyQuote(): ChatReplyQuote {
+    val label = when (val target = sender) {
+        is MessageSender.Character -> "${target.character.displayName}에게 답장"
+        MessageSender.User -> "나에게 답장"
+        MessageSender.Unknown -> "답장"
+    }
+    return ChatReplyQuote(senderLabel = label, message = content)
 }
 
 @Composable
@@ -432,4 +473,24 @@ private fun MessageInputBar(
     }
 }
 
-private val BubbleMaxWidth = 280.dp
+private fun Context.dialOrNotify(phoneNumber: String?) {
+    if (phoneNumber == null) return
+    if (!dial(phoneNumber)) {
+        Toast.makeText(
+            this,
+            getString(R.string.safety_call_unavailable, phoneNumber),
+            Toast.LENGTH_LONG,
+        ).show()
+    }
+}
+
+@Suppress("SwallowedException")
+private fun Context.dial(phoneNumber: String): Boolean =
+    try {
+        startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:${Uri.encode(phoneNumber)}")))
+        true
+    } catch (_: ActivityNotFoundException) {
+        false
+    }
+
+private const val EMERGENCY_PHONE_NUMBER = "119"

@@ -1,16 +1,22 @@
 package com.gamss.android.domain.conversation
 
 import com.gamss.android.core.common.AppResult
+import com.gamss.android.domain.emotion.EmotionCharacter
 
 interface ConversationRepository {
     /** 아직 종료하지 않은 방만 최신순으로 온다. 종료·삭제된 방과 카드가 만들어진 방은 빠진다. */
     suspend fun getOngoingConversations(): AppResult<List<Conversation>>
 
+    /**
+     * @param excludeCharacters 반응하지 않을 캐릭터. 새 채팅방을 열 때만 적용되고, 이어 보내는 요청에서는
+     *  서버가 무시한다. 6종 전체를 넘기면 서버가 거부한다.
+     */
     suspend fun sendMessage(
         conversationId: Long?,
         content: String,
         replyToMessageId: Long?,
         contextSummary: String?,
+        excludeCharacters: Set<EmotionCharacter>,
     ): AppResult<SentMessage>
 
     suspend fun getMessages(conversationId: Long): AppResult<List<Message>>

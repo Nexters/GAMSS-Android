@@ -27,6 +27,13 @@ class ConversationEmotionAccumulator @Inject constructor(
     private var utteranceCount = 0
     private var attemptsAtHead = 0
 
+    /**
+     * 초기화 세대. [classifyPending] 은 분류 중 [stateMutex] 를 놓으므로, 그 사이 [reset]/[restore] 가
+     * 지나가면 앞 대화의 분류 결과가 새 대화 점수에 섞인다. 락을 넓혀 막으면 초기화가 온디바이스
+     * 분류를 기다리게 되어, 대신 세대가 바뀐 결과를 버린다.
+     */
+    private var generation = 0
+
     /** 발화만 적재한다. 분류는 [classifyPending] 에서 돈다. */
     suspend fun append(utterance: String) {
         val trimmed = utterance.trim()
@@ -46,8 +53,9 @@ class ConversationEmotionAccumulator @Inject constructor(
 
     /** @return 큐를 다 비웠으면 true. 분류에 실패해 다시 시도할 발화를 남겼으면 false. */
     suspend fun classifyPending(): Boolean = classificationMutex.withLock {
+        val epoch = stateMutex.withLock { generation }
         var head = nextPending()
-        while (head != null && classifyHead(head)) {
+        while (head != null && classifyHead(head, epoch)) {
             head = nextPending()
         }
         head == null
@@ -57,13 +65,18 @@ class ConversationEmotionAccumulator @Inject constructor(
         aggregateEmotion(summed, utteranceCount)
     }
 
+    /** 모델 다운로드를 미리 걸어둔다. 실패해도 무시 — 실제 분류 시점에 정식 경로로 다시 시도된다. */
+    suspend fun prefetch() = classifier.prefetch()
+
     private suspend fun nextPending(): String? = stateMutex.withLock { pending.firstOrNull() }
 
     /** @return 다음 발화로 넘어가도 되면 true. 이 자리를 남기고 멈춰야 하면 false. */
-    private suspend fun classifyHead(utterance: String): Boolean {
+    private suspend fun classifyHead(utterance: String, epoch: Int): Boolean {
         val scores = failSafe { classifier.classify(utterance).scores }
         return stateMutex.withLock {
             when {
+                // 분류 중에 대화가 갈렸다. 이 점수는 앞 대화 것이라 버린다.
+                generation != epoch -> false
                 scores != null -> {
                     scores.forEach { (label, score) -> summed[label] = (summed[label] ?: 0f) + score }
                     utteranceCount++
@@ -90,6 +103,7 @@ class ConversationEmotionAccumulator @Inject constructor(
         summed.clear()
         utteranceCount = 0
         attemptsAtHead = 0
+        generation++
     }
 
     private companion object {

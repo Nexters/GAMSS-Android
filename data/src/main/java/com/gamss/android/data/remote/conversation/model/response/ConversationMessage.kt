@@ -1,6 +1,7 @@
 package com.gamss.android.data.remote.conversation.model.response
 
 import android.util.Log
+import com.gamss.android.core.common.util.formatKoreanTime
 import com.gamss.android.data.remote.emotion.toEmotionCharacter
 import com.gamss.android.domain.conversation.Message
 import com.gamss.android.domain.conversation.MessageSender
@@ -46,6 +47,7 @@ private fun ConversationMessage.toMessage(sender: MessageSender): Message = Mess
     sender = sender,
     content = content,
     repliesToMessageId = repliesToMessageId,
+    createdTime = formatKoreanTime(createdAt)
 )
 
 private fun ConversationMessage.resolveSender(): MessageSender = when (senderType) {

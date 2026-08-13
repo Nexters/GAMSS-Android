@@ -76,6 +76,29 @@ jobs:
           FIREBASE_TESTER_GROUPS: inner-tester
         run: bundle exec fastlane android distribute
 
+      # 위 Firebase 배포는 installTimeModels 로 모델을 박아 넣은 전용 AAB(~400MB)를 쓴다. 이 스텝은
+      # 그거와 별개로, 실제 운영 배포 형태(on-demand/fast-follow 유지, 작은 크기)의 AAB 를 워크플로
+      # 아티팩트로 남긴다 — Play Console 내부 테스트 트랙에 수동으로 올리거나 bundletool
+      # --local-testing 으로 로컬 설치해 PAD 동작을 검증할 때 쓴다. 실패해도 위 Firebase 배포는 이미
+      # 끝났으므로 파이프라인 전체를 실패시키지 않는다.
+      - name: Build release AAB
+        continue-on-error: true
+        env:
+          RELEASE_KEYSTORE_PATH: ${{ github.workspace }}/keystore/release.jks
+          RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+        run: ./gradlew :app:bundleRelease -PversionCode="$VERSION_CODE" --stacktrace
+
+      - name: Upload release AAB artifact
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release-aab
+          path: app/build/outputs/bundle/release/*.aab
+          if-no-files-found: error
+          retention-days: 7
+
       - name: Upload reports
         if: failure()
         uses: actions/upload-artifact@v4

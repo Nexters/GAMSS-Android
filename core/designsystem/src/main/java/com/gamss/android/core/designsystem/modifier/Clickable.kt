@@ -1,6 +1,7 @@
 package com.gamss.android.core.designsystem.modifier
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.ui.Modifier
 
 /**
@@ -19,4 +20,26 @@ fun Modifier.noRippleClickableIfNotNull(onClick: (() -> Unit)?): Modifier =
         )
     } else {
         this
+    }
+
+/**
+ * 짧은 탭과 길게 누르기를 ripple 없이 함께 받습니다. 둘 다 null이면 clickable을 붙이지 않습니다.
+ *
+ * 이유는 [noRippleClickableIfNotNull]과 같습니다. 길게 누르기만 있는 경우에도
+ * [Modifier.combinedClickable]이 짧은 탭 핸들러를 요구하므로 빈 람다를 넘깁니다. 이때 탭은 아무
+ * 일도 하지 않지만, 길게 누를 수 있는 요소라는 사실은 접근성 트리에 남는 것이 의도입니다.
+ */
+fun Modifier.noRippleCombinedClickable(
+    onClick: (() -> Unit)?,
+    onLongClick: (() -> Unit)?,
+): Modifier =
+    if (onClick == null && onLongClick == null) {
+        this
+    } else {
+        combinedClickable(
+            onClick = onClick ?: {},
+            onLongClick = onLongClick,
+            indication = null,
+            interactionSource = null,
+        )
     }

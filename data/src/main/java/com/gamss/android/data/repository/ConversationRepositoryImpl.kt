@@ -9,12 +9,14 @@ import com.gamss.android.data.remote.conversation.model.request.UpdateConversati
 import com.gamss.android.data.remote.conversation.model.response.ConversationMessage
 import com.gamss.android.data.remote.conversation.model.response.ConversationResponse
 import com.gamss.android.data.remote.conversation.model.response.toDomain
+import com.gamss.android.data.remote.emotion.toServerEmotionType
 import com.gamss.android.data.remote.runCatchingApiCall
 import com.gamss.android.data.remote.throwIfFailed
 import com.gamss.android.domain.conversation.Conversation
 import com.gamss.android.domain.conversation.ConversationRepository
 import com.gamss.android.domain.conversation.Message
 import com.gamss.android.domain.conversation.SentMessage
+import com.gamss.android.domain.emotion.EmotionCharacter
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.async
 import javax.inject.Inject
@@ -37,6 +39,7 @@ internal class ConversationRepositoryImpl @Inject constructor(
         content: String,
         replyToMessageId: Long?,
         contextSummary: String?,
+        excludeCharacters: Set<EmotionCharacter>,
     ): AppResult<SentMessage> = runCatchingApiCall {
         val response = conversationService.saveMessage(
             SaveMessageRequest(
@@ -44,6 +47,9 @@ internal class ConversationRepositoryImpl @Inject constructor(
                 conversationId = conversationId,
                 repliesToMessageId = replyToMessageId,
                 currentConversationSummary = contextSummary,
+                excludeCharacters = excludeCharacters
+                    .takeIf { it.isNotEmpty() }
+                    ?.map(EmotionCharacter::toServerEmotionType),
             ),
         )
         checkNotNull(response.data) { "No available saved message data" }.toDomain()

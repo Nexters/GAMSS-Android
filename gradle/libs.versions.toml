@@ -42,6 +42,7 @@ googleidVersion = "1.2.0"
 datastore = "1.2.1"
 tink = "1.23.0"
 mockk = "1.13.14"
+playAssetDelivery = "2.3.0"
 
 [libraries]
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidx-activity" }
@@ -123,6 +124,7 @@ google-googleid = { group = "com.google.android.libraries.identity.googleid", na
 androidx-datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "datastore" }
 google-tink-android = { module = "com.google.crypto.tink:tink-android", version.ref = "tink" }
 mockk = { module = "io.mockk:mockk", version.ref = "mockk" }
+play-asset-delivery = { module = "com.google.android.play:asset-delivery", version.ref = "playAssetDelivery" }
 
 android-gradlePlugin = { module = "com.android.tools.build:gradle", version.ref = "agp" }
 kotlin-gradlePlugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
@@ -133,6 +135,9 @@ hilt-gradlePlugin = { module = "com.google.dagger:hilt-android-gradle-plugin", v
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
 androidLibrary = { id = "com.android.library", version.ref = "agp" }
+# AGP 클래스패스에 이미 실려 있는 플러그인(com.android.application/library 와 같은 아티팩트) —
+# 버전을 명시하면 "이미 알 수 없는 버전으로 클래스패스에 있다" 충돌이 나서 버전 없이 선언한다.
+androidAssetPack = { id = "com.android.asset-pack" }
 kotlinJvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 composeCompiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 kotlinSerialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }

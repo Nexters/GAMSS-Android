@@ -129,7 +129,7 @@ class RemoteConfigRepositoryImplTest {
         val repository = repository()
         repository.initialize()
 
-        assertTrue(repository.getBoolean(RemoteConfigKey.UseCardFeature))
+        assertTrue(repository.getBoolean(RemoteConfigKey.UseChatEndFeature))
     }
 
     @Test
@@ -138,7 +138,7 @@ class RemoteConfigRepositoryImplTest {
 
         val repository = repository()
         repository.initialize()
-        repeat(3) { repository.getBoolean(RemoteConfigKey.UseCardFeature) }
+        repeat(3) { repository.getBoolean(RemoteConfigKey.UseChatEndFeature) }
 
         RemoteConfigKey.entries.forEach { key ->
             verify(exactly = 1) { remote.read(key.key) }
@@ -147,7 +147,7 @@ class RemoteConfigRepositoryImplTest {
 
     @Test
     fun `initialize 이전 조회도 선언한 기본값을 돌려준다`() {
-        val key = RemoteConfigKey.UseCardFeature
+        val key = RemoteConfigKey.UseChatEndFeature
 
         val repository = repository()
 
@@ -157,7 +157,7 @@ class RemoteConfigRepositoryImplTest {
 
     @Test
     fun `원격 조회가 실패하면 선언한 기본값을 돌려준다`() = runTest {
-        val key = RemoteConfigKey.UseCardFeature
+        val key = RemoteConfigKey.UseChatEndFeature
         coEvery { remote.configure(any()) } returns Unit
         coEvery { remote.fetchAndActivate() } throws IOException("network down")
 
@@ -170,6 +170,6 @@ class RemoteConfigRepositoryImplTest {
 
     @Test
     fun `기능 플래그의 기본값은 꺼짐이다`() {
-        assertEquals("false", RemoteConfigKey.UseCardFeature.defaultValue)
+        assertEquals("false", RemoteConfigKey.UseChatEndFeature.defaultValue)
     }
 }

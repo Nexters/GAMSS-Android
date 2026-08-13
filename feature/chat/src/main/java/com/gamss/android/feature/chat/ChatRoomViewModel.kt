@@ -1,8 +1,11 @@
 package com.gamss.android.feature.chat
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.gamss.android.core.common.AppResult
 import com.gamss.android.domain.card.CardNotRetryableException
+import com.gamss.android.domain.config.GetRemoteConfigFlagUseCase
+import com.gamss.android.domain.config.RemoteConfigKey
 import com.gamss.android.domain.conversation.CommentGenerationStatus
 import com.gamss.android.domain.conversation.ConversationSession
 import com.gamss.android.domain.conversation.Message
@@ -10,10 +13,13 @@ import com.gamss.android.domain.conversation.MessageSender
 import com.gamss.android.domain.conversation.nextCommentRevealGapMillis
 import com.gamss.android.domain.conversation.takeWithinMessageLimit
 import com.gamss.android.domain.repository.TokenUsageRefreshNotifier
+import com.gamss.android.domain.safety.DetectRiskInTextUseCase
+import com.gamss.android.domain.safety.RiskLevel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import org.orbitmvi.orbit.ContainerHost
 import org.orbitmvi.orbit.blockingIntent
 import org.orbitmvi.orbit.syntax.Syntax
@@ -26,22 +32,32 @@ private typealias ChatRoomSyntax = Syntax<ChatRoomState, ChatRoomSideEffect>
 class ChatRoomViewModel @Inject constructor(
     private val session: ConversationSession,
     private val tokenUsageRefreshNotifier: TokenUsageRefreshNotifier,
+    private val detectRiskInText: DetectRiskInTextUseCase,
+    private val getRemoteConfigFlag: GetRemoteConfigFlagUseCase,
 ) : ViewModel(),
     ContainerHost<ChatRoomState, ChatRoomSideEffect> {
 
     override val container = container<ChatRoomState, ChatRoomSideEffect>(ChatRoomState())
 
+    /** 구성 변경으로 화면이 다시 그려져도 서버를 다시 부르지 않는다. */
     private var started = false
 
     @Volatile
     private var revealJob: Job? = null
 
-    fun start(conversationId: Long?) {
+    fun start(conversationId: Long) {
         if (started) return
         started = true
-        if (conversationId != null) {
-            loadMessages(conversationId)
-        }
+        loadChatEndFeatureFlag()
+        loadMessages(conversationId)
+        // 결과를 기다리지 않는다 — 채팅방에 들어온 시점부터 온디바이스 모델 다운로드를 미리
+        // 걸어둬 첫 메시지/카드 생성 시점엔 이미 받아져 있을 확률을 높이는 순수 최적화용 호출이다.
+        viewModelScope.launch { session.prefetchOnDeviceModels() }
+    }
+
+    private fun loadChatEndFeatureFlag() = intent {
+        val useChatEndFeature = getRemoteConfigFlag(RemoteConfigKey.UseChatEndFeature)
+        reduce { state.copy(useChatEndFeature = useChatEndFeature) }
     }
 
     private fun loadMessages(conversationId: Long) = intent {
@@ -87,6 +103,26 @@ class ChatRoomViewModel @Inject constructor(
         }
         val sending = pending ?: return@intent
 
+        // session.send() 전에 고정된 메시지 내용으로 위험 신호 검사
+        val detection = detectRiskInText(sending.content)
+        if (detection.level != RiskLevel.NONE) {
+            reduce {
+                state.copy(
+                    riskDetection = detection,
+                    // CRITICAL이면 전송을 중단하므로 다시 전송 가능한 상태로 복구
+                    isSending = if (detection.shouldBlock) {
+                        false
+                    } else {
+                        state.isSending
+                    },
+                )
+            }
+
+            if (detection.shouldBlock) {
+                return@intent
+            }
+        }
+
         val result = session.send(
             conversationId = state.conversationId,
             content = sending.content,
@@ -119,9 +155,8 @@ class ChatRoomViewModel @Inject constructor(
     }
 
     fun onEndRequest() = intent {
-        // 검사와 상태 전환을 한 reduce 안에서 처리해야 연타로 두 번 시작되지 않는다.
-        // 전이 여부는 단계 값이 아니라 별도 플래그로 든다. 진행 중인 단계를 그대로 담으면
-        // 이미 CreatingCard 인 상태에서 카드 생성이 한 번 더 시작된다.
+        // 검사와 전환을 한 reduce 안에서 처리해야 연타로 두 번 시작되지 않는다.
+        // 전이 여부는 단계 값이 아니라 별도 플래그로 든다. 이미 CreatingCard 인 상태에서 또 시작되는 걸 막는다.
         var startCardCreation = false
         reduce {
             startCardCreation = state.canEnd && state.endFlow == EndFlow.CardFailedRetryable
@@ -166,7 +201,10 @@ class ChatRoomViewModel @Inject constructor(
         runCardCreation()
     }
 
-    /** 실패는 재시도 가능 여부에 따라 [EndFlow.CardFailedRetryable] 과 [EndFlow.CardFailedFinal] 로 갈린다. */
+    fun onRiskDialogDismiss() = intent {
+        reduce { state.copy(riskDetection = null) }
+    }
+
     private suspend fun ChatRoomSyntax.runCardCreation() {
         reduce { state.copy(endFlow = EndFlow.CreatingCard) }
 

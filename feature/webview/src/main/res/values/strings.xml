@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="webview_title_service_terms">서비스 이용약관</string>
+    <string name="webview_title_privacy_policy">개인정보 처리방침</string>
+    <string name="webview_error_message">페이지를 불러오지 못했어요.\n잠시 후 다시 시도해 주세요.</string>
+    <string name="webview_retry">다시 시도</string>
+</resources>

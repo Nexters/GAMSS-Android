@@ -2,6 +2,9 @@ package com.gamss.android.data.summary
 
 /** kobart 요약 모델(ONNX) 자산 경로와 디코딩 상수. */
 internal object KobartSummarySpec {
+    // :models:summary-pack 의 assetPack { packName } 과 일치해야 한다.
+    const val PACK_NAME = "summary_pack"
+
     const val ENCODER_ASSET = "models/kobart_encoder_int8.onnx"
     const val DECODER_ASSET = "models/kobart_decoder_int8.onnx"
     const val TOKENIZER_ASSET = "models/kobart_tokenizer.json"
