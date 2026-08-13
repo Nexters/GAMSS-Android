@@ -24,8 +24,8 @@ import com.gamss.android.feature.chat.ChatRoomScreen
 import com.gamss.android.feature.chat.ChattingListScreen
 import com.gamss.android.feature.chat.navigation.ChatKey
 import com.gamss.android.feature.chat.navigation.ChatRoomKey
-import com.gamss.android.feature.emotion.EmotionScreen
-import com.gamss.android.feature.emotion.navigation.EmotionKey
+import com.gamss.android.feature.chat.navigation.toEmotionCharacters
+import com.gamss.android.feature.chat.navigation.toKeyNames
 import com.gamss.android.feature.home.HomeScreen
 import com.gamss.android.feature.home.navigation.HomeKey
 import com.gamss.android.feature.setting.accountinfo.AccountInfoScreen
@@ -40,8 +40,8 @@ import com.gamss.android.feature.setting.privacypolicy.PrivacyPolicyScreen
 import com.gamss.android.feature.setting.serviceterms.ServiceTermsScreen
 
 @Composable
-fun MainScreen(isDebug: Boolean, useCardFeature: Boolean) {
-    val destinations = remember(isDebug) { topLevelDestinations(isDebug) }
+fun MainScreen(useCardFeature: Boolean) {
+    val destinations = remember { topLevelDestinations() }
     val visibleDestinations = remember(destinations, useCardFeature) { destinations.visibleIn(useCardFeature) }
     val navigationState = rememberNavigationState(
         startKey = HomeKey,
@@ -84,11 +84,14 @@ private fun mainEntryProvider(navigator: Navigator) = entryProvider {
     entry<HomeKey> {
         HomeScreen(
             onNavigateToSetting = { navigator.navigate(SettingKey) },
-            onStartConversation = { message -> navigator.navigate(ChatRoomKey(initialMessage = message)) },
+            onStartConversation = { message, excludeCharacters ->
+                navigator.navigate(
+                    ChatRoomKey(initialMessage = message, excludeCharacterNames = excludeCharacters.toKeyNames()),
+                )
+            },
         )
     }
     entry<CalendarKey> { CalendarScreen() }
-    entry<EmotionKey> { EmotionScreen() }
     entry<SettingKey> {
         SettingScreen(
             onBackClick = navigator::goBack,
@@ -118,6 +121,7 @@ private fun mainEntryProvider(navigator: Navigator) = entryProvider {
         ChatRoomScreen(
             conversationId = key.conversationId,
             initialMessage = key.initialMessage,
+            excludeCharacters = key.excludeCharacterNames.toEmotionCharacters(),
             onCardClose = navigator::goBack,
         )
     }

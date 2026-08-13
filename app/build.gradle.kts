@@ -108,7 +108,6 @@ dependencies {
     implementation(projects.feature.home)
     implementation(projects.feature.chat)
     implementation(projects.feature.calendar)
-    implementation(projects.feature.emotion)
     implementation(projects.feature.login)
     implementation(projects.feature.setting)
 

@@ -105,13 +105,17 @@ internal class FakeConversationRepository(
     val sentContextSummaries = mutableListOf<String?>()
     val updatedTitles = mutableListOf<Pair<Long, String>>()
 
+    val sentExcludeCharacters = mutableListOf<Set<EmotionCharacter>>()
+
     override suspend fun sendMessage(
         conversationId: Long?,
         content: String,
         replyToMessageId: Long?,
         contextSummary: String?,
+        excludeCharacters: Set<EmotionCharacter>,
     ): AppResult<SentMessage> {
         sentContextSummaries += contextSummary
+        sentExcludeCharacters += excludeCharacters
         if (failing) return AppResult.Failure(IllegalStateException("send failed"))
         val roomId = conversationId ?: ROOM_ID
         return AppResult.Success(

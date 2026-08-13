@@ -1,5 +1,6 @@
 package com.gamss.android.feature.home
 
+import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -19,6 +20,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
@@ -35,22 +37,27 @@ import com.gamss.android.core.designsystem.component.GamssTape
 import com.gamss.android.core.designsystem.component.GamssText
 import com.gamss.android.core.designsystem.component.GamssTopBar
 import com.gamss.android.core.designsystem.theme.GamssTheme
+import com.gamss.android.domain.emotion.EmotionCharacter
 import org.orbitmvi.orbit.compose.collectAsState
 import org.orbitmvi.orbit.compose.collectSideEffect
 
 @Composable
 fun HomeScreen(
     onNavigateToSetting: () -> Unit,
-    onStartConversation: (String) -> Unit,
+    onStartConversation: (String, Set<EmotionCharacter>) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val state by viewModel.collectAsState()
+    val context = LocalContext.current
 
     viewModel.collectSideEffect { sideEffect ->
         when (sideEffect) {
             is HomeSideEffect.NavigateToSetting -> onNavigateToSetting()
-            is HomeSideEffect.StartConversation -> onStartConversation(sideEffect.message)
+            is HomeSideEffect.StartConversation ->
+                onStartConversation(sideEffect.message, sideEffect.excludeCharacters)
+            is HomeSideEffect.ShowToast ->
+                Toast.makeText(context, sideEffect.message, Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -59,6 +66,8 @@ fun HomeScreen(
             onSettingClick = viewModel::navigateToSetting,
             onInputChange = viewModel::onInputChange,
             onSubmit = viewModel::onSubmit,
+            onEmotionPickerToggle = viewModel::onEmotionPickerToggle,
+            onEmotionToggle = viewModel::onEmotionToggle,
         )
     }
 
@@ -70,6 +79,8 @@ private data class HomeActions(
     val onSettingClick: () -> Unit,
     val onInputChange: (String) -> Unit,
     val onSubmit: () -> Unit,
+    val onEmotionPickerToggle: () -> Unit,
+    val onEmotionToggle: (EmotionCharacter) -> Unit,
 )
 
 @Composable
@@ -221,4 +232,10 @@ private fun HomeContentWithoutNicknamePreview() {
 
 private fun previewState() = HomeState(isLoading = false, nickname = "이소연")
 
-private fun previewActions() = HomeActions(onSettingClick = {}, onInputChange = {}, onSubmit = {})
+private fun previewActions() = HomeActions(
+    onSettingClick = {},
+    onInputChange = {},
+    onSubmit = {},
+    onEmotionPickerToggle = {},
+    onEmotionToggle = {},
+)

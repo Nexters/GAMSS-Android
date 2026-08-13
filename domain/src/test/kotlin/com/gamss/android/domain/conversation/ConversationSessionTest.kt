@@ -216,6 +216,7 @@ class ConversationSessionTest {
             content: String,
             replyToMessageId: Long?,
             contextSummary: String?,
+            excludeCharacters: Set<EmotionCharacter>,
         ): AppResult<SentMessage> {
             if (failingSend) return AppResult.Failure(IllegalStateException("send failed"))
             return AppResult.Success(

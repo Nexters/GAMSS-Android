@@ -57,6 +57,7 @@ import com.gamss.android.domain.card.Card
 import com.gamss.android.domain.conversation.MAX_MESSAGE_LENGTH
 import com.gamss.android.domain.conversation.Message
 import com.gamss.android.domain.conversation.MessageSender
+import com.gamss.android.domain.emotion.EmotionCharacter
 import org.orbitmvi.orbit.compose.collectAsState
 import org.orbitmvi.orbit.compose.collectSideEffect
 
@@ -70,6 +71,7 @@ fun ChatRoomScreen(
     onCardClose: () -> Unit,
     modifier: Modifier = Modifier,
     initialMessage: String? = null,
+    excludeCharacters: Set<EmotionCharacter> = emptySet(),
     viewModel: ChatRoomViewModel = hiltViewModel(),
 ) {
     val state by viewModel.collectAsState()
@@ -80,7 +82,11 @@ fun ChatRoomScreen(
     var initialMessageConsumed by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(conversationId) {
-        viewModel.start(conversationId, initialMessage.takeUnless { initialMessageConsumed })
+        viewModel.start(
+            conversationId = conversationId,
+            initialMessage = initialMessage.takeUnless { initialMessageConsumed },
+            excludeCharacters = excludeCharacters,
+        )
         initialMessageConsumed = true
     }
 

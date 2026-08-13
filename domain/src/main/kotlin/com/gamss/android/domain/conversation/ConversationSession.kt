@@ -5,6 +5,7 @@ import com.gamss.android.domain.card.Card
 import com.gamss.android.domain.card.CardNotRetryableException
 import com.gamss.android.domain.card.CreateConversationCardUseCase
 import com.gamss.android.domain.emotion.ConversationEmotionAccumulator
+import com.gamss.android.domain.emotion.EmotionCharacter
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
@@ -49,6 +50,7 @@ class ConversationSession @Inject constructor(
         conversationId: Long?,
         content: String,
         replyToMessageId: Long?,
+        excludeCharacters: Set<EmotionCharacter> = emptySet(),
     ): AppResult<SentMessage> {
         val opensConversation = conversationId == null
         val result = sendMessage(
@@ -57,6 +59,7 @@ class ConversationSession @Inject constructor(
                 content = content,
                 replyToMessageId = replyToMessageId,
                 contextSummary = summaryStore.currentContextSummary(),
+                excludeCharacters = excludeCharacters,
             ),
         )
         if (result is AppResult.Success) {

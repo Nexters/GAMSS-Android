@@ -1,6 +1,7 @@
 package com.gamss.android.feature.home
 
 import com.gamss.android.core.common.AppResult
+import com.gamss.android.domain.emotion.EmotionCharacter
 import com.gamss.android.domain.user.GetUserInfoUseCase
 import com.gamss.android.domain.user.UserProfile
 import io.mockk.coEvery
@@ -45,7 +46,65 @@ class HomeViewModelTest {
 
             containerHost.onSubmit()
             expectState { copy(input = "") }
-            expectSideEffect(HomeSideEffect.StartConversation(WORRY))
+            expectSideEffect(HomeSideEffect.StartConversation(WORRY, excludeCharacters = emptySet()))
+        }
+    }
+
+    @Test
+    fun `체크를 해제한 감정만 제외 목록으로 넘어간다`() = runTest {
+        viewModel().test(this) {
+            containerHost.onEmotionToggle(EmotionCharacter.SADNESS)
+            expectState { copy(selectedCharacters = selectedCharacters - EmotionCharacter.SADNESS) }
+
+            containerHost.onInputChange(WORRY)
+            expectState { copy(input = WORRY) }
+
+            containerHost.onSubmit()
+            expectState { copy(input = "") }
+            expectSideEffect(
+                HomeSideEffect.StartConversation(WORRY, excludeCharacters = setOf(EmotionCharacter.SADNESS)),
+            )
+        }
+    }
+
+    @Test
+    fun `해제했던 감정을 다시 누르면 제외 목록에서 빠진다`() = runTest {
+        viewModel().test(this) {
+            containerHost.onEmotionToggle(EmotionCharacter.ANGER)
+            expectState { copy(selectedCharacters = selectedCharacters - EmotionCharacter.ANGER) }
+
+            containerHost.onEmotionToggle(EmotionCharacter.ANGER)
+            expectState { copy(selectedCharacters = EmotionCharacter.entries.toSet()) }
+        }
+    }
+
+    @Test
+    fun `마지막 한 명은 해제되지 않고 안내만 띄운다`() = runTest {
+        viewModel().test(this) {
+            val last = EmotionCharacter.JOY
+            EmotionCharacter.entries.filter { it != last }.forEach { character ->
+                containerHost.onEmotionToggle(character)
+                expectState { copy(selectedCharacters = selectedCharacters - character) }
+            }
+
+            containerHost.onEmotionToggle(last)
+            expectSideEffect(HomeSideEffect.ShowToast(LAST_CHARACTER_BLOCKED))
+            expectNoItems()
+        }
+    }
+
+    @Test
+    fun `보내면 감정 목록이 닫힌다`() = runTest {
+        viewModel().test(this) {
+            containerHost.onEmotionPickerToggle()
+            expectState { copy(isEmotionPickerExpanded = true) }
+
+            containerHost.onInputChange(WORRY)
+            expectState { copy(input = WORRY) }
+
+            containerHost.onSubmit()
+            expectState { copy(input = "", isEmotionPickerExpanded = false) }
+            expectSideEffect(HomeSideEffect.StartConversation(WORRY, excludeCharacters = emptySet()))
         }
     }
 
@@ -68,7 +127,7 @@ class HomeViewModelTest {
 
             containerHost.onSubmit()
             expectState { copy(input = "") }
-            expectSideEffect(HomeSideEffect.StartConversation(WORRY))
+            expectSideEffect(HomeSideEffect.StartConversation(WORRY, excludeCharacters = emptySet()))
 
             containerHost.onSubmit()
             expectNoItems()

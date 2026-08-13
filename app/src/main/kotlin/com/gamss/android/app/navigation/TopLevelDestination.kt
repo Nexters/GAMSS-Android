@@ -10,7 +10,6 @@ import com.gamss.android.core.designsystem.component.GamssBottomBarItem
 import com.gamss.android.core.designsystem.component.GamssIcons
 import com.gamss.android.feature.calendar.navigation.CalendarKey
 import com.gamss.android.feature.chat.navigation.ChatKey
-import com.gamss.android.feature.emotion.navigation.EmotionKey
 import com.gamss.android.feature.home.navigation.HomeKey
 
 data class TopLevelDestination(
@@ -28,21 +27,16 @@ data class TopLevelDestination(
  * 정해져서 개수나 순서가 실행마다 달라지면 프로세스 재생성 뒤 다른 탭의 백스택이 복원된다.
  * 노출 여부는 [visibleIn] 으로 탭바에서만 거른다.
  */
-fun topLevelDestinations(isDebug: Boolean): List<TopLevelDestination> = buildList {
-    add(
-        TopLevelDestination(
-            key = CalendarKey,
-            iconRes = GamssIcons.TabArchive,
-            labelRes = R.string.tab_archive,
-            requiresCardFeature = true,
-        ),
-    )
-    add(TopLevelDestination(key = HomeKey, iconRes = GamssIcons.TabHome, labelRes = R.string.tab_home))
-    add(TopLevelDestination(key = ChatKey, iconRes = GamssIcons.TabChat, labelRes = R.string.tab_chat))
-    if (isDebug) {
-        add(TopLevelDestination(key = EmotionKey, iconRes = R.drawable.ic_tab_debug, labelRes = R.string.tab_emotion))
-    }
-}
+fun topLevelDestinations(): List<TopLevelDestination> = listOf(
+    TopLevelDestination(
+        key = CalendarKey,
+        iconRes = GamssIcons.TabArchive,
+        labelRes = R.string.tab_archive,
+        requiresCardFeature = true,
+    ),
+    TopLevelDestination(key = HomeKey, iconRes = GamssIcons.TabHome, labelRes = R.string.tab_home),
+    TopLevelDestination(key = ChatKey, iconRes = GamssIcons.TabChat, labelRes = R.string.tab_chat),
+)
 
 fun List<TopLevelDestination>.keys(): Set<NavKey> = map { it.key }.toSet()
 

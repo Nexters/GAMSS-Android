@@ -10,6 +10,7 @@ import com.gamss.android.domain.conversation.Message
 import com.gamss.android.domain.conversation.MessageSender
 import com.gamss.android.domain.conversation.nextCommentRevealGapMillis
 import com.gamss.android.domain.conversation.takeWithinMessageLimit
+import com.gamss.android.domain.emotion.EmotionCharacter
 import com.gamss.android.domain.repository.TokenUsageRefreshNotifier
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
@@ -35,13 +36,21 @@ class ChatRoomViewModel @Inject constructor(
 
     private var started = false
 
+    /** 새 대화의 첫 전송에만 실린다. 이어 보내는 요청에서는 도메인이 걸러낸다. */
+    private var excludeCharacters: Set<EmotionCharacter> = emptySet()
+
     @Volatile
     private var revealJob: Job? = null
 
     /** @param initialMessage 새 대화일 때만 자동 전송한다. [started] 가드로 재구성 시 중복 전송을 막는다. */
-    fun start(conversationId: Long?, initialMessage: String? = null) {
+    fun start(
+        conversationId: Long?,
+        initialMessage: String? = null,
+        excludeCharacters: Set<EmotionCharacter> = emptySet(),
+    ) {
         if (started) return
         started = true
+        this.excludeCharacters = excludeCharacters
         // 홈에서 시작한 대화는 NavKey 의 id 가 null 인 채로 복원된다. 저장해 둔 id 를 되살리지 않으면
         // 빈 대화방이 뜨고, 거기서 다시 보내면 같은 걱정으로 대화가 하나 더 만들어진다.
         val restored = conversationId ?: savedStateHandle.get<Long>(KEY_CONVERSATION_ID)
@@ -103,12 +112,15 @@ class ChatRoomViewModel @Inject constructor(
             conversationId = state.conversationId,
             content = sending.content,
             replyToMessageId = sending.replyToMessageId,
+            excludeCharacters = excludeCharacters,
         )
 
         when (result) {
             is AppResult.Success -> {
                 val sent = result.data
                 savedStateHandle[KEY_CONVERSATION_ID] = sent.message.conversationId
+                // 대화가 열렸으니 이후 요청에는 실을 이유가 없다. 서버도 무시한다.
+                excludeCharacters = emptySet()
                 reduce {
                     state.copy(
                         isSending = false,

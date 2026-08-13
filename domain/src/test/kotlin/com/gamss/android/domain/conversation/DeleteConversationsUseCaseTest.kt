@@ -2,6 +2,7 @@ package com.gamss.android.domain.conversation
 
 import com.gamss.android.core.common.AppResult
 import com.gamss.android.domain.auth.SessionExpiredException
+import com.gamss.android.domain.emotion.EmotionCharacter
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
@@ -195,6 +196,7 @@ class DeleteConversationsUseCaseTest {
             content: String,
             replyToMessageId: Long?,
             contextSummary: String?,
+            excludeCharacters: Set<EmotionCharacter>,
         ): AppResult<SentMessage> = throw UnsupportedOperationException()
 
         override suspend fun getOngoingConversations(): AppResult<List<Conversation>> =
