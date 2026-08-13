@@ -6,6 +6,7 @@ import com.gamss.android.domain.card.CardRepository
 import com.gamss.android.domain.card.CreateCardUseCase
 import com.gamss.android.domain.card.CreateConversationCardUseCase
 import com.gamss.android.domain.conversation.CommentGenerationStatus
+import com.gamss.android.domain.conversation.Conversation
 import com.gamss.android.domain.conversation.ConversationRepository
 import com.gamss.android.domain.conversation.ConversationSession
 import com.gamss.android.domain.conversation.ConversationSummaryStore
@@ -15,6 +16,7 @@ import com.gamss.android.domain.conversation.Message
 import com.gamss.android.domain.conversation.MessageSender
 import com.gamss.android.domain.conversation.SendMessageUseCase
 import com.gamss.android.domain.conversation.SentMessage
+import com.gamss.android.domain.conversation.UpdateConversationTitleUseCase
 import com.gamss.android.domain.emotion.ClassificationResult
 import com.gamss.android.domain.emotion.ConversationEmotionAccumulator
 import com.gamss.android.domain.emotion.EmotionCharacter
@@ -44,6 +46,7 @@ internal fun chatRoomViewModel(
     session = ConversationSession(
         sendMessage = SendMessageUseCase(conversationRepository),
         getMessages = GetMessagesUseCase(conversationRepository),
+        updateConversationTitle = UpdateConversationTitleUseCase(conversationRepository),
         endConversation = EndConversationUseCase(conversationRepository),
         createConversationCard = CreateConversationCardUseCase(
             summarizeDiary = SummarizeDiaryUseCase(summarizer),
@@ -96,6 +99,7 @@ internal class FakeConversationRepository(
     private var sentCount = 0
 
     val sentContextSummaries = mutableListOf<String?>()
+    val updatedTitles = mutableListOf<Pair<Long, String>>()
 
     override suspend fun sendMessage(
         conversationId: Long?,
@@ -129,6 +133,14 @@ internal class FakeConversationRepository(
 
     override suspend fun getMessages(conversationId: Long): AppResult<List<Message>> =
         AppResult.Success(emptyList())
+
+    override suspend fun getOngoingConversations(): AppResult<List<Conversation>> =
+        AppResult.Success(emptyList())
+
+    override suspend fun updateTitle(conversationId: Long, title: String): AppResult<Unit> {
+        updatedTitles += conversationId to title
+        return AppResult.Success(Unit)
+    }
 
     override suspend fun endConversation(conversationId: Long): AppResult<Unit> =
         if (endFailing) AppResult.Failure(IllegalStateException("end failed")) else AppResult.Success(Unit)

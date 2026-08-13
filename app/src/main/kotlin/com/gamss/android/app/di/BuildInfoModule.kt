@@ -8,7 +8,6 @@ import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 
-/** BuildConfig.DEBUG 는 모듈마다 따로 생성되므로 app 의 값 하나만 주입해 쓴다. */
 @Module
 @InstallIn(SingletonComponent::class)
 object BuildInfoModule {

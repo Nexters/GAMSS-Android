@@ -5,22 +5,31 @@ import com.gamss.android.domain.card.Card
 import com.gamss.android.domain.card.CardNotRetryableException
 import com.gamss.android.domain.card.CreateConversationCardUseCase
 import com.gamss.android.domain.emotion.ConversationEmotionAccumulator
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
 
-/**
- * 압축본과 감정 누적이 서버에 확정된 USER 발화만 미러링하도록 순서를 강제한다.
- * 호출자가 조회·전송과 파생 상태 갱신의 순서를 직접 맞추면 진입점이 늘 때마다 규칙이 복제된다.
- */
+/** 한 대화의 전송·복원·제목·종료·카드 생성 순서를 한곳에서 지키는 역할이라 의존이 그만큼 필요하다. */
+@Suppress("LongParameterList")
 class ConversationSession @Inject constructor(
     private val sendMessage: SendMessageUseCase,
     private val getMessages: GetMessagesUseCase,
+    private val updateConversationTitle: UpdateConversationTitleUseCase,
     private val endConversation: EndConversationUseCase,
     private val createConversationCard: CreateConversationCardUseCase,
     private val summaryStore: ConversationSummaryStore,
     private val emotionAccumulator: ConversationEmotionAccumulator,
 ) {
 
+    private val titleMutex = Mutex()
+
+    private var pendingTitle: PendingTitle? = null
+
     suspend fun restore(conversationId: Long): AppResult<List<Message>> {
+        clearPendingTitle()
         val result = getMessages(conversationId)
         when (result) {
             is AppResult.Success -> {
@@ -41,6 +50,7 @@ class ConversationSession @Inject constructor(
         content: String,
         replyToMessageId: Long?,
     ): AppResult<SentMessage> {
+        val opensConversation = conversationId == null
         val result = sendMessage(
             SendMessageUseCase.Params(
                 conversationId = conversationId,
@@ -52,25 +62,76 @@ class ConversationSession @Inject constructor(
         if (result is AppResult.Success) {
             summaryStore.append(result.data.message.content)
             emotionAccumulator.append(result.data.message.content)
+            opensConversation.takeIf { it }?.let {
+                savePendingTitle(
+                    PendingTitle(
+                        conversationId = result.data.message.conversationId,
+                        seed = result.data.message.content,
+                    ),
+                )
+            }
         }
         return result
     }
 
-    /** 온디바이스 모델이 돌 수 있어 호출자가 화면을 갱신한 뒤에 부른다. */
-    suspend fun compact() {
-        summaryStore.compact()
-        emotionAccumulator.classifyPending()
+    suspend fun finishSend() = coroutineScope {
+        launch { assignPendingTitle() }
+        launch {
+            summaryStore.compact()
+            emotionAccumulator.classifyPending()
+        }
+    }
+
+    private suspend fun assignPendingTitle() {
+        val pending = takePendingTitle() ?: return
+        val title = conversationTitleFrom(pending.seed) ?: return
+        val result = try {
+            updateConversationTitle(
+                UpdateConversationTitleUseCase.Params(conversationId = pending.conversationId, title = title),
+            )
+        } catch (e: CancellationException) {
+            restorePendingTitle(pending)
+            throw e
+        }
+        if (result is AppResult.Failure) {
+            pending.nextAttempt()?.let { nextPending ->
+                restorePendingTitle(nextPending)
+            }
+        }
+    }
+
+    private suspend fun clearPendingTitle() {
+        titleMutex.withLock { pendingTitle = null }
+    }
+
+    private suspend fun savePendingTitle(pending: PendingTitle) {
+        titleMutex.withLock { pendingTitle = pending }
+    }
+
+    private suspend fun takePendingTitle(): PendingTitle? =
+        titleMutex.withLock { pendingTitle.also { pendingTitle = null } }
+
+    private suspend fun restorePendingTitle(pending: PendingTitle) {
+        titleMutex.withLock {
+            pendingTitle = pendingTitle ?: pending
+        }
+    }
+
+    private data class PendingTitle(
+        val conversationId: Long,
+        val seed: String,
+        val attempts: Int = 0,
+    ) {
+        fun nextAttempt(): PendingTitle? =
+            copy(attempts = attempts + 1).takeIf { it.attempts < MAX_TITLE_ATTEMPTS }
+    }
+
+    private companion object {
+        const val MAX_TITLE_ATTEMPTS = 3
     }
 
     suspend fun end(conversationId: Long): AppResult<Unit> = endConversation(conversationId)
 
-    /**
-     * 카드는 [end] 와 묶지 않는다. 종료는 되돌릴 수 없어서, 종료는 됐고 카드만 실패한 상태를
-     * 화면이 들고 있어야 한다.
-     *
-     * 분류가 남았는데 대표 감정이 없으면 온디바이스 모델의 일시 장애라 다시 해볼 여지가 있다.
-     * 다 돌렸는데도 없으면 재시도해도 같으므로 [CardNotRetryableException] 으로 구분해 알린다.
-     */
     suspend fun createCard(conversationId: Long, messages: List<Message>): AppResult<Card> {
         val classified = emotionAccumulator.classifyPending()
         val emotion = emotionAccumulator.result()

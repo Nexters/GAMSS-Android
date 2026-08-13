@@ -43,7 +43,13 @@ class DeleteConversationUseCaseTest {
             contextSummary: String?,
         ): AppResult<SentMessage> = throw UnsupportedOperationException()
 
+        override suspend fun getOngoingConversations(): AppResult<List<Conversation>> =
+            throw UnsupportedOperationException()
+
         override suspend fun getMessages(conversationId: Long): AppResult<List<Message>> =
+            throw UnsupportedOperationException()
+
+        override suspend fun updateTitle(conversationId: Long, title: String): AppResult<Unit> =
             throw UnsupportedOperationException()
 
         override suspend fun endConversation(conversationId: Long): AppResult<Unit> =

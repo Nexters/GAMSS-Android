@@ -48,7 +48,6 @@ class ChatRoomViewModel @Inject constructor(
         reduce { state.copy(conversationId = conversationId, isLoading = true) }
         when (val result = session.restore(conversationId)) {
             is AppResult.Success ->
-                // 서버 목록엔 댓글이 다 들어 있다. 큐를 남기면 같은 댓글이 두 번 붙어 key 가 충돌한다.
                 reduce { state.copy(isLoading = false, messages = result.data, pendingComments = emptyList()) }
             is AppResult.Failure -> {
                 reduce { state.copy(isLoading = false) }
@@ -77,7 +76,6 @@ class ChatRoomViewModel @Inject constructor(
     fun onSend() = intent {
         flushPendingComments()
 
-        // reduce 는 CAS 재시도로 여러 번 실행되고 마지막 실행만 커밋된다.
         var pending: PendingSend? = null
         reduce {
             pending = if (state.canSend) {
@@ -111,7 +109,7 @@ class ChatRoomViewModel @Inject constructor(
                 launchCommentReveal()
                 sent.commentStatus.toUserMessage()?.let { postSideEffect(ChatRoomSideEffect.ShowToast(it)) }
                 tokenUsageRefreshNotifier.requestRefresh()
-                session.compact()
+                session.finishSend()
             }
             is AppResult.Failure -> {
                 reduce { state.copy(isSending = false) }

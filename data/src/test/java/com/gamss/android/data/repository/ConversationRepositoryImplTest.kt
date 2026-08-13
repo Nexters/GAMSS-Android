@@ -3,12 +3,20 @@ package com.gamss.android.data.repository
 import com.gamss.android.core.common.AppResult
 import com.gamss.android.core.common.network.ApiException
 import com.gamss.android.data.remote.conversation.ConversationService
+import com.gamss.android.data.remote.conversation.model.request.UpdateConversationTitleRequest
+import com.gamss.android.data.remote.conversation.model.response.ConversationResponse
 import com.gamss.android.data.remote.model.response.ApiError
 import com.gamss.android.data.remote.model.response.ApiResponse
 import com.gamss.android.domain.auth.SessionExpiredException
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.ResponseBody.Companion.toResponseBody
@@ -19,10 +27,42 @@ import retrofit2.HttpException
 import retrofit2.Response
 import java.io.IOException
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class ConversationRepositoryImplTest {
 
     private val conversationService: ConversationService = mockk()
-    private val repository = ConversationRepositoryImpl(conversationService)
+    private val repository = ConversationRepositoryImpl(
+        conversationService = conversationService,
+        applicationScope = TestScope(),
+    )
+
+    /**
+     * 이 테스트만 인스턴스를 따로 만든다. 가상 시간을 돌리려면 applicationScope 가
+     * 이 테스트의 스케줄러여야 한다.
+     */
+    @Test
+    fun `호출자가 취소돼도 제목 지정 요청은 끝까지 간다`() = runTest {
+        var completed = false
+        coEvery { conversationService.updateTitle(any(), any()) } coAnswers {
+            delay(REQUEST_MILLIS)
+            completed = true
+            ApiResponse(success = true, data = ConversationResponse(id = ROOM_ID, title = TITLE))
+        }
+        val scopedRepository = ConversationRepositoryImpl(
+            conversationService = conversationService,
+            applicationScope = this,
+        )
+
+        val caller = launch { scopedRepository.updateTitle(conversationId = ROOM_ID, title = TITLE) }
+        advanceTimeBy(REQUEST_MILLIS / 2)
+        caller.cancel()
+        advanceUntilIdle()
+
+        assertTrue("취소 시점에 요청이 끊겼다", completed)
+        coVerify(exactly = 1) {
+            conversationService.updateTitle(ROOM_ID, UpdateConversationTitleRequest(TITLE))
+        }
+    }
 
     @Test
     fun `삭제에 성공하면 성공으로 전한다`() = runTest {
@@ -208,6 +248,8 @@ class ConversationRepositoryImplTest {
 
     private companion object {
         const val ROOM_ID = 7L
+        const val TITLE = "팀장이 아이디어 가로챘어"
+        const val REQUEST_MILLIS = 100L
         const val UNAUTHORIZED = 401
         const val FORBIDDEN = 403
         const val NOT_FOUND = 404
