@@ -75,20 +75,6 @@ fun HomeScreen(
                     Button(onClick = viewModel::navigateToSetting) {
                         Text("설정으로 이동")
                     }
-                    Spacer(modifier = Modifier.height(16.dp))
-                    // 정식 설정 화면이 추가되기 전까지 사용하는 임시 로그아웃 버튼
-                    Button(
-                        onClick = viewModel::logout,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = GamssTheme.colors.green,
-                            contentColor = GamssTheme.colors.gray025,
-                        ),
-                    ) {
-                        Text(
-                            text = "로그아웃",
-                            style = GamssTheme.typography.subtitle4,
-                        )
-                    }
                 }
             }
         }

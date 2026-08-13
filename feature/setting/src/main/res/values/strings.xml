@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="setting_title">설정</string>
+    <string name="setting_list_user_account">계정 정보</string>
+    <string name="setting_list_service_term">서비스 이용약관</string>
+    <string name="setting_list_privacy_policy">개인정보 처리방침</string>
+    <string name="setting_list_app_version">앱 버전</string>
+    <string name="account_info_nickname_change">닉네임 변경</string>
+    <string name="account_info_email">이메일</string>
+    <string name="account_info_logout">로그아웃</string>
+    <string name="account_info_delete_user_info">회원탈퇴</string>
+    <string name="account_info_logout_dialog_title">로그아웃 하시겠어요?</string>
+    <string name="account_info_logout_dialog_action_button_label">로그아웃</string>
+    <string name="account_info_logout_dialog_dismiss_button_label">마저 사용하기</string>
+    <string name="account_info_delete_user_info_dialog_title">정말 탈퇴하시겠어요?</string>
+    <string name="account_info_delete_user_info_dialog_subtitle">회원 탈퇴 시 지금까지 기록된 카드와 대화 내용은\n영원히 삭제되며 복구되지 않아요.</string>
+    <string name="account_info_delete_user_info_dialog_action_button_label">탈퇴하기</string>
+    <string name="account_info_delete_user_info_dialog_dismiss_button_label">뒤로가기</string>
+    <string name="nickname_change_save">저장하기</string>
+</resources>
