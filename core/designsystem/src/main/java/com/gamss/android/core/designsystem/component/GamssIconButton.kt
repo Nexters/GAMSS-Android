@@ -17,10 +17,7 @@ import androidx.compose.ui.unit.dp
 import com.gamss.android.core.designsystem.theme.GamssTheme
 
 /**
- * 아이콘 하나짜리 버튼.
- *
- * [hitPadding] 은 clickable 안쪽에 들어가므로 아이콘 크기는 그대로 두고 터치 영역만 넓힌다.
- * 기본값 기준 터치 영역은 48dp 다.
+ * [hitPadding] 은 clickable 안쪽에 들어가 아이콘 크기는 그대로 두고 터치 영역만 넓힌다.
  *
  * 아이콘 크기는 VectorDrawable 에 박힌 값을 그대로 쓴다. Figma 내보내기는 stroke 여백까지 담아 크기가
  * 정해져 있어, 일괄로 24dp 에 맞추면 아이콘마다 비율이 틀어진다.
@@ -33,11 +30,12 @@ fun GamssIconButton(
     modifier: Modifier = Modifier,
     hitPadding: Dp = 12.dp,
     tint: Color = GamssTheme.colors.gray700,
+    enabled: Boolean = true,
 ) {
     Box(
         modifier = modifier
             .clip(CircleShape)
-            .clickable(role = Role.Button, onClick = onClick)
+            .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
             .padding(hitPadding),
     ) {
         Icon(

@@ -29,11 +29,6 @@ private val InputBarStartPadding = 21.dp
 private val TrailingHitPadding = 10.dp
 private val InputBarEndPadding = 8.dp
 
-/**
- * 걱정을 적어 던지는 한 줄 입력바.
- *
- * 후행 아이콘은 전송 버튼이라, 입력이 비어 있으면 [onTrailingClick] 을 흘려보내지 않고 비활성으로 보여 준다.
- */
 @Composable
 fun GamssInputBar(
     value: String,
@@ -58,7 +53,6 @@ fun GamssInputBar(
         BasicTextField(
             value = value,
             onValueChange = onValueChange,
-            // 입력칸이 바 전체를 차지해야 어디를 눌러도 커서가 잡힌다.
             modifier = Modifier
                 .weight(1f)
                 .fillMaxHeight(),
@@ -88,9 +82,10 @@ fun GamssInputBar(
         GamssIconButton(
             iconRes = trailingIconRes,
             contentDescription = trailingContentDescription,
-            onClick = { if (canSubmit) onTrailingClick() },
+            onClick = onTrailingClick,
             hitPadding = TrailingHitPadding,
             tint = if (canSubmit) GamssTheme.colors.gray900 else GamssTheme.colors.gray300,
+            enabled = canSubmit,
         )
     }
 }
