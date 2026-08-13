@@ -27,13 +27,11 @@ internal class FirebaseRemoteConfigDataSource @Inject constructor(
 
     suspend fun fetchAndActivate(): Boolean = remoteConfigProvider.get().fetchAndActivate().await()
 
-    /** 원격 값도 등록된 기본값도 없는 상태를 구분한다. */
-    fun hasValue(key: String): Boolean =
-        remoteConfigProvider.get().getValue(key).source != FirebaseRemoteConfig.VALUE_SOURCE_STATIC
-
-    fun getString(key: String): String = remoteConfigProvider.get().getString(key)
-
-    fun getBoolean(key: String): Boolean = remoteConfigProvider.get().getBoolean(key)
+    /** 원격 값도 등록된 기본값도 없으면 null. 첫 호출은 디스크 캐시를 기다릴 수 있다. */
+    fun read(key: String): String? {
+        val value = remoteConfigProvider.get().getValue(key)
+        return value.asString().takeIf { value.source != FirebaseRemoteConfig.VALUE_SOURCE_STATIC }
+    }
 
     /** 디버그 빌드는 콘솔 변경을 바로 확인해야 하므로 조회 간격 제한을 두지 않는다. */
     private fun fetchIntervalSeconds(): Long =

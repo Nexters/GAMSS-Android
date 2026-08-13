@@ -6,6 +6,7 @@ import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
+import io.mockk.verify
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.launch
@@ -31,6 +32,12 @@ class RemoteConfigRepositoryImplTest {
 
     private fun repository() = RemoteConfigRepositoryImpl(remote)
 
+    private fun stubFetchSuccess(value: String) {
+        coEvery { remote.configure(any()) } returns Unit
+        coEvery { remote.fetchAndActivate() } returns true
+        every { remote.read(any()) } returns value
+    }
+
     @Test
     fun `원격 조회가 실패해도 준비 완료로 표시한다`() = runTest {
         coEvery { remote.configure(any()) } returns Unit
@@ -55,8 +62,7 @@ class RemoteConfigRepositoryImplTest {
 
     @Test
     fun `initialize 를 두 번 호출해도 원격 조회는 한 번만 수행한다`() = runTest {
-        coEvery { remote.configure(any()) } returns Unit
-        coEvery { remote.fetchAndActivate() } returns true
+        stubFetchSuccess("false")
 
         val repository = repository()
         repository.initialize()
@@ -70,6 +76,7 @@ class RemoteConfigRepositoryImplTest {
         val defaults = slot<Map<String, String>>()
         coEvery { remote.configure(capture(defaults)) } returns Unit
         coEvery { remote.fetchAndActivate() } returns true
+        every { remote.read(any()) } returns null
 
         repository().initialize()
 
@@ -96,6 +103,7 @@ class RemoteConfigRepositoryImplTest {
         val configureGate = CompletableDeferred<Unit>()
         coEvery { remote.configure(any()) } coAnswers { configureGate.await() }
         coEvery { remote.fetchAndActivate() } returns true
+        every { remote.read(any()) } returns "false"
 
         val repository = repository()
         val first = launch { repository.initialize() }
@@ -115,33 +123,53 @@ class RemoteConfigRepositoryImplTest {
     }
 
     @Test
-    fun `원격 값이 있으면 키 문자열로 위임한다`() {
-        val key = RemoteConfigKey.UseCardFeature
-        every { remote.hasValue(key.key) } returns true
-        every { remote.getBoolean(key.key) } returns true
-
-        assertTrue(repository().getBoolean(key))
-    }
-
-    @Test
-    fun `기본값 등록이 실패해도 선언한 기본값을 돌려준다`() = runTest {
-        val key = RemoteConfigKey.UseCardFeature
-        coEvery { remote.configure(any()) } throws IOException("play services unavailable")
-        every { remote.hasValue(key.key) } returns false
+    fun `원격 값이 있으면 그 값을 돌려준다`() = runTest {
+        stubFetchSuccess("true")
 
         val repository = repository()
         repository.initialize()
 
-        assertFalse(repository.getBoolean(key))
+        assertTrue(repository.getBoolean(RemoteConfigKey.UseCardFeature))
+    }
+
+    @Test
+    fun `조회는 initialize 이후 SDK 를 다시 호출하지 않는다`() = runTest {
+        stubFetchSuccess("true")
+
+        val repository = repository()
+        repository.initialize()
+        repeat(3) { repository.getBoolean(RemoteConfigKey.UseCardFeature) }
+
+        RemoteConfigKey.entries.forEach { key ->
+            verify(exactly = 1) { remote.read(key.key) }
+        }
+    }
+
+    @Test
+    fun `initialize 이전 조회도 선언한 기본값을 돌려준다`() {
+        val key = RemoteConfigKey.UseCardFeature
+
+        val repository = repository()
+
         assertEquals(key.defaultValue, repository.getString(key))
+        assertFalse(repository.getBoolean(key))
+    }
+
+    @Test
+    fun `원격 조회가 실패하면 선언한 기본값을 돌려준다`() = runTest {
+        val key = RemoteConfigKey.UseCardFeature
+        coEvery { remote.configure(any()) } returns Unit
+        coEvery { remote.fetchAndActivate() } throws IOException("network down")
+
+        val repository = repository()
+        repository.initialize()
+
+        assertEquals(key.defaultValue, repository.getString(key))
+        assertFalse(repository.getBoolean(key))
     }
 
     @Test
     fun `기능 플래그의 기본값은 꺼짐이다`() {
-        val key = RemoteConfigKey.UseCardFeature
-        every { remote.hasValue(key.key) } returns false
-
-        assertEquals("false", key.defaultValue)
-        assertFalse(repository().getBoolean(key))
+        assertEquals("false", RemoteConfigKey.UseCardFeature.defaultValue)
     }
 }

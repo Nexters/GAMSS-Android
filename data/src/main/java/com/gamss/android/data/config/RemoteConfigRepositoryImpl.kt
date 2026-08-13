@@ -19,25 +19,31 @@ internal class RemoteConfigRepositoryImpl @Inject constructor(
     private val mutex = Mutex()
     private val readyState = MutableStateFlow(false)
 
+    /** SDK 조회는 디스크를 기다릴 수 있으므로 [initialize] 에서 한 번만 읽어 둔다. */
+    @Volatile
+    private var snapshot: Map<RemoteConfigKey, String> = DECLARED_DEFAULTS
+
     override val isReady: StateFlow<Boolean> = readyState.asStateFlow()
 
     override suspend fun initialize() {
         if (readyState.value) return
         mutex.withLock {
             if (readyState.value) return
-            runSafely {
-                remote.configure(DEFAULTS)
+            snapshot = runSafely {
+                remote.configure(SDK_DEFAULTS)
                 remote.fetchAndActivate()
-            }
+                readSnapshot()
+            } ?: DECLARED_DEFAULTS
             readyState.value = true
         }
     }
 
-    override fun getString(key: RemoteConfigKey): String =
-        if (remote.hasValue(key.key)) remote.getString(key.key) else key.defaultValue
+    override fun getString(key: RemoteConfigKey): String = snapshot.getValue(key)
 
-    override fun getBoolean(key: RemoteConfigKey): Boolean =
-        if (remote.hasValue(key.key)) remote.getBoolean(key.key) else key.defaultValue.toBoolean()
+    override fun getBoolean(key: RemoteConfigKey): Boolean = snapshot.getValue(key).toBoolean()
+
+    private fun readSnapshot(): Map<RemoteConfigKey, String> =
+        RemoteConfigKey.entries.associateWith { remote.read(it.key) ?: it.defaultValue }
 
     /** 원격 설정 실패가 앱 시작을 막으면 안 되므로 취소를 제외한 모든 예외를 삼킨다. */
     @Suppress("TooGenericExceptionCaught", "SwallowedException")
@@ -51,7 +57,9 @@ internal class RemoteConfigRepositoryImpl @Inject constructor(
         }
 
     private companion object {
-        val DEFAULTS: Map<String, String> =
-            RemoteConfigKey.entries.associate { it.key to it.defaultValue }
+        val DECLARED_DEFAULTS: Map<RemoteConfigKey, String> =
+            RemoteConfigKey.entries.associateWith { it.defaultValue }
+
+        val SDK_DEFAULTS: Map<String, String> = DECLARED_DEFAULTS.mapKeys { it.key.key }
     }
 }
