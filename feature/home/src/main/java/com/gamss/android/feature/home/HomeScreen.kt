@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -178,10 +177,11 @@ private fun CharacterPickerToggle(
     onClick: () -> Unit,
 ) {
     Row(
+        // fillMaxHeight 를 쓰면 안 된다. 입력바 높이가 내용 기반이라 자식이 최대 제약을 먹고 화면을 채운다.
+        // 터치 영역은 세로 여백으로 벌린다.
         modifier = Modifier
-            .fillMaxHeight()
             .clickable(role = Role.DropdownList, onClick = onClick)
-            .padding(horizontal = PickerToggleHitPadding),
+            .padding(horizontal = PickerToggleHitPadding, vertical = PickerToggleVerticalPadding),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(PickerToggleGap),
     ) {
@@ -286,6 +286,9 @@ private val InputBarHorizontalPadding: Dp = 20.dp
 private val PickerTopGap = 4.dp
 private val PickerToggleGap = 4.dp
 private val PickerToggleHitPadding = 4.dp
+
+// 라벨 줄높이가 20dp 라 위아래 14dp 씩 더하면 터치 영역이 48dp 가 된다.
+private val PickerToggleVerticalPadding = 14.dp
 private val PickerToggleChevronSize = 16.dp
 private const val CHEVRON_ROTATION = 90f
 

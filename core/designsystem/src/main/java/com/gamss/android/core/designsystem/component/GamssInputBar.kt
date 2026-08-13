@@ -6,9 +6,8 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.BasicTextField
@@ -40,6 +39,9 @@ private val SendButtonSize = 32.dp
 private val SendButtonTouchSize = 48.dp
 private val InputBarEndPadding = 10.dp
 
+// 140자 상한을 이 폭에서 담으려면 6줄이면 넉넉하다. 넘치면 입력칸 안에서 스크롤된다.
+private const val INPUT_MAX_LINES = 6
+
 @Composable
 fun GamssInputBar(
     value: String,
@@ -56,7 +58,8 @@ fun GamssInputBar(
 
     Row(
         modifier = modifier
-            .height(InputBarHeight)
+            // 140자를 채우면 여러 줄이 된다. 한 줄일 때의 높이를 최소치로만 잡고 아래로 늘어나게 둔다.
+            .heightIn(min = InputBarHeight)
             .background(GamssTheme.colors.white, RectangleShape)
             .border(InputBarBorderWidth, GamssTheme.colors.black, RectangleShape)
             .padding(start = InputBarStartPadding, end = InputBarEndPadding),
@@ -65,11 +68,13 @@ fun GamssInputBar(
         BasicTextField(
             value = value,
             onValueChange = onValueChange,
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxHeight(),
+            modifier = Modifier.weight(1f),
             enabled = enabled,
-            singleLine = true,
+            // 한 줄로 묶으면 140자 상한에 걸려도 가로로 스크롤만 되어 잘린 게 보이지 않는다.
+            // 상한을 안 걸면 남은 세로 공간을 전부 채워 버리므로 줄 수로 묶는다.
+            singleLine = false,
+            minLines = 1,
+            maxLines = INPUT_MAX_LINES,
             textStyle = GamssTheme.typography.body4Medium.copy(color = GamssTheme.colors.gray900),
             cursorBrush = SolidColor(GamssTheme.colors.gray900),
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
@@ -77,7 +82,7 @@ fun GamssInputBar(
             decorationBox = { innerTextField ->
                 // 자리표시자와 입력칸을 겹쳐 놓아야 한다. 컨테이너 없이 나란히 두면 입력칸이 밀려난다.
                 Box(
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier.fillMaxWidth(),
                     contentAlignment = Alignment.CenterStart,
                 ) {
                     if (value.isEmpty()) {

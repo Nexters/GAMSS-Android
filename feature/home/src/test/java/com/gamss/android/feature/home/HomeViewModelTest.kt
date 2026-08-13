@@ -1,6 +1,7 @@
 package com.gamss.android.feature.home
 
 import com.gamss.android.core.common.AppResult
+import com.gamss.android.domain.conversation.MAX_MESSAGE_LENGTH
 import com.gamss.android.domain.emotion.EmotionCharacter
 import com.gamss.android.domain.user.GetUserInfoUseCase
 import com.gamss.android.domain.user.UserProfile
@@ -105,6 +106,14 @@ class HomeViewModelTest {
             containerHost.onSubmit()
             expectState { copy(input = "", isEmotionPickerExpanded = false) }
             expectSideEffect(HomeSideEffect.StartConversation(WORRY, excludeCharacters = emptySet()))
+        }
+    }
+
+    @Test
+    fun `상한을 넘긴 입력은 140자까지만 남는다`() = runTest {
+        viewModel().test(this) {
+            containerHost.onInputChange("가".repeat(MAX_MESSAGE_LENGTH + 20))
+            expectState { copy(input = "가".repeat(MAX_MESSAGE_LENGTH)) }
         }
     }
 
