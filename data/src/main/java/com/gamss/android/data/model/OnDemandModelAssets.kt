@@ -1,6 +1,7 @@
 package com.gamss.android.data.model
 
 import android.content.Context
+import com.gamss.android.domain.model.ModelDownloadStatus
 import com.google.android.play.core.assetpacks.AssetLocation
 import com.google.android.play.core.assetpacks.AssetPackManager
 import com.google.android.play.core.assetpacks.AssetPackManagerFactory
@@ -9,6 +10,7 @@ import com.google.android.play.core.assetpacks.AssetPackStateUpdateListener
 import com.google.android.play.core.assetpacks.model.AssetPackStatus
 import com.google.android.play.core.ktx.requestFetch
 import com.google.android.play.core.ktx.requestPackStates
+import com.google.android.play.core.ktx.requestProgressFlow
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
@@ -16,6 +18,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import java.io.RandomAccessFile
 import java.nio.MappedByteBuffer
 import java.nio.channels.FileChannel
@@ -28,10 +31,11 @@ internal class ModelPackUnavailableException(message: String) : Exception(messag
  * 필요 시점에 내려받고 [AssetLocation](로컬 파일 경로 + 오프셋/길이)을 돌려주는 공용 헬퍼.
  * emotion(:models:emotion-pack), summary(:models:summary-pack) 두 모델 로더가 이 경로를 공유한다.
  *
- * WAITING_FOR_WIFI 상태의 셀룰러 확인 다이얼로그(requestCellularDataConfirmation)는 Activity 가
- * 있어야 띄울 수 있는데, data 모듈은 feature 모듈에서 볼 수 없어(둘 다 아는 Android 공용 모듈이
- * 없음) 지금은 예외로 실패 처리한다. 다운로드 진행률/Wi-Fi 확인을 사용자에게 보여주는 UI 흐름은
- * 후속 작업으로 분리한다.
+ * WAITING_FOR_WIFI/REQUIRES_USER_CONFIRMATION 은 둘 다 Activity 가 있어야 띄울 수 있는 시스템
+ * 다이얼로그로 풀리는데, [resolve]/[prefetch] 를 쓰는 감정 분류·요약 호출부는 Activity 를 모른다
+ * (data 모듈은 Activity 를 안 씀). 그래서 여기선 실패로만 처리하고, 실제 확인 다이얼로그를 띄우는
+ * 책임은 [statusFlow] 를 구독해 Activity 가 있는 app 루트로 넘긴다 — [ModelDownloadConfirmationGateway]
+ * 참고.
  */
 internal class OnDemandModelAssets(context: Context) {
 
@@ -84,6 +88,7 @@ internal class OnDemandModelAssets(context: Context) {
         val reason = when (state.status()) {
             AssetPackStatus.FAILED -> "다운로드 실패: ${state.errorCode()}"
             AssetPackStatus.WAITING_FOR_WIFI -> "Wi-Fi 확인 대기 중입니다. UI 에서 사용자 확인이 필요합니다."
+            AssetPackStatus.REQUIRES_USER_CONFIRMATION -> "다운로드 크기가 커서 사용자 확인이 필요합니다."
             AssetPackStatus.CANCELED -> "다운로드가 취소됐습니다."
             else -> "알 수 없는 상태(${state.status()})"
         }
@@ -101,11 +106,31 @@ internal class OnDemandModelAssets(context: Context) {
         awaitClose { manager.unregisterListener(listener) }
     }.filter { it.name() == packName }
 
+    /**
+     * [packName] 의 현재/이후 다운로드 상태를 계속 흘려준다. [resolve]/[prefetch] 와 달리 fetch를
+     * 직접 요청하지 않는다 — 순수 관찰용이라 UI 가 구독해도 다운로드가 새로 시작되진 않는다
+     * (이미 fetch 가 걸려 있어야 진행 상태가 바뀐다).
+     */
+    fun statusFlow(packName: String): Flow<ModelDownloadStatus> =
+        manager.requestProgressFlow(listOf(packName))
+            .filter { it.name() == packName }
+            .map { it.status().toDomainStatus() }
+
+    private fun Int.toDomainStatus(): ModelDownloadStatus = when (this) {
+        AssetPackStatus.COMPLETED -> ModelDownloadStatus.COMPLETED
+        AssetPackStatus.WAITING_FOR_WIFI,
+        AssetPackStatus.REQUIRES_USER_CONFIRMATION,
+        -> ModelDownloadStatus.NEEDS_USER_CONFIRMATION
+        AssetPackStatus.FAILED, AssetPackStatus.CANCELED -> ModelDownloadStatus.FAILED
+        else -> ModelDownloadStatus.DOWNLOADING
+    }
+
     private companion object {
         val TERMINAL_STATUSES = setOf(
             AssetPackStatus.COMPLETED,
             AssetPackStatus.FAILED,
             AssetPackStatus.WAITING_FOR_WIFI,
+            AssetPackStatus.REQUIRES_USER_CONFIRMATION,
             AssetPackStatus.CANCELED,
         )
     }
