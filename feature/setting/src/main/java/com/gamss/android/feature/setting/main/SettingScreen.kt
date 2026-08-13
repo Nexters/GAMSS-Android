@@ -50,10 +50,12 @@ fun SettingScreen(
         SettingDivider()
 
         Column(verticalArrangement = Arrangement.spacedBy(GamssTheme.spacing.spacing300)) {
-            SettingListItem(
-                title = stringResource(R.string.setting_list_service_term),
-                onClick = onServiceTermsClick,
-            )
+            if (SHOW_SERVICE_TERMS) {
+                SettingListItem(
+                    title = stringResource(R.string.setting_list_service_term),
+                    onClick = onServiceTermsClick,
+                )
+            }
             SettingListItem(
                 title = stringResource(R.string.setting_list_privacy_policy),
                 onClick = onPrivacyPolicyClick,
@@ -77,3 +79,6 @@ private fun SettingDivider() {
 
 private fun Context.appVersion(): String =
     packageManager.getPackageInfo(packageName, 0).versionName.orEmpty()
+
+// 약관과 처리방침이 한 문서에 함께 실려 있다. 문서가 분리되면 true 로 되돌린다.
+private const val SHOW_SERVICE_TERMS = false

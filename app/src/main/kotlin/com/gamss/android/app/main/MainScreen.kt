@@ -32,12 +32,11 @@ import com.gamss.android.feature.setting.accountinfo.AccountInfoScreen
 import com.gamss.android.feature.setting.main.SettingScreen
 import com.gamss.android.feature.setting.navigation.AccountInfoKey
 import com.gamss.android.feature.setting.navigation.NicknameChangeKey
-import com.gamss.android.feature.setting.navigation.PrivacyPolicyKey
-import com.gamss.android.feature.setting.navigation.ServiceTermsKey
 import com.gamss.android.feature.setting.navigation.SettingKey
 import com.gamss.android.feature.setting.nicknamechange.NicknameChangeScreen
-import com.gamss.android.feature.setting.privacypolicy.PrivacyPolicyScreen
-import com.gamss.android.feature.setting.serviceterms.ServiceTermsScreen
+import com.gamss.android.feature.webview.GamssWebPage
+import com.gamss.android.feature.webview.WebViewScreen
+import com.gamss.android.feature.webview.navigation.WebViewKey
 
 @Composable
 fun MainScreen(useCardFeature: Boolean) {
@@ -96,8 +95,8 @@ private fun mainEntryProvider(navigator: Navigator) = entryProvider {
         SettingScreen(
             onBackClick = navigator::goBack,
             onAccountInfoClick = { navigator.navigate(AccountInfoKey) },
-            onServiceTermsClick = { navigator.navigate(ServiceTermsKey) },
-            onPrivacyPolicyClick = { navigator.navigate(PrivacyPolicyKey) },
+            onServiceTermsClick = { navigator.navigate(WebViewKey(GamssWebPage.ServiceTerms)) },
+            onPrivacyPolicyClick = { navigator.navigate(WebViewKey(GamssWebPage.PrivacyPolicy)) },
         )
     }
     entry<AccountInfoKey> {
@@ -112,8 +111,9 @@ private fun mainEntryProvider(navigator: Navigator) = entryProvider {
             onBackClick = navigator::goBack,
         )
     }
-    entry<ServiceTermsKey> { ServiceTermsScreen(onBackClick = navigator::goBack) }
-    entry<PrivacyPolicyKey> { PrivacyPolicyScreen(onBackClick = navigator::goBack) }
+    entry<WebViewKey> { key ->
+        WebViewScreen(page = key.page, onBackClick = navigator::goBack)
+    }
     entry<ChatKey> {
         ChattingListScreen(onChatClick = { navigator.navigate(ChatRoomKey(conversationId = it)) })
     }
