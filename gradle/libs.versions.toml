@@ -18,7 +18,9 @@ kotlinx-serialization = "1.11.0"
 coroutines = "1.10.2"
 litert = "2.1.5"
 djl = "0.33.0"
-onnxruntime = "1.20.0"
+# 1.21.1 부터 libonnxruntime4j_jni.so 가 16KB 페이지에 맞춰 정렬된다(1.20.0, 1.21.0 은 4KB).
+# 다만 libdjl_tokenizer.so 가 아직 4KB 라, 16KB 페이지로 구성된 기기에서는 여전히 뜨지 않는다.
+onnxruntime = "1.21.1"
 orbit-mvi = "11.0.0"
 retrofit = "3.0.0"
 okhttp = "5.4.0"
