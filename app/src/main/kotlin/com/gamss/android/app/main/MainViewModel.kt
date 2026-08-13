@@ -54,10 +54,10 @@ class MainViewModel @Inject constructor(
         val readyInTime = withTimeoutOrNull(REMOTE_CONFIG_WAIT_MILLIS) {
             observeRemoteConfigReadyUseCase().first { isReady -> isReady }
         } != null
-        emit(getRemoteConfigFlagUseCase(RemoteConfigKey.UseCardFeature))
+        emit(getRemoteConfigFlagUseCase(RemoteConfigKey.UseChatEndFeature))
         if (!readyInTime) {
             observeRemoteConfigReadyUseCase().first { isReady -> isReady }
-            emit(getRemoteConfigFlagUseCase(RemoteConfigKey.UseCardFeature))
+            emit(getRemoteConfigFlagUseCase(RemoteConfigKey.UseChatEndFeature))
         }
     }
 

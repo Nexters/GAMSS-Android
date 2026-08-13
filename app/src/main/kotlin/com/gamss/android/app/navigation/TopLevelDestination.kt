@@ -16,7 +16,7 @@ data class TopLevelDestination(
     val key: NavKey,
     @param:DrawableRes @get:DrawableRes val iconRes: Int,
     @param:StringRes @get:StringRes val labelRes: Int,
-    /** 원격 설정 `use_card_feature` 가 켜졌을 때만 탭바에 노출한다. */
+    /** 원격 설정 `use_chat_end_feature` 가 켜졌을 때만 탭바에 노출한다. */
     val requiresCardFeature: Boolean = false,
 )
 
