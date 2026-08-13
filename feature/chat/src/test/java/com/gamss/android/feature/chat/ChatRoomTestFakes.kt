@@ -5,6 +5,9 @@ import com.gamss.android.domain.card.Card
 import com.gamss.android.domain.card.CardRepository
 import com.gamss.android.domain.card.CreateCardUseCase
 import com.gamss.android.domain.card.CreateConversationCardUseCase
+import com.gamss.android.domain.config.GetRemoteConfigFlagUseCase
+import com.gamss.android.domain.config.RemoteConfigKey
+import com.gamss.android.domain.config.RemoteConfigRepository
 import com.gamss.android.domain.conversation.CommentGenerationStatus
 import com.gamss.android.domain.conversation.Conversation
 import com.gamss.android.domain.conversation.ConversationRepository
@@ -32,6 +35,7 @@ import com.gamss.android.domain.summary.SummarizeDiaryUseCase
 import com.gamss.android.domain.summary.UtteranceTokenCounter
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emptyFlow
 
 /**
@@ -45,12 +49,14 @@ internal fun chatRoomViewModel(
     summarizer: DiarySummarizer = PassThroughSummarizer,
     classifier: EmotionClassifier = FlatClassifier,
     tokenUsageRefreshNotifier: TokenUsageRefreshNotifier = RecordingTokenUsageRefreshNotifier(),
+    remoteConfigRepository: RemoteConfigRepository = FakeRemoteConfigRepository(),
 ): ChatRoomViewModel = ChatRoomViewModel(
     tokenUsageRefreshNotifier = tokenUsageRefreshNotifier,
     detectRiskInText = DetectRiskInTextUseCase(
         repository = NoRiskLexiconRepository,
         matcher = RiskTermMatcher(),
     ),
+    getRemoteConfigFlag = GetRemoteConfigFlagUseCase(remoteConfigRepository),
     session = ConversationSession(
         sendMessage = SendMessageUseCase(conversationRepository),
         getMessages = GetMessagesUseCase(conversationRepository),
@@ -67,6 +73,19 @@ internal fun chatRoomViewModel(
         emotionAccumulator = ConversationEmotionAccumulator(classifier),
     ),
 )
+
+/** 원격 설정 조회 없이 항상 켜진 값을 돌려준다. 값 자체를 검증하는 테스트는 별도로 stub 한다. */
+internal class FakeRemoteConfigRepository(
+    private val flags: Map<RemoteConfigKey, Boolean> = RemoteConfigKey.entries.associateWith { true },
+) : RemoteConfigRepository {
+    override val isReady: Flow<Boolean> = MutableStateFlow(true)
+
+    override suspend fun initialize() = Unit
+
+    override fun getString(key: RemoteConfigKey): String = getBoolean(key).toString()
+
+    override fun getBoolean(key: RemoteConfigKey): Boolean = flags[key] ?: key.defaultValue.toBoolean()
+}
 
 private object NoRiskLexiconRepository : RiskLexiconRepository {
     override suspend fun getLexicon() = RiskLexicon(

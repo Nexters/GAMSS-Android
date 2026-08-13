@@ -210,6 +210,7 @@ private fun ChatRoomContent(
             ChatRoomTopBar(
                 endFlow = state.endFlow,
                 canEnd = state.canEnd,
+                showEndButton = state.useChatEndFeature,
                 onEndClick = actions.onEndClick,
             )
         },
@@ -278,6 +279,7 @@ private fun ChatRoomContent(
 private fun ChatRoomTopBar(
     endFlow: EndFlow,
     canEnd: Boolean,
+    showEndButton: Boolean,
     onEndClick: () -> Unit,
 ) {
     Row(
@@ -291,17 +293,19 @@ private fun ChatRoomTopBar(
             style = MaterialTheme.typography.titleLarge,
             modifier = Modifier.weight(1f),
         )
-        if (endFlow.isBusy) {
-            CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
-        } else {
-            TextButton(onClick = onEndClick, enabled = canEnd) {
-                Text(
-                    when {
-                        endFlow == EndFlow.CardFailedRetryable -> "카드 다시 만들기"
-                        endFlow is EndFlow.Ended -> "끝난 대화"
-                        else -> "대화 끝내기"
-                    },
-                )
+        if (showEndButton) {
+            if (endFlow.isBusy) {
+                CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+            } else {
+                TextButton(onClick = onEndClick, enabled = canEnd) {
+                    Text(
+                        when {
+                            endFlow == EndFlow.CardFailedRetryable -> "카드 다시 만들기"
+                            endFlow is EndFlow.Ended -> "끝난 대화"
+                            else -> "대화 끝내기"
+                        },
+                    )
+                }
             }
         }
     }

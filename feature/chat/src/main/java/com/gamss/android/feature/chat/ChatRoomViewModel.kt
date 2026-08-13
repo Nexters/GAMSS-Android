@@ -3,6 +3,8 @@ package com.gamss.android.feature.chat
 import androidx.lifecycle.ViewModel
 import com.gamss.android.core.common.AppResult
 import com.gamss.android.domain.card.CardNotRetryableException
+import com.gamss.android.domain.config.GetRemoteConfigFlagUseCase
+import com.gamss.android.domain.config.RemoteConfigKey
 import com.gamss.android.domain.conversation.CommentGenerationStatus
 import com.gamss.android.domain.conversation.ConversationSession
 import com.gamss.android.domain.conversation.Message
@@ -29,6 +31,7 @@ class ChatRoomViewModel @Inject constructor(
     private val session: ConversationSession,
     private val tokenUsageRefreshNotifier: TokenUsageRefreshNotifier,
     private val detectRiskInText: DetectRiskInTextUseCase,
+    private val getRemoteConfigFlag: GetRemoteConfigFlagUseCase,
 ) : ViewModel(),
     ContainerHost<ChatRoomState, ChatRoomSideEffect> {
 
@@ -42,9 +45,15 @@ class ChatRoomViewModel @Inject constructor(
     fun start(conversationId: Long?) {
         if (started) return
         started = true
+        loadChatEndFeatureFlag()
         if (conversationId != null) {
             loadMessages(conversationId)
         }
+    }
+
+    private fun loadChatEndFeatureFlag() = intent {
+        val useChatEndFeature = getRemoteConfigFlag(RemoteConfigKey.UseChatEndFeature)
+        reduce { state.copy(useChatEndFeature = useChatEndFeature) }
     }
 
     private fun loadMessages(conversationId: Long) = intent {

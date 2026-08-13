@@ -7,4 +7,5 @@ package com.gamss.android.domain.config
  */
 enum class RemoteConfigKey(val key: String, val defaultValue: String) {
     UseCardFeature("use_card_feature", "false"),
+    UseChatEndFeature("use_chat_end_feature", "false"),
 }
