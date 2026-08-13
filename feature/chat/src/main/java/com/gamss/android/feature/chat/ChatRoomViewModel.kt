@@ -1,5 +1,6 @@
 package com.gamss.android.feature.chat
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import com.gamss.android.core.common.AppResult
 import com.gamss.android.domain.card.CardNotRetryableException
@@ -26,6 +27,7 @@ private typealias ChatRoomSyntax = Syntax<ChatRoomState, ChatRoomSideEffect>
 class ChatRoomViewModel @Inject constructor(
     private val session: ConversationSession,
     private val tokenUsageRefreshNotifier: TokenUsageRefreshNotifier,
+    private val savedStateHandle: SavedStateHandle,
 ) : ViewModel(),
     ContainerHost<ChatRoomState, ChatRoomSideEffect> {
 
@@ -36,15 +38,15 @@ class ChatRoomViewModel @Inject constructor(
     @Volatile
     private var revealJob: Job? = null
 
-    /**
-     * @param initialMessage 홈에서 적어 온 첫 걱정. 새 대화일 때만 그대로 이어서 보낸다.
-     *  [started] 가드가 있어 화면이 다시 그려져도 두 번 보내지 않는다.
-     */
+    /** @param initialMessage 새 대화일 때만 자동 전송한다. [started] 가드로 재구성 시 중복 전송을 막는다. */
     fun start(conversationId: Long?, initialMessage: String? = null) {
         if (started) return
         started = true
-        if (conversationId != null) {
-            loadMessages(conversationId)
+        // 홈에서 시작한 대화는 NavKey 의 id 가 null 인 채로 복원된다. 저장해 둔 id 를 되살리지 않으면
+        // 빈 대화방이 뜨고, 거기서 다시 보내면 같은 걱정으로 대화가 하나 더 만들어진다.
+        val restored = conversationId ?: savedStateHandle.get<Long>(KEY_CONVERSATION_ID)
+        if (restored != null) {
+            loadMessages(restored)
             return
         }
         if (!initialMessage.isNullOrBlank()) {
@@ -54,6 +56,7 @@ class ChatRoomViewModel @Inject constructor(
     }
 
     private fun loadMessages(conversationId: Long) = intent {
+        savedStateHandle[KEY_CONVERSATION_ID] = conversationId
         reduce { state.copy(conversationId = conversationId, isLoading = true) }
         when (val result = session.restore(conversationId)) {
             is AppResult.Success ->
@@ -105,6 +108,7 @@ class ChatRoomViewModel @Inject constructor(
         when (result) {
             is AppResult.Success -> {
                 val sent = result.data
+                savedStateHandle[KEY_CONVERSATION_ID] = sent.message.conversationId
                 reduce {
                     state.copy(
                         isSending = false,
@@ -128,9 +132,8 @@ class ChatRoomViewModel @Inject constructor(
     }
 
     fun onEndRequest() = intent {
-        // 검사와 상태 전환을 한 reduce 안에서 처리해야 연타로 두 번 시작되지 않는다.
-        // 전이 여부는 단계 값이 아니라 별도 플래그로 든다. 진행 중인 단계를 그대로 담으면
-        // 이미 CreatingCard 인 상태에서 카드 생성이 한 번 더 시작된다.
+        // 검사와 전환을 한 reduce 안에서 처리해야 연타로 두 번 시작되지 않는다.
+        // 전이 여부는 단계 값이 아니라 별도 플래그로 든다. 이미 CreatingCard 인 상태에서 또 시작되는 걸 막는다.
         var startCardCreation = false
         reduce {
             startCardCreation = state.canEnd && state.endFlow == EndFlow.CardFailedRetryable
@@ -175,7 +178,6 @@ class ChatRoomViewModel @Inject constructor(
         runCardCreation()
     }
 
-    /** 실패는 재시도 가능 여부에 따라 [EndFlow.CardFailedRetryable] 과 [EndFlow.CardFailedFinal] 로 갈린다. */
     private suspend fun ChatRoomSyntax.runCardCreation() {
         reduce { state.copy(endFlow = EndFlow.CreatingCard) }
 
@@ -247,6 +249,7 @@ class ChatRoomViewModel @Inject constructor(
     )
 
     private companion object {
+        const val KEY_CONVERSATION_ID = "chatRoom.activeConversationId"
         const val LOAD_FAILED = "대화를 불러오지 못했어요"
         const val SEND_FAILED = "메시지를 보내지 못했어요"
         const val END_FAILED = "대화를 끝내지 못했어요"

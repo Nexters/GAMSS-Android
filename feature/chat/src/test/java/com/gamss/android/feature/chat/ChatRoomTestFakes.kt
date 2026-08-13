@@ -1,5 +1,6 @@
 package com.gamss.android.feature.chat
 
+import androidx.lifecycle.SavedStateHandle
 import com.gamss.android.core.common.AppResult
 import com.gamss.android.domain.card.Card
 import com.gamss.android.domain.card.CardRepository
@@ -35,14 +36,17 @@ import kotlinx.coroutines.flow.emptyFlow
  *
  * [summarizer] 는 카드 요약에만 쓴다. 압축본은 원문이 그대로 남아야 검증할 수 있다.
  */
+@Suppress("LongParameterList")
 internal fun chatRoomViewModel(
     conversationRepository: ConversationRepository = FakeConversationRepository(),
     cardRepository: CardRepository = CountingCardRepository(),
     summarizer: DiarySummarizer = PassThroughSummarizer,
     classifier: EmotionClassifier = FlatClassifier,
     tokenUsageRefreshNotifier: TokenUsageRefreshNotifier = RecordingTokenUsageRefreshNotifier(),
+    savedStateHandle: SavedStateHandle = SavedStateHandle(),
 ): ChatRoomViewModel = ChatRoomViewModel(
     tokenUsageRefreshNotifier = tokenUsageRefreshNotifier,
+    savedStateHandle = savedStateHandle,
     session = ConversationSession(
         sendMessage = SendMessageUseCase(conversationRepository),
         getMessages = GetMessagesUseCase(conversationRepository),
