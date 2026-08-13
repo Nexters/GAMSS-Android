@@ -107,3 +107,20 @@ private fun GamssMarkerHighlightPreview() {
         }
     }
 }
+
+@Preview(name = "CharacterPicker", showBackground = true)
+@Preview(name = "CharacterPicker fontScale 1.3", showBackground = true, fontScale = 1.3f)
+@Composable
+@Suppress("UnusedPrivateMember")
+private fun GamssCharacterPickerPreview() {
+    GamssTheme {
+        Box(modifier = Modifier.padding(20.dp)) {
+            GamssCharacterPicker(
+                items = listOf("분노", "엉뚱", "까칠", "기쁨", "슬픔", "불안").mapIndexed { index, label ->
+                    GamssCharacterPickerItem(value = label, label = label, selected = index < 4)
+                },
+                onToggle = {},
+            )
+        }
+    }
+}

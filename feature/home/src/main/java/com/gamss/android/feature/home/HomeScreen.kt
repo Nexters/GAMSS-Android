@@ -1,6 +1,7 @@
 package com.gamss.android.feature.home
 
 import android.widget.Toast
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -8,11 +9,14 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
@@ -20,15 +24,25 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Popup
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.gamss.android.core.designsystem.component.GamssCharacterPicker
+import com.gamss.android.core.designsystem.component.GamssCharacterPickerItem
 import com.gamss.android.core.designsystem.component.GamssIconButton
 import com.gamss.android.core.designsystem.component.GamssIcons
 import com.gamss.android.core.designsystem.component.GamssInputBar
+import com.gamss.android.core.designsystem.component.GamssInputBarHeight
 import com.gamss.android.core.designsystem.component.GamssLogo
 import com.gamss.android.core.designsystem.component.GamssMarkerHighlight
 import com.gamss.android.core.designsystem.component.GamssPaperSlip
@@ -89,6 +103,8 @@ private fun HomeContent(
     actions: HomeActions,
     modifier: Modifier = Modifier,
 ) {
+    val pickerItems = remember(state.selectedCharacters) { state.selectedCharacters.toPickerItems() }
+
     Box(modifier = modifier.fillMaxSize()) {
         HomeDecorations()
 
@@ -117,21 +133,88 @@ private fun HomeContent(
 
             Spacer(modifier = Modifier.height(GreetingToInputGap))
 
-            GamssInputBar(
-                value = state.input,
-                onValueChange = actions.onInputChange,
-                onTrailingClick = actions.onSubmit,
-                placeholder = stringResource(R.string.home_input_placeholder),
-                trailingContentDescription = stringResource(R.string.home_input_submit_description),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = InputBarHorizontalPadding),
-            )
+            // 패널은 Popup 으로 띄운다. 흐름에 넣으면 펼칠 때마다 인사말과 입력바가 위로 밀린다.
+            Box(modifier = Modifier.fillMaxWidth().padding(horizontal = InputBarHorizontalPadding)) {
+                GamssInputBar(
+                    value = state.input,
+                    onValueChange = actions.onInputChange,
+                    onTrailingClick = actions.onSubmit,
+                    placeholder = stringResource(R.string.home_input_placeholder),
+                    trailingContentDescription = stringResource(R.string.home_input_submit_description),
+                    trailingAction = {
+                        CharacterPickerToggle(
+                            expanded = state.isEmotionPickerExpanded,
+                            onClick = actions.onEmotionPickerToggle,
+                        )
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+
+                if (state.isEmotionPickerExpanded) {
+                    val pickerOffset = with(LocalDensity.current) {
+                        IntOffset(x = 0, y = (GamssInputBarHeight + PickerTopGap).roundToPx())
+                    }
+                    Popup(
+                        alignment = Alignment.TopEnd,
+                        offset = pickerOffset,
+                        onDismissRequest = actions.onEmotionPickerToggle,
+                    ) {
+                        GamssCharacterPicker(
+                            items = pickerItems,
+                            onToggle = actions.onEmotionToggle,
+                        )
+                    }
+                }
+            }
 
             Spacer(modifier = Modifier.weight(GREETING_BOTTOM_WEIGHT))
         }
     }
 }
+
+@Composable
+private fun CharacterPickerToggle(
+    expanded: Boolean,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxHeight()
+            .clickable(role = Role.DropdownList, onClick = onClick)
+            .padding(horizontal = PickerToggleHitPadding),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(PickerToggleGap),
+    ) {
+        GamssText(
+            text = stringResource(R.string.home_character_picker),
+            style = GamssTheme.typography.body4Medium,
+            color = GamssTheme.colors.gray900,
+            maxLines = 1,
+        )
+        Icon(
+            painter = painterResource(GamssIcons.RightChevron),
+            contentDescription = null,
+            tint = GamssTheme.colors.gray900,
+            // 아래위 셰브론 에셋이 없어 오른쪽 셰브론을 돌려 쓴다. 글리프가 뷰포트 중심에서 벗어나 있어
+            // 회전축을 글리프 자신의 중심으로 옮긴다. 그러지 않으면 펼칠 때마다 위아래로 튄다.
+            modifier = Modifier
+                .size(PickerToggleChevronSize)
+                .graphicsLayer {
+                    rotationZ = if (expanded) -CHEVRON_ROTATION else CHEVRON_ROTATION
+                    transformOrigin = TransformOrigin(CHEVRON_CENTER_X, CHEVRON_CENTER_Y)
+                },
+        )
+    }
+}
+
+private fun Set<EmotionCharacter>.toPickerItems(): List<GamssCharacterPickerItem<EmotionCharacter>> =
+    EmotionCharacter.entries.map { character ->
+        GamssCharacterPickerItem(
+            value = character,
+            label = character.displayName,
+            selected = character in this,
+        )
+    }
 
 @Composable
 private fun HomeGreeting(
@@ -199,6 +282,16 @@ private val GreetingStartPadding = 27.dp
 private val GreetingWordGap = 6.dp
 private val GreetingToInputGap = 22.dp
 private val InputBarHorizontalPadding: Dp = 20.dp
+
+private val PickerTopGap = 4.dp
+private val PickerToggleGap = 4.dp
+private val PickerToggleHitPadding = 4.dp
+private val PickerToggleChevronSize = 16.dp
+private const val CHEVRON_ROTATION = 90f
+
+// ic_right_chevron 글리프의 실제 중심. 24 뷰포트에서 stroke 포함 x 12.4~21.3, y 3.9~20.2 다.
+private const val CHEVRON_CENTER_X = 16.85f / 24f
+private const val CHEVRON_CENTER_Y = 12.03f / 24f
 
 @Preview(name = "Home - Light", showBackground = true, widthDp = 402, heightDp = 720)
 @Composable

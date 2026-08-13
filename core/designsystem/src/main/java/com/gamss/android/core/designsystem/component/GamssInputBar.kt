@@ -1,14 +1,16 @@
 package com.gamss.android.core.designsystem.component
 
-import androidx.annotation.DrawableRes
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -17,17 +19,26 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import com.gamss.android.core.designsystem.theme.GamssTheme
 
-private val InputBarHeight = 53.dp
+/** 입력바 아래에 무언가를 띄우는 화면이 있어 공개한다. */
+val GamssInputBarHeight = 53.dp
+
+private val InputBarHeight = GamssInputBarHeight
 private val InputBarBorderWidth = 1.5.dp
 private val InputBarStartPadding = 21.dp
 
-// 휴지통 버튼은 안쪽 여백만큼 터치 영역이 넓어진다. 오른쪽 여백은 디자인값 18dp 에서 그만큼 뺀다.
-private val TrailingHitPadding = 10.dp
-private val InputBarEndPadding = 8.dp
+/** 전송 버튼은 배경까지 담긴 32x32 에셋이라 tint 하지 않고 그대로 그린다. */
+private val SendButtonSize = 32.dp
+
+// 버튼을 48dp 터치 영역으로 감싸면 좌우로 8dp 씩 남는다. 디자인값 18dp 에서 그만큼 빼야
+// 버튼의 보이는 가장자리가 18dp 자리에 온다.
+private val SendButtonTouchSize = 48.dp
+private val InputBarEndPadding = 10.dp
 
 @Composable
 fun GamssInputBar(
@@ -37,8 +48,9 @@ fun GamssInputBar(
     modifier: Modifier = Modifier,
     placeholder: String = "",
     trailingContentDescription: String? = null,
-    @DrawableRes trailingIconRes: Int = GamssIcons.ThrowAway,
     enabled: Boolean = true,
+    /** 후행 아이콘 앞에 놓이는 자리. 홈은 여기에 감정 선택 토글을 단다. */
+    trailingAction: @Composable (() -> Unit)? = null,
 ) {
     val canSubmit = enabled && value.isNotBlank()
 
@@ -79,13 +91,18 @@ fun GamssInputBar(
                 }
             },
         )
-        GamssIconButton(
-            iconRes = trailingIconRes,
-            contentDescription = trailingContentDescription,
-            onClick = onTrailingClick,
-            hitPadding = TrailingHitPadding,
-            tint = if (canSubmit) GamssTheme.colors.gray900 else GamssTheme.colors.gray300,
-            enabled = canSubmit,
-        )
+        trailingAction?.invoke()
+        Box(
+            modifier = Modifier
+                .size(SendButtonTouchSize)
+                .clickable(enabled = canSubmit, role = Role.Button, onClick = onTrailingClick),
+            contentAlignment = Alignment.Center,
+        ) {
+            Image(
+                painter = painterResource(if (canSubmit) GamssIcons.SendButtonOn else GamssIcons.SendButtonOff),
+                contentDescription = trailingContentDescription,
+                modifier = Modifier.size(SendButtonSize),
+            )
+        }
     }
 }
