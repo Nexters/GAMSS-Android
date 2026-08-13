@@ -111,6 +111,7 @@ dependencies {
     implementation(projects.feature.emotion)
     implementation(projects.feature.login)
     implementation(projects.feature.setting)
+    implementation(projects.feature.webview)
 
     implementation(libs.compose.material.icons.core)
     implementation(libs.androidx.activity.compose)
