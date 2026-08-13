@@ -18,4 +18,10 @@ interface ConversationRepository {
     suspend fun updateTitle(conversationId: Long, title: String): AppResult<Unit>
 
     suspend fun endConversation(conversationId: Long): AppResult<Unit>
+
+    /**
+     * 되돌릴 수 없다. 이미 삭제된 방을 다시 지우는 것은 성공으로 본다.
+     * 취소는 [AppResult.Failure] 에 담지 않고 던진다. 값으로 담으면 호출부가 삭제 실패로 보고한다.
+     */
+    suspend fun deleteConversation(conversationId: Long): AppResult<Unit>
 }

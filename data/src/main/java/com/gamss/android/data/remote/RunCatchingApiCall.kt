@@ -3,6 +3,7 @@ package com.gamss.android.data.remote
 import com.gamss.android.core.common.AppResult
 import com.gamss.android.core.common.network.ApiException
 import com.gamss.android.data.remote.model.response.ApiError
+import com.gamss.android.data.remote.model.response.ApiResponse
 import com.gamss.android.domain.auth.SessionExpiredException
 import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.Serializable
@@ -44,6 +45,24 @@ internal inline fun <T> runCatchingApiCall(
     } catch (e: Throwable) {
         AppResult.Failure(e)
     }
+
+/**
+ * 응답 본문을 쓰지 않는 호출은 `checkNotNull(response.data)` 로 실패가 걸러지지 않는다.
+ * 되돌릴 수 없는 작업에서 200 + `success:false` 를 성공으로 보고하면 복구할 방법이 없다.
+ */
+internal fun ApiResponse<*>.throwIfFailed() {
+    if (success) return
+    val code = error?.code
+    // 같은 인증 실패가 4xx 로 오면 아래에서 세션 만료가 된다. envelope 로 왔다고 일반 실패로 흘리면
+    // 전송 방식에 따라 호출부가 정반대 결론을 낸다.
+    if (code in AUTH_ERROR_CODES) throw SessionExpiredException()
+    throw ApiException.Http(
+        code = code,
+        message = error?.message ?: "Request failed without error detail",
+    )
+}
+
+private val AUTH_ERROR_CODES = setOf("UNAUTHORIZED", "EXPIRED_TOKEN")
 
 /**
  * 서버는 실패를 항상 실제 HTTP 상태 코드(4xx/5xx)로 내려주면서, 바디에는

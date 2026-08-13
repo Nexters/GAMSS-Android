@@ -144,6 +144,9 @@ internal class FakeConversationRepository(
 
     override suspend fun endConversation(conversationId: Long): AppResult<Unit> =
         if (endFailing) AppResult.Failure(IllegalStateException("end failed")) else AppResult.Success(Unit)
+
+    override suspend fun deleteConversation(conversationId: Long): AppResult<Unit> =
+        AppResult.Success(Unit)
 }
 
 /** 호출 횟수를 세고, [gate] 가 있으면 그때까지 응답을 붙든다. */

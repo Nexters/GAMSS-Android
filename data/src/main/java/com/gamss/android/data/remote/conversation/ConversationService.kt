@@ -7,6 +7,7 @@ import com.gamss.android.data.remote.conversation.model.response.ConversationRes
 import com.gamss.android.data.remote.conversation.model.response.SaveMessageResponse
 import com.gamss.android.data.remote.model.response.ApiResponse
 import retrofit2.http.Body
+import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.PATCH
 import retrofit2.http.POST
@@ -31,6 +32,12 @@ internal interface ConversationService {
 
     @POST("/api/conversations/{conversationId}/end")
     suspend fun endConversation(
+        @Path("conversationId") conversationId: Long,
+    ): ApiResponse<Unit>
+
+    /** 종료 여부와 무관하게 지울 수 있다. envelope 의 success 만 보고 data 는 쓰지 않는다. */
+    @DELETE("/api/conversations/{conversationId}")
+    suspend fun deleteConversation(
         @Path("conversationId") conversationId: Long,
     ): ApiResponse<Unit>
 }

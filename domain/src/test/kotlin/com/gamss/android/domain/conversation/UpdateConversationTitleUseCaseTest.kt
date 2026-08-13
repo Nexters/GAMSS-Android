@@ -94,5 +94,8 @@ class UpdateConversationTitleUseCaseTest {
 
         override suspend fun endConversation(conversationId: Long): AppResult<Unit> =
             throw UnsupportedOperationException()
+
+        override suspend fun deleteConversation(conversationId: Long): AppResult<Unit> =
+            throw UnsupportedOperationException()
     }
 }
