@@ -88,9 +88,13 @@ fun MainScreen(isDebug: Boolean) {
                     entry<WebViewKey> { key ->
                         WebViewScreen(page = key.page, onBackClick = navigator::goBack)
                     }
+                    // 대화방 화면에 디자인이 적용되고 탭 아이콘이 확정되면 게이트를 해제한다.
                     if (isDebug) {
                         entry<ChatKey> {
-                            ChattingListScreen(onChatClick = { navigator.navigate(ChatRoomKey(it)) })
+                            ChattingListScreen(
+                                onChatClick = { navigator.navigate(ChatRoomKey(it)) },
+                                onMenuClick = { navigator.navigate(SettingKey) },
+                            )
                         }
                         entry<ChatRoomKey> { key ->
                             ChatRoomScreen(

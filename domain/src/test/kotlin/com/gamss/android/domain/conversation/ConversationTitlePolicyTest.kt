@@ -133,7 +133,7 @@ class ConversationTitlePolicyTest {
     @Test
     fun 붙여_쓴_감정_표현도_걷어낸다() {
         assertEquals(
-            "팀장새끼 나 일시켜놓고 지혼자 쏠랑…",
+            "팀장새끼 나 일시켜놓고 지혼자 쏠랑 튀었어",
             conversationTitleFrom("이진짜개짜증나 팀장새끼 나 일시켜놓고 지혼자 쏠랑 튀었어"),
         )
         assertEquals("지갑 잃어버렸어", conversationTitleFrom("아진짜 개짜증나 지갑 잃어버렸어"))
