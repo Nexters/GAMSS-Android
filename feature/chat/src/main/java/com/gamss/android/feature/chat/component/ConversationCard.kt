@@ -1,0 +1,152 @@
+package com.gamss.android.feature.chat.component
+
+import android.content.res.Configuration
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import com.gamss.android.core.designsystem.card.GamssOutlinedCard
+import com.gamss.android.core.designsystem.checkbox.GamssCheckbox
+import com.gamss.android.core.designsystem.theme.GamssTheme
+
+/**
+ * 대화 한 줄. 선택 모드에서만 체크박스가 보입니다.
+ *
+ * 체크박스에는 클릭을 걸지 않고 카드 전체가 탭을 받습니다. 두 곳이 각각 클릭을 받으면 체크박스
+ * 바로 옆을 눌렀을 때 동작이 갈리고, 접근성 트리에도 같은 동작이 두 번 노출됩니다.
+ */
+@Suppress("LongParameterList")
+@Composable
+internal fun ConversationCard(
+    title: String,
+    timeLabel: String?,
+    isSelectionMode: Boolean,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    GamssOutlinedCard(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(ConversationCardHeight)
+            .semantics { if (isSelectionMode) selected = isSelected },
+        onClick = onClick,
+        onLongClick = onLongClick,
+        // 선택 모드에서는 고르지 않은 카드의 테두리를 연하게 낮춘다. 고른 카드만 진하게 남아
+        // 삭제 대상이 한눈에 보인다.
+        borderColor = if (isSelectionMode && !isSelected) {
+            GamssTheme.colors.gray200
+        } else {
+            GamssTheme.colors.gray950
+        },
+        // 카드 기본 여백(20dp)이 아니라 16dp 다. 디자인 실측이 366 폭에 내부 334 로, 좌우 16 씩이다.
+        contentPadding = PaddingValues(horizontal = GamssTheme.spacing.spacing300),
+    ) {
+        // SpaceBetween 을 쓰지 않는다. 제목이 짧으면 남는 폭이 자식 사이로 흩어져, 시각이 없는 행에서는
+        // 제목이 오른쪽 끝으로 밀려난다. 제목에 남는 폭을 다 주고 왼쪽부터 채운다.
+        Row(
+            modifier = Modifier.fillMaxSize(),
+            horizontalArrangement = Arrangement.Start,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (isSelectionMode) {
+                GamssCheckbox(checked = isSelected)
+                Spacer(modifier = Modifier.width(GamssTheme.spacing.spacing200))
+            }
+
+            // 폭을 고정하지 않는다. 체크박스가 생기면 남는 폭이 달라지므로 하드코딩하면 잘못 잘린다.
+            Text(
+                modifier = Modifier.weight(1f),
+                text = title,
+                style = GamssTheme.typography.subtitle4,
+                color = GamssTheme.colors.gray900,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+
+            if (timeLabel != null) {
+                Spacer(modifier = Modifier.width(GamssTheme.spacing.spacing100))
+                Text(
+                    text = timeLabel,
+                    style = GamssTheme.typography.body6Medium,
+                    color = GamssTheme.colors.gray500,
+                )
+            }
+        }
+    }
+}
+
+@Preview(name = "Light", showBackground = true)
+@Suppress("UnusedPrivateMember")
+@Composable
+private fun ConversationCardLightPreview() {
+    GamssTheme(darkTheme = false) {
+        ConversationCardPreviewContent()
+    }
+}
+
+@Preview(
+    name = "Dark",
+    showBackground = true,
+    backgroundColor = 0xFF000000,
+    uiMode = Configuration.UI_MODE_NIGHT_YES,
+)
+@Suppress("UnusedPrivateMember")
+@Composable
+private fun ConversationCardDarkPreview() {
+    GamssTheme(darkTheme = true) {
+        ConversationCardPreviewContent()
+    }
+}
+
+@Composable
+private fun ConversationCardPreviewContent() {
+    Column(
+        modifier = Modifier.padding(GamssTheme.spacing.spacing300),
+        verticalArrangement = Arrangement.spacedBy(GamssTheme.spacing.spacing100),
+    ) {
+        ConversationCard(
+            title = "너무졸려서 지하철에서 걍 눕고싶엇어",
+            timeLabel = "오전 4:20",
+            isSelectionMode = false,
+            isSelected = false,
+            onClick = {},
+            onLongClick = {},
+        )
+        ConversationCard(
+            title = "부장이랑 싸웠는데 밥도 맛없는 거 먹은 날날날날",
+            timeLabel = "오전 2:43",
+            isSelectionMode = true,
+            isSelected = true,
+            onClick = {},
+            onLongClick = {},
+        )
+        ConversationCard(
+            title = "제목 없는 대화",
+            timeLabel = null,
+            isSelectionMode = true,
+            isSelected = false,
+            onClick = {},
+            onLongClick = {},
+        )
+    }
+}
+
+// 디자인 실측 고정 높이. 내용은 한 줄(20dp)로 제한되어 있어 잘릴 여지가 없다.
+private val ConversationCardHeight = 59.dp
