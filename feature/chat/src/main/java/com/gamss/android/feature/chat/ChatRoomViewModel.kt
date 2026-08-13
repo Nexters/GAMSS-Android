@@ -3,6 +3,8 @@ package com.gamss.android.feature.chat
 import androidx.lifecycle.ViewModel
 import com.gamss.android.core.common.AppResult
 import com.gamss.android.domain.card.CardNotRetryableException
+import com.gamss.android.domain.config.GetRemoteConfigFlagUseCase
+import com.gamss.android.domain.config.RemoteConfigKey
 import com.gamss.android.domain.conversation.CommentGenerationStatus
 import com.gamss.android.domain.conversation.ConversationSession
 import com.gamss.android.domain.conversation.Message
@@ -10,6 +12,8 @@ import com.gamss.android.domain.conversation.MessageSender
 import com.gamss.android.domain.conversation.nextCommentRevealGapMillis
 import com.gamss.android.domain.conversation.takeWithinMessageLimit
 import com.gamss.android.domain.repository.TokenUsageRefreshNotifier
+import com.gamss.android.domain.safety.DetectRiskInTextUseCase
+import com.gamss.android.domain.safety.RiskLevel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancelAndJoin
@@ -26,6 +30,8 @@ private typealias ChatRoomSyntax = Syntax<ChatRoomState, ChatRoomSideEffect>
 class ChatRoomViewModel @Inject constructor(
     private val session: ConversationSession,
     private val tokenUsageRefreshNotifier: TokenUsageRefreshNotifier,
+    private val detectRiskInText: DetectRiskInTextUseCase,
+    private val getRemoteConfigFlag: GetRemoteConfigFlagUseCase,
 ) : ViewModel(),
     ContainerHost<ChatRoomState, ChatRoomSideEffect> {
 
@@ -39,9 +45,15 @@ class ChatRoomViewModel @Inject constructor(
     fun start(conversationId: Long?) {
         if (started) return
         started = true
+        loadChatEndFeatureFlag()
         if (conversationId != null) {
             loadMessages(conversationId)
         }
+    }
+
+    private fun loadChatEndFeatureFlag() = intent {
+        val useChatEndFeature = getRemoteConfigFlag(RemoteConfigKey.UseChatEndFeature)
+        reduce { state.copy(useChatEndFeature = useChatEndFeature) }
     }
 
     private fun loadMessages(conversationId: Long) = intent {
@@ -86,6 +98,26 @@ class ChatRoomViewModel @Inject constructor(
             if (pending == null) state else state.copy(isSending = true)
         }
         val sending = pending ?: return@intent
+
+        // session.send() 전에 고정된 메시지 내용으로 위험 신호 검사
+        val detection = detectRiskInText(sending.content)
+        if (detection.level != RiskLevel.NONE) {
+            reduce {
+                state.copy(
+                    riskDetection = detection,
+                    // CRITICAL이면 전송을 중단하므로 다시 전송 가능한 상태로 복구
+                    isSending = if (detection.shouldBlock) {
+                        false
+                    } else {
+                        state.isSending
+                    },
+                )
+            }
+
+            if (detection.shouldBlock) {
+                return@intent
+            }
+        }
 
         val result = session.send(
             conversationId = state.conversationId,
@@ -164,6 +196,12 @@ class ChatRoomViewModel @Inject constructor(
         }
 
         runCardCreation()
+    }
+
+    fun onRiskDialogDismiss() = intent {
+        reduce {
+            state.copy(riskDetection = null)
+        }
     }
 
     /** 실패는 재시도 가능 여부에 따라 [EndFlow.CardFailedRetryable] 과 [EndFlow.CardFailedFinal] 로 갈린다. */

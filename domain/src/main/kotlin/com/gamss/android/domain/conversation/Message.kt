@@ -8,6 +8,7 @@ data class Message(
     val sender: MessageSender,
     val content: String,
     val repliesToMessageId: Long? = null,
+    val createdTime: String? = null,
 )
 
 sealed interface MessageSender {
