@@ -108,7 +108,6 @@ dependencies {
     implementation(projects.feature.home)
     implementation(projects.feature.chat)
     implementation(projects.feature.calendar)
-    implementation(projects.feature.emotion)
     implementation(projects.feature.login)
     implementation(projects.feature.setting)
     implementation(projects.feature.webview)
@@ -132,6 +131,8 @@ dependencies {
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.crashlytics)
     implementation(libs.firebase.analytics)
+
+    testImplementation(libs.junit)
 
     androidTestImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

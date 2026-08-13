@@ -1,6 +1,7 @@
 package com.gamss.android.domain.conversation
 
 import com.gamss.android.core.common.AppResult
+import com.gamss.android.domain.emotion.EmotionCharacter
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -22,13 +23,18 @@ class SendMessageUseCaseTest {
         var sentContextSummary: String? = null
             private set
 
+        var sentExcludeCharacters: Set<EmotionCharacter> = emptySet()
+            private set
+
         override suspend fun sendMessage(
             conversationId: Long?,
             content: String,
             replyToMessageId: Long?,
             contextSummary: String?,
+            excludeCharacters: Set<EmotionCharacter>,
         ): AppResult<SentMessage> {
             called = true
+            sentExcludeCharacters = excludeCharacters
             sentConversationId = conversationId
             sentContent = content
             sentReplyToMessageId = replyToMessageId
@@ -62,6 +68,66 @@ class SendMessageUseCaseTest {
 
         override suspend fun deleteConversation(conversationId: Long): AppResult<Unit> =
             AppResult.Success(Unit)
+    }
+
+    @Test
+    fun 새_대화일_때만_제외할_캐릭터를_싣는다() = runBlocking {
+        val repository = RecordingRepository()
+        val excluded = setOf(EmotionCharacter.SADNESS, EmotionCharacter.ANXIETY)
+
+        SendMessageUseCase(repository)(
+            SendMessageUseCase.Params(conversationId = null, content = "새 대화", excludeCharacters = excluded),
+        )
+
+        assertEquals(excluded, repository.sentExcludeCharacters)
+    }
+
+    @Test
+    fun 이어지는_대화에는_제외할_캐릭터를_싣지_않는다() = runBlocking {
+        val repository = RecordingRepository()
+
+        SendMessageUseCase(repository)(
+            SendMessageUseCase.Params(
+                conversationId = 7L,
+                content = "이어서",
+                excludeCharacters = setOf(EmotionCharacter.SADNESS),
+            ),
+        )
+
+        assertTrue(repository.sentExcludeCharacters.isEmpty())
+    }
+
+    @Test
+    fun 여섯_종을_모두_제외하면_보내지_않는다() = runBlocking {
+        val repository = RecordingRepository()
+
+        val result = SendMessageUseCase(repository)(
+            SendMessageUseCase.Params(
+                conversationId = null,
+                content = "전부 제외",
+                excludeCharacters = EmotionCharacter.entries.toSet(),
+            ),
+        )
+
+        assertTrue(result is AppResult.Failure)
+        assertFalse(repository.called)
+    }
+
+    @Test
+    fun 다섯_종까지는_제외할_수_있다() = runBlocking {
+        val repository = RecordingRepository()
+        val fiveOfSix = EmotionCharacter.entries.take(5).toSet()
+
+        val result = SendMessageUseCase(repository)(
+            SendMessageUseCase.Params(
+                conversationId = null,
+                content = "다섯 제외",
+                excludeCharacters = fiveOfSix,
+            ),
+        )
+
+        assertTrue(result is AppResult.Success)
+        assertEquals(fiveOfSix, repository.sentExcludeCharacters)
     }
 
     @Test

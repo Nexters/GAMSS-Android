@@ -1,0 +1,243 @@
+package com.gamss.android.feature.home
+
+import com.gamss.android.core.common.AppResult
+import com.gamss.android.domain.conversation.ConversationRepository
+import com.gamss.android.domain.conversation.MAX_MESSAGE_LENGTH
+import com.gamss.android.domain.emotion.EmotionCharacter
+import com.gamss.android.domain.user.GetUserInfoUseCase
+import com.gamss.android.domain.user.UserProfile
+import io.mockk.coEvery
+import io.mockk.mockk
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
+import org.junit.Test
+import org.orbitmvi.orbit.test.test
+
+@OptIn(ExperimentalCoroutinesApi::class)
+class HomeViewModelTest {
+
+    private val getUserInfoUseCase: GetUserInfoUseCase = mockk()
+    private val repository = RecordingConversationRepository()
+
+    private fun viewModel(repository: ConversationRepository = this.repository) =
+        HomeViewModel(getUserInfoUseCase, conversationSession(repository))
+
+    @Test
+    fun `유저 정보를 받아오면 인사말에 쓸 닉네임이 채워진다`() = runTest {
+        givenUserInfo(nickname = "이소연")
+
+        viewModel().test(this) {
+            runOnCreate()
+            expectState { copy(isLoading = false, nickname = "이소연") }
+        }
+    }
+
+    @Test
+    fun `유저 정보 조회에 실패해도 닉네임 없이 화면을 연다`() = runTest {
+        coEvery { getUserInfoUseCase() } returns AppResult.Failure(IllegalStateException("boom"))
+
+        viewModel().test(this) {
+            runOnCreate()
+            expectState { copy(isLoading = false, nickname = null) }
+        }
+    }
+
+    @Test
+    fun `걱정을 적고 보내면 대화를 만들고 그 방을 연다`() = runTest {
+        viewModel().test(this) {
+            containerHost.onInputChange(WORRY)
+            expectState { copy(input = WORRY) }
+
+            containerHost.onSubmit()
+            expectState { copy(isSending = true) }
+            expectState { copy(isSending = false) }
+            expectState { copy(input = "") }
+            expectSideEffect(HomeSideEffect.OpenConversation(NEW_ROOM_ID))
+        }
+        assertEquals(WORRY, repository.sentContent)
+        assertNull(repository.sentConversationId)
+    }
+
+    @Test
+    fun `전송에 실패하면 입력을 남기고 안내만 띄운다`() = runTest {
+        val failing = RecordingConversationRepository(failing = true)
+        viewModel(failing).test(this) {
+            containerHost.onInputChange(WORRY)
+            expectState { copy(input = WORRY) }
+
+            containerHost.onSubmit()
+            expectState { copy(isSending = true) }
+            expectState { copy(isSending = false) }
+            expectSideEffect(HomeSideEffect.ShowToast(SEND_FAILED))
+        }
+    }
+
+    @Test
+    fun `체크를 해제한 감정만 제외 목록으로 넘어간다`() = runTest {
+        viewModel().test(this) {
+            containerHost.onEmotionToggle(EmotionCharacter.SADNESS)
+            expectState { copy(selectedCharacters = selectedCharacters - EmotionCharacter.SADNESS) }
+
+            containerHost.onInputChange(WORRY)
+            expectState { copy(input = WORRY) }
+
+            containerHost.onSubmit()
+            expectState { copy(isSending = true) }
+            expectState { copy(isSending = false) }
+            expectState { copy(input = "") }
+            expectSideEffect(HomeSideEffect.OpenConversation(NEW_ROOM_ID))
+        }
+        assertEquals(setOf(EmotionCharacter.SADNESS), repository.sentExcludeCharacters)
+    }
+
+    @Test
+    fun `해제했던 감정을 다시 누르면 제외 목록에서 빠진다`() = runTest {
+        viewModel().test(this) {
+            containerHost.onEmotionToggle(EmotionCharacter.ANGER)
+            expectState { copy(selectedCharacters = selectedCharacters - EmotionCharacter.ANGER) }
+
+            containerHost.onEmotionToggle(EmotionCharacter.ANGER)
+            expectState { copy(selectedCharacters = EmotionCharacter.entries.toSet()) }
+        }
+    }
+
+    @Test
+    fun `마지막 한 명은 해제되지 않고 안내만 띄운다`() = runTest {
+        viewModel().test(this) {
+            val last = EmotionCharacter.JOY
+            EmotionCharacter.entries.filter { it != last }.forEach { character ->
+                containerHost.onEmotionToggle(character)
+                expectState { copy(selectedCharacters = selectedCharacters - character) }
+            }
+
+            containerHost.onEmotionToggle(last)
+            expectSideEffect(HomeSideEffect.ShowToast(LAST_CHARACTER_BLOCKED))
+            expectNoItems()
+        }
+    }
+
+    @Test
+    fun `보내면 감정 목록이 닫힌다`() = runTest {
+        viewModel().test(this) {
+            containerHost.onEmotionPickerToggle()
+            expectState { copy(isEmotionPickerExpanded = true) }
+
+            containerHost.onInputChange(WORRY)
+            expectState { copy(input = WORRY) }
+
+            containerHost.onSubmit()
+            expectState { copy(isSending = true, isEmotionPickerExpanded = false) }
+            expectState { copy(isSending = false) }
+            expectState { copy(input = "") }
+            expectSideEffect(HomeSideEffect.OpenConversation(NEW_ROOM_ID))
+        }
+    }
+
+    @Test
+    fun `상한을 넘긴 입력은 140자까지만 남는다`() = runTest {
+        viewModel().test(this) {
+            containerHost.onInputChange("가".repeat(MAX_MESSAGE_LENGTH + 20))
+            expectState { copy(input = "가".repeat(MAX_MESSAGE_LENGTH)) }
+        }
+    }
+
+    @Test
+    fun `공백만 적힌 입력은 보내도 대화를 시작하지 않는다`() = runTest {
+        viewModel().test(this) {
+            containerHost.onInputChange(BLANK)
+            expectState { copy(input = BLANK) }
+
+            containerHost.onSubmit()
+            expectNoItems()
+        }
+    }
+
+    @Test
+    fun `보낸 뒤 한 번 더 눌러도 빈 입력이라 대화가 두 번 시작되지 않는다`() = runTest {
+        viewModel().test(this) {
+            containerHost.onInputChange(WORRY)
+            expectState { copy(input = WORRY) }
+
+            containerHost.onSubmit()
+            expectState { copy(isSending = true) }
+            expectState { copy(isSending = false) }
+            expectState { copy(input = "") }
+            expectSideEffect(HomeSideEffect.OpenConversation(NEW_ROOM_ID))
+
+            containerHost.onSubmit()
+            expectNoItems()
+        }
+    }
+
+    @Test
+    fun `새 대화에는 앞서 보낸 걱정이 문맥으로 실리지 않는다`() = runTest {
+        viewModel().test(this) {
+            containerHost.onInputChange(WORRY)
+            expectState { copy(input = WORRY) }
+            containerHost.onSubmit()
+            expectState { copy(isSending = true) }
+            expectState { copy(isSending = false) }
+            expectState { copy(input = "") }
+            expectSideEffect(HomeSideEffect.OpenConversation(NEW_ROOM_ID))
+
+            containerHost.onInputChange(SECOND_WORRY)
+            expectState { copy(input = SECOND_WORRY) }
+            containerHost.onSubmit()
+            expectState { copy(isSending = true) }
+            expectState { copy(isSending = false) }
+            expectState { copy(input = "") }
+            expectSideEffect(HomeSideEffect.OpenConversation(NEW_ROOM_ID))
+        }
+        assertEquals(listOf(null, null), repository.sentContextSummaries)
+    }
+
+    @Test
+    fun `응답이 늦으면 끝날 때까지 전송 중 상태로 잠긴다`() = runTest {
+        val gate = CompletableDeferred<Unit>()
+        val gated = RecordingConversationRepository(gate = gate)
+        viewModel(gated).test(this) {
+            containerHost.onInputChange(WORRY)
+            expectState { copy(input = WORRY) }
+
+            containerHost.onSubmit()
+            expectState { copy(isSending = true) }
+            // 응답을 붙든 동안은 여기서 멈춰 있어야 입력과 전송 버튼이 잠긴 채로 남는다.
+            expectNoItems()
+
+            gate.complete(Unit)
+            expectState { copy(isSending = false) }
+            expectState { copy(input = "") }
+            expectSideEffect(HomeSideEffect.OpenConversation(NEW_ROOM_ID))
+        }
+        assertEquals(1, gated.sendCount)
+    }
+
+    @Test
+    fun `설정 아이콘을 누르면 설정으로 이동한다`() = runTest {
+        viewModel().test(this) {
+            containerHost.navigateToSetting()
+            expectSideEffect(HomeSideEffect.NavigateToSetting)
+        }
+    }
+
+    private fun givenUserInfo(nickname: String?) {
+        coEvery { getUserInfoUseCase() } returns AppResult.Success(
+            UserProfile(
+                id = 1L,
+                email = "soyeon@gamss.app",
+                nickname = nickname,
+                status = "ACTIVE",
+                createdAt = null,
+            ),
+        )
+    }
+
+    private companion object {
+        const val WORRY = "오늘 발표가 너무 떨려요"
+        const val SECOND_WORRY = "주말에 약속이 겹쳐서 곤란해요"
+        const val BLANK = "   "
+    }
+}

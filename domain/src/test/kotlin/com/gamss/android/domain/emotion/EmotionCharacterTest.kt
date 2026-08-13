@@ -12,7 +12,7 @@ class EmotionCharacterTest {
         assertEquals(EmotionCharacter.ANXIETY, EmotionCharacter.fromEmotionLabel(EmotionLabel.ANXIETY))
         assertEquals(EmotionCharacter.QUIRKY, EmotionCharacter.fromEmotionLabel(EmotionLabel.EMBARRASSED))
         assertEquals(EmotionCharacter.PRICKLY, EmotionCharacter.fromEmotionLabel(EmotionLabel.HURT))
-        assertEquals(EmotionCharacter.WARM, EmotionCharacter.fromEmotionLabel(EmotionLabel.SADNESS))
+        assertEquals(EmotionCharacter.SADNESS, EmotionCharacter.fromEmotionLabel(EmotionLabel.SADNESS))
     }
 
     @Test

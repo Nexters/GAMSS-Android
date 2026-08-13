@@ -15,6 +15,12 @@ internal val pretendardFamily = FontFamily(
     Font(R.font.pretendard_regular, FontWeight.Normal),
 )
 
+internal val handwritingFamily = FontFamily(Font(R.font.bm_kkubulim, FontWeight.Normal))
+
+// 디자인의 픽셀체는 Moneygraphy Pixel 이지만 저작권자가 폰트 파일의 복제, 배포, 수정을 금지하고 웹폰트(woff2)만
+// 배포한다. public 레포에 파일을 담을 수 없어 Pretendard 로 간다.
+internal val pixelFamily = pretendardFamily
+
 object GamssFontSize {
     val fontSize25 = 10.sp
     val fontSize50 = 12.sp
@@ -65,8 +71,9 @@ private fun gamssTextStyle(
     fontSize: TextUnit,
     lineHeight: TextUnit,
     letterSpacing: TextUnit,
+    fontFamily: FontFamily = pretendardFamily,
 ) = TextStyle(
-    fontFamily = pretendardFamily,
+    fontFamily = fontFamily,
     fontWeight = fontWeight,
     fontSize = fontSize,
     lineHeight = lineHeight,
@@ -253,5 +260,19 @@ object GamssTypography {
         fontSize = GamssFontSize.fontSize25,
         lineHeight = GamssLineHeight.lineHeight025,
         letterSpacing = GamssLetterSpacing.letterSpacing150,
+    )
+    val pixelTitle2 = gamssTextStyle(
+        fontWeight = GamssFontWeight.fontWeight400,
+        fontSize = GamssFontSize.fontSize400,
+        lineHeight = GamssLineHeight.lineHeight200,
+        letterSpacing = GamssLetterSpacing.letterSpacing100,
+        fontFamily = pixelFamily,
+    )
+    val handwritingBody4 = gamssTextStyle(
+        fontWeight = GamssFontWeight.fontWeight200,
+        fontSize = GamssFontSize.fontSize75,
+        lineHeight = GamssLineHeight.lineHeight075,
+        letterSpacing = GamssLetterSpacing.letterSpacing150,
+        fontFamily = handwritingFamily,
     )
 }

@@ -70,7 +70,7 @@ import org.orbitmvi.orbit.compose.collectSideEffect
  */
 @Composable
 fun ChatRoomScreen(
-    conversationId: Long?,
+    conversationId: Long,
     onCardClose: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: ChatRoomViewModel = hiltViewModel(),

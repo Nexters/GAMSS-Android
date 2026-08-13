@@ -23,12 +23,11 @@ import org.orbitmvi.orbit.compose.collectAsState
 
 @Composable
 fun GamssRootNavHost(
-    isDebug: Boolean,
     mainViewModel: MainViewModel = hiltViewModel(),
 ) {
-    val sessionState by mainViewModel.collectAsState()
+    val state by mainViewModel.collectAsState()
 
-    when (sessionState) {
+    when (state.sessionState) {
         SessionState.Loading -> {
             Box(
                 modifier = Modifier.fillMaxSize(),
@@ -38,8 +37,8 @@ fun GamssRootNavHost(
             }
         }
         else -> RootNavDisplay(
-            sessionState = sessionState,
-            isDebug = isDebug,
+            sessionState = state.sessionState,
+            useCardFeature = state.useCardFeature,
         )
     }
 }
@@ -47,7 +46,7 @@ fun GamssRootNavHost(
 @Composable
 private fun RootNavDisplay(
     sessionState: SessionState,
-    isDebug: Boolean,
+    useCardFeature: Boolean,
 ) {
     val initialKey = if (sessionState == SessionState.Authenticated) MainKey else LoginKey
     val backStack = rememberNavBackStack(initialKey)
@@ -72,7 +71,7 @@ private fun RootNavDisplay(
                         googleWebClientId = stringResource(R.string.default_web_client_id),
                     )
                 }
-                entry<MainKey> { MainScreen(isDebug = isDebug) }
+                entry<MainKey> { MainScreen(useCardFeature = useCardFeature) }
             },
         ),
         onBack = {

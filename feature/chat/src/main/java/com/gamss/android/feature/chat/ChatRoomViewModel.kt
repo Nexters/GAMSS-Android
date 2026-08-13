@@ -39,18 +39,17 @@ class ChatRoomViewModel @Inject constructor(
 
     override val container = container<ChatRoomState, ChatRoomSideEffect>(ChatRoomState())
 
+    /** 구성 변경으로 화면이 다시 그려져도 서버를 다시 부르지 않는다. */
     private var started = false
 
     @Volatile
     private var revealJob: Job? = null
 
-    fun start(conversationId: Long?) {
+    fun start(conversationId: Long) {
         if (started) return
         started = true
         loadChatEndFeatureFlag()
-        if (conversationId != null) {
-            loadMessages(conversationId)
-        }
+        loadMessages(conversationId)
         // 결과를 기다리지 않는다 — 채팅방에 들어온 시점부터 온디바이스 모델 다운로드를 미리
         // 걸어둬 첫 메시지/카드 생성 시점엔 이미 받아져 있을 확률을 높이는 순수 최적화용 호출이다.
         viewModelScope.launch { session.prefetchOnDeviceModels() }
@@ -156,9 +155,8 @@ class ChatRoomViewModel @Inject constructor(
     }
 
     fun onEndRequest() = intent {
-        // 검사와 상태 전환을 한 reduce 안에서 처리해야 연타로 두 번 시작되지 않는다.
-        // 전이 여부는 단계 값이 아니라 별도 플래그로 든다. 진행 중인 단계를 그대로 담으면
-        // 이미 CreatingCard 인 상태에서 카드 생성이 한 번 더 시작된다.
+        // 검사와 전환을 한 reduce 안에서 처리해야 연타로 두 번 시작되지 않는다.
+        // 전이 여부는 단계 값이 아니라 별도 플래그로 든다. 이미 CreatingCard 인 상태에서 또 시작되는 걸 막는다.
         var startCardCreation = false
         reduce {
             startCardCreation = state.canEnd && state.endFlow == EndFlow.CardFailedRetryable
@@ -204,12 +202,9 @@ class ChatRoomViewModel @Inject constructor(
     }
 
     fun onRiskDialogDismiss() = intent {
-        reduce {
-            state.copy(riskDetection = null)
-        }
+        reduce { state.copy(riskDetection = null) }
     }
 
-    /** 실패는 재시도 가능 여부에 따라 [EndFlow.CardFailedRetryable] 과 [EndFlow.CardFailedFinal] 로 갈린다. */
     private suspend fun ChatRoomSyntax.runCardCreation() {
         reduce { state.copy(endFlow = EndFlow.CreatingCard) }
 

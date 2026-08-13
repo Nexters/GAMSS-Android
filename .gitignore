@@ -14,3 +14,7 @@ fastlane/report.xml
 keystore/
 *.keystore
 *.jks
+
+# Gradle 이 자동 생성한다. 이 프로젝트는 JDK 17 기준인데 toolchainVersion 21 을 박아 넣어
+# CI 의 JDK 를 바꿔 버린다. 도입하려면 버전을 맞춘 뒤 의도적으로 커밋할 것.
+gradle/gradle-daemon-jvm.properties

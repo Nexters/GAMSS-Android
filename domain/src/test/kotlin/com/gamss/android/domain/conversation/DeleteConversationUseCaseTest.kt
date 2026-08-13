@@ -1,6 +1,7 @@
 package com.gamss.android.domain.conversation
 
 import com.gamss.android.core.common.AppResult
+import com.gamss.android.domain.emotion.EmotionCharacter
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -41,6 +42,7 @@ class DeleteConversationUseCaseTest {
             content: String,
             replyToMessageId: Long?,
             contextSummary: String?,
+            excludeCharacters: Set<EmotionCharacter>,
         ): AppResult<SentMessage> = throw UnsupportedOperationException()
 
         override suspend fun getOngoingConversations(): AppResult<List<Conversation>> =

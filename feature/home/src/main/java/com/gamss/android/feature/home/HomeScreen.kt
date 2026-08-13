@@ -1,39 +1,64 @@
 package com.gamss.android.feature.home
 
 import android.widget.Toast
-import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ProgressIndicatorDefaults
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
+import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Popup
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.gamss.android.core.designsystem.component.GamssCharacterPicker
+import com.gamss.android.core.designsystem.component.GamssCharacterPickerItem
+import com.gamss.android.core.designsystem.component.GamssIconButton
+import com.gamss.android.core.designsystem.component.GamssIcons
+import com.gamss.android.core.designsystem.component.GamssInputBar
+import com.gamss.android.core.designsystem.component.GamssInputBarHeight
+import com.gamss.android.core.designsystem.component.GamssLogo
+import com.gamss.android.core.designsystem.component.GamssMarkerHighlight
+import com.gamss.android.core.designsystem.component.GamssPaperSlip
+import com.gamss.android.core.designsystem.component.GamssStickyNote
+import com.gamss.android.core.designsystem.component.GamssTape
+import com.gamss.android.core.designsystem.component.GamssText
+import com.gamss.android.core.designsystem.component.GamssTopBar
 import com.gamss.android.core.designsystem.theme.GamssTheme
+import com.gamss.android.domain.emotion.EmotionCharacter
 import org.orbitmvi.orbit.compose.collectAsState
 import org.orbitmvi.orbit.compose.collectSideEffect
 
 @Composable
 fun HomeScreen(
     onNavigateToSetting: () -> Unit,
+    onOpenConversation: (Long) -> Unit,
+    modifier: Modifier = Modifier,
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val state by viewModel.collectAsState()
@@ -41,158 +66,272 @@ fun HomeScreen(
 
     viewModel.collectSideEffect { sideEffect ->
         when (sideEffect) {
+            is HomeSideEffect.NavigateToSetting -> onNavigateToSetting()
+            is HomeSideEffect.OpenConversation -> onOpenConversation(sideEffect.conversationId)
             is HomeSideEffect.ShowToast ->
                 Toast.makeText(context, sideEffect.message, Toast.LENGTH_SHORT).show()
-            is HomeSideEffect.NavigateToSetting -> onNavigateToSetting()
         }
     }
 
-    Scaffold { innerPadding ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding),
-            contentAlignment = Alignment.Center,
-        ) {
-            TokenUsageIndicator(
-                tokenUsage = state.tokenUsage,
-                isLoading = state.isTokenUsageLoading,
-                // innerPadding 에 이미 상태바 inset 이 들어 있어 따로 더하지 않는다.
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(top = 16.dp, end = 16.dp),
+    val actions = remember(viewModel) {
+        HomeActions(
+            onSettingClick = viewModel::navigateToSetting,
+            onInputChange = viewModel::onInputChange,
+            onSubmit = viewModel::onSubmit,
+            onEmotionPickerToggle = viewModel::onEmotionPickerToggle,
+            onEmotionToggle = viewModel::onEmotionToggle,
+        )
+    }
+
+    HomeContent(state = state, actions = actions, modifier = modifier)
+}
+
+@Immutable
+private data class HomeActions(
+    val onSettingClick: () -> Unit,
+    val onInputChange: (String) -> Unit,
+    val onSubmit: () -> Unit,
+    val onEmotionPickerToggle: () -> Unit,
+    val onEmotionToggle: (EmotionCharacter) -> Unit,
+)
+
+@Composable
+private fun HomeContent(
+    state: HomeState,
+    actions: HomeActions,
+    modifier: Modifier = Modifier,
+) {
+    val pickerItems = remember(state.selectedCharacters) { state.selectedCharacters.toPickerItems() }
+
+    Box(modifier = modifier.fillMaxSize()) {
+        HomeDecorations()
+
+        Column(modifier = Modifier.fillMaxSize()) {
+            GamssTopBar(
+                contentPadding = PaddingValues(start = HeaderStartPadding, end = HeaderEndPadding),
+                leading = { GamssLogo(contentDescription = stringResource(R.string.home_logo_description)) },
+                trailing = {
+                    GamssIconButton(
+                        iconRes = GamssIcons.Setting,
+                        contentDescription = stringResource(R.string.home_setting_description),
+                        onClick = actions.onSettingClick,
+                    )
+                },
             )
 
-            if (state.isLoading) {
-                CircularProgressIndicator()
-            } else {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = state.greeting.ifEmpty { "GAMSS" },
-                        style = MaterialTheme.typography.headlineLarge,
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Button(onClick = viewModel::navigateToSetting) {
-                        Text("설정으로 이동")
+            Spacer(modifier = Modifier.weight(GREETING_TOP_WEIGHT))
+
+            HomeGreeting(
+                nickname = state.nickname,
+                modifier = Modifier
+                    .padding(start = GreetingStartPadding)
+                    // 닉네임이 도착하기 전에 먼저 그리면 문구가 옆으로 밀린다. 자리만 잡아 두고 감춘다.
+                    .alpha(if (state.isLoading) 0f else 1f),
+            )
+
+            Spacer(modifier = Modifier.height(GreetingToInputGap))
+
+            // 패널은 Popup 으로 띄운다. 흐름에 넣으면 펼칠 때마다 인사말과 입력바가 위로 밀린다.
+            Box(modifier = Modifier.fillMaxWidth().padding(horizontal = InputBarHorizontalPadding)) {
+                GamssInputBar(
+                    value = state.input,
+                    onValueChange = actions.onInputChange,
+                    onTrailingClick = actions.onSubmit,
+                    placeholder = stringResource(R.string.home_input_placeholder),
+                    trailingContentDescription = stringResource(R.string.home_input_submit_description),
+                    enabled = !state.isSending,
+                    trailingAction = {
+                        CharacterPickerToggle(
+                            expanded = state.isEmotionPickerExpanded,
+                            onClick = actions.onEmotionPickerToggle,
+                        )
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+
+                if (state.isEmotionPickerExpanded) {
+                    val pickerOffset = with(LocalDensity.current) {
+                        IntOffset(x = 0, y = (GamssInputBarHeight + PickerTopGap).roundToPx())
+                    }
+                    Popup(
+                        alignment = Alignment.TopEnd,
+                        offset = pickerOffset,
+                        onDismissRequest = actions.onEmotionPickerToggle,
+                    ) {
+                        GamssCharacterPicker(
+                            items = pickerItems,
+                            onToggle = actions.onEmotionToggle,
+                        )
                     }
                 }
             }
+
+            Spacer(modifier = Modifier.weight(GREETING_BOTTOM_WEIGHT))
         }
     }
 }
 
 @Composable
-private fun TokenUsageIndicator(
-    tokenUsage: TokenUsageUiModel?,
-    isLoading: Boolean,
-    modifier: Modifier = Modifier,
+private fun CharacterPickerToggle(
+    expanded: Boolean,
+    onClick: () -> Unit,
 ) {
-    if (tokenUsage == null && !isLoading) return
-
-    Surface(
-        modifier = modifier,
-        shape = MaterialTheme.shapes.medium,
-        tonalElevation = 2.dp,
+    Row(
+        // fillMaxHeight 를 쓰면 안 된다. 입력바 높이가 내용 기반이라 자식이 최대 제약을 먹고 화면을 채운다.
+        // 터치 영역은 세로 여백으로 벌린다.
+        modifier = Modifier
+            .clickable(role = Role.DropdownList, onClick = onClick)
+            .padding(horizontal = PickerToggleHitPadding, vertical = PickerToggleVerticalPadding),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(PickerToggleGap),
     ) {
-        // 이미 아는 사용량이 있으면 갱신 중에도 지우지 않고 그대로 보여준다.
-        if (tokenUsage != null) {
-            TokenUsageContent(tokenUsage)
-        } else {
-            CircularProgressIndicator(
-                modifier = Modifier
-                    .padding(horizontal = 16.dp, vertical = 12.dp)
-                    .size(18.dp),
-                strokeWidth = 2.dp,
-            )
-        }
-    }
-}
-
-@Composable
-private fun TokenUsageContent(tokenUsage: TokenUsageUiModel) {
-    val displayText = tokenUsage.toDisplayText()
-
-    Column(
-        modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
-    ) {
-        Text(
-            text = "오늘 토큰",
-            style = MaterialTheme.typography.labelMedium,
+        GamssText(
+            text = stringResource(R.string.home_character_picker),
+            style = GamssTheme.typography.body4Medium,
+            color = GamssTheme.colors.gray900,
+            maxLines = 1,
         )
-        Spacer(modifier = Modifier.height(6.dp))
-        Text(
-            text = displayText.headline,
-            style = MaterialTheme.typography.titleMedium,
-        )
-        displayText.supportingText?.let { supportingText ->
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(
-                text = supportingText,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        tokenUsage.usageRatio?.let { usageRatio ->
-            Spacer(modifier = Modifier.height(10.dp))
-            LinearProgressIndicator(
-                progress = { usageRatio.coerceIn(0f, 1f) },
-                // fillMaxWidth 로 두면 배지 전체가 화면 폭까지 늘어난다.
-                modifier = Modifier.width(96.dp),
-                color = if (tokenUsage.exceeded) {
-                    MaterialTheme.colorScheme.error
-                } else {
-                    ProgressIndicatorDefaults.linearColor
+        Icon(
+            painter = painterResource(GamssIcons.RightChevron),
+            contentDescription = null,
+            tint = GamssTheme.colors.gray900,
+            // 아래위 셰브론 에셋이 없어 오른쪽 셰브론을 돌려 쓴다. 글리프가 뷰포트 중심에서 벗어나 있어
+            // 회전축을 글리프 자신의 중심으로 옮긴다. 그러지 않으면 펼칠 때마다 위아래로 튄다.
+            modifier = Modifier
+                .size(PickerToggleChevronSize)
+                .graphicsLayer {
+                    rotationZ = if (expanded) -CHEVRON_ROTATION else CHEVRON_ROTATION
+                    transformOrigin = TransformOrigin(CHEVRON_CENTER_X, CHEVRON_CENTER_Y)
                 },
-            )
-        }
-    }
-}
-
-@Composable
-private fun ThemeVerificationButton(
-    modifier: Modifier = Modifier,
-) {
-    Button(
-        onClick = {},
-        modifier = modifier,
-        colors = ButtonDefaults.buttonColors(
-            containerColor = GamssTheme.colors.green,
-            contentColor = GamssTheme.colors.gray025,
-        ),
-    ) {
-        Text(
-            text = "GAMSS 버튼",
-            style = GamssTheme.typography.subtitle4,
         )
     }
 }
 
-@Preview(name = "Button - Light", showBackground = true)
+private fun Set<EmotionCharacter>.toPickerItems(): List<GamssCharacterPickerItem<EmotionCharacter>> =
+    EmotionCharacter.entries.map { character ->
+        GamssCharacterPickerItem(
+            value = character,
+            label = character.displayName,
+            selected = character in this,
+        )
+    }
+
 @Composable
-@Suppress("UnusedPrivateMember")
-private fun LightThemeVerificationButtonPreview() {
-    GamssTheme(darkTheme = false) {
-        Box(
-            modifier = Modifier
-                .background(GamssTheme.colors.gray025)
-                .padding(24.dp),
+private fun HomeGreeting(
+    nickname: String?,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier) {
+        Row(
+            verticalAlignment = Alignment.Bottom,
+            horizontalArrangement = Arrangement.spacedBy(GreetingWordGap),
         ) {
-            ThemeVerificationButton()
+            if (nickname != null) {
+                GamssMarkerHighlight {
+                    GamssText(
+                        text = stringResource(R.string.home_greeting_nickname, nickname),
+                        style = GamssTheme.typography.pixelTitle2,
+                    )
+                }
+            }
+            GamssText(
+                text = stringResource(R.string.home_greeting_suffix),
+                style = GamssTheme.typography.pixelTitle2,
+            )
         }
+        GamssText(
+            text = stringResource(R.string.home_greeting_question),
+            style = GamssTheme.typography.pixelTitle2,
+        )
     }
 }
 
-@Preview(name = "Button - Dark", showBackground = true)
+/**
+ * 좌표는 Figma 402x874 프레임에서 상태바 높이(49)를 뺀 값이다. 콘텐츠 흐름에 끼어들면 안 되므로 절대 배치로 얹고,
+ * 화면이 좁을 때 잘리는 건 [com.gamss.android.core.designsystem.component.GamssPaperBackground] 의 clip 에 맡긴다.
+ */
+@Composable
+private fun BoxScope.HomeDecorations() {
+    GamssStickyNote(
+        text = stringResource(R.string.home_sample_note),
+        modifier = Modifier
+            .align(Alignment.TopStart)
+            .offset(x = 244.dp, y = 114.73.dp),
+    )
+    GamssTape(
+        modifier = Modifier
+            .align(Alignment.TopStart)
+            .offset(x = 211.dp, y = 494.dp),
+    )
+    GamssPaperSlip(
+        modifier = Modifier
+            .align(Alignment.TopStart)
+            .offset(x = 45.dp, y = 574.dp),
+    )
+}
+
+// 헤더 아래(111) ~ 인사말(281), 입력바 아래(418) ~ 탭바 위(769) 간격 비율을 그대로 옮긴 값.
+private const val GREETING_TOP_WEIGHT = 170f
+private const val GREETING_BOTTOM_WEIGHT = 351f
+
+private val HeaderStartPadding = 20.dp
+
+// 설정 버튼은 터치 영역을 12dp 넓혀 두었다. 아이콘이 화면 끝에서 20dp 에 놓이도록 그만큼 뺀다.
+private val HeaderEndPadding = 8.dp
+private val GreetingStartPadding = 27.dp
+private val GreetingWordGap = 6.dp
+private val GreetingToInputGap = 22.dp
+private val InputBarHorizontalPadding: Dp = 20.dp
+
+private val PickerTopGap = 4.dp
+private val PickerToggleGap = 4.dp
+private val PickerToggleHitPadding = 4.dp
+
+// 라벨 줄높이가 20dp 라 위아래 14dp 씩 더하면 터치 영역이 48dp 가 된다.
+private val PickerToggleVerticalPadding = 14.dp
+private val PickerToggleChevronSize = 16.dp
+private const val CHEVRON_ROTATION = 90f
+
+// ic_right_chevron 글리프의 실제 중심. 24 뷰포트에서 stroke 포함 x 12.4~21.3, y 3.9~20.2 다.
+private const val CHEVRON_CENTER_X = 16.85f / 24f
+private const val CHEVRON_CENTER_Y = 12.03f / 24f
+
+@Preview(name = "Home - Light", showBackground = true, widthDp = 402, heightDp = 720)
 @Composable
 @Suppress("UnusedPrivateMember")
-private fun DarkThemeVerificationButtonPreview() {
-    GamssTheme(darkTheme = true) {
-        Box(
-            modifier = Modifier
-                .background(GamssTheme.colors.gray025)
-                .padding(24.dp),
-        ) {
-            ThemeVerificationButton()
-        }
+private fun HomeContentLightPreview() {
+    GamssTheme(darkTheme = false) {
+        HomeContent(state = previewState(), actions = previewActions())
     }
 }
+
+@Preview(name = "Home - Dark", showBackground = true, widthDp = 402, heightDp = 720)
+@Composable
+@Suppress("UnusedPrivateMember")
+private fun HomeContentDarkPreview() {
+    GamssTheme(darkTheme = true) {
+        HomeContent(state = previewState(), actions = previewActions())
+    }
+}
+
+@Preview(name = "Home - No nickname", showBackground = true, widthDp = 402, heightDp = 720)
+@Composable
+@Suppress("UnusedPrivateMember")
+private fun HomeContentWithoutNicknamePreview() {
+    GamssTheme {
+        HomeContent(
+            state = HomeState(isLoading = false, nickname = null, input = "오늘 발표가 너무 떨려요"),
+            actions = previewActions(),
+        )
+    }
+}
+
+private fun previewState() = HomeState(isLoading = false, nickname = "이소연")
+
+private fun previewActions() = HomeActions(
+    onSettingClick = {},
+    onInputChange = {},
+    onSubmit = {},
+    onEmotionPickerToggle = {},
+    onEmotionToggle = {},
+)
