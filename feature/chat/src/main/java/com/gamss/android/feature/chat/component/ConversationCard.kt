@@ -48,18 +48,15 @@ internal fun ConversationCard(
             .semantics { if (isSelectionMode) selected = isSelected },
         onClick = onClick,
         onLongClick = onLongClick,
-        // 선택 모드에서는 고르지 않은 카드의 테두리를 연하게 낮춘다. 고른 카드만 진하게 남아
-        // 삭제 대상이 한눈에 보인다.
         borderColor = if (isSelectionMode && !isSelected) {
             GamssTheme.colors.gray200
         } else {
             GamssTheme.colors.gray950
         },
-        // 카드 기본 여백(20dp)이 아니라 16dp 다. 디자인 실측이 366 폭에 내부 334 로, 좌우 16 씩이다.
         contentPadding = PaddingValues(horizontal = GamssTheme.spacing.spacing300),
     ) {
-        // SpaceBetween 을 쓰지 않는다. 제목이 짧으면 남는 폭이 자식 사이로 흩어져, 시각이 없는 행에서는
-        // 제목이 오른쪽 끝으로 밀려난다. 제목에 남는 폭을 다 주고 왼쪽부터 채운다.
+        // SpaceBetween 은 쓸 수 없다. 제목이 짧으면 남는 폭이 자식 사이로 흩어져, 시각이 없는
+        // 행에서 제목이 오른쪽 끝으로 밀려난다.
         Row(
             modifier = Modifier.fillMaxSize(),
             horizontalArrangement = Arrangement.Start,
@@ -70,7 +67,6 @@ internal fun ConversationCard(
                 Spacer(modifier = Modifier.width(GamssTheme.spacing.spacing200))
             }
 
-            // 폭을 고정하지 않는다. 체크박스가 생기면 남는 폭이 달라지므로 하드코딩하면 잘못 잘린다.
             Text(
                 modifier = Modifier.weight(1f),
                 text = title,
@@ -148,5 +144,4 @@ private fun ConversationCardPreviewContent() {
     }
 }
 
-// 디자인 실측 고정 높이. 내용은 한 줄(20dp)로 제한되어 있어 잘릴 여지가 없다.
 private val ConversationCardHeight = 59.dp

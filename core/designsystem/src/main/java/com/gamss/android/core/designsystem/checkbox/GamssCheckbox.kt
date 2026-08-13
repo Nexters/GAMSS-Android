@@ -95,5 +95,5 @@ private fun GamssCheckboxPreviewContent() {
     }
 }
 
-// 자산의 viewBox 가 20 이고 원은 그 안에서 16 이다. 좌우 여백 2 는 자산이 이미 품고 있다.
+// 자산의 viewBox 크기다. 원은 그 안에서 16 이고 남는 2 는 자산이 품고 있다.
 private val CheckboxSize = 20.dp

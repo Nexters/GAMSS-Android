@@ -9,16 +9,12 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -32,11 +28,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.gamss.android.core.designsystem.button.GamssButton
 import com.gamss.android.core.designsystem.button.GamssButtonVariant
 import com.gamss.android.core.designsystem.theme.GamssTheme
-import com.gamss.android.core.designsystem.topnavigation.GamssTopNavigation
-import com.gamss.android.core.designsystem.topnavigation.GamssTopNavigationContent
-import com.gamss.android.core.designsystem.topnavigation.GamssTopNavigationIcon
-import com.gamss.android.feature.chat.component.ChattingListSectionHeader
-import com.gamss.android.feature.chat.component.ConversationCard
+import com.gamss.android.feature.chat.component.ChattingListTopBar
+import com.gamss.android.feature.chat.component.ConversationList
 import com.gamss.android.feature.chat.component.DeleteConversationDialog
 import org.orbitmvi.orbit.compose.collectAsState
 import org.orbitmvi.orbit.compose.collectSideEffect
@@ -58,6 +51,52 @@ fun ChattingListScreen(
     viewModel: ChattingListViewModel = hiltViewModel(),
 ) {
     val state by viewModel.collectAsState()
+
+    ChattingListSideEffectHandler(viewModel = viewModel, onChatClick = onChatClick)
+
+    LaunchedEffect(Unit) { viewModel.load() }
+
+    BackHandler(enabled = state.canCancelSelection) { viewModel.onSelectionCancel() }
+
+    val actions = remember(viewModel) {
+        ChattingListActions(
+            onCardClick = viewModel::onCardClick,
+            onCardLongClick = viewModel::onCardLongClick,
+            onDeleteActionClick = viewModel::onDeleteActionClick,
+        )
+    }
+
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .background(GamssTheme.colors.background),
+    ) {
+        ChattingListTopBar(
+            isSelectionMode = state.isSelectionMode,
+            onSelectionCancel = viewModel::onSelectionCancel,
+            onMenuClick = onMenuClick,
+        )
+
+        ChattingListBody(state = state, actions = actions, modifier = Modifier.weight(1f))
+
+        if (state.isSelectionMode) {
+            DeleteButton(enabled = state.canDelete, onClick = viewModel::onDeleteRequest)
+        }
+    }
+
+    if (state.isConfirmingDelete) {
+        DeleteConversationDialog(
+            onConfirm = viewModel::onDeleteConfirm,
+            onDismiss = viewModel::onDeleteDismiss,
+        )
+    }
+}
+
+@Composable
+private fun ChattingListSideEffectHandler(
+    viewModel: ChattingListViewModel,
+    onChatClick: (Long) -> Unit,
+) {
     val context = LocalContext.current
 
     viewModel.collectSideEffect { sideEffect ->
@@ -83,91 +122,18 @@ fun ChattingListScreen(
                 context.showToast(R.string.chatting_list_session_expired)
         }
     }
-
-    LaunchedEffect(Unit) { viewModel.load() }
-
-    BackHandler(enabled = state.canCancelSelection) { viewModel.onSelectionCancel() }
-
-    val actions = remember(viewModel) {
-        ChattingListActions(
-            onCardClick = viewModel::onCardClick,
-            onCardLongClick = viewModel::onCardLongClick,
-            onDeleteActionClick = viewModel::onDeleteActionClick,
-        )
-    }
-
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .background(GamssTheme.colors.background),
-    ) {
-        // 선택 모드에서는 로고 대신 좌측 뒤로가기만 남는다. 그 버튼이 선택 모드를 나가는 유일한
-        // 화면상 경로다.
-        GamssTopNavigation(
-            content = if (state.isSelectionMode) {
-                GamssTopNavigationContent.None
-            } else {
-                GamssTopNavigationContent.Logo
-            },
-            backgroundColor = GamssTheme.colors.background,
-            showLeftIcon = state.isSelectionMode,
-            showRightIcon = true,
-            leftIconContentDescription = stringResource(R.string.chatting_list_selection_cancel),
-            rightIconContentDescription = stringResource(R.string.chatting_list_menu_content_description),
-            onLeftIconClick = viewModel::onSelectionCancel,
-            onRightIconClick = onMenuClick,
-            rightIcon = GamssTopNavigationIcon.Menu,
-        )
-
-        ChattingListContent(state = state, actions = actions, modifier = Modifier.weight(1f))
-
-        // 선택 모드에서만 나타난다. 헤더의 삭제 액션은 진입 트리거이고 실행은 이 버튼이 맡는다.
-        if (state.isSelectionMode) {
-            GamssButton(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(BottomButtonPadding),
-                label = stringResource(R.string.chatting_list_delete_action),
-                onClick = viewModel::onDeleteRequest,
-                variant = GamssButtonVariant.Destructive,
-                enabled = state.canDelete,
-            )
-        }
-    }
-
-    if (state.isConfirmingDelete) {
-        DeleteConversationDialog(
-            onConfirm = viewModel::onDeleteConfirm,
-            onDismiss = viewModel::onDeleteDismiss,
-        )
-    }
 }
 
-@Immutable
-private data class ChattingListActions(
-    val onCardClick: (Long) -> Unit,
-    val onCardLongClick: (Long) -> Unit,
-    val onDeleteActionClick: () -> Unit,
-)
-
 @Composable
-private fun ChattingListContent(
+private fun ChattingListBody(
     state: ChattingListState,
     actions: ChattingListActions,
     modifier: Modifier = Modifier,
 ) {
     when {
-        state.isLoading -> Box(
-            modifier = modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center,
-        ) {
-            CircularProgressIndicator()
-        }
+        state.isLoading -> CenteredBox(modifier) { CircularProgressIndicator() }
 
-        state.isEmpty -> Box(
-            modifier = modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center,
-        ) {
+        state.isEmpty -> CenteredBox(modifier) {
             Text(
                 text = stringResource(R.string.chatting_list_empty),
                 style = GamssTheme.typography.body4Medium,
@@ -180,56 +146,21 @@ private fun ChattingListContent(
 }
 
 @Composable
-private fun ConversationList(
-    state: ChattingListState,
-    actions: ChattingListActions,
-    modifier: Modifier = Modifier,
-) {
-    val untitled = stringResource(R.string.chatting_list_untitled)
+private fun CenteredBox(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
+    Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) { content() }
+}
 
-    // 간격을 spacedBy 로 일괄 적용하지 않는다. 디자인의 헤더 위아래 간격(10dp)과 카드 사이
-    // 간격(8dp)이 다르므로, 항목별 아래 여백으로 표현해야 두 값을 각각 지킬 수 있다.
-    LazyColumn(
-        modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(bottom = ListBottomPadding),
-    ) {
-        state.groups.forEachIndexed { index, group ->
-            // 날짜도 액션도 없는 헤더는 내보내지 않는다. 그리면 빈 행이 위아래 여백만 차지한다.
-            if (group.dateLabel != null || index == 0) {
-                // 키를 지정해 삭제 후 재구성 때 체크 상태와 스크롤 위치가 엉키지 않게 한다.
-                item(key = "$HEADER_KEY_PREFIX${group.dateLabel ?: UNDATED_GROUP_KEY}") {
-                    ChattingListSectionHeader(
-                        modifier = Modifier.padding(
-                            start = HeaderHorizontalPadding,
-                            end = HeaderHorizontalPadding,
-                            top = HeaderVerticalSpacing,
-                            bottom = HeaderVerticalSpacing,
-                        ),
-                        dateLabel = group.dateLabel,
-                        showDeleteAction = index == 0,
-                        deleteActionEnabled = state.isDeleteActionEnabled,
-                        onDeleteActionClick = actions.onDeleteActionClick,
-                    )
-                }
-            }
-
-            items(items = group.rows, key = { it.id }) { row ->
-                ConversationCard(
-                    modifier = Modifier.padding(
-                        start = CardHorizontalPadding,
-                        end = CardHorizontalPadding,
-                        bottom = CardSpacing,
-                    ),
-                    title = row.title ?: untitled,
-                    timeLabel = row.timeLabel,
-                    isSelectionMode = state.isSelectionMode,
-                    isSelected = row.id in state.selectedIds,
-                    onClick = { actions.onCardClick(row.id) },
-                    onLongClick = { actions.onCardLongClick(row.id) },
-                )
-            }
-        }
-    }
+@Composable
+private fun ColumnScope.DeleteButton(enabled: Boolean, onClick: () -> Unit) {
+    GamssButton(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(BottomButtonPadding),
+        label = stringResource(R.string.chatting_list_delete_action),
+        onClick = onClick,
+        variant = GamssButtonVariant.Destructive,
+        enabled = enabled,
+    )
 }
 
 private fun Context.showToast(@StringRes resId: Int, vararg formatArgs: Any) {
@@ -289,36 +220,21 @@ private fun ChattingListPreviewContent() {
     )
 
     Column(modifier = Modifier.fillMaxSize()) {
-        PreviewSection(state = ChattingListState(groups, ChattingListPhase.Browsing), actions = actions)
-        PreviewSection(
+        ChattingListBody(
+            state = ChattingListState(groups, ChattingListPhase.Browsing),
+            actions = actions,
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f),
+        )
+        ChattingListBody(
             state = ChattingListState(groups, ChattingListPhase.Selecting(setOf(1L))),
             actions = actions,
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f),
         )
     }
 }
 
-@Composable
-private fun ColumnScope.PreviewSection(
-    state: ChattingListState,
-    actions: ChattingListActions,
-) {
-    ChattingListContent(
-        state = state,
-        actions = actions,
-        modifier = Modifier
-            .fillMaxWidth()
-            .weight(1f),
-    )
-}
-
-private const val HEADER_KEY_PREFIX = "header-"
-private const val UNDATED_GROUP_KEY = "undated"
-
-// 좌우 여백이 헤더와 카드에서 다른 것은 디자인 그대로다. 화면 402 기준으로 헤더는 20 + 362,
-// 카드는 18 + 366 으로 각각 대칭이다.
-private val CardHorizontalPadding = 18.dp
-private val HeaderHorizontalPadding = 20.dp
-private val HeaderVerticalSpacing = 10.dp
-private val CardSpacing = 8.dp
-private val ListBottomPadding = 16.dp
 private val BottomButtonPadding = 18.dp

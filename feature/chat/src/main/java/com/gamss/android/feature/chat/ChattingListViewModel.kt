@@ -24,8 +24,7 @@ class ChattingListViewModel @Inject constructor(
     override val container = container<ChattingListState, ChattingListSideEffect>(ChattingListState())
 
     fun load() = intent {
-        // 화면 재구성(회전 등)이나 재진입으로 다시 불린다. 목록을 보는 중이 아니면 단계를 건드리지
-        // 않는다. 선택이 지워지거나 확인 다이얼로그가 닫히거나 삭제 결과 처리와 뒤집힌다.
+        // 회전이나 재진입으로 다시 불린다. 목록을 보는 중이 아니면 단계를 건드리지 않는다.
         if (state.phase is ChattingListPhase.Selecting ||
             state.phase is ChattingListPhase.Confirming ||
             state.phase is ChattingListPhase.Deleting
@@ -33,7 +32,7 @@ class ChattingListViewModel @Inject constructor(
             return@intent
         }
 
-        // 이미 채워진 목록으로 재진입할 때 스피너를 다시 띄우지 않는다. 화면이 번쩍인다.
+        // 이미 채워진 목록에는 스피너를 다시 띄우지 않는다. 화면이 번쩍인다.
         if (state.groups.isEmpty()) {
             reduce { state.copy(phase = ChattingListPhase.Loading) }
         }
@@ -125,8 +124,7 @@ class ChattingListViewModel @Inject constructor(
     }
 
     private suspend fun ChattingListSyntax.onDeleteSettled(result: DeleteConversationsResult) {
-        // 일부만 실패해도 선택 모드를 나간다. 사라진 행 때문에 선택 id 가 화면과 어긋난 상태로
-        // 남으면, 재조회된 목록의 낡은 체크로 엉뚱한 방을 지울 수 있다.
+        // 일부만 실패해도 선택 모드를 나간다. 낡은 선택이 남으면 엉뚱한 방을 지울 수 있다.
         reduce { state.copy(phase = ChattingListPhase.Browsing) }
 
         if (result.failures.isEmpty()) {
