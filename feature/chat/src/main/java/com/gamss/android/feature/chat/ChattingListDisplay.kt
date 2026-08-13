@@ -1,5 +1,6 @@
 package com.gamss.android.feature.chat
 
+import com.gamss.android.core.common.util.formatKoreanTime
 import com.gamss.android.domain.conversation.Conversation
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -37,11 +38,9 @@ internal fun List<Conversation>.toConversationGroups(): List<ConversationGroup> 
 private fun Conversation.toConversationRow(): ConversationRow = ConversationRow(
     id = id,
     title = title,
-    timeLabel = createdAt?.format(TimeFormatter),
+    timeLabel = createdAt?.let(::formatKoreanTime),
 )
 
+// 불교력이나 일본력 로케일에서 연도가 밀리지 않게 ROOT 로 고정한다.
 private val DateHeaderFormatter: DateTimeFormatter =
     DateTimeFormatter.ofPattern("yy.MM.dd", Locale.ROOT)
-
-private val TimeFormatter: DateTimeFormatter =
-    DateTimeFormatter.ofPattern("a h:mm", Locale.KOREAN)
