@@ -1,10 +1,6 @@
 package com.gamss.android.feature.home
 
 import com.gamss.android.core.common.AppResult
-import com.gamss.android.domain.auth.AuthRepository
-import com.gamss.android.domain.auth.LoginResult
-import com.gamss.android.domain.auth.LogoutUseCase
-import com.gamss.android.domain.auth.SessionState
 import com.gamss.android.domain.model.DailyTokenUsage
 import com.gamss.android.domain.repository.TokenUsageRefreshNotifier
 import com.gamss.android.domain.usecase.GetDailyTokenUsageUseCase
@@ -15,7 +11,6 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -79,7 +74,6 @@ class HomeTokenUsageRefreshTest {
         repository: FakeUserRepository,
         notifier: TokenUsageRefreshNotifier,
     ) = HomeViewModel(
-        logoutUseCase = LogoutUseCase(FakeAuthRepository),
         getDailyTokenUsageUseCase = GetDailyTokenUsageUseCase(repository),
         tokenUsageRefreshNotifier = notifier,
     )
@@ -136,19 +130,6 @@ class HomeTokenUsageRefreshTest {
             status = "ACTIVE",
             createdAt = "2026-08-05T00:00:00Z",
         )
-    }
-
-    private object FakeAuthRepository : AuthRepository {
-        override val sessionState: StateFlow<SessionState> = MutableStateFlow(SessionState.Authenticated)
-
-        override suspend fun login(googleIdToken: String): AppResult<LoginResult> =
-            AppResult.Success(LoginResult(isFirstLogin = false))
-
-        override suspend fun reissueTokens(): AppResult<Unit> = AppResult.Success(Unit)
-
-        override suspend fun restoreSession(): AppResult<Unit> = AppResult.Success(Unit)
-
-        override suspend fun logout(): AppResult<Unit> = AppResult.Success(Unit)
     }
 
     private companion object {
