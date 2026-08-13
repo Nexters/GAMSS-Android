@@ -7,8 +7,6 @@ import com.gamss.android.data.summary.KobartSummarySpec
 import com.google.android.play.core.assetpacks.AssetPackManager
 import com.google.android.play.core.assetpacks.AssetPackManagerFactory
 import com.google.android.play.core.assetpacks.model.AssetPackStatus
-import com.google.android.play.core.ktx.requestCellularDataConfirmation
-import com.google.android.play.core.ktx.requestPackStates
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
@@ -34,14 +32,14 @@ class ModelDownloadConfirmationGateway @Inject constructor(
 
     /** @return 호출 시점에 확인이 필요한 팩이 하나라도 있었는데 사용자가 전부 승인했으면 true. */
     suspend fun confirmPendingDownloads(activity: Activity): Boolean {
-        val states = manager.requestPackStates(PACK_NAMES).packStates().values
+        val states = manager.getPackStates(PACK_NAMES).await().packStates().values
 
         val needsCellular = states.any { it.status() == AssetPackStatus.WAITING_FOR_WIFI }
         val needsSizeConfirmation = states.any { it.status() == AssetPackStatus.REQUIRES_USER_CONFIRMATION }
 
         var confirmed = true
         if (needsCellular) {
-            confirmed = confirmed && manager.requestCellularDataConfirmation(activity) == Activity.RESULT_OK
+            confirmed = confirmed && manager.showCellularDataConfirmation(activity).await() == Activity.RESULT_OK
         }
         if (needsSizeConfirmation) {
             confirmed = confirmed && manager.showConfirmationDialog(activity).await() == Activity.RESULT_OK
