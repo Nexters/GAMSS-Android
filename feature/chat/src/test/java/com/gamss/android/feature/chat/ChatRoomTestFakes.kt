@@ -43,6 +43,7 @@ import kotlinx.coroutines.flow.emptyFlow
  *
  * [summarizer] 는 카드 요약에만 쓴다. 압축본은 원문이 그대로 남아야 검증할 수 있다.
  */
+@Suppress("LongParameterList")
 internal fun chatRoomViewModel(
     conversationRepository: ConversationRepository = FakeConversationRepository(),
     cardRepository: CardRepository = CountingCardRepository(),
