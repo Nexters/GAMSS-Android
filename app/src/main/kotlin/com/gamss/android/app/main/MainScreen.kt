@@ -27,8 +27,16 @@ import com.gamss.android.feature.emotion.EmotionScreen
 import com.gamss.android.feature.emotion.navigation.EmotionKey
 import com.gamss.android.feature.home.HomeScreen
 import com.gamss.android.feature.home.navigation.HomeKey
-import com.gamss.android.feature.setting.SettingScreen
+import com.gamss.android.feature.setting.accountinfo.AccountInfoScreen
+import com.gamss.android.feature.setting.main.SettingScreen
+import com.gamss.android.feature.setting.navigation.AccountInfoKey
+import com.gamss.android.feature.setting.navigation.NicknameChangeKey
+import com.gamss.android.feature.setting.navigation.PrivacyPolicyKey
+import com.gamss.android.feature.setting.navigation.ServiceTermsKey
 import com.gamss.android.feature.setting.navigation.SettingKey
+import com.gamss.android.feature.setting.nicknamechange.NicknameChangeScreen
+import com.gamss.android.feature.setting.privacypolicy.PrivacyPolicyScreen
+import com.gamss.android.feature.setting.serviceterms.ServiceTermsScreen
 
 @Composable
 fun MainScreen(isDebug: Boolean) {
@@ -79,7 +87,28 @@ private fun mainEntryProvider(navigator: Navigator) = entryProvider {
     }
     entry<CalendarKey> { CalendarScreen() }
     entry<EmotionKey> { EmotionScreen() }
-    entry<SettingKey> { SettingScreen() }
+    entry<SettingKey> {
+        SettingScreen(
+            onBackClick = navigator::goBack,
+            onAccountInfoClick = { navigator.navigate(AccountInfoKey) },
+            onServiceTermsClick = { navigator.navigate(ServiceTermsKey) },
+            onPrivacyPolicyClick = { navigator.navigate(PrivacyPolicyKey) },
+        )
+    }
+    entry<AccountInfoKey> {
+        AccountInfoScreen(
+            onBackClick = navigator::goBack,
+            onNicknameChangeClick = { nickname -> navigator.navigate(NicknameChangeKey(nickname)) },
+        )
+    }
+    entry<NicknameChangeKey> { key ->
+        NicknameChangeScreen(
+            currentNickname = key.currentNickname,
+            onBackClick = navigator::goBack,
+        )
+    }
+    entry<ServiceTermsKey> { ServiceTermsScreen(onBackClick = navigator::goBack) }
+    entry<PrivacyPolicyKey> { PrivacyPolicyScreen(onBackClick = navigator::goBack) }
     entry<ChatKey> {
         ChattingListScreen(onChatClick = { navigator.navigate(ChatRoomKey(conversationId = it)) })
     }

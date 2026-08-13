@@ -7,6 +7,7 @@ import androidx.compose.ui.graphics.Color
 // Base
 internal val White = Color(0xFFFFFFFF)
 internal val Black = Color(0xFF000000)
+internal val Gray1000 = Color(0xFF1A1C20)
 
 // Gray - Light
 internal val GrayLight025 = Color(0xFFFDFEFF)
@@ -39,28 +40,31 @@ internal val GrayDark900 = Color(0xFFF2F5F8)
 internal val GrayDark950 = Color(0xFFFCFDFE)
 
 // Chromatic - Light
-internal val ChromaticLightPink = Color(0xFFFF7E9A)
-internal val ChromaticLightYellow = Color(0xFFFFD373)
-internal val ChromaticLightGreen = Color(0xFF36AF7C)
-internal val ChromaticLightPurple = Color(0xFFC08CEA)
-internal val ChromaticLightSkyblue = Color(0xFF66C3F1)
-internal val ChromaticLightApricot = Color(0xFFFB6F56)
+internal val ChromaticLightRed = Color(0xFFEF3535)
+internal val ChromaticLightApricot = Color(0xFFEC462B)
+internal val ChromaticLightYellow = Color(0xFFF1B235)
+internal val ChromaticLightGreen = Color(0xFF36AF48)
+internal val ChromaticLightTeal = Color(0xFF36B8BD)
+internal val ChromaticLightBlue = Color(0xFF376CE8)
+internal val ChromaticLightPurple = Color(0xFFA425E3)
 
 // Chromatic - Dark
+internal val ChromaticDarkRed = Color(0xFFFF4444)
+internal val ChromaticDarkApricot = Color(0xFFF15D47)
+internal val ChromaticDarkYellow = Color(0xFFFFC552)
 internal val ChromaticDarkGreen = Color(0xFF3BDB98)
-
-// Semantic - Light
-internal val SemanticLightRed = Color(0xFFEF3535)
-internal val SemanticLightBlue = Color(0xFF376CE8)
-
-// Semantic - Dark
-internal val SemanticDarkRed = Color(0xFFFF4444)
-internal val SemanticDarkBlue = Color(0xFF447CFF)
+internal val ChromaticDarkTeal = Color(0xFF44DFE5)
+internal val ChromaticDarkBlue = Color(0xFF5588FF)
+internal val ChromaticDarkPurple = Color(0xFFCC6DFC)
 
 @Immutable
 data class GamssColors(
     val white: Color,
     val black: Color,
+    // Figma 의 Gray/Gray1000. 라이트와 다크가 같은 값이라 gray025~gray950 과 달리 반전하지 않는다.
+    val gray1000: Color,
+    // 화면 최하단 배경. gray025 와 달리 라이트에서 순백, 다크에서 순검정으로 반전한다.
+    val background: Color,
     val gray025: Color,
     val gray050: Color,
     val gray075: Color,
@@ -74,19 +78,20 @@ data class GamssColors(
     val gray800: Color,
     val gray900: Color,
     val gray950: Color,
-    val pink: Color,
+    val red: Color,
+    val apricot: Color,
     val yellow: Color,
     val green: Color,
-    val purple: Color,
-    val skyblue: Color,
-    val apricot: Color,
-    val red: Color,
+    val teal: Color,
     val blue: Color,
+    val purple: Color,
 )
 
 val LightGamssColors = GamssColors(
     white = White,
     black = Black,
+    gray1000 = Gray1000,
+    background = White,
     gray025 = GrayLight025,
     gray050 = GrayLight050,
     gray075 = GrayLight075,
@@ -100,19 +105,20 @@ val LightGamssColors = GamssColors(
     gray800 = GrayLight800,
     gray900 = GrayLight900,
     gray950 = GrayLight950,
-    pink = ChromaticLightPink,
+    red = ChromaticLightRed,
+    apricot = ChromaticLightApricot,
     yellow = ChromaticLightYellow,
     green = ChromaticLightGreen,
+    teal = ChromaticLightTeal,
+    blue = ChromaticLightBlue,
     purple = ChromaticLightPurple,
-    skyblue = ChromaticLightSkyblue,
-    apricot = ChromaticLightApricot,
-    red = SemanticLightRed,
-    blue = SemanticLightBlue,
 )
 
 val DarkGamssColors = GamssColors(
     white = White,
     black = Black,
+    gray1000 = Gray1000,
+    background = Black,
     gray025 = GrayDark025,
     gray050 = GrayDark050,
     gray075 = GrayDark075,
@@ -126,14 +132,13 @@ val DarkGamssColors = GamssColors(
     gray800 = GrayDark800,
     gray900 = GrayDark900,
     gray950 = GrayDark950,
-    pink = ChromaticLightPink,
-    yellow = ChromaticLightYellow,
+    red = ChromaticDarkRed,
+    apricot = ChromaticDarkApricot,
+    yellow = ChromaticDarkYellow,
     green = ChromaticDarkGreen,
-    purple = ChromaticLightPurple,
-    skyblue = ChromaticLightSkyblue,
-    apricot = ChromaticLightApricot,
-    red = SemanticDarkRed,
-    blue = SemanticDarkBlue,
+    teal = ChromaticDarkTeal,
+    blue = ChromaticDarkBlue,
+    purple = ChromaticDarkPurple,
 )
 
 val LocalGamssColors = staticCompositionLocalOf { LightGamssColors }
