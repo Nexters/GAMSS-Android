@@ -30,7 +30,7 @@ class ClassifyUserEmotionUseCaseTest {
         )
         val result = useCase(listOf("오늘 너무 힘들었어", "자꾸 눈물이 나")).assertSuccess()
         assertEquals(EmotionLabel.SADNESS, result?.label)
-        assertEquals(EmotionCharacter.WARM, result?.character)
+        assertEquals(EmotionCharacter.SADNESS, result?.character)
     }
 
     @Test

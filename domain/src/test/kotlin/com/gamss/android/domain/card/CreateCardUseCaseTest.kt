@@ -46,7 +46,7 @@ class CreateCardUseCaseTest {
         CreateCardUseCase(repository)(
             CreateCardUseCase.Params(
                 conversationId = 1L,
-                character = EmotionCharacter.WARM,
+                character = EmotionCharacter.SADNESS,
                 summary = "  오늘 억울한 일이 있었다  ",
             ),
         )
