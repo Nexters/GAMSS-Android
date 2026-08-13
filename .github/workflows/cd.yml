@@ -74,6 +74,9 @@ jobs:
           FIREBASE_SERVICE_CREDENTIALS_FILE: ${{ github.workspace }}/fastlane/config/gamss-key.json
           FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
           FIREBASE_TESTER_GROUPS: inner-tester
+          # 임시: 릴리즈 빌드 디버거블 스위치. 검증 끝나면 "false" 로 되돌린다.
+          # 아래 "Build release AAB"(Play Console 업로드용)에는 절대 넣지 않는다.
+          RELEASE_DEBUGGABLE: "true"
         run: bundle exec fastlane android distribute
 
       # 위 Firebase 배포는 installTimeModels 로 모델을 박아 넣은 전용 AAB(~400MB)를 쓴다. 이 스텝은

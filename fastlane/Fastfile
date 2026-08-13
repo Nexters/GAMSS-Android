@@ -19,9 +19,15 @@ platform :android do
     # 빌드만 installTimeModels 로 두 팩을 install-time 전환해 AAB 안에 그대로 박는다(~400MB) —
     # 테스터가 설치하자마자 모든 기능을 바로 쓸 수 있다. Play Console 배포용(작은 크기, on-demand/
     # fast-follow 유지)은 이 플래그 없이 cd.yml 의 "Build release AAB" 스텝이 따로 만든다.
+    gradle_properties = { "versionCode" => version_code, "installTimeModels" => true }
+
+    # 온디바이스 요약/감정 동작을 릴리즈 형태 그대로 보면서 로그를 붙여야 할 때만 cd.yml 에서 켠다.
+    # 켜면 BuildConfig.DEBUG 가 true 가 되어 디버그 전용 탭과 BODY 레벨 HTTP 로깅도 함께 열린다.
+    gradle_properties["releaseDebuggable"] = true if ENV["RELEASE_DEBUGGABLE"] == "true"
+
     gradle(
       task: "clean :app:bundleRelease",
-      properties: { "versionCode" => version_code, "installTimeModels" => true }
+      properties: gradle_properties
     )
 
     firebase_app_distribution(

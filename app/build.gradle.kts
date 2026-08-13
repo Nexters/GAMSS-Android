@@ -77,6 +77,8 @@ android {
         }
     }
 
+    val releaseDebuggable = providers.gradleProperty("releaseDebuggable").orNull.toBoolean()
+
     buildTypes {
         getByName("debug") {
             applicationIdSuffix = ".dev"
@@ -84,6 +86,12 @@ android {
             resValue("string", "app_name", "GAMSS Dev")
         }
         getByName("release") {
+            // -PreleaseDebuggable=true 를 주면 릴리즈 빌드가 디버거블이 되고 BuildConfig.DEBUG 도 true 가 된다.
+            // Play Console 은 debuggable AAB 를 거부하므로 스토어 업로드용 빌드에는 절대 켜지 않는다.
+            isDebuggable = releaseDebuggable
+            if (releaseDebuggable) {
+                versionNameSuffix = "-debuggable"
+            }
             isMinifyEnabled = false
             if (hasCompleteReleaseSigningConfig) {
                 signingConfig = signingConfigs.getByName("release")
