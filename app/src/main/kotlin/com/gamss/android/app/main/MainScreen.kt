@@ -14,6 +14,7 @@ import com.gamss.android.app.navigation.keys
 import com.gamss.android.app.navigation.rememberNavigationState
 import com.gamss.android.app.navigation.toEntries
 import com.gamss.android.app.navigation.topLevelDestinations
+import com.gamss.android.app.navigation.visibleIn
 import com.gamss.android.core.designsystem.component.GamssBottomBar
 import com.gamss.android.core.designsystem.component.GamssPaperBackground
 import com.gamss.android.core.designsystem.theme.GamssTheme
@@ -39,8 +40,9 @@ import com.gamss.android.feature.setting.privacypolicy.PrivacyPolicyScreen
 import com.gamss.android.feature.setting.serviceterms.ServiceTermsScreen
 
 @Composable
-fun MainScreen(isDebug: Boolean) {
+fun MainScreen(isDebug: Boolean, useCardFeature: Boolean) {
     val destinations = remember(isDebug) { topLevelDestinations(isDebug) }
+    val visibleDestinations = remember(destinations, useCardFeature) { destinations.visibleIn(useCardFeature) }
     val navigationState = rememberNavigationState(
         startKey = HomeKey,
         topLevelKeys = remember(destinations) { destinations.keys() },
@@ -57,7 +59,7 @@ fun MainScreen(isDebug: Boolean) {
                 bottomBar = {
                     if (navigationState.currentKey == navigationState.currentTopLevelKey) {
                         GamssBottomBar(
-                            items = destinations.bottomBarItems(),
+                            items = visibleDestinations.bottomBarItems(),
                             selectedValue = navigationState.currentTopLevelKey,
                             onItemClick = navigator::navigate,
                         )
