@@ -2,6 +2,7 @@ package com.gamss.android.app
 
 import android.app.Application
 import android.util.Log
+import com.gamss.android.domain.config.InitializeRemoteConfigUseCase
 import com.gamss.android.domain.safety.RefreshRiskLexiconUseCase
 import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.CoroutineExceptionHandler
@@ -19,6 +20,9 @@ class GamssApplication : Application() {
     @Inject
     lateinit var refreshRiskLexicon: RefreshRiskLexiconUseCase
 
+    @Inject
+    lateinit var initializeRemoteConfig: InitializeRemoteConfigUseCase
+
     private val applicationScope = CoroutineScope(
         SupervisorJob() + Dispatchers.IO +
             CoroutineExceptionHandler { _, throwable ->
@@ -29,5 +33,6 @@ class GamssApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         applicationScope.launch { refreshRiskLexicon() }
+        applicationScope.launch { initializeRemoteConfig() }
     }
 }

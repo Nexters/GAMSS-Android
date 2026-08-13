@@ -1,0 +1,147 @@
+package com.gamss.android.data.config
+
+import com.gamss.android.domain.config.RemoteConfigKey
+import io.mockk.coEvery
+import io.mockk.coVerify
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.slot
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runCurrent
+import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertThrows
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Test
+import java.io.IOException
+
+class RemoteConfigRepositoryImplTest {
+
+    private lateinit var remote: FirebaseRemoteConfigDataSource
+
+    @Before
+    fun setUp() {
+        remote = mockk()
+    }
+
+    private fun repository() = RemoteConfigRepositoryImpl(remote)
+
+    @Test
+    fun `원격 조회가 실패해도 준비 완료로 표시한다`() = runTest {
+        coEvery { remote.configure(any()) } returns Unit
+        coEvery { remote.fetchAndActivate() } throws IOException("network down")
+
+        val repository = repository()
+        repository.initialize()
+
+        assertTrue(repository.isReady.value)
+    }
+
+    @Test
+    fun `기본값 등록이 실패해도 준비 완료로 표시한다`() = runTest {
+        coEvery { remote.configure(any()) } throws IOException("play services unavailable")
+
+        val repository = repository()
+        repository.initialize()
+
+        assertTrue(repository.isReady.value)
+        coVerify(exactly = 0) { remote.fetchAndActivate() }
+    }
+
+    @Test
+    fun `initialize 를 두 번 호출해도 원격 조회는 한 번만 수행한다`() = runTest {
+        coEvery { remote.configure(any()) } returns Unit
+        coEvery { remote.fetchAndActivate() } returns true
+
+        val repository = repository()
+        repository.initialize()
+        repository.initialize()
+
+        coVerify(exactly = 1) { remote.fetchAndActivate() }
+    }
+
+    @Test
+    fun `모든 설정 키의 기본값을 등록한다`() = runTest {
+        val defaults = slot<Map<String, String>>()
+        coEvery { remote.configure(capture(defaults)) } returns Unit
+        coEvery { remote.fetchAndActivate() } returns true
+
+        repository().initialize()
+
+        assertEquals(RemoteConfigKey.entries.size, defaults.captured.size)
+        RemoteConfigKey.entries.forEach { key ->
+            assertEquals(key.defaultValue, defaults.captured[key.key])
+        }
+    }
+
+    @Test
+    fun `취소 예외는 삼키지 않고 준비 상태도 바꾸지 않는다`() {
+        coEvery { remote.configure(any()) } throws CancellationException("cancelled")
+        val repository = repository()
+
+        assertThrows(CancellationException::class.java) {
+            runBlocking { repository.initialize() }
+        }
+
+        assertFalse(repository.isReady.value)
+    }
+
+    @Test
+    fun `동시에 initialize 를 호출해도 원격 조회는 한 번만 수행한다`() = runTest {
+        val configureGate = CompletableDeferred<Unit>()
+        coEvery { remote.configure(any()) } coAnswers { configureGate.await() }
+        coEvery { remote.fetchAndActivate() } returns true
+
+        val repository = repository()
+        val first = launch { repository.initialize() }
+        val second = launch { repository.initialize() }
+        runCurrent()
+        configureGate.complete(Unit)
+        first.join()
+        second.join()
+
+        coVerify(exactly = 1) { remote.configure(any()) }
+        coVerify(exactly = 1) { remote.fetchAndActivate() }
+    }
+
+    @Test
+    fun `initialize 이전에는 준비 상태가 아니다`() {
+        assertFalse(repository().isReady.value)
+    }
+
+    @Test
+    fun `원격 값이 있으면 키 문자열로 위임한다`() {
+        val key = RemoteConfigKey.UseCardFeature
+        every { remote.hasValue(key.key) } returns true
+        every { remote.getBoolean(key.key) } returns true
+
+        assertTrue(repository().getBoolean(key))
+    }
+
+    @Test
+    fun `기본값 등록이 실패해도 선언한 기본값을 돌려준다`() = runTest {
+        val key = RemoteConfigKey.UseCardFeature
+        coEvery { remote.configure(any()) } throws IOException("play services unavailable")
+        every { remote.hasValue(key.key) } returns false
+
+        val repository = repository()
+        repository.initialize()
+
+        assertFalse(repository.getBoolean(key))
+        assertEquals(key.defaultValue, repository.getString(key))
+    }
+
+    @Test
+    fun `기능 플래그의 기본값은 꺼짐이다`() {
+        val key = RemoteConfigKey.UseCardFeature
+        every { remote.hasValue(key.key) } returns false
+
+        assertEquals("false", key.defaultValue)
+        assertFalse(repository().getBoolean(key))
+    }
+}
