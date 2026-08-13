@@ -153,11 +153,8 @@ private fun HomeGreeting(
 }
 
 /**
- * 보드에 흩어 둔 장식.
- *
- * 좌표는 Figma 402x874 프레임에서 상태바 높이(49)를 뺀 값이다. 콘텐츠 흐름에 끼어들면 안 되므로
- * 절대 배치로 얹기만 하고, 화면이 좁을 때 잘리는 건 [com.gamss.android.core.designsystem.component.GamssPaperBackground]
- * 의 clip 에 맡긴다.
+ * 좌표는 Figma 402x874 프레임에서 상태바 높이(49)를 뺀 값이다. 콘텐츠 흐름에 끼어들면 안 되므로 절대 배치로 얹고,
+ * 화면이 좁을 때 잘리는 건 [com.gamss.android.core.designsystem.component.GamssPaperBackground] 의 clip 에 맡긴다.
  */
 @Composable
 private fun BoxScope.HomeDecorations() {

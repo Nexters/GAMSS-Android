@@ -14,11 +14,6 @@ import com.gamss.android.core.designsystem.R
 
 private val DefaultHighlightHeight = 19.dp
 
-/**
- * 문구 뒤에 형광펜을 그어 둔 것처럼 보이게 한다.
- *
- * 형광펜 높이는 글줄 높이보다 낮아 아래쪽에 붙인다. 텍스트 폭에 맞춰 가로로 늘어난다.
- */
 @Composable
 fun GamssMarkerHighlight(
     modifier: Modifier = Modifier,

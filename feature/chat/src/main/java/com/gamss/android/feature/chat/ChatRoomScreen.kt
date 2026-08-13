@@ -61,7 +61,6 @@ import org.orbitmvi.orbit.compose.collectAsState
 import org.orbitmvi.orbit.compose.collectSideEffect
 
 /**
- * @param initialMessage 홈에서 적어 온 첫 걱정. 새 대화로 들어올 때만 채워진다.
  * @param onCardClose 카드 시트를 닫을 때 호출한다. 이 화면을 실제로 벗어나야 한다.
  *  머무르면 카드 단계가 그대로라 시트가 다시 열린다.
  */

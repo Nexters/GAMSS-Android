@@ -40,10 +40,9 @@ fun MainScreen(isDebug: Boolean) {
     val navigator = remember(navigationState) { Navigator(navigationState) }
     val entries = remember(navigator) { mainEntryProvider(navigator) }
 
-    // 종이 보드 시안에 다크 버전이 아직 없다. 배경과 탭바 에셋이 라이트 전용이라 다크 팔레트를 물리면
-    // 밝은 종이 위에 밝은 글자가 얹혀 읽히지 않는다. 시안이 나올 때까지 셸은 라이트로 고정한다.
+    // 배경/탭바 에셋이 라이트 전용이라 다크 시안이 나올 때까지 셸은 라이트로 고정한다.
     GamssTheme(darkTheme = false) {
-        // 종이 보드가 상태바와 탭바 뒤까지 이어져야 해서 Scaffold 바깥에 깔고 컨테이너를 투명하게 둔다.
+        // 종이 보드가 상태바와 탭바 뒤까지 이어져야 해서 Scaffold 바깥에 깐다.
         GamssPaperBackground {
             Scaffold(
                 containerColor = Color.Transparent,

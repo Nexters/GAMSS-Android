@@ -13,11 +13,7 @@ import androidx.compose.ui.res.painterResource
 import com.gamss.android.core.designsystem.R
 import com.gamss.android.core.designsystem.theme.GamssTheme
 
-/**
- * 걱정을 붙여 두는 종이 보드 배경.
- *
- * 장식을 절대 좌표로 얹는 화면이 있어 [clipToBounds] 로 넘치는 부분이 레이아웃을 밀지 않게 막는다.
- */
+/** 장식을 절대 좌표로 얹는 화면이 있어 [clipToBounds] 로 넘치는 부분이 레이아웃을 밀지 않게 막는다. */
 @Composable
 fun GamssPaperBackground(
     modifier: Modifier = Modifier,

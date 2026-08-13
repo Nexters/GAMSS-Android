@@ -17,7 +17,7 @@ import com.gamss.android.core.designsystem.R
 
 private val TopBarHeight = 62.dp
 
-/** 좌우 슬롯만 두는 얇은 헤더. 가운데 타이틀이 필요한 화면은 [leading] 안에서 직접 배치한다. */
+/** 가운데 슬롯이 없다. 타이틀이 필요한 화면은 [leading] 안에서 직접 배치한다. */
 @Composable
 fun GamssTopBar(
     modifier: Modifier = Modifier,

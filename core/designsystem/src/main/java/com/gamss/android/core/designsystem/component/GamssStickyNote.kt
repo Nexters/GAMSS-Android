@@ -26,12 +26,7 @@ private const val TAPE_ROTATION = -11.26f
 private const val TEXT_ROTATION = -20.3f
 private const val TEXT_ALPHA = 0.7f
 
-/**
- * 보드에 붙인 포스트잇.
- *
- * 종이 두 장이 살짝 어긋나게 겹치고 위를 마스킹 테이프로 붙인 모양이라 조각마다 회전각이 다르다.
- * 좌표와 각도는 Figma 노드(3138:6119)를 그대로 옮긴 값이라 하나만 바꾸면 겹침이 어긋난다.
- */
+/** 좌표와 각도는 Figma 노드(3138:6119)를 그대로 옮긴 값이라 하나만 바꾸면 겹침이 어긋난다. */
 @Composable
 fun GamssStickyNote(
     text: String,
@@ -85,11 +80,7 @@ fun GamssStickyNote(
     }
 }
 
-/**
- * Figma 의 "회전 전 크기를 담는 상자" 구조를 그대로 옮긴 자리.
- *
- * 자식은 이 상자 한가운데에서 자기 중심을 기준으로 회전한다.
- */
+/** Figma 의 "회전 전 크기를 담는 상자" 구조. 자식은 이 상자 한가운데에서 자기 중심을 기준으로 회전한다. */
 @Composable
 private fun BoxScope.Slot(
     x: Dp,

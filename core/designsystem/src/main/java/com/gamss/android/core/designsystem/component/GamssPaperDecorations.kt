@@ -21,7 +21,7 @@ import com.gamss.android.core.designsystem.theme.GamssTheme
 private val SlipGroupSize = DpSize(76.03.dp, 52.02.dp)
 private const val SLIP_ROTATION = 19.88f
 
-/** 보드에 붙은 마스킹 테이프 조각. 기울기는 벡터 자체에 들어 있어 따로 회전시키지 않는다. */
+/** 기울기는 벡터 자체에 들어 있어 따로 회전시키지 않는다. */
 @Composable
 fun GamssTape(modifier: Modifier = Modifier) {
     Image(
@@ -31,7 +31,6 @@ fun GamssTape(modifier: Modifier = Modifier) {
     )
 }
 
-/** 빨간 테두리를 두른 빈 쪽지. 아직 아무것도 적히지 않은 자리를 나타낸다. */
 @Composable
 fun GamssPaperSlip(
     modifier: Modifier = Modifier,

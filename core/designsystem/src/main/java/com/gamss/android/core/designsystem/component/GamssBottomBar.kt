@@ -25,8 +25,7 @@ import androidx.compose.ui.unit.dp
 import com.gamss.android.core.designsystem.R
 import com.gamss.android.core.designsystem.theme.GamssTheme
 
-// 손그림 테두리는 조각 500여 개짜리 path 라 VectorDrawable 로 넣으면 pathData 가 aapt 의 문자열 한도를
-// 넘겨 STRING_TOO_LARGE 로 잘린다. 그래서 배경만 3배율 PNG 로 둔다.
+// 손그림 테두리는 path 조각이 500여 개라 VectorDrawable 로 넣으면 aapt 문자열 한도를 넘겨 STRING_TOO_LARGE 로 잘린다. 배경만 3배율 PNG 로 둔다.
 // 높이는 디자인 62dp 에 에셋의 stroke 여백 2dp 를 더한 값.
 private val BottomBarHeight = 64.dp
 private val BottomBarHorizontalMargin = 20.dp
@@ -35,11 +34,7 @@ private val ItemRowHorizontalPadding = 53.dp
 private val ItemIconSize = 24.dp
 private val ItemLabelGap = 4.dp
 
-/**
- * 손그림 테두리를 두른 하단 탭바.
- *
- * 화면이 edge-to-edge 라 시스템 내비게이션 영역은 이 컴포넌트가 직접 피한다.
- */
+/** 화면이 edge-to-edge 라 시스템 내비게이션 영역은 이 컴포넌트가 직접 피한다. */
 @Composable
 fun <T> GamssBottomBar(
     items: List<GamssBottomBarItem<T>>,
