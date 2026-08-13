@@ -205,6 +205,27 @@ class ConversationEmotionAccumulatorTest {
         assertEquals(EmotionLabel.ANGER, accumulator.result()?.label)
     }
 
+    @Test
+    fun 분류가_도는_동안_초기화되면_앞_대화_점수를_새_대화에_섞지_않는다() = runBlocking {
+        val started = CompletableDeferred<Unit>()
+        val release = CompletableDeferred<Unit>()
+        val accumulator = ConversationEmotionAccumulator(GatedClassifier(started, release))
+        accumulator.append("오늘 분노 가득한 하루")
+
+        val classification = launch { accumulator.classifyPending() }
+        started.await()
+
+        // 앞 대화를 분류하는 중에 새 대화가 열린다. 늦게 도착한 점수가 여기에 얹히면 안 된다.
+        accumulator.reset()
+        accumulator.append("조금 불안 하기도 하고")
+
+        release.complete(Unit)
+        classification.join()
+        accumulator.classifyPending()
+
+        assertEquals(EmotionLabel.ANXIETY, accumulator.result()?.label)
+    }
+
     private companion object {
         val FAILING = listOf("첫 발화에서 분류가 죽는다", "그래도 분노 가 남는다")
         const val APPEND_TIMEOUT_MILLIS = 1_000L

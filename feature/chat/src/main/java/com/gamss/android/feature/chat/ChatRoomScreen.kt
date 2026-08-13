@@ -43,10 +43,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -63,7 +60,6 @@ import com.gamss.android.domain.card.Card
 import com.gamss.android.domain.conversation.MAX_MESSAGE_LENGTH
 import com.gamss.android.domain.conversation.Message
 import com.gamss.android.domain.conversation.MessageSender
-import com.gamss.android.domain.emotion.EmotionCharacter
 import com.gamss.android.feature.chat.component.SupportAgencyDialog
 import org.orbitmvi.orbit.compose.collectAsState
 import org.orbitmvi.orbit.compose.collectSideEffect
@@ -74,28 +70,15 @@ import org.orbitmvi.orbit.compose.collectSideEffect
  */
 @Composable
 fun ChatRoomScreen(
-    conversationId: Long?,
+    conversationId: Long,
     onCardClose: () -> Unit,
     modifier: Modifier = Modifier,
-    initialMessage: String? = null,
-    excludeCharacters: Set<EmotionCharacter> = emptySet(),
     viewModel: ChatRoomViewModel = hiltViewModel(),
 ) {
     val state by viewModel.collectAsState()
     val context = LocalContext.current
 
-    // ViewModel 의 중복 전송 가드는 프로세스가 죽으면 함께 사라진다. 반면 NavKey 는 복원되므로
-    // 소비 여부를 화면 저장 상태에 남겨야 같은 문구가 새 대화로 한 번 더 나가지 않는다.
-    var initialMessageConsumed by rememberSaveable { mutableStateOf(false) }
-
-    LaunchedEffect(conversationId) {
-        viewModel.start(
-            conversationId = conversationId,
-            initialMessage = initialMessage.takeUnless { initialMessageConsumed },
-            excludeCharacters = excludeCharacters,
-        )
-        initialMessageConsumed = true
-    }
+    LaunchedEffect(conversationId) { viewModel.start(conversationId) }
 
     viewModel.collectSideEffect { sideEffect ->
         when (sideEffect) {

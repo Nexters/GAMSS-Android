@@ -53,6 +53,9 @@ class ConversationSession @Inject constructor(
         excludeCharacters: Set<EmotionCharacter> = emptySet(),
     ): AppResult<SentMessage> {
         val opensConversation = conversationId == null
+        // 새 대화는 이전 대화의 문맥을 물려받지 않는다. 이 인스턴스가 홈처럼 오래 사는 화면에 물려
+        // 있으면 앞 대화의 발화가 남아 새 대화 첫 요청에 남의 얘기가 실려 나간다.
+        if (opensConversation) resetConversationState()
         val result = sendMessage(
             SendMessageUseCase.Params(
                 conversationId = conversationId,
@@ -83,6 +86,11 @@ class ConversationSession @Inject constructor(
             summaryStore.compact()
             emotionAccumulator.classifyPending()
         }
+    }
+
+    private suspend fun resetConversationState() {
+        summaryStore.reset()
+        emotionAccumulator.reset()
     }
 
     private suspend fun assignPendingTitle() {

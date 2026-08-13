@@ -50,6 +50,28 @@ class ConversationSessionTest {
     }
 
     @Test
+    fun 한_세션으로_새_대화를_또_열면_앞_대화_문맥이_실리지_않는다() = runBlocking {
+        val repository = FakeConversationRepository()
+        val session = session(repository)
+
+        session.openWith(SEED)
+        session.openWith("주말에 약속이 겹쳐서 곤란해")
+
+        assertEquals(listOf(null, null), repository.sentContextSummaries)
+    }
+
+    @Test
+    fun 이어_쓰는_대화는_앞선_발화를_문맥으로_넘긴다() = runBlocking {
+        val repository = FakeConversationRepository()
+        val session = session(repository)
+
+        session.openWith(SEED)
+        session.continueWith("팀장이 또 그랬어")
+
+        assertEquals(listOf(null, SEED), repository.sentContextSummaries)
+    }
+
+    @Test
     fun 이어_쓰는_대화는_제목을_건드리지_않는다() = runBlocking {
         val repository = FakeConversationRepository()
         val session = session(repository)
@@ -207,6 +229,7 @@ class ConversationSessionTest {
 
         val updatedTitles = mutableListOf<Pair<Long, String>>()
         val committedTitles = mutableListOf<Pair<Long, String>>()
+        val sentContextSummaries = mutableListOf<String?>()
         var cancelledTitleAttempts = 0
             private set
         private var titleAttemptStarted = CompletableDeferred<Unit>()
@@ -218,6 +241,7 @@ class ConversationSessionTest {
             contextSummary: String?,
             excludeCharacters: Set<EmotionCharacter>,
         ): AppResult<SentMessage> {
+            sentContextSummaries += contextSummary
             if (failingSend) return AppResult.Failure(IllegalStateException("send failed"))
             return AppResult.Success(
                 SentMessage(

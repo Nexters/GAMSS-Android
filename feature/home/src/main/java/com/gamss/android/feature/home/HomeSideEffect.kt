@@ -1,15 +1,10 @@
 package com.gamss.android.feature.home
 
-import com.gamss.android.domain.emotion.EmotionCharacter
-
 sealed interface HomeSideEffect {
     data object NavigateToSetting : HomeSideEffect
 
-    /** 전송은 대화방이 맡는다. */
-    data class StartConversation(
-        val message: String,
-        val excludeCharacters: Set<EmotionCharacter>,
-    ) : HomeSideEffect
+    /** 대화는 이미 만들어졌다. 대화방은 이 id 로 조회만 한다. */
+    data class OpenConversation(val conversationId: Long) : HomeSideEffect
 
     data class ShowToast(val message: String) : HomeSideEffect
 }

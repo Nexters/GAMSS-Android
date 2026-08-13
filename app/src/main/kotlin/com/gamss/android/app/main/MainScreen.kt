@@ -32,8 +32,6 @@ import com.gamss.android.feature.chat.ChatRoomScreen
 import com.gamss.android.feature.chat.ChattingListScreen
 import com.gamss.android.feature.chat.navigation.ChatKey
 import com.gamss.android.feature.chat.navigation.ChatRoomKey
-import com.gamss.android.feature.chat.navigation.toEmotionCharacters
-import com.gamss.android.feature.chat.navigation.toKeyNames
 import com.gamss.android.feature.home.HomeScreen
 import com.gamss.android.feature.home.navigation.HomeKey
 import com.gamss.android.feature.setting.accountinfo.AccountInfoScreen
@@ -98,11 +96,7 @@ private fun mainEntryProvider(navigator: Navigator) = entryProvider {
     entry<HomeKey> {
         HomeScreen(
             onNavigateToSetting = { navigator.navigate(SettingKey) },
-            onStartConversation = { message, excludeCharacters ->
-                navigator.navigate(
-                    ChatRoomKey(initialMessage = message, excludeCharacterNames = excludeCharacters.toKeyNames()),
-                )
-            },
+            onOpenConversation = { conversationId -> navigator.navigate(ChatRoomKey(conversationId)) },
         )
     }
     entry<CalendarKey> { CalendarScreen() }
@@ -131,15 +125,13 @@ private fun mainEntryProvider(navigator: Navigator) = entryProvider {
     }
     entry<ChatKey> {
         ChattingListScreen(
-            onChatClick = { navigator.navigate(ChatRoomKey(conversationId = it)) },
+            onChatClick = { navigator.navigate(ChatRoomKey(it)) },
             onMenuClick = { navigator.navigate(SettingKey) },
         )
     }
     entry<ChatRoomKey> { key ->
         ChatRoomScreen(
             conversationId = key.conversationId,
-            initialMessage = key.initialMessage,
-            excludeCharacters = key.excludeCharacterNames.toEmotionCharacters(),
             onCardClose = navigator::goBack,
         )
     }

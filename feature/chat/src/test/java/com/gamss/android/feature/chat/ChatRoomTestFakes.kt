@@ -1,6 +1,5 @@
 package com.gamss.android.feature.chat
 
-import androidx.lifecycle.SavedStateHandle
 import com.gamss.android.core.common.AppResult
 import com.gamss.android.domain.card.Card
 import com.gamss.android.domain.card.CardRepository
@@ -51,11 +50,9 @@ internal fun chatRoomViewModel(
     summarizer: DiarySummarizer = PassThroughSummarizer,
     classifier: EmotionClassifier = FlatClassifier,
     tokenUsageRefreshNotifier: TokenUsageRefreshNotifier = RecordingTokenUsageRefreshNotifier(),
-    savedStateHandle: SavedStateHandle = SavedStateHandle(),
     remoteConfigRepository: RemoteConfigRepository = FakeRemoteConfigRepository(),
 ): ChatRoomViewModel = ChatRoomViewModel(
     tokenUsageRefreshNotifier = tokenUsageRefreshNotifier,
-    savedStateHandle = savedStateHandle,
     detectRiskInText = DetectRiskInTextUseCase(
         repository = NoRiskLexiconRepository,
         matcher = RiskTermMatcher(),

@@ -1,14 +1,18 @@
 package com.gamss.android.feature.home
 
 import com.gamss.android.core.common.AppResult
+import com.gamss.android.domain.conversation.ConversationRepository
 import com.gamss.android.domain.conversation.MAX_MESSAGE_LENGTH
 import com.gamss.android.domain.emotion.EmotionCharacter
 import com.gamss.android.domain.user.GetUserInfoUseCase
 import com.gamss.android.domain.user.UserProfile
 import io.mockk.coEvery
 import io.mockk.mockk
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Test
 import org.orbitmvi.orbit.test.test
 
@@ -16,8 +20,10 @@ import org.orbitmvi.orbit.test.test
 class HomeViewModelTest {
 
     private val getUserInfoUseCase: GetUserInfoUseCase = mockk()
+    private val repository = RecordingConversationRepository()
 
-    private fun viewModel() = HomeViewModel(getUserInfoUseCase)
+    private fun viewModel(repository: ConversationRepository = this.repository) =
+        HomeViewModel(getUserInfoUseCase, conversationSession(repository))
 
     @Test
     fun `유저 정보를 받아오면 인사말에 쓸 닉네임이 채워진다`() = runTest {
@@ -40,14 +46,32 @@ class HomeViewModelTest {
     }
 
     @Test
-    fun `걱정을 적고 보내면 대화를 시작하고 입력을 비운다`() = runTest {
+    fun `걱정을 적고 보내면 대화를 만들고 그 방을 연다`() = runTest {
         viewModel().test(this) {
             containerHost.onInputChange(WORRY)
             expectState { copy(input = WORRY) }
 
             containerHost.onSubmit()
+            expectState { copy(isSending = true) }
+            expectState { copy(isSending = false) }
             expectState { copy(input = "") }
-            expectSideEffect(HomeSideEffect.StartConversation(WORRY, excludeCharacters = emptySet()))
+            expectSideEffect(HomeSideEffect.OpenConversation(NEW_ROOM_ID))
+        }
+        assertEquals(WORRY, repository.sentContent)
+        assertNull(repository.sentConversationId)
+    }
+
+    @Test
+    fun `전송에 실패하면 입력을 남기고 안내만 띄운다`() = runTest {
+        val failing = RecordingConversationRepository(failing = true)
+        viewModel(failing).test(this) {
+            containerHost.onInputChange(WORRY)
+            expectState { copy(input = WORRY) }
+
+            containerHost.onSubmit()
+            expectState { copy(isSending = true) }
+            expectState { copy(isSending = false) }
+            expectSideEffect(HomeSideEffect.ShowToast(SEND_FAILED))
         }
     }
 
@@ -61,11 +85,12 @@ class HomeViewModelTest {
             expectState { copy(input = WORRY) }
 
             containerHost.onSubmit()
+            expectState { copy(isSending = true) }
+            expectState { copy(isSending = false) }
             expectState { copy(input = "") }
-            expectSideEffect(
-                HomeSideEffect.StartConversation(WORRY, excludeCharacters = setOf(EmotionCharacter.SADNESS)),
-            )
+            expectSideEffect(HomeSideEffect.OpenConversation(NEW_ROOM_ID))
         }
+        assertEquals(setOf(EmotionCharacter.SADNESS), repository.sentExcludeCharacters)
     }
 
     @Test
@@ -104,8 +129,10 @@ class HomeViewModelTest {
             expectState { copy(input = WORRY) }
 
             containerHost.onSubmit()
-            expectState { copy(input = "", isEmotionPickerExpanded = false) }
-            expectSideEffect(HomeSideEffect.StartConversation(WORRY, excludeCharacters = emptySet()))
+            expectState { copy(isSending = true, isEmotionPickerExpanded = false) }
+            expectState { copy(isSending = false) }
+            expectState { copy(input = "") }
+            expectSideEffect(HomeSideEffect.OpenConversation(NEW_ROOM_ID))
         }
     }
 
@@ -135,12 +162,57 @@ class HomeViewModelTest {
             expectState { copy(input = WORRY) }
 
             containerHost.onSubmit()
+            expectState { copy(isSending = true) }
+            expectState { copy(isSending = false) }
             expectState { copy(input = "") }
-            expectSideEffect(HomeSideEffect.StartConversation(WORRY, excludeCharacters = emptySet()))
+            expectSideEffect(HomeSideEffect.OpenConversation(NEW_ROOM_ID))
 
             containerHost.onSubmit()
             expectNoItems()
         }
+    }
+
+    @Test
+    fun `새 대화에는 앞서 보낸 걱정이 문맥으로 실리지 않는다`() = runTest {
+        viewModel().test(this) {
+            containerHost.onInputChange(WORRY)
+            expectState { copy(input = WORRY) }
+            containerHost.onSubmit()
+            expectState { copy(isSending = true) }
+            expectState { copy(isSending = false) }
+            expectState { copy(input = "") }
+            expectSideEffect(HomeSideEffect.OpenConversation(NEW_ROOM_ID))
+
+            containerHost.onInputChange(SECOND_WORRY)
+            expectState { copy(input = SECOND_WORRY) }
+            containerHost.onSubmit()
+            expectState { copy(isSending = true) }
+            expectState { copy(isSending = false) }
+            expectState { copy(input = "") }
+            expectSideEffect(HomeSideEffect.OpenConversation(NEW_ROOM_ID))
+        }
+        assertEquals(listOf(null, null), repository.sentContextSummaries)
+    }
+
+    @Test
+    fun `응답이 늦으면 끝날 때까지 전송 중 상태로 잠긴다`() = runTest {
+        val gate = CompletableDeferred<Unit>()
+        val gated = RecordingConversationRepository(gate = gate)
+        viewModel(gated).test(this) {
+            containerHost.onInputChange(WORRY)
+            expectState { copy(input = WORRY) }
+
+            containerHost.onSubmit()
+            expectState { copy(isSending = true) }
+            // 응답을 붙든 동안은 여기서 멈춰 있어야 입력과 전송 버튼이 잠긴 채로 남는다.
+            expectNoItems()
+
+            gate.complete(Unit)
+            expectState { copy(isSending = false) }
+            expectState { copy(input = "") }
+            expectSideEffect(HomeSideEffect.OpenConversation(NEW_ROOM_ID))
+        }
+        assertEquals(1, gated.sendCount)
     }
 
     @Test
@@ -165,6 +237,7 @@ class HomeViewModelTest {
 
     private companion object {
         const val WORRY = "오늘 발표가 너무 떨려요"
+        const val SECOND_WORRY = "주말에 약속이 겹쳐서 곤란해요"
         const val BLANK = "   "
     }
 }

@@ -1,6 +1,5 @@
 package com.gamss.android.feature.chat
 
-import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gamss.android.core.common.AppResult
@@ -13,7 +12,6 @@ import com.gamss.android.domain.conversation.Message
 import com.gamss.android.domain.conversation.MessageSender
 import com.gamss.android.domain.conversation.nextCommentRevealGapMillis
 import com.gamss.android.domain.conversation.takeWithinMessageLimit
-import com.gamss.android.domain.emotion.EmotionCharacter
 import com.gamss.android.domain.repository.TokenUsageRefreshNotifier
 import com.gamss.android.domain.safety.DetectRiskInTextUseCase
 import com.gamss.android.domain.safety.RiskLevel
@@ -34,7 +32,6 @@ private typealias ChatRoomSyntax = Syntax<ChatRoomState, ChatRoomSideEffect>
 class ChatRoomViewModel @Inject constructor(
     private val session: ConversationSession,
     private val tokenUsageRefreshNotifier: TokenUsageRefreshNotifier,
-    private val savedStateHandle: SavedStateHandle,
     private val detectRiskInText: DetectRiskInTextUseCase,
     private val getRemoteConfigFlag: GetRemoteConfigFlagUseCase,
 ) : ViewModel(),
@@ -42,35 +39,17 @@ class ChatRoomViewModel @Inject constructor(
 
     override val container = container<ChatRoomState, ChatRoomSideEffect>(ChatRoomState())
 
+    /** 구성 변경으로 화면이 다시 그려져도 서버를 다시 부르지 않는다. */
     private var started = false
-
-    /** 새 대화의 첫 전송에만 실린다. 이어 보내는 요청에서는 도메인이 걸러낸다. */
-    private var excludeCharacters: Set<EmotionCharacter> = emptySet()
 
     @Volatile
     private var revealJob: Job? = null
 
-    /** @param initialMessage 새 대화일 때만 자동 전송한다. [started] 가드로 재구성 시 중복 전송을 막는다. */
-    fun start(
-        conversationId: Long?,
-        initialMessage: String? = null,
-        excludeCharacters: Set<EmotionCharacter> = emptySet(),
-    ) {
+    fun start(conversationId: Long) {
         if (started) return
         started = true
-        this.excludeCharacters = excludeCharacters
         loadChatEndFeatureFlag()
-        // 홈에서 시작한 대화는 NavKey 의 id 가 null 인 채로 복원된다. 저장해 둔 id 를 되살리지 않으면
-        // 빈 대화방이 뜨고, 거기서 다시 보내면 같은 걱정으로 대화가 하나 더 만들어진다.
-        val restored = conversationId ?: savedStateHandle.get<Long>(KEY_CONVERSATION_ID)
-        if (restored != null) {
-            loadMessages(restored)
-            return
-        }
-        if (!initialMessage.isNullOrBlank()) {
-            onInputChange(initialMessage)
-            onSend()
-        }
+        loadMessages(conversationId)
         // 결과를 기다리지 않는다 — 채팅방에 들어온 시점부터 온디바이스 모델 다운로드를 미리
         // 걸어둬 첫 메시지/카드 생성 시점엔 이미 받아져 있을 확률을 높이는 순수 최적화용 호출이다.
         viewModelScope.launch { session.prefetchOnDeviceModels() }
@@ -82,7 +61,6 @@ class ChatRoomViewModel @Inject constructor(
     }
 
     private fun loadMessages(conversationId: Long) = intent {
-        savedStateHandle[KEY_CONVERSATION_ID] = conversationId
         reduce { state.copy(conversationId = conversationId, isLoading = true) }
         when (val result = session.restore(conversationId)) {
             is AppResult.Success ->
@@ -149,15 +127,11 @@ class ChatRoomViewModel @Inject constructor(
             conversationId = state.conversationId,
             content = sending.content,
             replyToMessageId = sending.replyToMessageId,
-            excludeCharacters = excludeCharacters,
         )
 
         when (result) {
             is AppResult.Success -> {
                 val sent = result.data
-                savedStateHandle[KEY_CONVERSATION_ID] = sent.message.conversationId
-                // 대화가 열렸으니 이후 요청에는 실을 이유가 없다. 서버도 무시한다.
-                excludeCharacters = emptySet()
                 reduce {
                     state.copy(
                         isSending = false,
@@ -302,7 +276,6 @@ class ChatRoomViewModel @Inject constructor(
     )
 
     private companion object {
-        const val KEY_CONVERSATION_ID = "chatRoom.activeConversationId"
         const val LOAD_FAILED = "대화를 불러오지 못했어요"
         const val SEND_FAILED = "메시지를 보내지 못했어요"
         const val END_FAILED = "대화를 끝내지 못했어요"

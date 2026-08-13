@@ -57,7 +57,7 @@ import org.orbitmvi.orbit.compose.collectSideEffect
 @Composable
 fun HomeScreen(
     onNavigateToSetting: () -> Unit,
-    onStartConversation: (String, Set<EmotionCharacter>) -> Unit,
+    onOpenConversation: (Long) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
@@ -67,8 +67,7 @@ fun HomeScreen(
     viewModel.collectSideEffect { sideEffect ->
         when (sideEffect) {
             is HomeSideEffect.NavigateToSetting -> onNavigateToSetting()
-            is HomeSideEffect.StartConversation ->
-                onStartConversation(sideEffect.message, sideEffect.excludeCharacters)
+            is HomeSideEffect.OpenConversation -> onOpenConversation(sideEffect.conversationId)
             is HomeSideEffect.ShowToast ->
                 Toast.makeText(context, sideEffect.message, Toast.LENGTH_SHORT).show()
         }
@@ -140,6 +139,7 @@ private fun HomeContent(
                     onTrailingClick = actions.onSubmit,
                     placeholder = stringResource(R.string.home_input_placeholder),
                     trailingContentDescription = stringResource(R.string.home_input_submit_description),
+                    enabled = !state.isSending,
                     trailingAction = {
                         CharacterPickerToggle(
                             expanded = state.isEmotionPickerExpanded,
