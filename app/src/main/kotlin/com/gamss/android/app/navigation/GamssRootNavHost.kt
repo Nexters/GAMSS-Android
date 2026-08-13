@@ -21,12 +21,6 @@ import com.gamss.android.feature.login.LoginScreen
 import com.gamss.android.feature.login.navigation.LoginKey
 import org.orbitmvi.orbit.compose.collectAsState
 
-/**
- * 앱의 최상위 진입 지점.
- *
- * 앱 시작 시 저장된 세션을 확인하고, 로그인 이전 흐름과
- * Bottom Navigation 기반 메인 영역 사이의 root back stack을 관리한다.
- */
 @Composable
 fun GamssRootNavHost(
     isDebug: Boolean,

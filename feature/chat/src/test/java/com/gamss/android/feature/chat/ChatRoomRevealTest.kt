@@ -3,6 +3,7 @@ package com.gamss.android.feature.chat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
@@ -148,6 +149,24 @@ class ChatRoomRevealTest {
     }
 
     @Test
+    fun 새_대화의_첫_전송_뒤_제목이_지정된다() = runTest {
+        val repository = FakeConversationRepository(commentCount = 1)
+        val viewModel = viewModel(repository)
+
+        viewModel.test(this) {
+            containerHost.onInputChange(SEED_INPUT)
+            skipItems(1) // input 반영
+            containerHost.onSend()
+            skipItems(1) // isSending = true
+            awaitState() // 전송 성공 반영
+
+            assertEquals(listOf(ROOM_ID to "지갑 잃어버렸어"), repository.updatedTitles)
+
+            cancelAndIgnoreRemainingItems()
+        }
+    }
+
+    @Test
     fun 전송이_성공하면_토큰_사용량_갱신을_요청한다() = runTest {
         val notifier = RecordingTokenUsageRefreshNotifier()
         val viewModel = chatRoomViewModel(
@@ -161,6 +180,7 @@ class ChatRoomRevealTest {
             containerHost.onSend()
             skipItems(1) // isSending = true
             awaitState() // 전송 성공 반영
+            advanceUntilIdle()
 
             assertEquals(1, notifier.refreshCount)
 
@@ -197,6 +217,7 @@ class ChatRoomRevealTest {
         chatRoomViewModel(conversationRepository)
 
     private companion object {
+        const val SEED_INPUT = "아 진짜 짜증나 지갑 잃어버렸어"
         const val SEND_FAILED_MESSAGE = "메시지를 보내지 못했어요"
     }
 }

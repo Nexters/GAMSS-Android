@@ -1,5 +1,8 @@
 package com.gamss.android.feature.chat
 
+import com.gamss.android.domain.conversation.Conversation
+
 data class ChattingListState(
-    val isLoading: Boolean = false,
+    val conversations: List<Conversation> = emptyList(),
+    val isLoading: Boolean = true,
 )
