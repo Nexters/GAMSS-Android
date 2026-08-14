@@ -1,9 +1,7 @@
 package com.gamss.android.data.summary
 
 import ai.djl.huggingface.tokenizers.HuggingFaceTokenizer
-import android.content.Context
-import com.gamss.android.data.model.OnDemandModelAssets
-import com.gamss.android.data.model.readBytes
+import com.gamss.android.data.model.ModelAssetSource
 import java.io.ByteArrayInputStream
 import java.io.Closeable
 
@@ -33,19 +31,28 @@ internal class KobartTokenizer private constructor(
         private const val OPT_TRUNCATION = "truncation"
         private const val OPT_MAX_LENGTH = "maxLength"
 
-        suspend fun load(context: Context, packName: String, tokenizerAsset: String, maxInput: Int): KobartTokenizer {
+        suspend fun load(
+            modelAssetSource: ModelAssetSource,
+            packName: String,
+            tokenizerAsset: String,
+            maxInput: Int,
+        ): KobartTokenizer {
             val options = mapOf(
                 OPT_SPECIAL_TOKENS to "true",
                 OPT_TRUNCATION to "true",
                 OPT_MAX_LENGTH to maxInput.toString(),
             )
-            return newInstance(context, packName, tokenizerAsset, options)
+            return newInstance(modelAssetSource, packName, tokenizerAsset, options)
         }
 
         /** 토큰 수를 재려면 절단이 없어야 한다. 절단하면 한계 이상은 전부 같은 값으로 보인다. */
-        suspend fun loadWithoutTruncation(context: Context, packName: String, tokenizerAsset: String): KobartTokenizer =
+        suspend fun loadWithoutTruncation(
+            modelAssetSource: ModelAssetSource,
+            packName: String,
+            tokenizerAsset: String,
+        ): KobartTokenizer =
             newInstance(
-                context = context,
+                modelAssetSource = modelAssetSource,
                 packName = packName,
                 tokenizerAsset = tokenizerAsset,
                 options = mapOf(
@@ -55,12 +62,12 @@ internal class KobartTokenizer private constructor(
             )
 
         private suspend fun newInstance(
-            context: Context,
+            modelAssetSource: ModelAssetSource,
             packName: String,
             tokenizerAsset: String,
             options: Map<String, String>,
         ): KobartTokenizer {
-            val bytes = OnDemandModelAssets(context).resolve(packName, tokenizerAsset).readBytes()
+            val bytes = modelAssetSource.readBytes(packName, tokenizerAsset)
             val tokenizer = ByteArrayInputStream(bytes).use { stream ->
                 HuggingFaceTokenizer.newInstance(stream, options)
             }

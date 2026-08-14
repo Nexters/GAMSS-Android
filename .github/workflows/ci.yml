@@ -30,7 +30,7 @@ jobs:
           - name: test
             task: test
           - name: build
-            task: assembleRelease assembleInternal
+            task: assembleRelease assembleFirebase
           - name: build-debug
             task: assembleDebug
 
@@ -90,6 +90,6 @@ jobs:
           name: app-apks
           path: |
             app/build/outputs/apk/release/*.apk
-            app/build/outputs/apk/internal/*.apk
+            app/build/outputs/apk/firebase/*.apk
           if-no-files-found: error
           retention-days: 7

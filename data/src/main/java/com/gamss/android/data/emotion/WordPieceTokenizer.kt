@@ -1,9 +1,7 @@
 package com.gamss.android.data.emotion
 
 import ai.djl.huggingface.tokenizers.HuggingFaceTokenizer
-import android.content.Context
-import com.gamss.android.data.model.OnDemandModelAssets
-import com.gamss.android.data.model.readBytes
+import com.gamss.android.data.model.ModelAssetSource
 import java.io.ByteArrayInputStream
 import java.io.Closeable
 
@@ -42,13 +40,18 @@ internal class WordPieceTokenizer private constructor(
         private const val OPT_TRUNCATION = "truncation"
         private const val OPT_MAX_LENGTH = "maxLength"
 
-        suspend fun load(context: Context, packName: String, tokenizerAsset: String, seqLen: Int): WordPieceTokenizer {
+        suspend fun load(
+            modelAssetSource: ModelAssetSource,
+            packName: String,
+            tokenizerAsset: String,
+            seqLen: Int,
+        ): WordPieceTokenizer {
             val options = mapOf(
                 OPT_SPECIAL_TOKENS to "true",
                 OPT_TRUNCATION to "true",
                 OPT_MAX_LENGTH to seqLen.toString(),
             )
-            val bytes = OnDemandModelAssets(context).resolve(packName, tokenizerAsset).readBytes()
+            val bytes = modelAssetSource.readBytes(packName, tokenizerAsset)
             val tokenizer = ByteArrayInputStream(bytes).use { stream ->
                 HuggingFaceTokenizer.newInstance(stream, options)
             }

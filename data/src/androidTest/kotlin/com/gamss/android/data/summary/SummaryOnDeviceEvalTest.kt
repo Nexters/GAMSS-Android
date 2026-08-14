@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.gamss.android.core.common.getOrNull
+import com.gamss.android.data.model.LocalAssetsModelSource
 import com.gamss.android.domain.summary.SummarizeDiaryUseCase
 import kotlinx.coroutines.runBlocking
 import org.junit.Test
@@ -13,9 +14,9 @@ import org.junit.runner.RunWith
  * 온디바이스 원문 요약 검증. 실기기에서 kobart INT8(ONNX Runtime Mobile)로 한국어 일기를 요약하고
  * 각 결과를 "SUMMARY_EVAL" 태그로 로그에 남긴다. (Python 레퍼런스 출력과 품질 비교용)
  *
- * 모델은 이제 :models:summary-pack(on-demand 애셋팩)에서 내려받는다. 실제 Play 배포 없이
- * 로컬에서 돌리려면 `bundletool build-apks --local-testing` 으로 만든 로컬 테스트 APK 를 설치해야
- * 애셋팩이 채워진다(그냥 :data:connectedAndroidTest 만으로는 팩이 비어 있어 실패한다).
+ * `:data:connectedAndroidTest` 는 debug variant 로 돌아가니, 모델은 [LocalAssetsModelSource] 로
+ * APK 에 번들된 assets(:models:summary-pack 원본을 debug sourceSet 이 참조)에서 바로 읽는다 —
+ * Play 배포나 `bundletool --local-testing` 같은 별도 준비가 필요 없다.
  */
 @RunWith(AndroidJUnit4::class)
 class SummaryOnDeviceEvalTest {
@@ -28,9 +29,9 @@ class SummaryOnDeviceEvalTest {
     )
 
     @Test
-    fun summarizeOnDevice() = runBlocking {
+    fun summarizeOnDevice(): Unit = runBlocking {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
-        OnnxKobartSummarizer.load(context).use { summarizer ->
+        OnnxKobartSummarizer.load(LocalAssetsModelSource(context)).use { summarizer ->
             Log.i(TAG, "===SUMMARY_EVAL_START=== total=${diaries.size}")
             diaries.forEachIndexed { i, diary ->
                 val started = System.nanoTime()
@@ -50,7 +51,7 @@ class SummaryOnDeviceEvalTest {
     @Test
     fun gatingShortVsLong() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
-        val useCase = SummarizeDiaryUseCase(AndroidDiarySummarizer(context))
+        val useCase = SummarizeDiaryUseCase(AndroidDiarySummarizer(LocalAssetsModelSource(context)))
         runBlocking {
             val short = useCase(listOf("오늘 억울한 일이 있었어", "그러게 그냥 맛있는거 먹고 쉬려고")).getOrNull()
             val long = useCase(listOf(diaries[0])).getOrNull()

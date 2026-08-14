@@ -1,8 +1,7 @@
 package com.gamss.android.data.summary
 
-import android.content.Context
+import com.gamss.android.data.model.ModelAssetSource
 import com.gamss.android.domain.summary.UtteranceTokenCounter
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -12,7 +11,7 @@ import javax.inject.Singleton
 
 @Singleton
 internal class KobartTokenCounter @Inject constructor(
-    @ApplicationContext private val context: Context,
+    private val modelAssetSource: ModelAssetSource,
 ) : UtteranceTokenCounter {
 
     private val mutex = Mutex()
@@ -24,7 +23,7 @@ internal class KobartTokenCounter @Inject constructor(
 
     private suspend fun loadTokenizer(): KobartTokenizer = mutex.withLock {
         tokenizer ?: KobartTokenizer.loadWithoutTruncation(
-            context = context,
+            modelAssetSource = modelAssetSource,
             packName = KobartSummarySpec.PACK_NAME,
             tokenizerAsset = KobartSummarySpec.TOKENIZER_ASSET,
         ).also { tokenizer = it }

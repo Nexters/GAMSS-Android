@@ -8,13 +8,13 @@ plugins {
 // 시점(사용자가 채팅을 시작하기 전)부터 리드타임을 번다.
 // 실제 파일: src/main/assets/models/emotion_int8.tflite, emotion_tokenizer.json
 //
-// -PinstallTimeModels=true 를 주면 install-time 으로 강제 전환된다. Play Asset Delivery(on-demand/
-// fast-follow)는 Play Store 설치 경로에서만 채워지므로, Play Store를 거치지 않는 배포(Firebase App
-// Distribution 등)용 빌드에서 이 모델이 필요할 때 CD 에서 이 플래그로 켠다 — AAB 안에 모델이 그대로
-// 박혀 용량은 커지지만(전체 ~400MB) 어떤 설치 경로에서도 바로 동작한다.
+// 이 애셋팩은 Play Console(release buildType) 배포에서만 쓰인다. Play Store 를 거치지 않는 배포
+// (debug/firebase buildType)는 이 모델을 아예 여기서 가져가지 않고, data 모듈이 이 assets 디렉터리를
+// 자기 debug/firebase sourceSet 에 직접 srcDir 로 얹어 APK 에 번들한다 — data/build.gradle.kts,
+// data/model/LocalAssetsModelSource 참고.
 assetPack {
     packName.set("emotion_pack")
     dynamicDelivery {
-        deliveryType.set(if (project.hasProperty("installTimeModels")) "install-time" else "fast-follow")
+        deliveryType.set("fast-follow")
     }
 }

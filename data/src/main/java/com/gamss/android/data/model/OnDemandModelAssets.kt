@@ -33,13 +33,23 @@ internal class ModelPackUnavailableException(message: String) : Exception(messag
  * (data 모듈은 Activity 를 안 씀). 그래서 여기선 실패로만 처리하고, 실제 확인 다이얼로그를 띄우는
  * 책임은 [statusFlow] 를 구독해 Activity 가 있는 app 루트로 넘긴다 — [ModelDownloadConfirmationGateway]
  * 참고.
+ *
+ * `release` buildType 전용 [ModelAssetSource] 구현(`di/ModelAssetSourceModule.kt` 참고) — Play
+ * Store 밖 설치 경로(debug/firebase)에서는 [com.gamss.android.data.model.LocalAssetsModelSource]
+ * 가 대신 쓰인다.
  */
-internal class OnDemandModelAssets(context: Context) {
+internal class OnDemandModelAssets(context: Context) : ModelAssetSource {
 
     private val manager: AssetPackManager = AssetPackManagerFactory.getInstance(context.applicationContext)
 
+    override suspend fun mmap(packName: String, relativeAssetPath: String): MappedByteBuffer =
+        resolve(packName, relativeAssetPath).mmap()
+
+    override suspend fun readBytes(packName: String, relativeAssetPath: String): ByteArray =
+        resolve(packName, relativeAssetPath).readBytes()
+
     /** [packName] 팩이 아직 없으면 내려받아 완료될 때까지 대기한 뒤, [relativeAssetPath] 의 위치를 돌려준다. */
-    suspend fun resolve(packName: String, relativeAssetPath: String): AssetLocation {
+    private suspend fun resolve(packName: String, relativeAssetPath: String): AssetLocation {
         ensureInstalled(packName)
         return manager.getAssetLocation(packName, relativeAssetPath)
             ?: throw ModelPackUnavailableException(
@@ -56,7 +66,7 @@ internal class OnDemandModelAssets(context: Context) {
      * 취소는 삼키지 않는다 — 그냥 runCatching 만 쓰면 [kotlinx.coroutines.CancellationException] 도
      * 잡혀서 취소가 조용히 성공한 것처럼 보인다.
      */
-    suspend fun prefetch(packName: String) {
+    override suspend fun prefetch(packName: String) {
         runCatching { ensureInstalled(packName) }
         currentCoroutineContext().ensureActive()
     }
@@ -112,7 +122,7 @@ internal class OnDemandModelAssets(context: Context) {
      * 직접 요청하지 않는다 — 순수 관찰용이라 UI 가 구독해도 다운로드가 새로 시작되진 않는다
      * (이미 fetch 가 걸려 있어야 진행 상태가 바뀐다).
      */
-    fun statusFlow(packName: String): Flow<ModelDownloadStatus> = callbackFlow {
+    override fun statusFlow(packName: String): Flow<ModelDownloadStatus> = callbackFlow {
         val listener = AssetPackStateUpdateListener { state ->
             if (state.name() == packName) {
                 trySend(state.status().toDomainStatus())

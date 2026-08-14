@@ -28,10 +28,17 @@ android {
         }
     }
 
-    // 온디바이스 모델(.tflite/.onnx)은 더 이상 base 앱에 번들되지 않는다.
-    // Play Asset Delivery(on-demand) 애셋팩으로 분리되어 필요 시점에만 기기로 내려받힌다.
-    // 애셋팩은 다운로드 후 로컬 파일로 추출되므로(APK zip 엔트리가 아님) noCompress 설정이 필요 없다.
+    // release(Play Console) buildType 은 온디바이스 모델(.tflite/.onnx)을 base 앱에 번들하지 않는다 —
+    // Play Asset Delivery(on-demand) 애셋팩으로 분리되어 필요 시점에만 기기로 내려받힌다(다운로드 후
+    // 로컬 파일로 추출되므로 APK zip 엔트리가 아니라 noCompress 설정이 필요 없다).
     assetPacks += setOf(":models:emotion-pack", ":models:summary-pack")
+
+    // debug/firebase buildType 은 위 애셋팩 대신 같은 파일을 assets 로 직접 번들한다(data 모듈의
+    // debug/firebase sourceSet 참고) — 이 경우엔 APK zip 엔트리이므로 noCompress 가 필요하다. .onnx 는
+    // 명시하지 않으면 압축돼 mmap(assets.openFd)이 실패한다. .tflite 는 AGP 가 기본으로 비압축 처리한다.
+    androidResources {
+        noCompress += "onnx"
+    }
 
     packaging {
         resources {
@@ -89,10 +96,13 @@ android {
                 signingConfig = signingConfigs.getByName("release")
             }
         }
-        create("internal") {
+        // Firebase App Distribution 전용 buildType. Play Store 를 거치지 않는 설치 경로라 온디바이스
+        // 모델을 PAD 대신 APK 에 그대로 번들한다 — data/build.gradle.kts 의 `firebase` buildType/
+        // sourceSet 참고.
+        create("firebase") {
             initWith(getByName("release"))
             isDebuggable = true
-            versionNameSuffix = "-internal"
+            versionNameSuffix = "-firebase"
             signingConfig = signingConfigs.getByName("debug")
             matchingFallbacks += listOf("release")
         }

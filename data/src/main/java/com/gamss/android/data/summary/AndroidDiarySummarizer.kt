@@ -1,10 +1,8 @@
 package com.gamss.android.data.summary
 
-import android.content.Context
-import com.gamss.android.data.model.OnDemandModelAssets
+import com.gamss.android.data.model.ModelAssetSource
 import com.gamss.android.domain.model.ModelDownloadStatus
 import com.gamss.android.domain.summary.DiarySummarizer
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.sync.Mutex
@@ -19,7 +17,7 @@ import javax.inject.Singleton
  */
 @Singleton
 class AndroidDiarySummarizer @Inject constructor(
-    @ApplicationContext private val context: Context,
+    private val modelAssetSource: ModelAssetSource,
 ) : DiarySummarizer {
 
     private val mutex = Mutex()
@@ -27,7 +25,7 @@ class AndroidDiarySummarizer @Inject constructor(
 
     override suspend fun summarize(text: String): String = mutex.withLock {
         withContext(Dispatchers.Default) {
-            val ready = summarizer ?: OnnxKobartSummarizer.load(context).also { summarizer = it }
+            val ready = summarizer ?: OnnxKobartSummarizer.load(modelAssetSource).also { summarizer = it }
             ready.summarize(text)
         }
     }
@@ -37,10 +35,10 @@ class AndroidDiarySummarizer @Inject constructor(
      * mutex 를 타면 아직 안 끝난 prefetch 가 실제 요약 요청을 불필요하게 막게 된다.
      */
     override suspend fun prefetch() {
-        OnDemandModelAssets(context).prefetch(KobartSummarySpec.PACK_NAME)
+        modelAssetSource.prefetch(KobartSummarySpec.PACK_NAME)
     }
 
     /** UI(app 루트)가 셀룰러/크기 확인 배너를 띄울지 판단하는 데 쓴다. */
     override val downloadStatus: Flow<ModelDownloadStatus>
-        get() = OnDemandModelAssets(context).statusFlow(KobartSummarySpec.PACK_NAME)
+        get() = modelAssetSource.statusFlow(KobartSummarySpec.PACK_NAME)
 }
