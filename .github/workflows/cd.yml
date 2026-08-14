@@ -4,6 +4,11 @@ on:
   push:
     branches: [develop]
   workflow_dispatch:
+    inputs:
+      deploy_firebase:
+        description: "Firebase App Distribution 배포 여부 (수동 실행 전용 — push 트리거는 항상 배포)"
+        type: boolean
+        default: true
 
 concurrency:
   group: cd-${{ github.workflow }}-${{ github.ref }}
@@ -16,7 +21,11 @@ jobs:
   # QA/기능 테스트용. `firebase` buildType 은 debug 서명 + 온디바이스 모델을 APK 에 그대로 번들해서
   # (PAD 미사용) 테스터가 설치하자마자 모든 기능을 바로 쓸 수 있다 — data/build.gradle.kts,
   # fastlane/Fastfile 의 `distribute` lane 참고. release 서명 키스토어는 필요 없다.
+  #
+  # push(develop)는 항상 배포하고, workflow_dispatch(수동 실행)만 deploy_firebase 입력으로 건너뛸 수
+  # 있다 — 예: release AAB만 다시 뽑아서 확인하고 싶을 때 테스터에게 알림이 가는 걸 막는 용도.
   firebase-distribution:
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.deploy_firebase }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

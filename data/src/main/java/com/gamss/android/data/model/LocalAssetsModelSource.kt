@@ -22,8 +22,13 @@ import java.nio.channels.FileChannel
  * PAD 도입 전(커밋 `d6a9151` 이전) 실제로 쓰였던 `context.assets.openFd()` + mmap 패턴을 그대로
  * 되살렸다. `AssetFileDescriptor` 로 mmap 하려면 해당 확장자가 APK 안에 비압축으로 들어있어야
  * 하므로 `androidResources.noCompress`("tflite", "onnx")가 함께 필요하다.
+ *
+ * `internal` 이 아니라 public 이다 — `app` 모듈의 온디바이스 모델 평가 테스트
+ * ([com.gamss.android.OnDeviceModelEvalTest])가 Hilt DI 없이 `AndroidEmotionClassifier`/
+ * `AndroidDiarySummarizer`를 직접 생성할 때 이 클래스를 인자로 넘겨야 해서 모듈 경계 밖에서도
+ * 보여야 한다.
  */
-internal class LocalAssetsModelSource(private val context: Context) : ModelAssetSource {
+class LocalAssetsModelSource(private val context: Context) : ModelAssetSource {
 
     override suspend fun mmap(packName: String, relativeAssetPath: String): MappedByteBuffer =
         context.assets.openFd(relativeAssetPath).use { afd ->
