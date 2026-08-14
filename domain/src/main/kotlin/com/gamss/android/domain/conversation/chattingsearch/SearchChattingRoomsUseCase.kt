@@ -20,7 +20,7 @@ class SearchChattingRoomsUseCase @Inject constructor(
 
     private fun validate(keyword: String): ChattingRoomSearchException? =
         when {
-            keyword.length < ChattingRoomSearchPolicy.MIN_KEYWORD_LENGTH -> ChattingRoomSearchException.InvalidKeyword()
+            keyword.codePointCount(0, keyword.length) < ChattingRoomSearchPolicy.MIN_KEYWORD_LENGTH -> ChattingRoomSearchException.InvalidKeyword()
             else -> null
         }
 }
