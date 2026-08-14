@@ -21,7 +21,7 @@ android {
         applicationId = "com.gamss.android"
         // CD에서 fastlane이 -PversionCode= 로 CI 빌드 번호(GITHUB_RUN_NUMBER 기반)를 주입한다.
         versionCode = (project.findProperty("versionCode") as String?)?.toIntOrNull() ?: 1
-        versionName = "0.1.0"
+        versionName = "1.0.0"
 
         ndk {
             abiFilters += "arm64-v8a"
