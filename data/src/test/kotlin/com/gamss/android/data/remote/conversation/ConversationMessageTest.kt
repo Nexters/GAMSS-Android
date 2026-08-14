@@ -55,7 +55,7 @@ class ConversationMessageTest {
             "ANGER" to EmotionCharacter.ANGER,
             "ANXIETY" to EmotionCharacter.ANXIETY,
             "GRUMPY" to EmotionCharacter.PRICKLY,
-            "WARM" to EmotionCharacter.WARM,
+            "SADNESS" to EmotionCharacter.SADNESS,
             "QUIRKY" to EmotionCharacter.QUIRKY,
         )
 

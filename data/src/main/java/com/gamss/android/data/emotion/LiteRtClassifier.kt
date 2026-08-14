@@ -56,10 +56,8 @@ internal class LiteRtClassifier private constructor(
         )
     }
 
-    override fun close() {
-        model.close()
-        tokenizer.close()
-    }
+    // 토크나이저는 순수 Kotlin 이라 닫을 네이티브 핸들이 없다. 여기서 닫을 것은 Interpreter 뿐이다.
+    override fun close() = model.close()
 
     private fun toInputBuffer(values: LongArray, dataType: DataType, numBytes: Int): ByteBuffer {
         val buffer = ByteBuffer.allocateDirect(numBytes).order(ByteOrder.nativeOrder())

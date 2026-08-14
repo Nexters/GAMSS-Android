@@ -7,6 +7,7 @@ import com.gamss.android.domain.conversation.DeleteConversationsUseCase
 import com.gamss.android.domain.conversation.GetOngoingConversationsUseCase
 import com.gamss.android.domain.conversation.Message
 import com.gamss.android.domain.conversation.SentMessage
+import com.gamss.android.domain.emotion.EmotionCharacter
 import kotlinx.coroutines.CompletableDeferred
 import org.orbitmvi.orbit.test.Item
 import org.orbitmvi.orbit.test.OrbitTestContext
@@ -61,6 +62,7 @@ internal class FakeChattingListRepository(
         content: String,
         replyToMessageId: Long?,
         contextSummary: String?,
+        excludeCharacters: Set<EmotionCharacter>,
     ): AppResult<SentMessage> = error("목록 테스트에서 쓰지 않는다")
 
     override suspend fun getMessages(conversationId: Long): AppResult<List<Message>> =

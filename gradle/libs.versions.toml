@@ -17,8 +17,8 @@ detekt = "1.23.8"
 kotlinx-serialization = "1.11.0"
 coroutines = "1.10.2"
 litert = "2.1.5"
-djl = "0.33.0"
-onnxruntime = "1.20.0"
+# 1.21.1 부터 libonnxruntime4j_jni.so 가 16KB 페이지에 맞춰 정렬된다(1.20.0, 1.21.0 은 4KB).
+onnxruntime = "1.21.1"
 orbit-mvi = "11.0.0"
 retrofit = "3.0.0"
 okhttp = "5.4.0"
@@ -76,9 +76,6 @@ kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-t
 javax-inject = { module = "javax.inject:javax.inject", version = "1" }
 
 litert = { module = "com.google.ai.edge.litert:litert", version.ref = "litert" }
-djl-bom = { module = "ai.djl:bom", version.ref = "djl" }
-djl-huggingface-tokenizers = { module = "ai.djl.huggingface:tokenizers" }
-djl-android-tokenizer-native = { module = "ai.djl.android:tokenizer-native", version.ref = "djl" }
 onnxruntime-android = { module = "com.microsoft.onnxruntime:onnxruntime-android", version.ref = "onnxruntime" }
 
 orbit-core = { module = "org.orbit-mvi:orbit-core", version.ref = "orbit-mvi" }

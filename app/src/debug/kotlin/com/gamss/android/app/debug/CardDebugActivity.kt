@@ -122,7 +122,7 @@ private val SAMPLES: List<Pair<String, List<ConversationMessage>>> = listOf(
         msg(104, "USER", null, "내가 준비한 자료가 부족했다는 건데 사실 그건 어제 갑자기 시킨 거였잖아"),
         msg(105, "USER", null, "너무 억울하고 분한데 아무 말도 못 하고 그냥 듣고만 있었어"),
         msg(106, "USER", null, "점심도 혼자 먹고 오후 내내 일이 손에 안 잡히더라고"),
-        msg(107, "CHARACTER", "WARM", "많이 속상했겠다..."),
+        msg(107, "CHARACTER", "SADNESS", "많이 속상했겠다..."),
         msg(108, "USER", null, "집에 오는 길에 괜히 눈물이 났어 내가 뭘 그렇게 잘못했나 싶고"),
         msg(109, "USER", null, "그냥 오늘은 아무것도 안 하고 맛있는거 시켜 먹고 일찍 잘래"),
         msg(110, "USER", null, "내일은 좀 나아지겠지"),
