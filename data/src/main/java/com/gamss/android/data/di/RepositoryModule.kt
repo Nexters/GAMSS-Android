@@ -1,7 +1,7 @@
 package com.gamss.android.data.di
 
-import com.gamss.android.data.chattingsearch.ChattingRoomSearchRepositoryImpl
 import com.gamss.android.data.auth.AuthRepositoryImpl
+import com.gamss.android.data.chattingsearch.ChattingRoomSearchRepositoryImpl
 import com.gamss.android.data.local.auth.AuthTokenLocalDataSource
 import com.gamss.android.data.local.auth.EncryptedAuthTokenLocalDataSource
 import com.gamss.android.data.local.auth.TinkTokenCipher
@@ -15,6 +15,7 @@ import com.gamss.android.data.repository.UserRepositoryImpl
 import com.gamss.android.domain.auth.AuthRepository
 import com.gamss.android.domain.card.CardRepository
 import com.gamss.android.domain.conversation.ConversationRepository
+import com.gamss.android.domain.repository.ChattingRoomSearchRepository
 import com.gamss.android.domain.repository.TokenUsageRefreshNotifier
 import com.gamss.android.domain.user.UserRepository
 import dagger.Binds

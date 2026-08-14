@@ -8,7 +8,6 @@ import com.gamss.android.data.auth.TokenAuthenticator
 import com.gamss.android.data.auth.TokenInterceptor
 import com.gamss.android.data.remote.auth.AuthService
 import com.gamss.android.data.remote.gamssJson
-import com.gamss.android.data.remote.chattingRoomSearch.ChattingRoomSearchService
 import com.gamss.android.data.remote.user.UserService
 import dagger.Module
 import dagger.Provides
@@ -116,11 +115,6 @@ internal object NetworkModule {
     @Singleton
     fun provideUserService(retrofit: Retrofit): UserService =
         retrofit.create(UserService::class.java)
-
-    @Provides
-    @Singleton
-    fun provideChattingRoomSearchService(retrofit: Retrofit): ChattingRoomSearchService =
-        retrofit.create(ChattingRoomSearchService::class.java)
 
     private fun String.redactTokenValues(): String =
         TOKEN_JSON_PATTERN.replace(this) { matchResult ->
