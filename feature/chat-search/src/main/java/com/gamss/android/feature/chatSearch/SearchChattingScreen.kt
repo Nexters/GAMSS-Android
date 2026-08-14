@@ -100,6 +100,7 @@ fun SearchChattingContent(
             chattingRooms = chattingRooms,
             listState = listState,
             contentPadding = innerPadding,
+            onRetry = onSearch,
         )
     }
 }
@@ -146,6 +147,7 @@ private fun SearchResultContent(
     chattingRooms: LazyPagingItems<ChattingRoomSummary>,
     listState: LazyListState,
     contentPadding: PaddingValues,
+    onRetry: () -> Unit,
 ) {
     if (!state.hasSearched) {
         MessageContent(message = "검색어를 입력해 채팅방을 찾아보세요", contentPadding = contentPadding)
@@ -157,7 +159,7 @@ private fun SearchResultContent(
         is LoadState.Error -> ErrorContent(
             message = refresh.error.toSearchFailureReason().toMessage(),
             contentPadding = contentPadding,
-            onRetry = chattingRooms::retry,
+            onRetry = onRetry,
         )
 
         is LoadState.NotLoading -> if (chattingRooms.itemCount == 0) {
