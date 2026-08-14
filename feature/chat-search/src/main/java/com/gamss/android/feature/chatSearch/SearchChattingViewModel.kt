@@ -51,10 +51,6 @@ class SearchChattingViewModel @Inject constructor(
             is AppResult.Success -> {
                 reduce {
                     state.copy(
-                        keyword = TextFieldValue(
-                            text = keyword,
-                            selection = TextRange(keyword.length),
-                        ),
                         hasSearched = true,
                         searchGeneration = nextGeneration,
                     )
