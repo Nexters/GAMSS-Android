@@ -29,13 +29,15 @@ internal class ChattingRoomSearchPagingSource(
 
         return when (result) {
             is AppResult.Success -> {
-                val uniqueRooms = result.data.rooms.filter { room ->
+                val data = result.data
+                val uniqueRooms = data.rooms.filter { room ->
                     seenIds.add(room.conversationId)
                 }
+                val hasMore = data.rooms.isNotEmpty() && data.page == page && data.hasNextPage
                 LoadResult.Page(
                     data = uniqueRooms,
                     prevKey = page.takeIf { it > DEFAULT_PAGE }?.minus(1),
-                    nextKey = (page + 1).takeIf { result.data.hasNextPage },
+                    nextKey = (page + 1).takeIf { hasMore },
                 )
             }
 
