@@ -2,6 +2,7 @@ package com.gamss.android.data.remote.conversation
 
 import com.gamss.android.data.remote.conversation.model.request.SaveMessageRequest
 import com.gamss.android.data.remote.conversation.model.request.UpdateConversationTitleRequest
+import com.gamss.android.data.remote.conversation.model.response.ChattingRoomSearchResponse
 import com.gamss.android.data.remote.conversation.model.response.ConversationMessage
 import com.gamss.android.data.remote.conversation.model.response.ConversationResponse
 import com.gamss.android.data.remote.conversation.model.response.SaveMessageResponse
@@ -12,6 +13,7 @@ import retrofit2.http.GET
 import retrofit2.http.PATCH
 import retrofit2.http.POST
 import retrofit2.http.Path
+import retrofit2.http.Query
 
 internal interface ConversationService {
 
@@ -40,4 +42,15 @@ internal interface ConversationService {
     suspend fun deleteConversation(
         @Path("conversationId") conversationId: Long,
     ): ApiResponse<Unit>
+
+    /**
+     * 지정한 제목 또는 채팅 내용에 검색어가 포함된 본인 대화방을 최신순으로 조회한다.
+     * 현재 진행중인 대화를 대상으로 진행한다.
+     */
+    @GET("/api/conversations/search")
+    suspend fun searchChattingRooms(
+        @Query("keyword") keyword: String,
+        @Query("page") page: Int,
+        @Query("size") size: Int,
+    ): ApiResponse<ChattingRoomSearchResponse>
 }

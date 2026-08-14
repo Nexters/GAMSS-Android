@@ -3,9 +3,14 @@ package com.gamss.android.feature.chatSearch
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.paging.PagingData
-import com.gamss.android.domain.chattingsearch.ChattingRoomSummary
-import com.gamss.android.domain.chattingsearch.SearchChattingRoomsUseCase
-import com.gamss.android.domain.repository.ChattingRoomSearchRepository
+import com.gamss.android.core.common.AppResult
+import com.gamss.android.domain.conversation.Conversation
+import com.gamss.android.domain.conversation.ConversationRepository
+import com.gamss.android.domain.conversation.Message
+import com.gamss.android.domain.conversation.SentMessage
+import com.gamss.android.domain.conversation.chattingsearch.ChattingRoomSummary
+import com.gamss.android.domain.conversation.chattingsearch.SearchChattingRoomsUseCase
+import com.gamss.android.domain.emotion.EmotionCharacter
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
@@ -23,7 +28,7 @@ class SearchChattingViewModelTest {
 
     @Test
     fun `검색어가 2글자 미만이면 검색을 실행하지 않는다`() = runTest {
-        val repository = FakeChattingRoomSearchRepository()
+        val repository = FakeConversationRepository()
         val viewModel = SearchChattingViewModel(SearchChattingRoomsUseCase(repository))
         backgroundScope.launch { viewModel.chattingRooms.collect {} }
 
@@ -40,7 +45,7 @@ class SearchChattingViewModelTest {
 
     @Test
     fun `공백을 제외하면 2글자 미만인 검색어도 검색을 실행하지 않는다`() = runTest {
-        val repository = FakeChattingRoomSearchRepository()
+        val repository = FakeConversationRepository()
         val viewModel = SearchChattingViewModel(SearchChattingRoomsUseCase(repository))
         backgroundScope.launch { viewModel.chattingRooms.collect {} }
 
@@ -57,7 +62,7 @@ class SearchChattingViewModelTest {
 
     @Test
     fun `검색어가 2글자 이상이면 공백을 제거하고 검색을 실행한다`() = runTest {
-        val repository = FakeChattingRoomSearchRepository()
+        val repository = FakeConversationRepository()
         val viewModel = SearchChattingViewModel(SearchChattingRoomsUseCase(repository))
         backgroundScope.launch { viewModel.chattingRooms.collect {} }
 
@@ -78,12 +83,32 @@ class SearchChattingViewModelTest {
         assertEquals(listOf("ab"), repository.requestedKeywords)
     }
 
-    private class FakeChattingRoomSearchRepository : ChattingRoomSearchRepository {
+    private class FakeConversationRepository : ConversationRepository {
         val requestedKeywords = mutableListOf<String>()
 
         override fun searchChattingRooms(keyword: String): Flow<PagingData<ChattingRoomSummary>> {
             requestedKeywords += keyword
             return flowOf(PagingData.empty())
         }
+
+        override suspend fun getOngoingConversations(): AppResult<List<Conversation>> = unused()
+
+        override suspend fun sendMessage(
+            conversationId: Long?,
+            content: String,
+            replyToMessageId: Long?,
+            contextSummary: String?,
+            excludeCharacters: Set<EmotionCharacter>,
+        ): AppResult<SentMessage> = unused()
+
+        override suspend fun getMessages(conversationId: Long): AppResult<List<Message>> = unused()
+
+        override suspend fun updateTitle(conversationId: Long, title: String): AppResult<Unit> = unused()
+
+        override suspend fun endConversation(conversationId: Long): AppResult<Unit> = unused()
+
+        override suspend fun deleteConversation(conversationId: Long): AppResult<Unit> = unused()
+
+        private fun <T> unused(): T = error("Not used in search ViewModel tests")
     }
 }

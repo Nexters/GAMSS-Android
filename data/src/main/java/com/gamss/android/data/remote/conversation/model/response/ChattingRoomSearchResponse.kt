@@ -1,7 +1,7 @@
-package com.gamss.android.data.remote.chattingsearch.model.response
+package com.gamss.android.data.remote.conversation.model.response
 
-import com.gamss.android.domain.chattingsearch.ChattingRoomSearch
-import com.gamss.android.domain.chattingsearch.ChattingRoomSummary
+import com.gamss.android.domain.conversation.chattingsearch.ChattingRoomSearch
+import com.gamss.android.domain.conversation.chattingsearch.ChattingRoomSummary
 import kotlinx.serialization.Serializable
 
 @Serializable

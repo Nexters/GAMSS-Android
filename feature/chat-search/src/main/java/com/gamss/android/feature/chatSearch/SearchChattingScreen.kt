@@ -39,7 +39,7 @@ import androidx.paging.LoadState
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemKey
-import com.gamss.android.domain.chattingsearch.ChattingRoomSummary
+import com.gamss.android.domain.conversation.chattingsearch.ChattingRoomSummary
 import org.orbitmvi.orbit.compose.collectAsState
 import org.orbitmvi.orbit.compose.collectSideEffect
 

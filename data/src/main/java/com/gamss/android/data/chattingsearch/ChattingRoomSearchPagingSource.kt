@@ -3,13 +3,13 @@ package com.gamss.android.data.chattingsearch
 import androidx.paging.PagingSource
 import androidx.paging.PagingState
 import com.gamss.android.core.common.AppResult
-import com.gamss.android.data.remote.chattingsearch.ChattingRoomSearchService
-import com.gamss.android.data.remote.chattingsearch.model.response.toDomain
+import com.gamss.android.data.remote.conversation.ConversationService
+import com.gamss.android.data.remote.conversation.model.response.toDomain
 import com.gamss.android.data.remote.runCatchingApiCall
-import com.gamss.android.domain.chattingsearch.ChattingRoomSummary
+import com.gamss.android.domain.conversation.chattingsearch.ChattingRoomSummary
 
 internal class ChattingRoomSearchPagingSource(
-    private val chattingRoomSearchService: ChattingRoomSearchService,
+    private val conversationService: ConversationService,
     private val keyword: String,
 ) : PagingSource<Int, ChattingRoomSummary>() {
 
@@ -17,7 +17,7 @@ internal class ChattingRoomSearchPagingSource(
         val page = params.key ?: DEFAULT_PAGE
         val result = runCatchingApiCall {
             checkNotNull(
-                chattingRoomSearchService.searchChattingRooms(
+                conversationService.searchChattingRooms(
                     keyword = keyword,
                     page = page,
                     size = params.loadSize,

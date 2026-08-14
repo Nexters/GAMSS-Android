@@ -8,9 +8,9 @@ import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import com.gamss.android.core.common.AppResult
 import com.gamss.android.core.common.network.ApiException
-import com.gamss.android.domain.chattingsearch.ChattingRoomSearchException
-import com.gamss.android.domain.chattingsearch.ChattingRoomSummary
-import com.gamss.android.domain.chattingsearch.SearchChattingRoomsUseCase
+import com.gamss.android.domain.conversation.chattingsearch.ChattingRoomSearchException
+import com.gamss.android.domain.conversation.chattingsearch.ChattingRoomSummary
+import com.gamss.android.domain.conversation.chattingsearch.SearchChattingRoomsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow

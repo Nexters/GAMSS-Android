@@ -1,7 +1,7 @@
 package com.gamss.android.data.chattingsearch
 
 import androidx.paging.PagingSource
-import com.gamss.android.data.remote.chattingsearch.ChattingRoomSearchService
+import com.gamss.android.data.remote.conversation.ConversationService
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import mockwebserver3.MockResponse
@@ -22,7 +22,7 @@ import retrofit2.converter.kotlinx.serialization.asConverterFactory
 class ChattingRoomSearchPagingSourceTest {
 
     private lateinit var server: MockWebServer
-    private lateinit var service: ChattingRoomSearchService
+    private lateinit var service: ConversationService
 
     @Before
     fun setUp() {
@@ -36,7 +36,7 @@ class ChattingRoomSearchPagingSourceTest {
             .baseUrl(server.url("/"))
             .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
             .build()
-        service = retrofit.create(ChattingRoomSearchService::class.java)
+        service = retrofit.create(ConversationService::class.java)
     }
 
     @After
@@ -119,7 +119,7 @@ class ChattingRoomSearchPagingSourceTest {
     }
 
     private fun pagingSource() = ChattingRoomSearchPagingSource(
-        chattingRoomSearchService = service,
+        conversationService = service,
         keyword = "감정",
     )
 

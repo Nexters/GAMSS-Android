@@ -1,13 +1,13 @@
-package com.gamss.android.domain.chattingsearch
+package com.gamss.android.domain.conversation.chattingsearch
 
 import androidx.paging.PagingData
 import com.gamss.android.core.common.AppResult
-import com.gamss.android.domain.repository.ChattingRoomSearchRepository
+import com.gamss.android.domain.conversation.ConversationRepository
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 
 class SearchChattingRoomsUseCase @Inject constructor(
-    private val chattingRoomSearchRepository: ChattingRoomSearchRepository,
+    private val conversationRepository: ConversationRepository,
 ) {
 
     operator fun invoke(keyword: String): AppResult<Flow<PagingData<ChattingRoomSummary>>> {
@@ -15,7 +15,7 @@ class SearchChattingRoomsUseCase @Inject constructor(
 
         validate(trimmedKeyword)?.let { return AppResult.Failure(it) }
 
-        return AppResult.Success(chattingRoomSearchRepository.searchChattingRooms(trimmedKeyword))
+        return AppResult.Success(conversationRepository.searchChattingRooms(trimmedKeyword))
     }
 
     private fun validate(keyword: String): ChattingRoomSearchException? =

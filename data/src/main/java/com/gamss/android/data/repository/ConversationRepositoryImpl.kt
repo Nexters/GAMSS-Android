@@ -1,7 +1,11 @@
 package com.gamss.android.data.repository
 
+import androidx.paging.Pager
+import androidx.paging.PagingConfig
+import androidx.paging.PagingData
 import com.gamss.android.core.common.AppResult
 import com.gamss.android.core.common.map
+import com.gamss.android.data.chattingsearch.ChattingRoomSearchPagingSource
 import com.gamss.android.data.di.ApplicationScope
 import com.gamss.android.data.remote.conversation.ConversationService
 import com.gamss.android.data.remote.conversation.model.request.SaveMessageRequest
@@ -16,9 +20,11 @@ import com.gamss.android.domain.conversation.Conversation
 import com.gamss.android.domain.conversation.ConversationRepository
 import com.gamss.android.domain.conversation.Message
 import com.gamss.android.domain.conversation.SentMessage
+import com.gamss.android.domain.conversation.chattingsearch.ChattingRoomSummary
 import com.gamss.android.domain.emotion.EmotionCharacter
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.async
+import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -102,4 +108,19 @@ internal class ConversationRepositoryImpl @Inject constructor(
                 }
         }
     }
+
+    override fun searchChattingRooms(keyword: String): Flow<PagingData<ChattingRoomSummary>> =
+        Pager(
+            config = PagingConfig(
+                pageSize = ChattingRoomSearchPagingSource.DEFAULT_SIZE,
+                initialLoadSize = ChattingRoomSearchPagingSource.DEFAULT_SIZE,
+                enablePlaceholders = false,
+            ),
+            pagingSourceFactory = {
+                ChattingRoomSearchPagingSource(
+                    conversationService = conversationService,
+                    keyword = keyword,
+                )
+            },
+        ).flow
 }
