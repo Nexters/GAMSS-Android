@@ -21,7 +21,7 @@ android {
         applicationId = "com.gamss.android"
         // CD에서 fastlane이 -PversionCode= 로 CI 빌드 번호(GITHUB_RUN_NUMBER 기반)를 주입한다.
         versionCode = (project.findProperty("versionCode") as String?)?.toIntOrNull() ?: 1
-        versionName = "0.1.0"
+        versionName = "1.0.0"
 
         ndk {
             abiFilters += "arm64-v8a"
@@ -32,24 +32,6 @@ android {
     // Play Asset Delivery(on-demand) 애셋팩으로 분리되어 필요 시점에만 기기로 내려받힌다.
     // 애셋팩은 다운로드 후 로컬 파일로 추출되므로(APK zip 엔트리가 아님) noCompress 설정이 필요 없다.
     assetPacks += setOf(":models:emotion-pack", ":models:summary-pack")
-
-    packaging {
-        resources {
-            excludes += setOf(
-                "native/lib/win-x86_64/**",
-                "native/lib/osx-aarch64/**",
-                "native/lib/osx-x86_64/**",
-                "native/lib/linux-x86_64/**",
-                "com/sun/jna/aix-ppc/**",
-                "com/sun/jna/aix-ppc64/**",
-                "com/sun/jna/win32-x86/**",
-                "com/sun/jna/win32-x86-64/**",
-                "com/sun/jna/darwin-aarch64/**",
-                "com/sun/jna/darwin-x86-64/**",
-                "META-INF/INDEX.LIST",
-            )
-        }
-    }
 
     val releaseKeystorePath = providers.environmentVariable("RELEASE_KEYSTORE_PATH").orNull
     val releaseKeystorePassword = providers.environmentVariable("RELEASE_KEYSTORE_PASSWORD").orNull
@@ -136,4 +118,5 @@ dependencies {
 
     androidTestImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
+    androidTestImplementation(libs.androidx.test.runner)
 }

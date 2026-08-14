@@ -3,6 +3,14 @@
 
     <application>
 
+        <!--
+            미출시 앱이라 Play 로는 애셋팩을 못 받는다. 이 값이 있으면 Play Core 가 로컬에 넣어둔
+            팩 APK 를 읽는다. 절차는 OnDeviceModelEvalTest 참고.
+        -->
+        <meta-data
+            android:name="local_testing_dir"
+            android:value="local_testing" />
+
         <!-- 디버그/검증 전용 화면. adb 로만 실행. -->
         <activity
             android:name=".debug.CardDebugActivity"
