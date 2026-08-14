@@ -6,6 +6,7 @@ import androidx.paging.PagingData
 import com.gamss.android.core.common.AppResult
 import com.gamss.android.core.common.map
 import com.gamss.android.data.chattingsearch.ChattingRoomSearchPagingSource
+import com.gamss.android.data.chattingsearch.ChattingRoomSearchPagingSource.Companion.DEFAULT_SIZE
 import com.gamss.android.data.di.ApplicationScope
 import com.gamss.android.data.remote.conversation.ConversationService
 import com.gamss.android.data.remote.conversation.model.request.SaveMessageRequest
@@ -112,8 +113,9 @@ internal class ConversationRepositoryImpl @Inject constructor(
     override fun searchChattingRooms(keyword: String): Flow<PagingData<ChattingRoomSummary>> =
         Pager(
             config = PagingConfig(
-                pageSize = ChattingRoomSearchPagingSource.DEFAULT_SIZE,
-                initialLoadSize = ChattingRoomSearchPagingSource.DEFAULT_SIZE,
+                pageSize = DEFAULT_SIZE,
+                initialLoadSize = DEFAULT_SIZE,
+                prefetchDistance = SEARCH_PREFETCH_DISTANCE,
                 enablePlaceholders = false,
             ),
             pagingSourceFactory = {
@@ -123,4 +125,8 @@ internal class ConversationRepositoryImpl @Inject constructor(
                 )
             },
         ).flow
+
+    private companion object {
+        const val SEARCH_PREFETCH_DISTANCE = 5
+    }
 }
