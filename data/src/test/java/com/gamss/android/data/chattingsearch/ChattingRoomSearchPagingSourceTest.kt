@@ -136,6 +136,31 @@ class ChattingRoomSearchPagingSourceTest {
         Assert.assertTrue(result is PagingSource.LoadResult.Error)
     }
 
+    @Test
+    fun `검색 응답 필드가 누락되면 기본값으로 파싱하고 식별자 없는 채팅방을 제외한다`() = runTest {
+        server.enqueue(
+            jsonResponse(
+                """
+                    {
+                      "success": true,
+                      "data": {
+                        "content": [{}]
+                      }
+                    }
+                """.trimIndent(),
+            ),
+        )
+        val pagingSource = pagingSource()
+
+        val result = pagingSource.load(
+            PagingSource.LoadParams.Refresh(key = null, loadSize = 20, placeholdersEnabled = false),
+        ) as PagingSource.LoadResult.Page
+
+        Assert.assertTrue(result.data.isEmpty())
+        Assert.assertNull(result.prevKey)
+        Assert.assertNull(result.nextKey)
+    }
+
     private fun pagingSource() = ChattingRoomSearchPagingSource(
         conversationService = service,
         keyword = "감정",

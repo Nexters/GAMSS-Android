@@ -6,34 +6,36 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 internal data class ChattingRoomSearchResponse(
-    val content: List<ChattingRoomResponse>,
-    val page: Int,
-    val size: Int,
-    val totalElements: Long,
-    val totalPages: Int,
+    val content: List<ChattingRoomResponse> = emptyList(),
+    val page: Int = 0,
+    val size: Int = 0,
+    val totalElements: Long = 0L,
+    val totalPages: Int = 0,
 )
 
 @Serializable
 internal data class ChattingRoomResponse(
-    val conversationId: Long,
-    val title: String,
-    val status: String,
-    val createdAt: String,
+    val conversationId: Long? = null,
+    val title: String? = null,
+    val status: String? = null,
+    val createdAt: String? = null,
 )
 
 internal fun ChattingRoomSearchResponse.toDomain(): ChattingRoomSearch =
     ChattingRoomSearch(
-        rooms = content.map { it.toDomain() },
+        rooms = content.mapNotNull { it.toDomain() },
         page = page,
         size = size,
         totalElements = totalElements,
         totalPages = totalPages,
     )
 
-internal fun ChattingRoomResponse.toDomain(): ChattingRoomSummary =
-    ChattingRoomSummary(
-        conversationId = conversationId,
-        title = title,
-        status = status,
-        createdAt = createdAt,
+internal fun ChattingRoomResponse.toDomain(): ChattingRoomSummary? {
+    val id = conversationId ?: return null
+    return ChattingRoomSummary(
+        conversationId = id,
+        title = title.orEmpty(),
+        status = status.orEmpty(),
+        createdAt = createdAt.orEmpty(),
     )
+}
