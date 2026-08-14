@@ -33,24 +33,6 @@ android {
     // 애셋팩은 다운로드 후 로컬 파일로 추출되므로(APK zip 엔트리가 아님) noCompress 설정이 필요 없다.
     assetPacks += setOf(":models:emotion-pack", ":models:summary-pack")
 
-    packaging {
-        resources {
-            excludes += setOf(
-                "native/lib/win-x86_64/**",
-                "native/lib/osx-aarch64/**",
-                "native/lib/osx-x86_64/**",
-                "native/lib/linux-x86_64/**",
-                "com/sun/jna/aix-ppc/**",
-                "com/sun/jna/aix-ppc64/**",
-                "com/sun/jna/win32-x86/**",
-                "com/sun/jna/win32-x86-64/**",
-                "com/sun/jna/darwin-aarch64/**",
-                "com/sun/jna/darwin-x86-64/**",
-                "META-INF/INDEX.LIST",
-            )
-        }
-    }
-
     val releaseKeystorePath = providers.environmentVariable("RELEASE_KEYSTORE_PATH").orNull
     val releaseKeystorePassword = providers.environmentVariable("RELEASE_KEYSTORE_PASSWORD").orNull
     val releaseKeyAlias = providers.environmentVariable("RELEASE_KEY_ALIAS").orNull
