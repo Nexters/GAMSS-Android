@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import org.orbitmvi.orbit.ContainerHost
 import org.orbitmvi.orbit.viewmodel.container
 import javax.inject.Inject
@@ -61,9 +62,17 @@ class SearchChattingViewModel @Inject constructor(
                 searchResults.value = result.data
             }
 
-            is AppResult.Failure -> postSideEffect(
-                SearchChattingSideEffect.SearchFailure(result.throwable.toSearchFailureReason()),
-            )
+            is AppResult.Failure -> {
+                searchResults.value = flowOf(PagingData.empty<ChattingRoomSummary>())
+                reduce {
+                    state.copy(
+                        hasSearched = false
+                    )
+                }
+                postSideEffect(
+                    SearchChattingSideEffect.SearchFailure(result.throwable.toSearchFailureReason()),
+                )
+            }
         }
     }
 }
