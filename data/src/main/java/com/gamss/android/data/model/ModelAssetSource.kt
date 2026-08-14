@@ -11,7 +11,7 @@ import java.nio.MappedByteBuffer
  * 여부를 몰라도 된다.
  *
  * - `release`: [OnDemandModelAssets] — Play Asset Delivery(on-demand/fast-follow)로 내려받는다.
- * - `debug`/`firebase`: `LocalAssetsModelSource` — APK 에 그대로 번들된 assets 를 읽는다(PAD 미사용).
+ * - `debug`/`internal`: `LocalAssetsModelSource` — APK 에 그대로 번들된 assets 를 읽는다(PAD 미사용).
  *
  * `internal` 이 아니라 public 이다 — Hilt(Dagger KSP)가 `@Inject constructor`/`@Provides` 반환
  * 타입으로 쓰는 타입에 `internal` 가시성을 주면 컴파일이 깨진다(KSP 가 타입을 못 찾는다).

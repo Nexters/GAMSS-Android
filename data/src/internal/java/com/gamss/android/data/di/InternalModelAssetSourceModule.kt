@@ -11,14 +11,14 @@ import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 
 /**
- * `firebase` buildType(Firebase App Distribution QA 배포) 전용 바인딩 — Play Store 를 거치지 않는
+ * `internal` buildType(Firebase App Distribution QA 배포) 전용 바인딩 — Play Store 를 거치지 않는
  * 설치 경로라 AssetPackManager 가 동작하지 않는다. 모델은 APK 에 그대로 번들된 assets 에서 읽는다
- * (`data/build.gradle.kts` 의 `firebase` sourceSet assets.srcDirs 참고). `release` 는 동명의 다른
+ * (`data/build.gradle.kts` 의 `internal` sourceSet assets.srcDirs 참고). `release` 는 동명의 다른
  * 모듈(`OnDemandModelAssets` 바인딩)로 대체된다.
  */
 @Module
 @InstallIn(SingletonComponent::class)
-internal object FirebaseModelAssetSourceModule {
+internal object InternalModelAssetSourceModule {
     @Provides
     @Singleton
     fun provideModelAssetSource(@ApplicationContext context: Context): ModelAssetSource =

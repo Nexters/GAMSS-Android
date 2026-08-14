@@ -18,7 +18,7 @@ permissions:
   contents: read
 
 jobs:
-  # QA/기능 테스트용. `firebase` buildType 은 debug 서명 + 온디바이스 모델을 APK 에 그대로 번들해서
+  # QA/기능 테스트용. `internal` buildType 은 debug 서명 + 온디바이스 모델을 APK 에 그대로 번들해서
   # (PAD 미사용) 테스터가 설치하자마자 모든 기능을 바로 쓸 수 있다 — data/build.gradle.kts,
   # fastlane/Fastfile 의 `distribute` lane 참고. release 서명 키스토어는 필요 없다.
   #
@@ -92,7 +92,7 @@ jobs:
           retention-days: 7
 
   # Play Console 에 올릴 서명된 운영용 AAB 를 만들어 워크플로 아티팩트로 남긴다. `release` buildType
-  # 그대로라 기존 PAD 정책(emotion=fast-follow, summary=on-demand)이 유지되고, firebase 배포용 설정이
+  # 그대로라 기존 PAD 정책(emotion=fast-follow, summary=on-demand)이 유지되고, internal 배포용 설정이
   # 여기 섞이지 않는다.
   #
   # Play Console 로 자동 업로드(upload_to_play_store)는 아직 안 한다 — 서비스 계정 JSON secret

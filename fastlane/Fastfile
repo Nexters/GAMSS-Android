@@ -15,12 +15,12 @@ platform :android do
     UI.user_error!("FIREBASE_APP_ID environment variable is not set") unless firebase_app_id
 
     # Firebase App Distribution 은 Play Store 설치 경로가 아니라서 Play Asset Delivery(on-demand/
-    # fast-follow)로 배포되는 온디바이스 모델(emotion/summary pack)을 못 받아온다. `firebase`
+    # fast-follow)로 배포되는 온디바이스 모델(emotion/summary pack)을 못 받아온다. `internal`
     # buildType 은 이 모델들을 애초에 PAD 가 아니라 APK 에 그대로 번들된 assets 로 공급하므로
     # (data/build.gradle.kts, ModelAssetSource 참고) 별도 플래그 없이 테스터가 설치하자마자 모든
     # 기능을 바로 쓸 수 있다. 결과물은 AAB 가 아니라 plain APK.
     gradle(
-      task: "clean :app:assembleFirebase",
+      task: "clean :app:assembleInternal",
       properties: { "versionCode" => version_code }
     )
 
@@ -28,7 +28,7 @@ platform :android do
       app: firebase_app_id,
       service_credentials_file: ENV["FIREBASE_SERVICE_CREDENTIALS_FILE"],
       android_artifact_type: "APK",
-      android_artifact_path: File.expand_path("../app/build/outputs/apk/firebase/app-firebase.apk", __dir__),
+      android_artifact_path: File.expand_path("../app/build/outputs/apk/internal/app-internal.apk", __dir__),
       groups: ENV["FIREBASE_TESTER_GROUPS"],
       release_notes: changelog_from_git_commits(
         commits_count: 1,
@@ -43,7 +43,7 @@ platform :android do
     UI.user_error!("VERSION_CODE environment variable is not set") unless version_code
 
     # release buildType 은 기존 PAD 정책(emotion=fast-follow, summary=on-demand) 그대로 — 이 빌드에는
-    # firebase 배포용 install-time 전환 같은 게 절대 섞이지 않는다.
+    # internal 배포용 install-time 전환 같은 게 절대 섞이지 않는다.
     #
     # Play Console 자동 업로드(upload_to_play_store)는 아직 붙이지 않았다 — 서비스 계정 JSON secret
     # (PLAY_STORE_SERVICE_ACCOUNT_JSON)이 리포지토리에 아직 없다. 지금은 서명된 AAB 를 CI 아티팩트로만

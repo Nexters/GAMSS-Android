@@ -38,21 +38,21 @@ android {
         release {
             buildConfigField("String", "BASE_URL", "\"$prodBaseUrl\"")
         }
-        // app 의 `firebase` buildType(Firebase App Distribution 배포)과 짝을 맞춘다. app 은 이
-        // buildType 에 matchingFallbacks("release")를 두지만, 그건 firebase variant 가 아예 없는
-        // 라이브러리에만 적용된다 — 이 모듈처럼 진짜 firebase variant 를 선언하면 그게 우선한다.
+        // app 의 `internal` buildType(Firebase App Distribution 배포)과 짝을 맞춘다. app 은 이
+        // buildType 에 matchingFallbacks("release")를 두지만, 그건 internal variant 가 아예 없는
+        // 라이브러리에만 적용된다 — 이 모듈처럼 진짜 internal variant 를 선언하면 그게 우선한다.
         // BASE_URL 은 release 와 동일(운영 서버 대상 QA 배포).
-        create("firebase") {
+        create("internal") {
             initWith(getByName("release"))
         }
     }
 
     // 온디바이스 모델(.tflite/.onnx)은 release(Play Console)에서는 Play Asset Delivery 로 내려받지만,
-    // debug/firebase(Play Store 를 거치지 않는 설치 경로)에서는 AssetPackManager 가 동작하지 않아
+    // debug/internal(Play Store 를 거치지 않는 설치 경로)에서는 AssetPackManager 가 동작하지 않아
     // APK 에 그대로 번들한다. 파일을 복사하지 않고 애셋팩 모듈의 assets 를 그대로 srcDir 로 참조해
     // 단일 소스를 유지한다 — data/model/LocalAssetsModelSource, di/ModelAssetSourceModule 참고.
     sourceSets {
-        listOf("debug", "firebase").forEach { buildTypeName ->
+        listOf("debug", "internal").forEach { buildTypeName ->
             getByName(buildTypeName) {
                 assets.srcDirs(
                     "../models/emotion-pack/src/main/assets",

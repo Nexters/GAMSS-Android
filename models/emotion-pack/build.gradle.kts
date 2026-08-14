@@ -9,8 +9,8 @@ plugins {
 // 실제 파일: src/main/assets/models/emotion_int8.tflite, emotion_tokenizer.json
 //
 // 이 애셋팩은 Play Console(release buildType) 배포에서만 쓰인다. Play Store 를 거치지 않는 배포
-// (debug/firebase buildType)는 이 모델을 아예 여기서 가져가지 않고, data 모듈이 이 assets 디렉터리를
-// 자기 debug/firebase sourceSet 에 직접 srcDir 로 얹어 APK 에 번들한다 — data/build.gradle.kts,
+// (debug/internal buildType)는 이 모델을 아예 여기서 가져가지 않고, data 모듈이 이 assets 디렉터리를
+// 자기 debug/internal sourceSet 에 직접 srcDir 로 얹어 APK 에 번들한다 — data/build.gradle.kts,
 // data/model/LocalAssetsModelSource 참고.
 assetPack {
     packName.set("emotion_pack")

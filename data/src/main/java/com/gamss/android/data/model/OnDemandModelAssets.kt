@@ -35,7 +35,7 @@ internal class ModelPackUnavailableException(message: String) : Exception(messag
  * 참고.
  *
  * `release` buildType 전용 [ModelAssetSource] 구현(`di/ModelAssetSourceModule.kt` 참고) — Play
- * Store 밖 설치 경로(debug/firebase)에서는 [com.gamss.android.data.model.LocalAssetsModelSource]
+ * Store 밖 설치 경로(debug/internal)에서는 [com.gamss.android.data.model.LocalAssetsModelSource]
  * 가 대신 쓰인다.
  */
 internal class OnDemandModelAssets(context: Context) : ModelAssetSource {
