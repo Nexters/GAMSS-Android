@@ -61,19 +61,20 @@ class SearchChattingViewModelTest {
     }
 
     @Test
-    fun `검색어가 2글자 이상이면 공백을 제거하고 검색을 실행한다`() = runTest {
+    fun `검색어가 2글자 이상이면 입력 상태를 유지하고 공백을 제거한 검색어로 실행한다`() = runTest {
         val repository = FakeConversationRepository()
         val viewModel = SearchChattingViewModel(SearchChattingRoomsUseCase(repository))
+        val input = TextFieldValue(text = " ab ", selection = TextRange(2))
         backgroundScope.launch { viewModel.chattingRooms.collect {} }
 
         viewModel.test(this) {
-            viewModel.onKeywordChanged(TextFieldValue(" ab "))
-            expectState { copy(keyword = TextFieldValue(" ab ")) }
+            viewModel.onKeywordChanged(input)
+            expectState { copy(keyword = input) }
 
             viewModel.search()
             expectState {
                 copy(
-                    keyword = TextFieldValue(text = "ab", selection = TextRange(2)),
+                    keyword = input,
                     hasSearched = true,
                     searchGeneration = 1L,
                 )
