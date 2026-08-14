@@ -61,8 +61,7 @@ dependencies {
     implementation(libs.firebase.config)
     implementation(libs.kotlinx.coroutines.play.services)
 
-    // 온디바이스 감정 분류(KoELECTRA INT8) — LiteRT 추론.
-    // 토크나이저는 순수 Kotlin 구현(WordPieceTokenizer)이라 별도 네이티브 의존이 없다.
+    // 온디바이스 감정 분류(KoELECTRA INT8). LiteRT 추론, 토크나이저는 순수 Kotlin.
     implementation(libs.litert) {
         // 모델은 Play Asset Delivery(범용 on-demand 애셋팩)로 내려받는다.
         // LiteRT 자체 모델 배포 API(ai-delivery)는 쓰지 않는다 — 콜드스타트마다 WorkManager 를
@@ -70,7 +69,7 @@ dependencies {
         exclude(group = "com.google.android.play", module = "ai-delivery")
     }
 
-    // 온디바이스 원문 요약(kobart INT8) — ONNX Runtime Mobile (토크나이저는 KobartTokenizer)
+    // 온디바이스 원문 요약(kobart INT8). ONNX Runtime Mobile, 토크나이저는 순수 Kotlin.
     implementation(libs.onnxruntime.android)
 
     // 감정/요약 모델(.tflite, .onnx)을 담은 on-demand 애셋팩(:models:emotion-pack, :models:summary-pack)을

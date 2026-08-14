@@ -4,9 +4,8 @@
     <application>
 
         <!--
-            미출시 앱이라 Play 로는 애셋팩을 못 받는다(APP_UNAVAILABLE). 이 값이 있으면 Play Core 가
-            팩을 내려받는 대신 <externalFilesDir>/local_testing 에 넣어둔 팩 APK 를 읽는다.
-            온디바이스 모델 검증을 실기기에서 돌리는 유일한 경로다. 절차는 OnDeviceModelEvalTest 참고.
+            미출시 앱이라 Play 로는 애셋팩을 못 받는다. 이 값이 있으면 Play Core 가 로컬에 넣어둔
+            팩 APK 를 읽는다. 절차는 OnDeviceModelEvalTest 참고.
         -->
         <meta-data
             android:name="local_testing_dir"

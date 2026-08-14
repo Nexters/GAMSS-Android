@@ -16,12 +16,8 @@ import kotlinx.serialization.json.jsonPrimitive
 import java.text.Normalizer
 
 /**
- * kobart tokenizer.json 을 로드해 요약 인코더 입력을 만들고, 디코더 출력 토큰을 문자열로 되돌린다.
- * 감정용 WordPieceTokenizer 와 달리 고정 길이 패딩 없이 실제 길이를 그대로 쓰고(seq2seq 인코더는
- * 가변 길이 입력을 받음), decode 를 제공한다.
- *
- * 추가 토큰 추출 → NFKC → Metaspace → BPE → <s>/</s> 부착까지 HuggingFace 구현을 옮긴 것이다.
- * 네이티브 토크나이저를 쓰지 않는 이유와 골든 대조가 계약인 이유는 WordPieceTokenizer 와 같다.
+ * HuggingFace BPE 파이프라인 이식. seq2seq 인코더라 고정 길이 패딩 없이 실제 길이를 쓴다.
+ * 네이티브를 안 쓰는 이유와 골든 대조가 계약인 이유는 [WordPieceTokenizer] 와 같다.
  */
 internal class KobartTokenizer private constructor(
     private val model: BpeModel,
@@ -41,7 +37,6 @@ internal class KobartTokenizer private constructor(
 
     class MergeRule(val rank: Int, val mergedId: Int)
 
-    /** decode 에서 건너뛸 id 는 added_tokens 중 special 로 표시된 것들이다. */
     class SpecialTokens(val bosId: Int, val eosId: Int, val skipOnDecodeIds: Set<Int>)
 
     class Encoded(val ids: LongArray, val attentionMask: LongArray)
@@ -50,7 +45,6 @@ internal class KobartTokenizer private constructor(
         val budget = maxInput?.minus(SPECIAL_TOKEN_COUNT) ?: Int.MAX_VALUE
         val body = ArrayList<Int>()
 
-        // 추가 토큰을 먼저 떼어내고, 그 사이에 남은 구간만 정규화·사전분할·BPE 를 거친다.
         outer@ for (segment in addedVocabulary.split(text)) {
             val ids = when (segment) {
                 is AddedVocabulary.Segment.Added -> listOf(segment.id)
@@ -70,13 +64,13 @@ internal class KobartTokenizer private constructor(
         return Encoded(ids = ids, attentionMask = LongArray(ids.size) { 1L })
     }
 
-    /** skipSpecialTokens 고정: `</s>`·`<pad>` 등 추가 토큰은 건너뛴다. */
+    /** skipSpecialTokens 고정. */
     fun decode(ids: LongArray): String {
         val decoded = StringBuilder()
         var emitted = 0
         for (rawId in ids) {
             val token = decodableToken(rawId.toInt()) ?: continue
-            // Metaspace 디코더: 첫 토큰의 구분자는 버리고, 이후 토큰의 구분자는 스페이스로 되돌린다.
+            // 첫 토큰의 구분자만 버린다(Metaspace 규칙).
             for (char in token) {
                 when {
                     char != replacement -> decoded.append(char)
@@ -91,10 +85,10 @@ internal class KobartTokenizer private constructor(
     private fun decodableToken(id: Int): String? =
         if (id in specialTokens.skipOnDecodeIds) null else model.tokenById.getOrNull(id)
 
-    /** normalizer 는 NFKC 하나뿐이다. 함께 걸린 BertNormalizer 는 모든 플래그가 꺼져 있어 아무 일도 하지 않는다. */
+    /** 함께 걸린 BertNormalizer 는 모든 플래그가 꺼져 있어 NFKC 만 유효하다. */
     private fun normalize(text: String): String = Normalizer.normalize(text, Normalizer.Form.NFKC)
 
-    /** 스페이스를 구분자로 바꾸고 선두에 하나 붙인 뒤, 구분자 앞에서 끊는다(Metaspace, prepend_scheme=always). */
+    /** Metaspace(prepend_scheme=always). */
     private fun preTokenize(text: String): List<String> {
         val replaced = text.replace(' ', replacement)
         val prefixed = if (replaced.startsWith(replacement)) replaced else replacement + replaced
@@ -111,7 +105,7 @@ internal class KobartTokenizer private constructor(
         return pieces
     }
 
-    /** 코드포인트 단위로 쪼갠 뒤 병합 규칙을 순위가 낮은 것부터 적용한다(BPE). */
+    /** 코드포인트 단위로 쪼갠 뒤 순위가 낮은 병합부터 적용한다. */
     private fun encodePiece(piece: String): List<Int> {
         val symbols = mutableListOf<Int>()
         var index = 0
@@ -139,10 +133,8 @@ internal class KobartTokenizer private constructor(
     }
 
     /**
-     * 겹치지 않는 모든 자리를 왼쪽부터 한 번에 병합한다.
-     * HuggingFace 는 힙에서 (rank, 위치) 순으로 하나씩 꺼내 쓰는데, 병합으로 새로 생기는 쌍의 rank 가
-     * 방금 적용한 rank 보다 항상 크다는 학습 BPE 의 성질 덕분에 결과가 같다.
-     * 이 성질이 깨진 merges 테이블이 들어오면 HuggingFace 와 결과가 달라진다.
+     * 한 번에 병합해도 HuggingFace 의 힙 방식과 결과가 같은 근거: 병합으로 새로 생기는 쌍의 rank 는
+     * 방금 적용한 rank 보다 항상 크다(학습 BPE 의 성질). 이 성질이 깨진 merges 에서는 달라진다.
      */
     private fun mergeAllOccurrences(symbols: MutableList<Int>, mergeKey: Long) {
         val mergedId = model.mergeRules.getValue(mergeKey).mergedId
@@ -205,7 +197,7 @@ internal class KobartTokenizer private constructor(
 
             val root = TOKENIZER_JSON.parseToJsonElement(bytes.decodeToString()).jsonObject
             val model = root.getValue("model").jsonObject
-            // 모델을 재export 하면서 파이프라인이 바뀌면 결과가 조용히 틀어지므로 로드 시점에 끊는다.
+            // 재export 로 파이프라인이 바뀌면 조용히 틀어지므로 로드 시점에 끊는다.
             require(model["type"]?.jsonPrimitive?.content == MODEL_TYPE) {
                 "지원하지 않는 model.type: ${model["type"]}"
             }
@@ -238,14 +230,11 @@ internal class KobartTokenizer private constructor(
             )
         }
 
-        /**
-         * 병합 규칙을 토큰 문자열이 아니라 id 쌍으로 미리 풀어둔다.
-         * vocab 으로 옮길 수 없는 규칙은 적용할 방법이 없으므로 버린다(현재 파일에는 해당 없음).
-         */
+        /** vocab 으로 옮길 수 없는 규칙은 버린다(현재 파일에는 해당 없음). */
         private fun parseMerges(merges: JsonArray, vocab: Map<String, Int>): Map<Long, MergeRule> {
             val rules = HashMap<Long, MergeRule>(merges.size)
             merges.forEachIndexed { rank, element ->
-                // 신형은 ["a", "b"], 구형은 "a b" 한 줄이다.
+                // 신형 ["a","b"], 구형 "a b".
                 val (left, right) = when (element) {
                     is JsonArray -> element[0].jsonPrimitive.content to element[1].jsonPrimitive.content
                     is JsonPrimitive -> element.content.split(' ', limit = 2).let { it.first() to it.last() }
@@ -274,7 +263,7 @@ internal class KobartTokenizer private constructor(
             require(preTokenizer["type"]?.jsonPrimitive?.content == PRE_TOKENIZER_TYPE) {
                 "지원하지 않는 pre_tokenizer.type: ${preTokenizer["type"]}"
             }
-            // prepend_scheme·split 은 코드가 always/true 로 고정 구현이라 다르면 결과가 달라진다.
+            // always/true 로 고정 구현이라 다르면 결과가 달라진다.
             require(preTokenizer["prepend_scheme"]?.jsonPrimitive?.content == PREPEND_SCHEME_ALWAYS) {
                 "지원하지 않는 prepend_scheme: ${preTokenizer["prepend_scheme"]}. " +
                     "구버전 tokenizers 로 export 하면 prepend_scheme 대신 add_prefix_space 가 들어간다."

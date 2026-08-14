@@ -15,15 +15,10 @@ import java.io.File
 
 /**
  * 순수 Kotlin 토크나이저가 교체 이전 DJL 0.33.0 출력과 한 글자도 다르지 않은지 검증한다.
- * 여기서 어긋나면 학습 시점 토크나이징과 달라져 분류·요약 결과가 조용히 틀어지므로,
- * 이 테스트가 교체의 유일한 안전망이다.
  *
- * 모델을 재export 해서 tokenizer.json 이 바뀌면 골든도 다시 만들어야 한다. 절차는
- * `testImplementation(platform(libs.djl.bom))` 과 `ai.djl.huggingface:tokenizers` 를 잠시 붙이고,
- * 아래 케이스들을 `HuggingFaceTokenizer.newInstance(stream, options)` 로 돌려 결과를
- * tokenizer_golden.json 에 덮어쓴 뒤 의존성을 다시 떼는 것이다.
- * 옵션은 encode 경로가 addSpecialTokens=true, truncation=true, maxLength=seqLen(또는 maxInput),
- * 절단 없는 경로가 truncation=false 이며, decode 는 skipSpecialTokens=true 에 trim 을 건다.
+ * tokenizer.json 을 재export 하면 골든도 다시 만들어야 한다. DJL 을 testImplementation 으로 잠시
+ * 붙여 `HuggingFaceTokenizer` 로 같은 케이스를 돌린 뒤 tokenizer_golden.json 을 덮어쓴다.
+ * 옵션은 addSpecialTokens=true, truncation=true/false, decode 는 skipSpecialTokens=true + trim.
  */
 class TokenizerGoldenTest {
 
@@ -103,7 +98,6 @@ class TokenizerGoldenTest {
     private fun JsonObject.longs(key: String): List<Long> =
         getValue(key).jsonArray.map { it.jsonPrimitive.long }
 
-    /** 케이스가 94개라 실패 시 어느 입력인지 바로 보이게 한다. */
     private fun label(field: String, input: String): String =
         "$field 불일치 (입력: ${input.take(LABEL_MAX_LENGTH)})"
 

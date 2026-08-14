@@ -16,13 +16,8 @@ import kotlinx.serialization.json.Json
 import java.text.Normalizer
 
 /**
- * HuggingFace tokenizer.json 을 그대로 로드해 학습 토크나이저와 동일하게 인코딩한다.
- * 고정 길이(seqLen)로 자르거나 0 패딩해 LiteRT 입력에 맞춘다.
- *
- * 추가 토큰 추출 → BertNormalizer → BertPreTokenizer → WordPiece → [CLS]/[SEP] 부착까지
- * HuggingFace 구현을 옮긴 것이다. 네이티브 토크나이저를 쓰지 않는 이유는 유일하게 배포된
- * ai.djl.android:tokenizer-native 0.33.0 의 .so 가 4KB 페이지 정렬이라 16KB 기기에서 뜨지 않기 때문이다.
- * 출력이 원본과 어긋나면 분류 결과가 조용히 틀어지므로 tokenizer_golden.json 대조 테스트가 계약이다.
+ * HuggingFace WordPiece 파이프라인 이식. 네이티브 토크나이저는 .so 가 4KB 정렬이라 쓸 수 없다.
+ * 출력이 원본과 어긋나면 분류가 조용히 틀어지므로 tokenizer_golden.json 대조가 계약이다.
  */
 internal class WordPieceTokenizer private constructor(
     private val model: Model,
@@ -49,11 +44,10 @@ internal class WordPieceTokenizer private constructor(
     )
 
     fun encode(text: String): Encoded {
-        // HuggingFace 는 maxLength 를 특수 토큰까지 포함한 길이로 세므로 본문 예산은 2개를 뺀 값이다.
+        // maxLength 는 특수 토큰을 포함한 길이다.
         val budget = seqLen - SPECIAL_TOKEN_COUNT
         val pieces = ArrayList<Int>(minOf(budget, INITIAL_PIECE_CAPACITY))
 
-        // 추가 토큰을 먼저 떼어내고, 그 사이에 남은 구간만 정규화·사전분할·WordPiece 를 거친다.
         outer@ for (segment in addedVocabulary.split(text)) {
             val ids = when (segment) {
                 is AddedVocabulary.Segment.Added -> listOf(segment.id)
@@ -73,14 +67,11 @@ internal class WordPieceTokenizer private constructor(
 
         val length = pieces.size + SPECIAL_TOKEN_COUNT
         val attentionMask = LongArray(seqLen) { if (it < length) 1L else 0L }
-        // 단일 시퀀스라 TemplateProcessing 의 type_id 는 전부 0 이다.
+        // 단일 시퀀스라 type_id 는 전부 0.
         return Encoded(ids = ids, attentionMask = attentionMask, typeIds = LongArray(seqLen))
     }
 
-    /**
-     * 공백으로 끊고 구두점을 한 글자씩 떼어낸다(BertPreTokenizer).
-     * 스페이스만 구분자로 보는 것은 앞선 clean_text 가 모든 공백류를 스페이스로 바꿔주기 때문이다.
-     */
+    /** 스페이스만 구분자로 보는 것은 앞선 clean_text 가 모든 공백류를 스페이스로 바꾸기 때문이다. */
     private fun preTokenize(text: String): List<String> {
         val words = mutableListOf<String>()
         val current = StringBuilder()
@@ -106,13 +97,13 @@ internal class WordPieceTokenizer private constructor(
         return words
     }
 
-    /** 한 조각이라도 사전에 없으면 조각 단위가 아니라 단어 전체가 UNK 다(HuggingFace 의 is_bad). */
+    /** 한 조각이라도 사전에 없으면 단어 전체가 UNK 다. */
     private fun tokenizeWord(word: String): List<Int> {
         if (word.codePointCount(0, word.length) > model.maxInputCharsPerWord) return listOf(model.unkId)
         return matchGreedily(word) ?: listOf(model.unkId)
     }
 
-    /** 가장 긴 조각부터 맞춰보는 greedy longest-match-first. 맞출 수 없으면 null. */
+    /** greedy longest-match-first. 맞출 수 없으면 null. */
     private fun matchGreedily(word: String): List<Int>? {
         val ids = mutableListOf<Int>()
         var start = 0
@@ -123,7 +114,6 @@ internal class WordPieceTokenizer private constructor(
                 val piece = word.substring(start, end)
                 matched = model.vocab[if (start > 0) model.continuingPrefix + piece else piece]
                 if (matched != null) break
-                // 코드포인트 경계로 한 글자씩 줄인다.
                 end = word.offsetByCodePoints(end, -1)
             }
             ids.add(matched ?: return null)
@@ -132,10 +122,7 @@ internal class WordPieceTokenizer private constructor(
         return ids
     }
 
-    /**
-     * HuggingFace BertNormalizer 이식.
-     * strip_accents 가 비어 있으면 lowercase 값을 따르는 규칙까지 원본과 같다.
-     */
+    /** strip_accents 가 비어 있으면 lowercase 값을 따른다(HuggingFace 규칙). */
     class BertNormalizer(
         private val cleanText: Boolean,
         private val handleChineseChars: Boolean,
@@ -151,7 +138,7 @@ internal class WordPieceTokenizer private constructor(
             return result
         }
 
-        /** NUL·U+FFFD·제어문자는 버리고, 남은 공백류는 스페이스 하나로 통일한다. */
+        /** 공백류를 스페이스 하나로 통일한다. 뒤의 preTokenize 가 이에 의존한다. */
         private fun cleanText(text: String): String = buildString(text.length) {
             forEachCodePoint(text) { codePoint ->
                 when {
@@ -163,7 +150,6 @@ internal class WordPieceTokenizer private constructor(
             }
         }
 
-        /** CJK 는 앞뒤에 공백을 넣어 한 글자씩 떨어지게 한다. */
         private fun padChineseChars(text: String): String = buildString(text.length) {
             forEachCodePoint(text) { codePoint ->
                 if (isChineseChar(codePoint)) {
@@ -174,7 +160,7 @@ internal class WordPieceTokenizer private constructor(
             }
         }
 
-        /** 결합 문자는 보조 평면에도 있어서 UTF-16 단위가 아니라 코드포인트 단위로 걸러야 한다. */
+        /** 결합 문자는 보조 평면에도 있어 코드포인트 단위로 걸러야 한다. */
         private fun stripAccents(text: String): String =
             buildString(text.length) {
                 forEachCodePoint(Normalizer.normalize(text, Normalizer.Form.NFD)) { codePoint ->
@@ -212,7 +198,7 @@ internal class WordPieceTokenizer private constructor(
             require(seqLen > SPECIAL_TOKEN_COUNT) { "seqLen 은 특수 토큰 수보다 커야 합니다: $seqLen" }
 
             val file = TOKENIZER_JSON.decodeFromString(TokenizerFile.serializer(), bytes.decodeToString())
-            // 모델을 재export 하면서 파이프라인이 바뀌면 결과가 조용히 틀어지므로 로드 시점에 끊는다.
+            // 재export 로 파이프라인이 바뀌면 조용히 틀어지므로 로드 시점에 끊는다.
             require(file.model.type == MODEL_TYPE) { "지원하지 않는 model.type: ${file.model.type}" }
             require(file.normalizer?.type == NORMALIZER_TYPE) {
                 "지원하지 않는 normalizer.type: ${file.normalizer?.type}"
@@ -236,7 +222,6 @@ internal class WordPieceTokenizer private constructor(
                 normalizer = BertNormalizer(
                     cleanText = file.normalizer.cleanText != false,
                     handleChineseChars = file.normalizer.handleChineseChars != false,
-                    // strip_accents 가 null 이면 lowercase 를 따른다.
                     stripAccents = file.normalizer.stripAccents ?: lowercase,
                     lowercase = lowercase,
                 ),
