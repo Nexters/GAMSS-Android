@@ -13,6 +13,8 @@ internal class ChattingRoomSearchPagingSource(
     private val keyword: String,
 ) : PagingSource<Int, ChattingRoomSummary>() {
 
+    private val seenIds = mutableSetOf<Long>()
+
     override suspend fun load(params: LoadParams<Int>): LoadResult<Int, ChattingRoomSummary> {
         val page = params.key ?: DEFAULT_PAGE
         val result = runCatchingApiCall {
@@ -26,11 +28,16 @@ internal class ChattingRoomSearchPagingSource(
         }
 
         return when (result) {
-            is AppResult.Success -> LoadResult.Page(
-                data = result.data.rooms,
-                prevKey = page.takeIf { it > DEFAULT_PAGE }?.minus(1),
-                nextKey = (page + 1).takeIf { result.data.hasNextPage },
-            )
+            is AppResult.Success -> {
+                val uniqueRooms = result.data.rooms.filter { room ->
+                    seenIds.add(room.conversationId)
+                }
+                LoadResult.Page(
+                    data = uniqueRooms,
+                    prevKey = page.takeIf { it > DEFAULT_PAGE }?.minus(1),
+                    nextKey = (page + 1).takeIf { result.data.hasNextPage },
+                )
+            }
 
             is AppResult.Failure -> LoadResult.Error(result.throwable)
         }

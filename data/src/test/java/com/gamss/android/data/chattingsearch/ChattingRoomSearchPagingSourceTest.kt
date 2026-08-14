@@ -86,6 +86,24 @@ class ChattingRoomSearchPagingSourceTest {
     }
 
     @Test
+    fun `다음 페이지에 이미 조회한 채팅방이 포함되면 중복을 제거한다`() = runTest {
+        server.enqueue(jsonResponse(FIRST_PAGE_JSON))
+        server.enqueue(jsonResponse(SECOND_PAGE_WITH_DUPLICATE_JSON))
+        val pagingSource = pagingSource()
+
+        pagingSource.load(
+            PagingSource.LoadParams.Refresh(key = null, loadSize = 20, placeholdersEnabled = false),
+        )
+        val result = pagingSource.load(
+            PagingSource.LoadParams.Append(key = 1, loadSize = 20, placeholdersEnabled = false),
+        ) as PagingSource.LoadResult.Page
+
+        Assert.assertEquals(listOf(1003L), result.data.map { it.conversationId })
+        Assert.assertEquals(0, result.prevKey)
+        Assert.assertEquals(2, result.nextKey)
+    }
+
+    @Test
     fun `마지막 페이지를 추가 로딩하면 다음 페이지 키가 없어 무한 스크롤이 멈춘다`() = runTest {
         server.enqueue(jsonResponse(LAST_PAGE_JSON))
         val pagingSource = pagingSource()
@@ -173,6 +191,32 @@ class ChattingRoomSearchPagingSourceTest {
                     "title": "친구와 나눈 고민",
                     "status": "ACTIVE",
                     "createdAt": "2026-08-03T23:40:00Z"
+                  }
+                ],
+                "page": 1,
+                "size": 2,
+                "totalElements": 5,
+                "totalPages": 3
+              }
+            }
+        """.trimIndent()
+
+        val SECOND_PAGE_WITH_DUPLICATE_JSON = """
+            {
+              "success": true,
+              "data": {
+                "content": [
+                  {
+                    "conversationId": 1002,
+                    "title": "점심시간 감정 기록",
+                    "status": "ACTIVE",
+                    "createdAt": "2026-08-04T12:31:00Z"
+                  },
+                  {
+                    "conversationId": 1003,
+                    "title": "회의 후 정리한 생각",
+                    "status": "ACTIVE",
+                    "createdAt": "2026-08-03T22:18:00Z"
                   }
                 ],
                 "page": 1,
