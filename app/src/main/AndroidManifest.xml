@@ -10,6 +10,21 @@
         android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC"
         tools:node="remove"/>
 
+    <!--
+        firebase-analytics 가 끌고 오는 play-services-measurement-api 가 광고 ID 권한을 머지한다.
+        광고를 붙이지 않고 Google Ads 전환 추적도 쓰지 않으므로 제거해 데이터 안전 섹션에서
+        광고 ID 미수집으로 신고할 수 있게 한다. 캠페인 전환 추적을 도입하면 되돌려야 한다.
+    -->
+    <uses-permission
+        android:name="com.google.android.gms.permission.AD_ID"
+        tools:node="remove"/>
+    <uses-permission
+        android:name="android.permission.ACCESS_ADSERVICES_AD_ID"
+        tools:node="remove"/>
+    <uses-permission
+        android:name="android.permission.ACCESS_ADSERVICES_ATTRIBUTION"
+        tools:node="remove"/>
+
     <queries>
         <intent>
             <action android:name="android.intent.action.DIAL" />
