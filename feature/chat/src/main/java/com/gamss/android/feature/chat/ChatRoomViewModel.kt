@@ -94,7 +94,11 @@ class ChatRoomViewModel @Inject constructor(
         val character = (message.sender as? MessageSender.Character)?.character ?: return@intent
         reduce {
             state.copy(
-                replyTarget = ReplyTarget(messageId = message.id, characterName = character.displayName),
+                replyTarget = ReplyTarget(
+                    messageId = message.id,
+                    characterName = character.displayName,
+                    content = message.content,
+                ),
             )
         }
     }

@@ -1,13 +1,9 @@
 package com.gamss.android.feature.chat
 
-import android.content.ActivityNotFoundException
-import android.content.Context
-import android.content.Intent
+
 import android.content.res.Configuration
-import android.net.Uri
 import android.widget.Toast
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -26,19 +22,12 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
@@ -55,19 +44,26 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.gamss.android.core.designsystem.button.GamssButtonVariant
 import com.gamss.android.core.designsystem.component.GamssInputBar
 import com.gamss.android.core.designsystem.component.chat.ChatReplyQuote
 import com.gamss.android.core.designsystem.component.chat.ChatSender
 import com.gamss.android.core.designsystem.component.chat.GamssReceivedChatBubble
 import com.gamss.android.core.designsystem.component.chat.GamssSentChatBubble
+import com.gamss.android.core.designsystem.dialog.GamssDialog
+import com.gamss.android.core.designsystem.dialog.GamssDialogAction
+import com.gamss.android.core.designsystem.modifier.noRippleCombinedClickable
 import com.gamss.android.core.designsystem.theme.GamssTheme
 import com.gamss.android.core.designsystem.topnavigation.GamssTopNavigation
+import com.gamss.android.core.designsystem.topnavigation.GamssTopNavigationIcon
+import com.gamss.android.core.designsystem.topnavigation.GamssTopNavigationIconAction
 import com.gamss.android.core.designsystem.topnavigation.GamssTopNavigationTitleAlignment
 import com.gamss.android.domain.card.Card
 import com.gamss.android.domain.conversation.Message
 import com.gamss.android.domain.conversation.MessageSender
 import com.gamss.android.domain.emotion.EmotionCharacter
 import com.gamss.android.feature.chat.component.SupportAgencyDialog
+import com.gamss.android.feature.chat.util.dialOrNotify
 import org.orbitmvi.orbit.compose.collectAsState
 import org.orbitmvi.orbit.compose.collectSideEffect
 
@@ -79,6 +75,7 @@ import org.orbitmvi.orbit.compose.collectSideEffect
 fun ChatRoomScreen(
     conversationId: Long,
     onCardClose: () -> Unit,
+    onBackClick: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: ChatRoomViewModel = hiltViewModel(),
 ) {
@@ -104,15 +101,18 @@ fun ChatRoomScreen(
         )
     }
 
-    ChatRoomContent(state = state, actions = actions, modifier = modifier)
+    ChatRoomContent(
+        state = state,
+        actions = actions,
+        modifier = modifier,
+        onBackClick = onBackClick
+    )
 
     state.riskDetection?.let { detection ->
         SupportAgencyDialog(
             agencies = detection.agencies,
             onCallClick = { agency -> context.dialOrNotify(agency.phoneNumber) },
             onEmergencyCallClick = { context.dialOrNotify(EMERGENCY_PHONE_NUMBER) },
-            // 감정 결과 화면으로 이동하는 별도 계약이 생기기 전까지는 안내만 닫는다.
-            onConfirm = viewModel::onRiskDialogDismiss,
             onDismiss = viewModel::onRiskDialogDismiss,
         )
     }
@@ -123,36 +123,35 @@ fun ChatRoomScreen(
             onConfirm = viewModel::onEndConfirm,
             onDismiss = viewModel::onEndCancel,
         )
+
         is EndFlow.CardReady -> CardBottomSheet(card = endFlow.card, onDismiss = onCardClose)
         EndFlow.NotStarted,
         EndFlow.Ending,
         EndFlow.CreatingCard,
         EndFlow.CardFailedRetryable,
         EndFlow.CardFailedFinal,
-        -> Unit
+            -> Unit
     }
 }
 
-// 디자인 컴포넌트로 대체하기
 @Composable
 private fun EndConversationDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    AlertDialog(
+    GamssDialog(
+        title = stringResource(R.string.chat_room_end_dialog_title),
+        subtitle = stringResource(R.string.chat_room_end_dialog_subTitle),
+        secondaryAction = GamssDialogAction(
+            label = stringResource(R.string.chat_room_end_dialog_dismiss_button_label),
+            onClick = onDismiss,
+            variant = GamssButtonVariant.Secondary,
+        ),
+        primaryAction = GamssDialogAction(
+            label = stringResource(R.string.chat_room_end_dialog_confirm_button_label),
+            onClick = onConfirm,
+        ),
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.chat_room_end_dialog_title)) },
-        text = { Text(stringResource(R.string.chat_room_end_dialog_subTitle)) },
-        confirmButton = {
-            TextButton(onClick = onConfirm) {
-                Text(stringResource(R.string.chat_room_end_dialog_confirm_button_label))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.chat_room_end_dialog_dismiss_button_label))
-            }
-        },
     )
 }
 
@@ -200,6 +199,7 @@ private fun ChatRoomContent(
     state: ChatRoomState,
     actions: ChatRoomActions,
     modifier: Modifier = Modifier,
+    onBackClick: () -> Unit,
 ) {
     val listState = rememberLazyListState()
 
@@ -226,18 +226,12 @@ private fun ChatRoomContent(
     Scaffold(
         modifier = modifier,
         topBar = {
-            /// FIXME: 디자인 컴포넌트 적용 예정
-//            ChatRoomTopBar(
-//                endFlow = state.endFlow,
-//                canEnd = state.canEnd,
-//                showEndButton = state.useChatEndFeature,
-//                onEndClick = actions.onEndClick,
-//            )
-            GamssTopNavigation(
-                title = "YY.MM.DD",
-                titleAlignment = GamssTopNavigationTitleAlignment.Center,
-                showLeftIcon = true,
-                showRightIcon = true,
+            ChatRoomTopBar(
+                endFlow = state.endFlow,
+                canEnd = state.canEnd,
+                showEndButton = state.useChatEndFeature,
+                onEndClick = actions.onEndClick,
+                onBackClick = onBackClick
             )
         },
         // 상위 Scaffold 가 인셋을 이미 적용해, imePadding 을 그대로 쓰면 이중 적용된다.
@@ -246,6 +240,7 @@ private fun ChatRoomContent(
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .background(GamssTheme.colors.background)
                 .padding(innerPadding)
                 .windowInsetsPadding(WindowInsets.ime.exclude(WindowInsets.navigationBars)),
         ) {
@@ -279,7 +274,6 @@ private fun ChatRoomContent(
                     MessageBubble(
                         message = message,
                         messages = state.messages,
-                        isReplyTarget = state.replyTarget?.messageId == message.id,
                         onCharacterMessageClick = actions.onCharacterMessageClick,
                     )
                 }
@@ -288,15 +282,13 @@ private fun ChatRoomContent(
                 }
             }
 
-            HorizontalDivider()
-
             ChatRoomInputSection(
                 endFlow = state.endFlow,
                 input = state.input,
                 // 전송 가능 여부(글자 유무)는 GamssInputBar 내부에서 계산한다. 여기서는 그 앞단
                 // 조건(전송 중·로딩 중·종료 흐름 진입)만 넘겨 입력칸 자체를 잠근다.
                 isInputEnabled = !state.isSending && !state.isLoading &&
-                    state.endFlow == EndFlow.NotStarted,
+                        state.endFlow == EndFlow.NotStarted,
                 replyTarget = state.replyTarget,
                 actions = actions,
             )
@@ -304,41 +296,37 @@ private fun ChatRoomContent(
     }
 }
 
-//@Composable
-//private fun ChatRoomTopBar(
-//    endFlow: EndFlow,
-//    canEnd: Boolean,
-//    showEndButton: Boolean,
-//    onEndClick: () -> Unit,
-//) {
-//    Row(
-//        modifier = Modifier
-//            .fillMaxWidth()
-//            .padding(start = 16.dp, end = 4.dp, top = 12.dp, bottom = 12.dp),
-//        verticalAlignment = Alignment.CenterVertically,
-//    ) {
-//        Text(
-//            text = "대화",
-//            style = MaterialTheme.typography.titleLarge,
-//            modifier = Modifier.weight(1f),
-//        )
-//        if (showEndButton) {
-//            if (endFlow.isBusy) {
-//                CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
-//            } else {
-//                TextButton(onClick = onEndClick, enabled = canEnd) {
-//                    Text(
-//                        when {
-//                            endFlow == EndFlow.CardFailedRetryable -> "카드 다시 만들기"
-//                            endFlow is EndFlow.Ended -> "끝난 대화"
-//                            else -> "대화 끝내기"
-//                        },
-//                    )
-//                }
-//            }
-//        }
-//    }
-//}
+@Composable
+private fun ChatRoomTopBar(
+    endFlow: EndFlow,
+    canEnd: Boolean,
+    showEndButton: Boolean,
+    onEndClick: () -> Unit,
+    onBackClick: () -> Unit,
+) {
+    GamssTopNavigation(
+        title = "YY.MM.DD",
+        titleAlignment = GamssTopNavigationTitleAlignment.Center,
+        showLeftIcon = true,
+        onLeftIconClick = onBackClick,
+        rightActions = listOfNotNull(
+            /// TODO: showEndButton 이걸 release할때 조건 변경해야함
+            if (!showEndButton) {
+                if (!endFlow.isBusy && canEnd) {
+                    GamssTopNavigationIconAction(
+                        icon = GamssTopNavigationIcon.CreateCard,
+                        onClick = onEndClick,
+                    )
+                } else null
+            } else {
+                null
+            },
+            GamssTopNavigationIconAction(icon = GamssTopNavigationIcon.Menu, onClick = {
+                // 토큰 확인 페이지?
+            }),
+        ),
+    )
+}
 
 @Composable
 private fun ChatRoomInputSection(
@@ -361,15 +349,13 @@ private fun ChatRoomInputSection(
         return
     }
 
-    replyTarget?.let {
-        ReplyTargetBanner(replyTarget = it, onClear = actions.onReplyTargetClear)
-    }
-
     MessageInputBar(
         input = input,
         enabled = isInputEnabled,
+        replyTarget = replyTarget,
         onInputChange = actions.onInputChange,
         onSendClick = actions.onSendClick,
+        onReplyClear = actions.onReplyTargetClear,
     )
 }
 
@@ -381,7 +367,6 @@ private fun ChatRoomInputSection(
 private fun MessageBubble(
     message: Message,
     messages: List<Message>,
-    isReplyTarget: Boolean,
     onCharacterMessageClick: (Message) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -390,15 +375,7 @@ private fun MessageBubble(
         ?.toReplyQuote()
 
     Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .then(
-                if (isReplyTarget) {
-                    Modifier.background(GamssTheme.colors.blue.copy(alpha = 0.12f))
-                } else {
-                    Modifier
-                },
-            ),
+        modifier = modifier.fillMaxWidth(),
     ) {
         when (val sender = message.sender) {
             MessageSender.User -> GamssSentChatBubble(
@@ -407,6 +384,7 @@ private fun MessageBubble(
                 replyQuote = replyQuote,
                 modifier = Modifier.align(Alignment.CenterEnd),
             )
+
             is MessageSender.Character -> GamssReceivedChatBubble(
                 sender = ChatSender(name = sender.character.displayName),
                 message = message.content,
@@ -414,8 +392,12 @@ private fun MessageBubble(
                 replyQuote = replyQuote,
                 modifier = Modifier
                     .align(Alignment.CenterStart)
-                    .clickable { onCharacterMessageClick(message) },
+                    .noRippleCombinedClickable(
+                        onClick = { onCharacterMessageClick(message) },
+                        onLongClick = null
+                    ),
             )
+
             MessageSender.Unknown -> GamssReceivedChatBubble(
                 sender = ChatSender(name = ""),
                 message = message.content,
@@ -427,11 +409,16 @@ private fun MessageBubble(
     }
 }
 
+@Composable
 private fun Message.toReplyQuote(): ChatReplyQuote {
     val label = when (val target = sender) {
-        is MessageSender.Character -> "${target.character.displayName}에게 답장"
-        MessageSender.User -> "나에게 답장"
-        MessageSender.Unknown -> "답장"
+        is MessageSender.Character -> stringResource(
+            R.string.chat_room_reply_to_character,
+            target.character.displayName,
+        )
+
+        MessageSender.User -> stringResource(R.string.chat_room_reply_to_me)
+        MessageSender.Unknown -> stringResource(R.string.chat_room_reply)
     }
     return ChatReplyQuote(senderLabel = label, message = content)
 }
@@ -453,34 +440,13 @@ private fun GeneratingIndicator(modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun ReplyTargetBanner(
-    replyTarget: ReplyTarget,
-    onClear: () -> Unit,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surfaceVariant)
-            .padding(start = 16.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = "↩ ${replyTarget.characterName}에게 답장",
-            style = MaterialTheme.typography.labelLarge,
-            modifier = Modifier.weight(1f),
-        )
-        IconButton(onClick = onClear) {
-            Icon(imageVector = Icons.Filled.Close, contentDescription = "답장 취소")
-        }
-    }
-}
-
-@Composable
 private fun MessageInputBar(
     input: String,
     enabled: Boolean,
+    replyTarget: ReplyTarget?,
     onInputChange: (String) -> Unit,
     onSendClick: () -> Unit,
+    onReplyClear: () -> Unit,
 ) {
     GamssInputBar(
         value = input,
@@ -489,32 +455,23 @@ private fun MessageInputBar(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 18.dp, vertical = 12.dp),
-        placeholder = "지금 기분을 적어보세요",
+        placeholder = stringResource(R.string.chat_room_input_placeholder),
         trailingContentDescription = "보내기",
         enabled = enabled,
         maxLines = MESSAGE_INPUT_MAX_LINES,
+        replyQuote = replyTarget?.let {
+            ChatReplyQuote(
+                senderLabel = stringResource(
+                    R.string.chat_room_reply_to_character,
+                    it.characterName
+                ),
+                message = it.content,
+            )
+        },
+        onReplyClear = onReplyClear,
+        replyClearContentDescription = "답장 취소",
     )
 }
-
-private fun Context.dialOrNotify(phoneNumber: String?) {
-    if (phoneNumber == null) return
-    if (!dial(phoneNumber)) {
-        Toast.makeText(
-            this,
-            getString(R.string.safety_call_unavailable, phoneNumber),
-            Toast.LENGTH_LONG,
-        ).show()
-    }
-}
-
-@Suppress("SwallowedException")
-private fun Context.dial(phoneNumber: String): Boolean =
-    try {
-        startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:${Uri.encode(phoneNumber)}")))
-        true
-    } catch (_: ActivityNotFoundException) {
-        false
-    }
 
 private const val EMERGENCY_PHONE_NUMBER = "119"
 private const val MESSAGE_INPUT_MAX_LINES = 5
@@ -573,6 +530,11 @@ private fun ChatRoomPreviewContent() {
         messages = messages,
         input = "",
         useChatEndFeature = true,
+        replyTarget = ReplyTarget(
+            messageId = 1,
+            characterName = "기쁨",
+            content = "안녕! 오늘도 행복한 하루~!",
+        ),
     )
     val actions = ChatRoomActions(
         onInputChange = {},
@@ -581,5 +543,5 @@ private fun ChatRoomPreviewContent() {
         onReplyTargetClear = {},
         onEndClick = {},
     )
-    ChatRoomContent(state = state, actions = actions)
+    ChatRoomContent(state = state, actions = actions, onBackClick = {})
 }

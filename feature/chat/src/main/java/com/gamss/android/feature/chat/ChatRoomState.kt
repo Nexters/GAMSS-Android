@@ -34,4 +34,5 @@ data class ChatRoomState(
 data class ReplyTarget(
     val messageId: Long,
     val characterName: String,
+    val content: String,
 )
