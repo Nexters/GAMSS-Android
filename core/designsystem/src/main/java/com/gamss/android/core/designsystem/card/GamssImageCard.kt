@@ -121,30 +121,46 @@ private fun GamssImageCardEmotionDarkPreview() {
     }
 }
 
-/** Figma `Type=Card` 재현. 캐릭터 이미지 + 요약 제목/설명 + 기록 버리기/대화보기 + 공유하기. */
+/**
+ * 감정 캐릭터와 대화 요약을 보여 주는 이미지 카드 퍼사드.
+ *
+ * 카드의 고정 구조는 이 컴포넌트가 맡고, 캐릭터와 사용자 동작만 호출부가 제공한다.
+ * 따라서 화면마다 [GamssImageCard]의 간격과 텍스트 스타일을 다시 조합할 필요가 없다.
+ * [character]는 270×156dp 영역에 배치되며, 의미 있는 이미지라면 호출부가 접근성 설명을 제공한다.
+ */
 @Composable
-private fun EmotionCardPreviewContent() {
+@Suppress("LongParameterList")
+fun GamssEmotionCard(
+    date: String,
+    title: String,
+    description: String,
+    primaryActionLabel: String,
+    secondaryActionLabel: String,
+    shareActionLabel: String,
+    character: @Composable BoxScope.() -> Unit,
+    onPrimaryActionClick: () -> Unit,
+    onSecondaryActionClick: () -> Unit,
+    onShareClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    shape: Shape = RectangleShape,
+    topEndAction: @Composable BoxScope.() -> Unit = {},
+) {
     GamssImageCard(
-        date = "26.08.03",
-        topEndAction = { CloseIconPlaceholder() },
+        date = date,
+        modifier = modifier,
+        shape = shape,
+        topEndAction = topEndAction,
     ) {
         Spacer(modifier = Modifier.height(DateToCharacterGap))
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(CharacterImageHeight)
-                .background(CharacterPlaceholderColor),
-        ) {
-            Image(
-                painter = painterResource(R.drawable.character_angry),
-                contentDescription = null,
-                contentScale = ContentScale.Fit,
-                modifier = Modifier.fillMaxSize(),
-            )
-        }
+                .height(CharacterImageHeight),
+            content = character,
+        )
         Spacer(modifier = Modifier.height(CharacterToTitleGap))
         Text(
-            text = "오늘 화~나네",
+            text = title,
             modifier = Modifier.fillMaxWidth(),
             style = GamssTheme.typography.title2,
             color = GamssTheme.colors.gray950,
@@ -152,7 +168,7 @@ private fun EmotionCardPreviewContent() {
         )
         Spacer(modifier = Modifier.height(GamssTheme.spacing.spacing200))
         Text(
-            text = "설느닛람햄을 긱에자네에 신손 겅투히오의 흐랸비의 수매해으는 하어이",
+            text = description,
             modifier = Modifier.fillMaxWidth(),
             style = GamssTheme.typography.body4Regular,
             color = GamssTheme.colors.gray800,
@@ -165,18 +181,27 @@ private fun EmotionCardPreviewContent() {
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(GamssTheme.spacing.spacing100),
         ) {
-            CardOutlinedButton(text = "기록 버리기", modifier = Modifier.weight(1f))
-            CardOutlinedButton(text = "대화보기", modifier = Modifier.weight(1f))
+            CardOutlinedButton(
+                text = primaryActionLabel,
+                onClick = onPrimaryActionClick,
+                modifier = Modifier.weight(1f),
+            )
+            CardOutlinedButton(
+                text = secondaryActionLabel,
+                onClick = onSecondaryActionClick,
+                modifier = Modifier.weight(1f),
+            )
         }
         Spacer(modifier = Modifier.height(GamssTheme.spacing.spacing200))
         Row(
             modifier = Modifier
-                .fillMaxWidth(),
+                .fillMaxWidth()
+                .noRippleClickableIfNotNull(onShareClick),
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = "공유하기",
+                text = shareActionLabel,
                 style = GamssTheme.typography.body5Medium,
                 color = GamssTheme.colors.gray600,
             )
@@ -189,6 +214,54 @@ private fun EmotionCardPreviewContent() {
             )
         }
     }
+}
+
+/**
+ * 이미지 카드 안에 대화 로그를 배치하는 카드 퍼사드.
+ *
+ * 대화 내용 자체는 화면마다 달라 [content] 슬롯으로 남기고, 카드의 상단 여백과 셸만 고정한다.
+ */
+@Composable
+fun GamssChattingCard(
+    date: String,
+    modifier: Modifier = Modifier,
+    shape: Shape = RectangleShape,
+    topEndAction: @Composable BoxScope.() -> Unit = {},
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    GamssImageCard(
+        date = date,
+        modifier = modifier,
+        shape = shape,
+        topEndAction = topEndAction,
+    ) {
+        Spacer(modifier = Modifier.height(GamssTheme.spacing.spacing300))
+        content()
+    }
+}
+
+@Composable
+private fun EmotionCardPreviewContent() {
+    GamssEmotionCard(
+        date = "26.08.03",
+        title = "오늘 화~나네",
+        description = "설느닛람햄을 긱에자네에 신손 겅투히오의 흐랸비의 수매해으는 하어이",
+        primaryActionLabel = "기록 버리기",
+        secondaryActionLabel = "대화보기",
+        shareActionLabel = "공유하기",
+        character = {
+            Image(
+                painter = painterResource(R.drawable.character_angry),
+                contentDescription = null,
+                contentScale = ContentScale.Fit,
+                modifier = Modifier.fillMaxSize(),
+            )
+        },
+        onPrimaryActionClick = {},
+        onSecondaryActionClick = {},
+        onShareClick = {},
+        topEndAction = { CloseIconPlaceholder() },
+    )
 }
 
 /** Figma의 우상단 20dp 닫기 아이콘과 같은 크기·색의 프리뷰 액션. */
@@ -206,7 +279,7 @@ private fun CloseIconPlaceholder(modifier: Modifier = Modifier) {
 @Composable
 private fun CardOutlinedButton(
     text: String,
-    onClick: (() -> Unit)? = null,
+    onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     GamssOutlinedCard(
@@ -252,14 +325,12 @@ private fun GamssImageCardChattingDarkPreview() {
     }
 }
 
-/** Figma `Type=Card_chatting` 재현. 같은 셸에 본문만 대화 로그로 바뀐다. */
 @Composable
 private fun ChattingCardPreviewContent() {
-    GamssImageCard(
+    GamssChattingCard(
         date = "26.08.03",
         topEndAction = { CloseIconPlaceholder() },
     ) {
-        Spacer(modifier = Modifier.height(GamssTheme.spacing.spacing300))
         Column(verticalArrangement = Arrangement.spacedBy(GamssTheme.spacing.spacing150)) {
             GamssSentChatBubble(
                 message = "안녕하세요ㅁㅇㄹㅁㅇㄹㅁㅇㄹ",
