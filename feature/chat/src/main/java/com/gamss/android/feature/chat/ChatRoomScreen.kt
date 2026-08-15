@@ -3,10 +3,12 @@ package com.gamss.android.feature.chat
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
+import android.content.res.Configuration
 import android.net.Uri
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -25,7 +27,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
@@ -35,7 +36,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -43,23 +43,30 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.gamss.android.core.designsystem.component.GamssInputBar
 import com.gamss.android.core.designsystem.component.chat.ChatReplyQuote
 import com.gamss.android.core.designsystem.component.chat.ChatSender
 import com.gamss.android.core.designsystem.component.chat.GamssReceivedChatBubble
 import com.gamss.android.core.designsystem.component.chat.GamssSentChatBubble
 import com.gamss.android.core.designsystem.theme.GamssTheme
+import com.gamss.android.core.designsystem.topnavigation.GamssTopNavigation
+import com.gamss.android.core.designsystem.topnavigation.GamssTopNavigationTitleAlignment
 import com.gamss.android.domain.card.Card
-import com.gamss.android.domain.conversation.MAX_MESSAGE_LENGTH
 import com.gamss.android.domain.conversation.Message
 import com.gamss.android.domain.conversation.MessageSender
+import com.gamss.android.domain.emotion.EmotionCharacter
 import com.gamss.android.feature.chat.component.SupportAgencyDialog
 import org.orbitmvi.orbit.compose.collectAsState
 import org.orbitmvi.orbit.compose.collectSideEffect
@@ -203,15 +210,34 @@ private fun ChatRoomContent(
         }
     }
 
+    // 답장할 메시지까지 스크롤해 둔 채로 입력창을 탭하면, 키보드가 올라오며 줄어드는 높이만큼
+    // 뷰포트 아래쪽이 잘려 그 메시지가 화면 밖으로 밀려난다. 키보드가 커진 만큼 같이 스크롤해
+    // 같은 메시지가 입력창 위에 계속 보이게 한다. 키보드가 내려갈 때도 같은 식으로 되돌아온다.
+    val imeBottomPx = WindowInsets.ime.getBottom(LocalDensity.current)
+    var previousImeBottomPx by remember { mutableIntStateOf(imeBottomPx) }
+    LaunchedEffect(imeBottomPx) {
+        val delta = imeBottomPx - previousImeBottomPx
+        previousImeBottomPx = imeBottomPx
+        if (delta != 0) {
+            listState.scrollBy(delta.toFloat())
+        }
+    }
+
     Scaffold(
         modifier = modifier,
         topBar = {
-            // 디자인 컴포넌트 적용 예정
-            ChatRoomTopBar(
-                endFlow = state.endFlow,
-                canEnd = state.canEnd,
-                showEndButton = state.useChatEndFeature,
-                onEndClick = actions.onEndClick,
+            /// FIXME: 디자인 컴포넌트 적용 예정
+//            ChatRoomTopBar(
+//                endFlow = state.endFlow,
+//                canEnd = state.canEnd,
+//                showEndButton = state.useChatEndFeature,
+//                onEndClick = actions.onEndClick,
+//            )
+            GamssTopNavigation(
+                title = "YY.MM.DD",
+                titleAlignment = GamssTopNavigationTitleAlignment.Center,
+                showLeftIcon = true,
+                showRightIcon = true,
             )
         },
         // 상위 Scaffold 가 인셋을 이미 적용해, imePadding 을 그대로 쓰면 이중 적용된다.
@@ -267,7 +293,10 @@ private fun ChatRoomContent(
             ChatRoomInputSection(
                 endFlow = state.endFlow,
                 input = state.input,
-                canSend = state.canSend,
+                // 전송 가능 여부(글자 유무)는 GamssInputBar 내부에서 계산한다. 여기서는 그 앞단
+                // 조건(전송 중·로딩 중·종료 흐름 진입)만 넘겨 입력칸 자체를 잠근다.
+                isInputEnabled = !state.isSending && !state.isLoading &&
+                    state.endFlow == EndFlow.NotStarted,
                 replyTarget = state.replyTarget,
                 actions = actions,
             )
@@ -275,47 +304,47 @@ private fun ChatRoomContent(
     }
 }
 
-@Composable
-private fun ChatRoomTopBar(
-    endFlow: EndFlow,
-    canEnd: Boolean,
-    showEndButton: Boolean,
-    onEndClick: () -> Unit,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(start = 16.dp, end = 4.dp, top = 12.dp, bottom = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = "대화",
-            style = MaterialTheme.typography.titleLarge,
-            modifier = Modifier.weight(1f),
-        )
-        if (showEndButton) {
-            if (endFlow.isBusy) {
-                CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
-            } else {
-                TextButton(onClick = onEndClick, enabled = canEnd) {
-                    Text(
-                        when {
-                            endFlow == EndFlow.CardFailedRetryable -> "카드 다시 만들기"
-                            endFlow is EndFlow.Ended -> "끝난 대화"
-                            else -> "대화 끝내기"
-                        },
-                    )
-                }
-            }
-        }
-    }
-}
+//@Composable
+//private fun ChatRoomTopBar(
+//    endFlow: EndFlow,
+//    canEnd: Boolean,
+//    showEndButton: Boolean,
+//    onEndClick: () -> Unit,
+//) {
+//    Row(
+//        modifier = Modifier
+//            .fillMaxWidth()
+//            .padding(start = 16.dp, end = 4.dp, top = 12.dp, bottom = 12.dp),
+//        verticalAlignment = Alignment.CenterVertically,
+//    ) {
+//        Text(
+//            text = "대화",
+//            style = MaterialTheme.typography.titleLarge,
+//            modifier = Modifier.weight(1f),
+//        )
+//        if (showEndButton) {
+//            if (endFlow.isBusy) {
+//                CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+//            } else {
+//                TextButton(onClick = onEndClick, enabled = canEnd) {
+//                    Text(
+//                        when {
+//                            endFlow == EndFlow.CardFailedRetryable -> "카드 다시 만들기"
+//                            endFlow is EndFlow.Ended -> "끝난 대화"
+//                            else -> "대화 끝내기"
+//                        },
+//                    )
+//                }
+//            }
+//        }
+//    }
+//}
 
 @Composable
 private fun ChatRoomInputSection(
     endFlow: EndFlow,
     input: String,
-    canSend: Boolean,
+    isInputEnabled: Boolean,
     replyTarget: ReplyTarget?,
     actions: ChatRoomActions,
 ) {
@@ -338,7 +367,7 @@ private fun ChatRoomInputSection(
 
     MessageInputBar(
         input = input,
-        canSend = canSend,
+        enabled = isInputEnabled,
         onInputChange = actions.onInputChange,
         onSendClick = actions.onSendClick,
     )
@@ -449,28 +478,22 @@ private fun ReplyTargetBanner(
 @Composable
 private fun MessageInputBar(
     input: String,
-    canSend: Boolean,
+    enabled: Boolean,
     onInputChange: (String) -> Unit,
     onSendClick: () -> Unit,
 ) {
-    Row(
+    GamssInputBar(
+        value = input,
+        onValueChange = onInputChange,
+        onTrailingClick = onSendClick,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        OutlinedTextField(
-            value = input,
-            onValueChange = onInputChange,
-            modifier = Modifier.weight(1f),
-            placeholder = { Text("지금 기분을 적어보세요") },
-            supportingText = { Text("${input.length}/$MAX_MESSAGE_LENGTH") },
-            maxLines = 4,
-        )
-        IconButton(onClick = onSendClick, enabled = canSend) {
-            Icon(imageVector = Icons.AutoMirrored.Filled.Send, contentDescription = "보내기")
-        }
-    }
+            .padding(horizontal = 18.dp, vertical = 12.dp),
+        placeholder = "지금 기분을 적어보세요",
+        trailingContentDescription = "보내기",
+        enabled = enabled,
+        maxLines = MESSAGE_INPUT_MAX_LINES,
+    )
 }
 
 private fun Context.dialOrNotify(phoneNumber: String?) {
@@ -494,3 +517,69 @@ private fun Context.dial(phoneNumber: String): Boolean =
     }
 
 private const val EMERGENCY_PHONE_NUMBER = "119"
+private const val MESSAGE_INPUT_MAX_LINES = 5
+
+@Preview(name = "Light", showBackground = true)
+@Suppress("UnusedPrivateMember")
+@Composable
+private fun ChatRoomLightPreview() {
+    GamssTheme(darkTheme = false) {
+        ChatRoomPreviewContent()
+    }
+}
+
+@Preview(
+    name = "Dark",
+    showBackground = true,
+    backgroundColor = 0xFF000000,
+    uiMode = Configuration.UI_MODE_NIGHT_YES,
+)
+@Suppress("UnusedPrivateMember")
+@Composable
+private fun ChatRoomDarkPreview() {
+    GamssTheme(darkTheme = true) {
+        ChatRoomPreviewContent()
+    }
+}
+
+@Composable
+private fun ChatRoomPreviewContent() {
+    val messages = listOf(
+        Message(
+            id = 1,
+            conversationId = 1,
+            sender = MessageSender.Character(EmotionCharacter.JOY),
+            content = "안녕! 오늘도 행복한 하루~!",
+            createdTime = "오후 1:38",
+        ),
+        Message(
+            id = 2,
+            conversationId = 1,
+            sender = MessageSender.User,
+            content = "안녕하세요 반가워요",
+            createdTime = "오후 1:39",
+        ),
+        Message(
+            id = 3,
+            conversationId = 1,
+            sender = MessageSender.Character(EmotionCharacter.SADNESS),
+            content = "오늘은 좀 힘든 하루였어요",
+            repliesToMessageId = 2,
+            createdTime = "오후 1:40",
+        ),
+    )
+    val state = ChatRoomState(
+        conversationId = 1,
+        messages = messages,
+        input = "",
+        useChatEndFeature = true,
+    )
+    val actions = ChatRoomActions(
+        onInputChange = {},
+        onSendClick = {},
+        onCharacterMessageClick = {},
+        onReplyTargetClear = {},
+        onEndClick = {},
+    )
+    ChatRoomContent(state = state, actions = actions)
+}

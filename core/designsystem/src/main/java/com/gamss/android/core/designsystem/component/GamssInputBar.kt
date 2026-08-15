@@ -53,6 +53,8 @@ fun GamssInputBar(
     enabled: Boolean = true,
     /** 후행 아이콘 앞에 놓이는 자리. 홈은 여기에 감정 선택 토글을 단다. */
     trailingAction: @Composable (() -> Unit)? = null,
+    /** 이 줄 수까지 늘어나고, 넘는 내용은 입력칸 안에서 스크롤된다. 화면별 글자 상한에 맞춰 조정한다. */
+    maxLines: Int = INPUT_MAX_LINES,
 ) {
     val canSubmit = enabled && value.isNotBlank()
 
@@ -74,7 +76,7 @@ fun GamssInputBar(
             // 상한을 안 걸면 남은 세로 공간을 전부 채워 버리므로 줄 수로 묶는다.
             singleLine = false,
             minLines = 1,
-            maxLines = INPUT_MAX_LINES,
+            maxLines = maxLines,
             textStyle = GamssTheme.typography.body4Medium.copy(color = GamssTheme.colors.gray900),
             cursorBrush = SolidColor(GamssTheme.colors.gray900),
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
