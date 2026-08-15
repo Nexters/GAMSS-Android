@@ -258,7 +258,7 @@ class ConversationSessionTest {
         pendingReveal: PendingConversationReveal = PendingConversationReveal(),
     ) = ConversationSession(
         sendMessage = SendMessageUseCase(repository),
-        getMessages = GetMessagesUseCase(repository),
+        getConversation = GetConversationUseCase(repository),
         updateConversationTitle = UpdateConversationTitleUseCase(repository),
         endConversation = EndConversationUseCase(repository),
         createConversationCard = CreateConversationCardUseCase(
@@ -350,8 +350,13 @@ class ConversationSessionTest {
         override suspend fun getOngoingConversations(): AppResult<List<Conversation>> =
             AppResult.Success(emptyList())
 
-        override suspend fun getMessages(conversationId: Long): AppResult<List<Message>> =
-            AppResult.Success(emptyList())
+        override suspend fun getConversation(conversationId: Long): AppResult<ConversationDetail> =
+            AppResult.Success(
+                ConversationDetail(
+                    conversation = Conversation(id = conversationId, title = null),
+                    messages = emptyList(),
+                ),
+            )
 
         override suspend fun updateTitle(conversationId: Long, title: String): AppResult<Unit> {
             updatedTitles += conversationId to title

@@ -3,10 +3,10 @@ package com.gamss.android.feature.chat
 import androidx.paging.PagingData
 import com.gamss.android.core.common.AppResult
 import com.gamss.android.domain.conversation.Conversation
+import com.gamss.android.domain.conversation.ConversationDetail
 import com.gamss.android.domain.conversation.ConversationRepository
 import com.gamss.android.domain.conversation.DeleteConversationsUseCase
 import com.gamss.android.domain.conversation.GetOngoingConversationsUseCase
-import com.gamss.android.domain.conversation.Message
 import com.gamss.android.domain.conversation.SentMessage
 import com.gamss.android.domain.conversation.chattingsearch.ChattingRoomSummary
 import com.gamss.android.domain.conversation.chattingsearch.SearchChattingRoomsUseCase
@@ -75,7 +75,7 @@ internal class FakeChattingListRepository(
         excludeCharacters: Set<EmotionCharacter>,
     ): AppResult<SentMessage> = error("목록 테스트에서 쓰지 않는다")
 
-    override suspend fun getMessages(conversationId: Long): AppResult<List<Message>> =
+    override suspend fun getConversation(conversationId: Long): AppResult<ConversationDetail> =
         error("목록 테스트에서 쓰지 않는다")
 
     override suspend fun updateTitle(conversationId: Long, title: String): AppResult<Unit> =

@@ -3,9 +3,11 @@ package com.gamss.android.feature.chat
 import com.gamss.android.domain.conversation.Message
 import com.gamss.android.domain.conversation.MessageSender
 import com.gamss.android.domain.safety.RiskDetection
+import java.time.LocalDateTime
 
 data class ChatRoomState(
     val conversationId: Long? = null,
+    val conversationCreatedAt: LocalDateTime? = null,
     val messages: List<Message> = emptyList(),
     val pendingComments: List<Message> = emptyList(),
     val input: String = "",

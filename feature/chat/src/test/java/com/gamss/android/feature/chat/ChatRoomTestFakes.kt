@@ -11,11 +11,12 @@ import com.gamss.android.domain.config.RemoteConfigKey
 import com.gamss.android.domain.config.RemoteConfigRepository
 import com.gamss.android.domain.conversation.CommentGenerationStatus
 import com.gamss.android.domain.conversation.Conversation
+import com.gamss.android.domain.conversation.ConversationDetail
 import com.gamss.android.domain.conversation.ConversationRepository
 import com.gamss.android.domain.conversation.ConversationSession
 import com.gamss.android.domain.conversation.ConversationSummaryStore
 import com.gamss.android.domain.conversation.EndConversationUseCase
-import com.gamss.android.domain.conversation.GetMessagesUseCase
+import com.gamss.android.domain.conversation.GetConversationUseCase
 import com.gamss.android.domain.conversation.Message
 import com.gamss.android.domain.conversation.MessageSender
 import com.gamss.android.domain.conversation.PendingConversationReveal
@@ -58,7 +59,7 @@ internal fun chatRoomViewModel(
     pendingReveal: PendingConversationReveal = PendingConversationReveal(),
     session: ConversationSession = ConversationSession(
         sendMessage = SendMessageUseCase(conversationRepository),
-        getMessages = GetMessagesUseCase(conversationRepository),
+        getConversation = GetConversationUseCase(conversationRepository),
         updateConversationTitle = UpdateConversationTitleUseCase(conversationRepository),
         endConversation = EndConversationUseCase(conversationRepository),
         createConversationCard = CreateConversationCardUseCase(
@@ -141,6 +142,7 @@ internal class FakeConversationRepository(
     private val commentCount: Int = 0,
     private val failing: Boolean = false,
     private val endFailing: Boolean = false,
+    private val restoredConversation: Conversation = Conversation(id = ROOM_ID, title = null),
 ) : ConversationRepository {
     private var sentCount = 0
 
@@ -181,8 +183,13 @@ internal class FakeConversationRepository(
         )
     }
 
-    override suspend fun getMessages(conversationId: Long): AppResult<List<Message>> =
-        AppResult.Success(emptyList())
+    override suspend fun getConversation(conversationId: Long): AppResult<ConversationDetail> =
+        AppResult.Success(
+            ConversationDetail(
+                conversation = restoredConversation,
+                messages = emptyList(),
+            ),
+        )
 
     override suspend fun getOngoingConversations(): AppResult<List<Conversation>> =
         AppResult.Success(emptyList())

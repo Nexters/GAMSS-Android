@@ -17,7 +17,7 @@ import javax.inject.Inject
 @Suppress("LongParameterList")
 class ConversationSession @Inject constructor(
     private val sendMessage: SendMessageUseCase,
-    private val getMessages: GetMessagesUseCase,
+    private val getConversation: GetConversationUseCase,
     private val updateConversationTitle: UpdateConversationTitleUseCase,
     private val endConversation: EndConversationUseCase,
     private val createConversationCard: CreateConversationCardUseCase,
@@ -30,12 +30,12 @@ class ConversationSession @Inject constructor(
 
     private var pendingTitle: PendingTitle? = null
 
-    suspend fun restore(conversationId: Long): AppResult<List<Message>> {
+    suspend fun restore(conversationId: Long): AppResult<ConversationDetail> {
         clearPendingTitle()
-        val result = getMessages(conversationId)
+        val result = getConversation(conversationId)
         when (result) {
             is AppResult.Success -> {
-                val utterances = result.data.userUtterances()
+                val utterances = result.data.messages.userUtterances()
                 summaryStore.restore(utterances)
                 emotionAccumulator.restore(utterances)
             }

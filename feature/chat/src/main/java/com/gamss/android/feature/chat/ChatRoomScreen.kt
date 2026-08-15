@@ -1,6 +1,5 @@
 package com.gamss.android.feature.chat
 
-
 import android.content.res.Configuration
 import android.widget.Toast
 import androidx.compose.foundation.background
@@ -20,6 +19,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.CircularProgressIndicator
@@ -44,6 +44,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.gamss.android.core.common.util.formatConversationDate
 import com.gamss.android.core.designsystem.button.GamssButtonVariant
 import com.gamss.android.core.designsystem.component.GamssInputBar
 import com.gamss.android.core.designsystem.component.chat.ChatReplyQuote
@@ -66,6 +67,7 @@ import com.gamss.android.feature.chat.component.SupportAgencyDialog
 import com.gamss.android.feature.chat.util.dialOrNotify
 import org.orbitmvi.orbit.compose.collectAsState
 import org.orbitmvi.orbit.compose.collectSideEffect
+import java.time.LocalDateTime
 
 /**
  * @param onCardClose 카드 시트를 닫을 때 호출한다. 이 화면을 실제로 벗어나야 한다.
@@ -105,7 +107,7 @@ fun ChatRoomScreen(
         state = state,
         actions = actions,
         modifier = modifier,
-        onBackClick = onBackClick
+        onBackClick = onBackClick,
     )
 
     state.riskDetection?.let { detection ->
@@ -130,7 +132,7 @@ fun ChatRoomScreen(
         EndFlow.CreatingCard,
         EndFlow.CardFailedRetryable,
         EndFlow.CardFailedFinal,
-            -> Unit
+        -> Unit
     }
 }
 
@@ -227,11 +229,12 @@ private fun ChatRoomContent(
         modifier = modifier,
         topBar = {
             ChatRoomTopBar(
+                conversationCreatedAt = state.conversationCreatedAt,
                 endFlow = state.endFlow,
                 canEnd = state.canEnd,
                 showEndButton = state.useChatEndFeature,
                 onEndClick = actions.onEndClick,
-                onBackClick = onBackClick
+                onBackClick = onBackClick,
             )
         },
         // 상위 Scaffold 가 인셋을 이미 적용해, imePadding 을 그대로 쓰면 이중 적용된다.
@@ -244,43 +247,14 @@ private fun ChatRoomContent(
                 .padding(innerPadding)
                 .windowInsetsPadding(WindowInsets.ime.exclude(WindowInsets.navigationBars)),
         ) {
-            LazyColumn(
-                state = listState,
+            ChatMessageList(
+                state = state,
+                actions = actions,
+                listState = listState,
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth(),
-                contentPadding = PaddingValues(horizontal = 18.dp, vertical = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-            ) {
-                if (state.messages.isEmpty()) {
-                    item {
-                        Box(
-                            modifier = Modifier.fillParentMaxSize(),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            if (state.isLoading) {
-                                CircularProgressIndicator()
-                            } else {
-                                Text(
-                                    text = "오늘 어떤 일이 있었나요?",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-                        }
-                    }
-                }
-                items(state.messages, key = { it.id }) { message ->
-                    MessageBubble(
-                        message = message,
-                        messages = state.messages,
-                        onCharacterMessageClick = actions.onCharacterMessageClick,
-                    )
-                }
-                if (state.isAwaitingComments) {
-                    item { GeneratingIndicator() }
-                }
-            }
+            )
 
             ChatRoomInputSection(
                 endFlow = state.endFlow,
@@ -288,7 +262,7 @@ private fun ChatRoomContent(
                 // 전송 가능 여부(글자 유무)는 GamssInputBar 내부에서 계산한다. 여기서는 그 앞단
                 // 조건(전송 중·로딩 중·종료 흐름 진입)만 넘겨 입력칸 자체를 잠근다.
                 isInputEnabled = !state.isSending && !state.isLoading &&
-                        state.endFlow == EndFlow.NotStarted,
+                    state.endFlow == EndFlow.NotStarted,
                 replyTarget = state.replyTarget,
                 actions = actions,
             )
@@ -297,7 +271,52 @@ private fun ChatRoomContent(
 }
 
 @Composable
+private fun ChatMessageList(
+    state: ChatRoomState,
+    actions: ChatRoomActions,
+    listState: LazyListState,
+    modifier: Modifier = Modifier,
+) {
+    LazyColumn(
+        state = listState,
+        modifier = modifier,
+        contentPadding = PaddingValues(horizontal = 18.dp, vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        if (state.messages.isEmpty()) {
+            item {
+                Box(
+                    modifier = Modifier.fillParentMaxSize(),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    if (state.isLoading) {
+                        CircularProgressIndicator()
+                    } else {
+                        Text(
+                            text = "오늘 어떤 일이 있었나요?",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
+        }
+        items(state.messages, key = { it.id }) { message ->
+            MessageBubble(
+                message = message,
+                messages = state.messages,
+                onCharacterMessageClick = actions.onCharacterMessageClick,
+            )
+        }
+        if (state.isAwaitingComments) {
+            item { GeneratingIndicator() }
+        }
+    }
+}
+
+@Composable
 private fun ChatRoomTopBar(
+    conversationCreatedAt: LocalDateTime?,
     endFlow: EndFlow,
     canEnd: Boolean,
     showEndButton: Boolean,
@@ -305,19 +324,20 @@ private fun ChatRoomTopBar(
     onBackClick: () -> Unit,
 ) {
     GamssTopNavigation(
-        title = "YY.MM.DD",
+        title = conversationCreatedAt?.let(::formatConversationDate).orEmpty(),
         titleAlignment = GamssTopNavigationTitleAlignment.Center,
         showLeftIcon = true,
         onLeftIconClick = onBackClick,
         rightActions = listOfNotNull(
-            /// TODO: showEndButton 이걸 release할때 조건 변경해야함
-            if (!showEndButton) {
+            if (showEndButton) {
                 if (!endFlow.isBusy && canEnd) {
                     GamssTopNavigationIconAction(
                         icon = GamssTopNavigationIcon.CreateCard,
                         onClick = onEndClick,
                     )
-                } else null
+                } else {
+                    null
+                }
             } else {
                 null
             },

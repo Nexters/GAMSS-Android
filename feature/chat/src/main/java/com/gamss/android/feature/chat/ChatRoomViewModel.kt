@@ -78,7 +78,14 @@ class ChatRoomViewModel @Inject constructor(
 
         when (val result = session.restore(conversationId)) {
             is AppResult.Success ->
-                reduce { state.copy(isLoading = false, messages = result.data, pendingComments = emptyList()) }
+                reduce {
+                    state.copy(
+                        isLoading = false,
+                        conversationCreatedAt = result.data.conversation.createdAt,
+                        messages = result.data.messages,
+                        pendingComments = emptyList(),
+                    )
+                }
             is AppResult.Failure -> {
                 reduce { state.copy(isLoading = false) }
                 postSideEffect(ChatRoomSideEffect.ShowToast(LOAD_FAILED))

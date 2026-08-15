@@ -11,15 +11,14 @@ import com.gamss.android.data.di.ApplicationScope
 import com.gamss.android.data.remote.conversation.ConversationService
 import com.gamss.android.data.remote.conversation.model.request.SaveMessageRequest
 import com.gamss.android.data.remote.conversation.model.request.UpdateConversationTitleRequest
-import com.gamss.android.data.remote.conversation.model.response.ConversationMessage
 import com.gamss.android.data.remote.conversation.model.response.ConversationResponse
 import com.gamss.android.data.remote.conversation.model.response.toDomain
 import com.gamss.android.data.remote.emotion.toServerEmotionType
 import com.gamss.android.data.remote.runCatchingApiCall
 import com.gamss.android.data.remote.throwIfFailed
 import com.gamss.android.domain.conversation.Conversation
+import com.gamss.android.domain.conversation.ConversationDetail
 import com.gamss.android.domain.conversation.ConversationRepository
-import com.gamss.android.domain.conversation.Message
 import com.gamss.android.domain.conversation.SentMessage
 import com.gamss.android.domain.conversation.chattingsearch.ChattingRoomSummary
 import com.gamss.android.domain.emotion.EmotionCharacter
@@ -62,10 +61,9 @@ internal class ConversationRepositoryImpl @Inject constructor(
         checkNotNull(response.data) { "No available saved message data" }.toDomain()
     }
 
-    override suspend fun getMessages(conversationId: Long): AppResult<List<Message>> = runCatchingApiCall {
-        val response = conversationService.getMessages(conversationId)
-        checkNotNull(response.data) { "No available message data" }
-            .mapNotNull(ConversationMessage::toDomain)
+    override suspend fun getConversation(conversationId: Long): AppResult<ConversationDetail> = runCatchingApiCall {
+        val response = conversationService.getConversation(conversationId)
+        checkNotNull(response.data?.toDomain()) { "No available conversation detail data" }
     }
 
     override suspend fun updateTitle(conversationId: Long, title: String): AppResult<Unit> =
