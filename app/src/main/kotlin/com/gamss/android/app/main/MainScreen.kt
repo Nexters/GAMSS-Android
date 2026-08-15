@@ -56,7 +56,7 @@ fun MainScreen(
         topLevelKeys = remember(destinations) { destinations.keys() },
     )
     val navigator = remember(navigationState) { Navigator(navigationState) }
-    val entries = remember(navigator) { mainEntryProvider(navigator) }
+    val entries = remember(navigator, useCardFeature) { mainEntryProvider(navigator, useCardFeature) }
     val snackbarHostState = remember { SnackbarHostState() }
 
     ModelDownloadConfirmationEffect(modelDownloadPromptViewModel, snackbarHostState)
@@ -92,7 +92,7 @@ fun MainScreen(
     }
 }
 
-private fun mainEntryProvider(navigator: Navigator) = entryProvider {
+private fun mainEntryProvider(navigator: Navigator, useCardFeature: Boolean) = entryProvider {
     entry<HomeKey> {
         HomeScreen(
             onNavigateToSetting = { navigator.navigate(SettingKey) },
@@ -100,7 +100,12 @@ private fun mainEntryProvider(navigator: Navigator) = entryProvider {
         )
     }
     entry<ArchiveKey> {
-        ArchiveScreen(onNavigateToSetting = { navigator.navigate(SettingKey) })
+        // 백스택 복원이나 플래그가 도중에 꺼지는 경우, 탭바에서 숨겨진 화면이 그려지지 않도록 홈으로 되돌린다.
+        if (useCardFeature) {
+            ArchiveScreen(onNavigateToSetting = { navigator.navigate(SettingKey) })
+        } else {
+            LaunchedEffect(Unit) { navigator.navigate(HomeKey) }
+        }
     }
     entry<SettingKey> {
         SettingScreen(

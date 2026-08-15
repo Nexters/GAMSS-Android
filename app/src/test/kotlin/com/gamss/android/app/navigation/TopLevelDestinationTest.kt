@@ -1,6 +1,6 @@
 package com.gamss.android.app.navigation
 
-import com.gamss.android.feature.calendar.navigation.CalendarKey
+import com.gamss.android.feature.archive.navigation.ArchiveKey
 import com.gamss.android.feature.chat.navigation.ChatKey
 import com.gamss.android.feature.home.navigation.HomeKey
 import org.junit.Assert.assertEquals
@@ -12,7 +12,7 @@ class TopLevelDestinationTest {
 
     @Test
     fun 탭은_보관함_홈_대화_세_종이다() {
-        assertEquals(listOf(CalendarKey, HomeKey, ChatKey), topLevelDestinations().map { it.key })
+        assertEquals(listOf(ArchiveKey, HomeKey, ChatKey), topLevelDestinations().map { it.key })
     }
 
     @Test
@@ -26,7 +26,7 @@ class TopLevelDestinationTest {
     fun 카드_기능이_켜지면_보관함이_탭바에_들어간다() {
         val visible = topLevelDestinations().visibleIn(useCardFeature = true)
 
-        assertEquals(listOf(CalendarKey, HomeKey, ChatKey), visible.map { it.key })
+        assertEquals(listOf(ArchiveKey, HomeKey, ChatKey), visible.map { it.key })
     }
 
     /**
@@ -37,7 +37,7 @@ class TopLevelDestinationTest {
     fun 보관함을_걸러도_네비게이션_key_집합은_그대로다() {
         val destinations = topLevelDestinations()
 
-        assertTrue(CalendarKey in destinations.keys())
-        assertFalse(CalendarKey in destinations.visibleIn(useCardFeature = false).map { it.key })
+        assertTrue(ArchiveKey in destinations.keys())
+        assertFalse(ArchiveKey in destinations.visibleIn(useCardFeature = false).map { it.key })
     }
 }
