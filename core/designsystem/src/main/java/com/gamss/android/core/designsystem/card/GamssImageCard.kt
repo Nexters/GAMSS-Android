@@ -124,20 +124,19 @@ private fun GamssImageCardEmotionDarkPreview() {
 /**
  * 감정 캐릭터와 대화 요약을 보여 주는 이미지 카드 퍼사드.
  *
- * 카드의 고정 구조는 이 컴포넌트가 맡고, 캐릭터와 사용자 동작만 호출부가 제공한다.
+ * 카드의 고정 구조와 감정별 캐릭터 선택은 이 컴포넌트가 맡고, 문구와 사용자 동작만 호출부가 제공한다.
  * 따라서 화면마다 [GamssImageCard]의 간격과 텍스트 스타일을 다시 조합할 필요가 없다.
- * [character]는 270×156dp 영역에 배치되며, 의미 있는 이미지라면 호출부가 접근성 설명을 제공한다.
  */
 @Composable
 @Suppress("LongParameterList")
 fun GamssEmotionCard(
     date: String,
+    character: GamssEmotionCardCharacter,
     title: String,
     description: String,
     primaryActionLabel: String,
     secondaryActionLabel: String,
     shareActionLabel: String,
-    character: @Composable BoxScope.() -> Unit,
     onPrimaryActionClick: () -> Unit,
     onSecondaryActionClick: () -> Unit,
     onShareClick: () -> Unit,
@@ -156,8 +155,14 @@ fun GamssEmotionCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(CharacterImageHeight),
-            content = character,
-        )
+        ) {
+            Image(
+                painter = painterResource(character.drawableRes),
+                contentDescription = null,
+                contentScale = ContentScale.Fit,
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
         Spacer(modifier = Modifier.height(CharacterToTitleGap))
         Text(
             text = title,
@@ -244,19 +249,12 @@ fun GamssChattingCard(
 private fun EmotionCardPreviewContent() {
     GamssEmotionCard(
         date = "26.08.03",
+        character = GamssEmotionCardCharacter.ANGER,
         title = "오늘 화~나네",
         description = "설느닛람햄을 긱에자네에 신손 겅투히오의 흐랸비의 수매해으는 하어이",
         primaryActionLabel = "기록 버리기",
         secondaryActionLabel = "대화보기",
         shareActionLabel = "공유하기",
-        character = {
-            Image(
-                painter = painterResource(R.drawable.character_angry),
-                contentDescription = null,
-                contentScale = ContentScale.Fit,
-                modifier = Modifier.fillMaxSize(),
-            )
-        },
         onPrimaryActionClick = {},
         onSecondaryActionClick = {},
         onShareClick = {},
