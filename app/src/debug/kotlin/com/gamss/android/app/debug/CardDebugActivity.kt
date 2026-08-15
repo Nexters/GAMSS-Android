@@ -11,13 +11,19 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.gamss.android.core.common.AppResult
@@ -25,8 +31,11 @@ import com.gamss.android.core.designsystem.theme.GamssTheme
 import com.gamss.android.data.remote.conversation.model.response.ConversationMessage
 import com.gamss.android.data.remote.conversation.model.response.userUtterances
 import com.gamss.android.domain.card.CardInput
+import com.gamss.android.domain.card.CreateCardUseCase
 import com.gamss.android.domain.card.GenerateCardInputUseCase
+import com.gamss.android.domain.card.GetCardsByDateUseCase
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 /**
@@ -41,11 +50,17 @@ class CardDebugActivity : ComponentActivity() {
     @Inject
     lateinit var generateCardInput: GenerateCardInputUseCase
 
+    @Inject
+    lateinit var createCard: CreateCardUseCase
+
+    @Inject
+    lateinit var getCardsByDate: GetCardsByDateUseCase
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             GamssTheme {
-                CardDebugScreen(generateCardInput)
+                CardDebugScreen(generateCardInput, createCard, getCardsByDate)
             }
         }
     }
@@ -57,14 +72,28 @@ private data class DebugResult(
     val card: AppResult<CardInput?>,
 )
 
+private data class CreateAndQueryResult(
+    val creation: AppResult<com.gamss.android.domain.card.Card>,
+    val queriedCards: AppResult<List<com.gamss.android.domain.card.Card>>?,
+)
+
 @Composable
-private fun CardDebugScreen(useCase: GenerateCardInputUseCase) {
+private fun CardDebugScreen(
+    generateCardInput: GenerateCardInputUseCase,
+    createCard: CreateCardUseCase,
+    getCardsByDate: GetCardsByDateUseCase,
+) {
     val results by produceState<List<DebugResult>?>(initialValue = null) {
         value = SAMPLES.map { (title, messages) ->
             val utts = messages.userUtterances()
-            DebugResult(title, utts, useCase(utts))
+            DebugResult(title, utts, generateCardInput(utts))
         }
     }
+    var conversationIdText by remember { mutableStateOf("") }
+    var creationResult by remember { mutableStateOf<CreateAndQueryResult?>(null) }
+    var isCreating by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    val conversationId = conversationIdText.toLongOrNull()
 
     Scaffold { padding ->
         Column(
@@ -81,14 +110,51 @@ private fun CardDebugScreen(useCase: GenerateCardInputUseCase) {
                 CircularProgressIndicator()
                 Text("모델 로드 + 감정/요약 추론 중...")
             } else {
-                current.forEach { ResultCard(it) }
+                OutlinedTextField(
+                    value = conversationIdText,
+                    onValueChange = { conversationIdText = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("종료된 대화방 ID") },
+                    singleLine = true,
+                )
+                Text("같은 대화방에는 카드가 한 장만 생성됩니다.", style = MaterialTheme.typography.bodySmall)
+                current.forEach { result ->
+                    ResultCard(
+                        result = result,
+                        canCreate = conversationId != null && !isCreating,
+                        onCreateClick = { cardInput ->
+                            conversationId?.let { id ->
+                                scope.launch {
+                                    isCreating = true
+                                    val creation = createCard(
+                                        CreateCardUseCase.Params(
+                                            conversationId = id,
+                                            character = cardInput.character,
+                                            summary = requireNotNull(cardInput.summary),
+                                        ),
+                                    )
+                                    val queriedCards = (creation as? AppResult.Success)
+                                        ?.data
+                                        ?.let { card -> getCardsByDate(card.date) }
+                                    creationResult = CreateAndQueryResult(creation, queriedCards)
+                                    isCreating = false
+                                }
+                            }
+                        },
+                    )
+                }
+                creationResult?.let { result -> CreateAndQueryResultCard(result) }
             }
         }
     }
 }
 
 @Composable
-private fun ResultCard(result: DebugResult) {
+private fun ResultCard(
+    result: DebugResult,
+    canCreate: Boolean,
+    onCreateClick: (CardInput) -> Unit,
+) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(
             modifier = Modifier.padding(12.dp),
@@ -106,6 +172,37 @@ private fun ResultCard(result: DebugResult) {
                     } else {
                         Text("감정: ${input.emotion.koLabel}  →  캐릭터: ${input.character.displayName}")
                         Text("요약: ${input.summary ?: "(없음)"}")
+                        Button(
+                            onClick = { onCreateClick(input) },
+                            enabled = canCreate && !input.summary.isNullOrBlank(),
+                        ) {
+                            Text("테스트 카드 생성")
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CreateAndQueryResultCard(result: CreateAndQueryResult) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            when (val creation = result.creation) {
+                is AppResult.Failure -> Text("카드 생성 실패: ${creation.throwable.message}")
+                is AppResult.Success -> {
+                    Text("카드 생성 성공: #${creation.data.id}")
+                    when (val queried = result.queriedCards) {
+                        null -> Unit
+                        is AppResult.Failure -> Text("날짜별 조회 실패: ${queried.throwable.message}")
+                        is AppResult.Success -> Text(
+                            "날짜별 조회 성공: ${queried.data.size}장 " +
+                                "(생성 카드 포함: ${queried.data.any { it.id == creation.data.id }})",
+                        )
                     }
                 }
             }
