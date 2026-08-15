@@ -4,19 +4,30 @@ import com.gamss.android.core.common.AppResult
 import com.gamss.android.data.remote.card.CardService
 import com.gamss.android.data.remote.card.model.request.CreateCardRequest
 import com.gamss.android.data.remote.card.model.response.toDomain
+import com.gamss.android.data.remote.card.model.response.toDomainOrNull
 import com.gamss.android.data.remote.emotion.toServerEmotionType
 import com.gamss.android.data.remote.runCatchingApiCall
+import com.gamss.android.data.remote.throwIfFailed
 import com.gamss.android.domain.card.Card
 import com.gamss.android.domain.card.CardNotRetryableException
-import com.gamss.android.domain.card.CardRepository
+import com.gamss.android.domain.card.CardQueryRepository
+import com.gamss.android.domain.card.CardWriteRepository
 import com.gamss.android.domain.emotion.EmotionCharacter
+import java.time.LocalDate
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 internal class CardRepositoryImpl @Inject constructor(
     private val cardService: CardService,
-) : CardRepository {
+) : CardQueryRepository, CardWriteRepository {
+
+    override suspend fun getCardsByDate(date: LocalDate): AppResult<List<Card>> = runCatchingApiCall {
+        val response = cardService.getCardsByDate(date.toString())
+        response.throwIfFailed()
+        checkNotNull(response.data) { "No available card data" }
+            .mapNotNull { it.toDomainOrNull() }
+    }
 
     override suspend fun createCard(
         conversationId: Long,

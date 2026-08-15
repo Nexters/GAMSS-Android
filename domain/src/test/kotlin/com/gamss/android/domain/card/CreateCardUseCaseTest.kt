@@ -9,7 +9,7 @@ import org.junit.Test
 
 class CreateCardUseCaseTest {
 
-    private class RecordingRepository : CardRepository {
+    private class RecordingRepository : CardWriteRepository {
         var sentSummary: String? = null
             private set
 

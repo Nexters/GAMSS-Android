@@ -2,7 +2,7 @@ package com.gamss.android.feature.home
 
 import com.gamss.android.core.common.AppResult
 import com.gamss.android.domain.card.Card
-import com.gamss.android.domain.card.CardRepository
+import com.gamss.android.domain.card.CardWriteRepository
 import com.gamss.android.domain.card.CreateCardUseCase
 import com.gamss.android.domain.card.CreateConversationCardUseCase
 import com.gamss.android.domain.conversation.CommentGenerationStatus
@@ -110,7 +110,7 @@ internal class RecordingConversationRepository(
         AppResult.Success(Unit)
 }
 
-private object NoCardRepository : CardRepository {
+private object NoCardRepository : CardWriteRepository {
     override suspend fun createCard(
         conversationId: Long,
         character: EmotionCharacter,

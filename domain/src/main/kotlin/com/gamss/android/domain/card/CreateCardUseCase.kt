@@ -9,7 +9,7 @@ import javax.inject.Inject
 const val MAX_CARD_SUMMARY_LENGTH = 1000
 
 class CreateCardUseCase @Inject constructor(
-    private val cardRepository: CardRepository,
+    private val cardRepository: CardWriteRepository,
 ) : UseCase<CreateCardUseCase.Params, AppResult<Card>> {
 
     data class Params(

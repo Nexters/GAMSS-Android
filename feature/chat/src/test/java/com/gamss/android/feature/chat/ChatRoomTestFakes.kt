@@ -2,7 +2,7 @@ package com.gamss.android.feature.chat
 
 import com.gamss.android.core.common.AppResult
 import com.gamss.android.domain.card.Card
-import com.gamss.android.domain.card.CardRepository
+import com.gamss.android.domain.card.CardWriteRepository
 import com.gamss.android.domain.card.CreateCardUseCase
 import com.gamss.android.domain.card.CreateConversationCardUseCase
 import com.gamss.android.domain.config.GetRemoteConfigFlagUseCase
@@ -46,7 +46,7 @@ import kotlinx.coroutines.flow.emptyFlow
 @Suppress("LongParameterList")
 internal fun chatRoomViewModel(
     conversationRepository: ConversationRepository = FakeConversationRepository(),
-    cardRepository: CardRepository = CountingCardRepository(),
+    cardRepository: CardWriteRepository = CountingCardRepository(),
     summarizer: DiarySummarizer = PassThroughSummarizer,
     classifier: EmotionClassifier = FlatClassifier,
     tokenUsageRefreshNotifier: TokenUsageRefreshNotifier = RecordingTokenUsageRefreshNotifier(),
@@ -196,7 +196,7 @@ internal class FakeConversationRepository(
 internal class CountingCardRepository(
     private val gate: CompletableDeferred<Unit>? = null,
     private val failure: Throwable? = null,
-) : CardRepository {
+) : CardWriteRepository {
     var calls = 0
         private set
 

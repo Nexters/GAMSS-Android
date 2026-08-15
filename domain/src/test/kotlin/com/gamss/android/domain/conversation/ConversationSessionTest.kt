@@ -2,7 +2,7 @@ package com.gamss.android.domain.conversation
 
 import com.gamss.android.core.common.AppResult
 import com.gamss.android.domain.card.Card
-import com.gamss.android.domain.card.CardRepository
+import com.gamss.android.domain.card.CardWriteRepository
 import com.gamss.android.domain.card.CreateCardUseCase
 import com.gamss.android.domain.card.CreateConversationCardUseCase
 import com.gamss.android.domain.emotion.ClassificationResult
@@ -213,7 +213,7 @@ class ConversationSessionTest {
         }
     }
 
-    private object NoOpCardRepository : CardRepository {
+    private object NoOpCardRepository : CardWriteRepository {
         override suspend fun createCard(
             conversationId: Long,
             character: EmotionCharacter,
