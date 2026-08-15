@@ -2,7 +2,6 @@ package com.gamss.android.core.designsystem.card
 
 import android.content.res.Configuration
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -20,10 +19,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.layout.ContentScale
@@ -38,17 +37,11 @@ import com.gamss.android.core.designsystem.component.GamssIcons
 import com.gamss.android.core.designsystem.component.chat.ChatSender
 import com.gamss.android.core.designsystem.component.chat.GamssReceivedChatBubble
 import com.gamss.android.core.designsystem.component.chat.GamssSentChatBubble
+import com.gamss.android.core.designsystem.modifier.noRippleClickableIfNotNull
 import com.gamss.android.core.designsystem.theme.GamssTheme
+import com.gamss.android.core.designsystem.theme.LightGamssColors
+import com.gamss.android.core.designsystem.theme.LocalGamssColors
 
-/**
- * 캐릭터 배경 이미지 위에 콘텐츠를 얹는 카드 셸. 배경은 모든 variant가 공유하는 고정 에셋이라
- * 파라미터로 받지 않는다.
- *
- * 실측이 고정인 건 카드 크기(366x528), 날짜 위치, 우상단 액션 아이콘 위치뿐이다. 그 아래 본문은
- * variant마다(버튼형 요약 카드, 채팅 로그 카드 ...) 구조가 완전히 달라 셸이 알 필요가 없어
- * [content] 슬롯으로 그대로 넘긴다. [topEndAction] 도 슬롯인 이유는 같다 — 아이콘 에셋이 아직
- * 없어 지금은 호출부가 플레이스홀더를 그리고, 나중에 실제 에셋으로 바꿔도 셸은 손댈 일이 없다.
- */
 @Composable
 fun GamssImageCard(
     date: String,
@@ -57,44 +50,46 @@ fun GamssImageCard(
     topEndAction: @Composable BoxScope.() -> Unit = {},
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    Box(
-        modifier = modifier
-            .width(CardWidth)
-            .height(CardHeight)
-            .clip(shape),
-    ) {
-        Image(
-            painter = painterResource(R.drawable.bg_card),
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxSize(),
-        )
-
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(
-                    start = GamssTheme.spacing.spacing800,
-                    end = GamssTheme.spacing.spacing800,
-                    top = GamssTheme.spacing.spacing700,
-                ),
-        ) {
-            Text(
-                text = date,
-                modifier = Modifier.fillMaxWidth(),
-                style = GamssTheme.typography.subtitle3,
-                color = GamssTheme.colors.gray900,
-                textAlign = TextAlign.Center,
-            )
-            content()
-        }
-
+    CompositionLocalProvider(LocalGamssColors provides LightGamssColors) {
         Box(
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(top = GamssTheme.spacing.spacing550, end = GamssTheme.spacing.spacing550),
+            modifier = modifier
+                .width(CardWidth)
+                .height(CardHeight)
+                .clip(shape),
         ) {
-            topEndAction()
+            Image(
+                painter = painterResource(R.drawable.bg_card),
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(),
+            )
+
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(
+                        start = GamssTheme.spacing.spacing800,
+                        end = GamssTheme.spacing.spacing800,
+                        top = GamssTheme.spacing.spacing700,
+                    ),
+            ) {
+                Text(
+                    text = date,
+                    modifier = Modifier.fillMaxWidth(),
+                    style = GamssTheme.typography.subtitle3,
+                    color = GamssTheme.colors.gray900,
+                    textAlign = TextAlign.Center,
+                )
+                content()
+            }
+
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = GamssTheme.spacing.spacing550, end = GamssTheme.spacing.spacing550),
+            ) {
+                topEndAction()
+            }
         }
     }
 }
@@ -285,14 +280,9 @@ private fun ChattingCardPreviewContent() {
     }
 }
 
-// 디자인 실측: 카드 366x528. 안쪽 여백(좌우 48/상단 40)과 우상단 액션 아이콘 위치(28,28)는
-// GamssSpacing 값과 정확히 맞아떨어져 spacing800/700/550 토큰을 그대로 쓴다.
 private val CardWidth = 366.dp
 private val CardHeight = 528.dp
 
 private val DateToCharacterGap = 18.dp
 private val CharacterImageHeight = 156.dp
 private val CharacterToTitleGap = 42.dp
-
-// Figma char_image: #FFA8A8, opacity 30%.
-private val CharacterPlaceholderColor = Color(0x4DFFA8A8)
