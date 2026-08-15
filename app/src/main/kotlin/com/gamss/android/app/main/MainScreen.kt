@@ -26,7 +26,9 @@ import com.gamss.android.app.navigation.visibleIn
 import com.gamss.android.core.designsystem.component.GamssBottomBar
 import com.gamss.android.core.designsystem.component.GamssPaperBackground
 import com.gamss.android.core.designsystem.theme.GamssTheme
+import com.gamss.android.feature.archive.ArchiveDetailScreen
 import com.gamss.android.feature.archive.ArchiveScreen
+import com.gamss.android.feature.archive.navigation.ArchiveDetailKey
 import com.gamss.android.feature.archive.navigation.ArchiveKey
 import com.gamss.android.feature.chat.ChatRoomScreen
 import com.gamss.android.feature.chat.ChattingListScreen
@@ -102,10 +104,16 @@ private fun mainEntryProvider(navigator: Navigator, useCardFeature: Boolean) = e
     entry<ArchiveKey> {
         // 백스택 복원이나 플래그가 도중에 꺼지는 경우, 탭바에서 숨겨진 화면이 그려지지 않도록 홈으로 되돌린다.
         if (useCardFeature) {
-            ArchiveScreen(onNavigateToSetting = { navigator.navigate(SettingKey) })
+            ArchiveScreen(
+                onNavigateToSetting = { navigator.navigate(SettingKey) },
+                onArchiveClick = { navigator.navigate(ArchiveDetailKey(it)) },
+            )
         } else {
             LaunchedEffect(Unit) { navigator.navigate(HomeKey) }
         }
+    }
+    entry<ArchiveDetailKey> { key ->
+        ArchiveDetailScreen(emotion = key.emotion, onBackClick = navigator::goBack)
     }
     entry<SettingKey> {
         SettingScreen(
