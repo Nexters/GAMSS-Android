@@ -9,7 +9,7 @@ import java.util.Locale
 
 private const val KOREAN_TIME_PATTERN = "a h:mm"
 
-private val KoreanTimeZone: ZoneId = ZoneId.of("Asia/Seoul")
+val KoreanTimeZone: ZoneId = ZoneId.of("Asia/Seoul")
 private val KoreanTimeFormatter: DateTimeFormatter = DateTimeFormatter
     .ofPattern(KOREAN_TIME_PATTERN, Locale.KOREAN)
     .withZone(KoreanTimeZone)
