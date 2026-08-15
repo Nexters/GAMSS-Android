@@ -90,7 +90,7 @@ private fun gamssButtonColors(
         )
 
         GamssButtonVariant.Destructive -> GamssButtonColors(
-            containerColor = GamssTheme.colors.red,
+            containerColor = GamssTheme.colors.apricot,
             contentColor = GamssTheme.colors.white,
         )
     }
