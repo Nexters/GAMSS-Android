@@ -17,6 +17,7 @@ import com.gamss.android.domain.conversation.EndConversationUseCase
 import com.gamss.android.domain.conversation.GetMessagesUseCase
 import com.gamss.android.domain.conversation.Message
 import com.gamss.android.domain.conversation.MessageSender
+import com.gamss.android.domain.conversation.PendingConversationReveal
 import com.gamss.android.domain.conversation.SendMessageUseCase
 import com.gamss.android.domain.conversation.SentMessage
 import com.gamss.android.domain.conversation.UpdateConversationTitleUseCase
@@ -51,14 +52,11 @@ internal fun chatRoomViewModel(
     classifier: EmotionClassifier = FlatClassifier,
     tokenUsageRefreshNotifier: TokenUsageRefreshNotifier = RecordingTokenUsageRefreshNotifier(),
     remoteConfigRepository: RemoteConfigRepository = FakeRemoteConfigRepository(),
-): ChatRoomViewModel = ChatRoomViewModel(
-    tokenUsageRefreshNotifier = tokenUsageRefreshNotifier,
-    detectRiskInText = DetectRiskInTextUseCase(
-        repository = NoRiskLexiconRepository,
-        matcher = RiskTermMatcher(),
-    ),
-    getRemoteConfigFlag = GetRemoteConfigFlagUseCase(remoteConfigRepository),
-    session = ConversationSession(
+    // 실제 앱에서 채팅방이 받는 ConversationSession은 홈의 것과 다른 인스턴스다(무스코프 주입).
+    // 홈에서 먼저 보낸 시나리오를 검증하려면, 호출부가 홈 쪽 세션과 이 PendingConversationReveal
+    // 인스턴스만 공유해서 넘긴다 — 나머지 상태(요약·감정 누적)는 공유하지 않아야 실제 배선과 같다.
+    pendingReveal: PendingConversationReveal = PendingConversationReveal(),
+    session: ConversationSession = ConversationSession(
         sendMessage = SendMessageUseCase(conversationRepository),
         getMessages = GetMessagesUseCase(conversationRepository),
         updateConversationTitle = UpdateConversationTitleUseCase(conversationRepository),
@@ -72,7 +70,16 @@ internal fun chatRoomViewModel(
             tokenCounter = CharLengthTokenCounter,
         ),
         emotionAccumulator = ConversationEmotionAccumulator(classifier),
+        pendingReveal = pendingReveal,
     ),
+): ChatRoomViewModel = ChatRoomViewModel(
+    tokenUsageRefreshNotifier = tokenUsageRefreshNotifier,
+    detectRiskInText = DetectRiskInTextUseCase(
+        repository = NoRiskLexiconRepository,
+        matcher = RiskTermMatcher(),
+    ),
+    getRemoteConfigFlag = GetRemoteConfigFlagUseCase(remoteConfigRepository),
+    session = session,
 )
 
 /** 원격 설정 조회 없이 항상 켜진 값을 돌려준다. 값 자체를 검증하는 테스트는 별도로 stub 한다. */
