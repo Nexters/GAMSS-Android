@@ -4,6 +4,7 @@ import com.gamss.android.core.common.AppResult
 import com.gamss.android.data.remote.card.CardService
 import com.gamss.android.data.remote.card.model.request.CreateCardRequest
 import com.gamss.android.data.remote.card.model.response.toDomain
+import com.gamss.android.data.remote.card.model.response.toDomainOrNull
 import com.gamss.android.data.remote.emotion.toServerEmotionType
 import com.gamss.android.data.remote.runCatchingApiCall
 import com.gamss.android.data.remote.throwIfFailed
@@ -23,7 +24,7 @@ internal class CardRepositoryImpl @Inject constructor(
     override suspend fun getCardsByDate(date: LocalDate): AppResult<List<Card>> = runCatchingApiCall {
         val response = cardService.getCardsByDate(date.toString())
         response.throwIfFailed()
-        checkNotNull(response.data) { "No available card data" }.map { it.toDomain() }
+        checkNotNull(response.data) { "No available card data" }.mapNotNull { it.toDomainOrNull() }
     }
 
     override suspend fun createCard(

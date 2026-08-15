@@ -153,70 +153,81 @@ fun GamssEmotionCard(
         shape = shape,
         topEndAction = topEndAction,
     ) {
-        Spacer(modifier = Modifier.height(DateToCharacterGap))
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(CharacterImageHeight),
-        ) {
-            GamssEmotionCardCharacterImage(character = character)
-        }
-        Spacer(modifier = Modifier.height(CharacterToTitleGap))
-        Text(
-            text = title,
-            modifier = Modifier.fillMaxWidth(),
-            style = GamssTheme.typography.title2,
-            color = GamssTheme.colors.gray950,
-            textAlign = TextAlign.Center,
-        )
-        Spacer(modifier = Modifier.height(GamssTheme.spacing.spacing200))
-        Text(
-            text = description,
-            modifier = Modifier.fillMaxWidth(),
-            style = GamssTheme.typography.body4Regular,
-            color = GamssTheme.colors.gray800,
-            textAlign = TextAlign.Center,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-        )
-        Spacer(modifier = Modifier.height(GamssTheme.spacing.spacing800))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(GamssTheme.spacing.spacing100),
-        ) {
-            CardOutlinedButton(
-                text = primaryActionLabel,
-                onClick = onPrimaryActionClick,
-                modifier = Modifier.weight(1f),
-            )
-            CardOutlinedButton(
-                text = secondaryActionLabel,
-                onClick = onSecondaryActionClick,
-                modifier = Modifier.weight(1f),
-            )
-        }
-        Spacer(modifier = Modifier.height(GamssTheme.spacing.spacing200))
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .noRippleClickableIfNotNull(onShareClick),
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
+        GamssEmotionCardContent(character = character) {
             Text(
-                text = shareActionLabel,
-                style = GamssTheme.typography.body5Medium,
-                color = GamssTheme.colors.gray600,
+                text = title,
+                modifier = Modifier.fillMaxWidth(),
+                style = GamssTheme.typography.title2,
+                color = GamssTheme.colors.gray950,
+                textAlign = TextAlign.Center,
             )
-            Spacer(modifier = Modifier.width(GamssTheme.spacing.spacing025))
-            Icon(
-                painter = painterResource(GamssIcons.RightChevron),
-                contentDescription = null,
-                tint = GamssTheme.colors.gray600,
-                modifier = Modifier.size(GamssTheme.spacing.spacing300),
+            Spacer(modifier = Modifier.height(GamssTheme.spacing.spacing200))
+            Text(
+                text = description,
+                modifier = Modifier.fillMaxWidth(),
+                style = GamssTheme.typography.body4Regular,
+                color = GamssTheme.colors.gray800,
+                textAlign = TextAlign.Center,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
             )
+            Spacer(modifier = Modifier.height(GamssTheme.spacing.spacing800))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(GamssTheme.spacing.spacing100),
+            ) {
+                CardOutlinedButton(
+                    text = primaryActionLabel,
+                    onClick = onPrimaryActionClick,
+                    modifier = Modifier.weight(1f),
+                )
+                CardOutlinedButton(
+                    text = secondaryActionLabel,
+                    onClick = onSecondaryActionClick,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+            Spacer(modifier = Modifier.height(GamssTheme.spacing.spacing200))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .noRippleClickableIfNotNull(onShareClick),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = shareActionLabel,
+                    style = GamssTheme.typography.body5Medium,
+                    color = GamssTheme.colors.gray600,
+                )
+                Spacer(modifier = Modifier.width(GamssTheme.spacing.spacing025))
+                Icon(
+                    painter = painterResource(GamssIcons.RightChevron),
+                    contentDescription = null,
+                    tint = GamssTheme.colors.gray600,
+                    modifier = Modifier.size(GamssTheme.spacing.spacing300),
+                )
+            }
         }
     }
+}
+
+/** 감정 카드의 캐릭터 영역과 그 아래 콘텐츠 간격을 재사용한다. */
+@Composable
+fun ColumnScope.GamssEmotionCardContent(
+    character: GamssEmotionCardCharacter,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    Spacer(modifier = Modifier.height(DateToCharacterGap))
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(CharacterImageHeight),
+    ) {
+        GamssEmotionCardCharacterImage(character = character)
+    }
+    Spacer(modifier = Modifier.height(CharacterToTitleGap))
+    content()
 }
 
 /**

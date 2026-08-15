@@ -20,9 +20,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.gamss.android.core.designsystem.card.GamssEmotionCardCharacterImage
+import com.gamss.android.core.designsystem.card.GamssEmotionCardContent
 import com.gamss.android.core.designsystem.card.GamssImageCard
 import com.gamss.android.core.designsystem.theme.GamssTheme
 import com.gamss.android.core.ui.card.toGamssEmotionCardCharacter
@@ -136,35 +137,30 @@ private fun CalendarCardItem(card: Card) {
         contentAlignment = Alignment.TopCenter,
     ) {
         GamssImageCard(date = card.date.format(CardDateFormatter)) {
-            Spacer(modifier = Modifier.height(18.dp))
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(156.dp),
+            GamssEmotionCardContent(
+                character = card.character.toGamssEmotionCardCharacter(),
             ) {
-                GamssEmotionCardCharacterImage(
-                    character = card.character.toGamssEmotionCardCharacter(),
-                )
-            }
-            Spacer(modifier = Modifier.height(42.dp))
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
-                Text(
-                    text = card.emotionLabel,
+                Column(
                     modifier = Modifier.fillMaxWidth(),
-                    style = GamssTheme.typography.subtitle3,
-                    color = GamssTheme.colors.gray800,
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                )
-                Text(
-                    text = card.summary,
-                    modifier = Modifier.fillMaxWidth(),
-                    style = GamssTheme.typography.title3,
-                    color = GamssTheme.colors.gray950,
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                )
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    Text(
+                        text = card.emotionLabel,
+                        modifier = Modifier.fillMaxWidth(),
+                        style = GamssTheme.typography.subtitle3,
+                        color = GamssTheme.colors.gray800,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    )
+                    Text(
+                        text = card.summary,
+                        modifier = Modifier.fillMaxWidth(),
+                        style = GamssTheme.typography.title3,
+                        color = GamssTheme.colors.gray950,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
             }
         }
     }

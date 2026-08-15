@@ -4,6 +4,10 @@ import androidx.lifecycle.ViewModel
 import com.gamss.android.core.common.AppResult
 import com.gamss.android.domain.card.GetCardsByDateUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.launch
 import org.orbitmvi.orbit.ContainerHost
 import org.orbitmvi.orbit.syntax.Syntax
 import org.orbitmvi.orbit.viewmodel.container
@@ -21,31 +25,42 @@ class CalendarViewModel @Inject constructor(
         CalendarState(today = LocalDate.now()),
     )
 
+    private var cardLoadJob: Job? = null
+
     fun selectDate(date: LocalDate) = intent {
         if (date == state.selectedDate) {
+            cardLoadJob?.cancel()
             reduce { state.copy(selectedDate = null, cardLoadState = CalendarCardLoadState.Idle) }
             return@intent
         }
 
-        loadCards(date)
+        startCardLoad(date)
     }
 
     fun retrySelectedDate() = intent {
-        state.selectedDate?.let { loadCards(it) }
+        state.selectedDate?.let { startCardLoad(it) }
     }
 
-    private suspend fun Syntax<CalendarState, CalendarSideEffect>.loadCards(date: LocalDate) {
+    private suspend fun Syntax<CalendarState, CalendarSideEffect>.startCardLoad(date: LocalDate) {
+        cardLoadJob?.cancelAndJoin()
         reduce { state.copy(selectedDate = date, cardLoadState = CalendarCardLoadState.Loading) }
-        when (val result = getCardsByDate(date)) {
-            is AppResult.Success -> reduce {
-                state.copy(
-                    cardLoadState = result.data
+
+        cardLoadJob = container.scope.launch(start = CoroutineStart.UNDISPATCHED) {
+            val loadState = when (val result = getCardsByDate(date)) {
+                is AppResult.Success ->
+                    result.data
                         .takeIf { it.isNotEmpty() }
                         ?.let(CalendarCardLoadState::Content)
-                        ?: CalendarCardLoadState.Empty,
-                )
+                        ?: CalendarCardLoadState.Empty
+                is AppResult.Failure ->
+                    CalendarCardLoadState.Error
             }
-            is AppResult.Failure -> reduce { state.copy(cardLoadState = CalendarCardLoadState.Error) }
+
+            intent {
+                if (state.selectedDate == date) {
+                    reduce { state.copy(cardLoadState = loadState) }
+                }
+            }
         }
     }
 }

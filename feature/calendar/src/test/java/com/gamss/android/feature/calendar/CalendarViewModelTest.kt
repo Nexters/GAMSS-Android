@@ -5,7 +5,9 @@ import com.gamss.android.domain.card.Card
 import com.gamss.android.domain.card.CardRepository
 import com.gamss.android.domain.card.GetCardsByDateUseCase
 import com.gamss.android.domain.emotion.EmotionCharacter
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -25,6 +27,7 @@ class CalendarViewModelTest {
         CalendarViewModel(GetCardsByDateUseCase(repository)).test(this) {
             containerHost.selectDate(selectedDate)
             runCurrent()
+            runCurrent()
 
             val state = containerHost.container.stateFlow.value
             assertEquals(selectedDate, repository.requestedDate)
@@ -43,10 +46,12 @@ class CalendarViewModelTest {
         CalendarViewModel(GetCardsByDateUseCase(repository)).test(this) {
             containerHost.selectDate(selectedDate)
             runCurrent()
+            runCurrent()
             assertEquals(CalendarCardLoadState.Error, containerHost.container.stateFlow.value.cardLoadState)
 
             repository.shouldFail = false
             containerHost.retrySelectedDate()
+            runCurrent()
             runCurrent()
 
             assertEquals(2, repository.requestCount)
@@ -54,6 +59,29 @@ class CalendarViewModelTest {
                 CalendarCardLoadState.Content(listOf(card(selectedDate))),
                 containerHost.container.stateFlow.value.cardLoadState,
             )
+            cancelAndIgnoreRemainingItems()
+        }
+    }
+
+    @Test
+    fun `selecting a new date cancels the previous card request`() = runTest {
+        val firstDate = LocalDate.of(2026, 8, 15)
+        val secondDate = LocalDate.of(2026, 8, 16)
+        val repository = DelayingCardRepository()
+
+        CalendarViewModel(GetCardsByDateUseCase(repository)).test(this) {
+            containerHost.selectDate(firstDate)
+            repository.awaitFirstRequest()
+            containerHost.selectDate(secondDate)
+            repository.awaitSecondRequest()
+
+            assertEquals(listOf(firstDate, secondDate), repository.requestedDates)
+            assertEquals(listOf(firstDate), repository.cancelledDates)
+            assertEquals(secondDate, containerHost.container.stateFlow.value.selectedDate)
+            assertEquals(CalendarCardLoadState.Loading, containerHost.container.stateFlow.value.cardLoadState)
+
+            containerHost.selectDate(secondDate)
+            runCurrent()
             cancelAndIgnoreRemainingItems()
         }
     }
@@ -76,6 +104,36 @@ class CalendarViewModelTest {
                 AppResult.Success(listOf(card))
             }
         }
+
+        override suspend fun createCard(
+            conversationId: Long,
+            character: EmotionCharacter,
+            summary: String,
+        ): AppResult<Card> = error("Not used by the calendar")
+    }
+
+    private class DelayingCardRepository : CardRepository {
+        val requestedDates = mutableListOf<LocalDate>()
+        val cancelledDates = mutableListOf<LocalDate>()
+        private val firstRequestStarted = CompletableDeferred<Unit>()
+        private val secondRequestStarted = CompletableDeferred<Unit>()
+
+        override suspend fun getCardsByDate(date: LocalDate): AppResult<List<Card>> {
+            requestedDates += date
+            when (requestedDates.size) {
+                1 -> firstRequestStarted.complete(Unit)
+                2 -> secondRequestStarted.complete(Unit)
+            }
+            try {
+                awaitCancellation()
+            } finally {
+                cancelledDates += date
+            }
+        }
+
+        suspend fun awaitFirstRequest() = firstRequestStarted.await()
+
+        suspend fun awaitSecondRequest() = secondRequestStarted.await()
 
         override suspend fun createCard(
             conversationId: Long,
