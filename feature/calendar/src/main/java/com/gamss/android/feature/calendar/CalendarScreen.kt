@@ -4,9 +4,9 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -31,8 +31,9 @@ import com.gamss.android.feature.calendar.component.CalendarDayCell
 import com.gamss.android.feature.calendar.component.MonthCalendar
 import com.kizitonwose.calendar.core.DayPosition
 import org.orbitmvi.orbit.compose.collectAsState
-import java.time.format.DateTimeFormatter
+import java.time.LocalDate
 import java.time.YearMonth
+import java.time.format.DateTimeFormatter
 
 private const val PAST_MONTH_COUNT = 60L
 private const val FUTURE_MONTH_COUNT = 12L
@@ -79,7 +80,7 @@ fun CalendarScreen(
 
 @Composable
 private fun CalendarCardResults(
-    selectedDate: java.time.LocalDate?,
+    selectedDate: LocalDate?,
     loadState: CalendarCardLoadState,
     onRetryClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -88,14 +89,20 @@ private fun CalendarCardResults(
 
     Column(modifier = modifier.padding(top = 24.dp)) {
         Text(
-            text = stringResource(R.string.calendar_card_result_title, selectedDate.monthValue, selectedDate.dayOfMonth),
+            text = stringResource(
+                R.string.calendar_card_result_title,
+                selectedDate.monthValue,
+                selectedDate.dayOfMonth,
+            ),
             style = GamssTheme.typography.title3,
             color = GamssTheme.colors.gray950,
         )
         Spacer(modifier = Modifier.height(12.dp))
         when (loadState) {
             CalendarCardLoadState.Idle -> Unit
-            CalendarCardLoadState.Loading -> CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
+            CalendarCardLoadState.Loading -> CircularProgressIndicator(
+                modifier = Modifier.align(Alignment.CenterHorizontally),
+            )
             CalendarCardLoadState.Empty -> Text(
                 text = stringResource(R.string.calendar_card_empty),
                 style = GamssTheme.typography.body4Regular,

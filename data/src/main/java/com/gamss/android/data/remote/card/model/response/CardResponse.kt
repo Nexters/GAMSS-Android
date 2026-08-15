@@ -1,7 +1,7 @@
 package com.gamss.android.data.remote.card.model.response
 
-import com.gamss.android.domain.card.Card
 import com.gamss.android.data.remote.emotion.toEmotionCharacter
+import com.gamss.android.domain.card.Card
 import kotlinx.serialization.Serializable
 import java.time.LocalDate
 

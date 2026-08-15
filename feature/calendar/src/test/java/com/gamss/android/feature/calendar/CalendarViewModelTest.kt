@@ -70,7 +70,11 @@ class CalendarViewModelTest {
         override suspend fun getCardsByDate(date: LocalDate): AppResult<List<Card>> {
             requestedDate = date
             requestCount++
-            return if (shouldFail) AppResult.Failure(IllegalStateException("Network failure")) else AppResult.Success(listOf(card))
+            return if (shouldFail) {
+                AppResult.Failure(IllegalStateException("Network failure"))
+            } else {
+                AppResult.Success(listOf(card))
+            }
         }
 
         override suspend fun createCard(

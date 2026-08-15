@@ -2,7 +2,6 @@ package com.gamss.android.feature.calendar
 
 import androidx.lifecycle.ViewModel
 import com.gamss.android.core.common.AppResult
-import com.gamss.android.domain.card.Card
 import com.gamss.android.domain.card.GetCardsByDateUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import org.orbitmvi.orbit.ContainerHost
