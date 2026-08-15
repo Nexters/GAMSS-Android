@@ -25,7 +25,6 @@ fun SettingScreen(
     onAccountInfoClick: () -> Unit,
     onServiceTermsClick: () -> Unit,
     onPrivacyPolicyClick: () -> Unit,
-    onCardDeletePreviewClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -65,12 +64,6 @@ fun SettingScreen(
                 title = stringResource(R.string.setting_list_app_version),
                 additionalInfo = appVersion,
             )
-            if (onCardDeletePreviewClick != null) {
-                SettingListItem(
-                    title = stringResource(R.string.setting_list_card_delete_preview),
-                    onClick = onCardDeletePreviewClick,
-                )
-            }
         }
     }
 }
