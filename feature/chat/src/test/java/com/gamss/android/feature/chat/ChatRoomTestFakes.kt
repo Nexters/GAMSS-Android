@@ -37,6 +37,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emptyFlow
+import java.time.LocalDate
 
 /**
  * 채팅 ViewModel 조립을 한 곳에 둔다. 테스트마다 따로 조립하면 세션 구성이 갈라진다.
@@ -200,6 +201,9 @@ internal class CountingCardRepository(
     var calls = 0
         private set
 
+    override suspend fun getCardsByDate(date: LocalDate): AppResult<List<Card>> =
+        AppResult.Success(emptyList())
+
     override suspend fun createCard(
         conversationId: Long,
         character: EmotionCharacter,
@@ -208,7 +212,17 @@ internal class CountingCardRepository(
         calls++
         gate?.await()
         return failure?.let { AppResult.Failure(it) }
-            ?: AppResult.Success(Card(character = character, summary = summary, message = "대사"))
+            ?: AppResult.Success(
+                Card(
+                    id = 1L,
+                    conversationId = conversationId,
+                    character = character,
+                    emotionLabel = character.displayName,
+                    summary = summary,
+                    message = "대사",
+                    date = LocalDate.of(2026, 8, 15),
+                ),
+            )
     }
 }
 

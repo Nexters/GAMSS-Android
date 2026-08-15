@@ -10,12 +10,14 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -53,8 +55,9 @@ fun GamssImageCard(
     CompositionLocalProvider(LocalGamssColors provides LightGamssColors) {
         Box(
             modifier = modifier
-                .width(CardWidth)
-                .height(CardHeight)
+                .widthIn(max = CardWidth)
+                .fillMaxWidth()
+                .aspectRatio(CardAspectRatio)
                 .clip(shape),
         ) {
             Image(
@@ -156,12 +159,7 @@ fun GamssEmotionCard(
                 .fillMaxWidth()
                 .height(CharacterImageHeight),
         ) {
-            Image(
-                painter = painterResource(character.drawableRes),
-                contentDescription = null,
-                contentScale = ContentScale.Fit,
-                modifier = Modifier.fillMaxSize(),
-            )
+            GamssEmotionCardCharacterImage(character = character)
         }
         Spacer(modifier = Modifier.height(CharacterToTitleGap))
         Text(
@@ -351,6 +349,7 @@ private fun ChattingCardPreviewContent() {
 
 private val CardWidth = 366.dp
 private val CardHeight = 528.dp
+private val CardAspectRatio = CardWidth.value / CardHeight.value
 
 private val DateToCharacterGap = 18.dp
 private val CharacterImageHeight = 156.dp

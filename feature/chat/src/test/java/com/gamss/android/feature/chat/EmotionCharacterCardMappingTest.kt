@@ -1,6 +1,7 @@
 package com.gamss.android.feature.chat
 
 import com.gamss.android.core.designsystem.card.GamssEmotionCardCharacter
+import com.gamss.android.core.ui.card.toGamssEmotionCardCharacter
 import com.gamss.android.domain.emotion.EmotionCharacter
 import org.junit.Assert.assertEquals
 import org.junit.Test

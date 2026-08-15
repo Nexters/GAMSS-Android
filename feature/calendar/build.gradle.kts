@@ -8,6 +8,7 @@ android {
 
 dependencies {
     implementation(projects.core.ui)
+    implementation(projects.domain)
 
     implementation(libs.calendar.compose) {
         exclude(group = "androidx.compose.ui", module = "ui-tooling")

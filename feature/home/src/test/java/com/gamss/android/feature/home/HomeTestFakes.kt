@@ -26,6 +26,7 @@ import com.gamss.android.domain.summary.DiarySummarizer
 import com.gamss.android.domain.summary.SummarizeDiaryUseCase
 import com.gamss.android.domain.summary.UtteranceTokenCounter
 import kotlinx.coroutines.CompletableDeferred
+import java.time.LocalDate
 
 internal const val NEW_ROOM_ID = 42L
 
@@ -111,6 +112,9 @@ internal class RecordingConversationRepository(
 }
 
 private object NoCardRepository : CardRepository {
+    override suspend fun getCardsByDate(date: LocalDate): AppResult<List<Card>> =
+        AppResult.Success(emptyList())
+
     override suspend fun createCard(
         conversationId: Long,
         character: EmotionCharacter,

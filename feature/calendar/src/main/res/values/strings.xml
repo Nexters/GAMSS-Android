@@ -5,4 +5,8 @@
     <string name="calendar_next_month">다음 달</string>
     <string name="calendar_date_description">%1$d년 %2$d월 %3$d일</string>
     <string name="calendar_date_description_today">%1$d년 %2$d월 %3$d일, 오늘</string>
+    <string name="calendar_card_result_title">%1$d월 %2$d일의 카드</string>
+    <string name="calendar_card_empty">이 날짜에는 카드가 없어요.</string>
+    <string name="calendar_card_load_error">카드를 불러오지 못했어요.</string>
+    <string name="calendar_card_retry">다시 시도</string>
 </resources>
