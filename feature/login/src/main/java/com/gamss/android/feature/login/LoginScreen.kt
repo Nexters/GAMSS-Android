@@ -53,6 +53,7 @@ private val ButtonBottomSpacing = 54.dp
 @Composable
 fun LoginScreen(
     googleWebClientId: String,
+    onLoginSuccess: (isFirstLogin: Boolean) -> Unit,
     viewModel: LoginViewModel = hiltViewModel(),
 ) {
     val state by viewModel.collectAsState()
@@ -76,6 +77,9 @@ fun LoginScreen(
 
     viewModel.collectSideEffect { sideEffect ->
         when (sideEffect) {
+            is LoginSideEffect.LoginSucceeded ->
+                onLoginSuccess(sideEffect.isFirstLogin)
+
             is LoginSideEffect.ShowToast ->
                 Toast.makeText(context, sideEffect.message, Toast.LENGTH_SHORT).show()
         }
