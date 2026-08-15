@@ -24,10 +24,6 @@ import org.junit.Before
 import org.junit.Test
 import org.orbitmvi.orbit.test.test
 
-/**
- * 홈과 채팅방은 각자 다른 [ConversationSession] 인스턴스를 받는다(무스코프 주입). 둘이 공유하는
- * 건 [PendingConversationReveal] 뿐이라, 여기서도 그 배선을 그대로 재현해 검증한다.
- */
 @OptIn(ExperimentalCoroutinesApi::class)
 class ChatRoomLoadTest {
 

@@ -82,11 +82,7 @@ class ConversationSession @Inject constructor(
         return result
     }
 
-    /**
-     * 홈에서 이미 받아온 첫 교환을 채팅방이 재조회 없이 이어받게 한다. 캐시가 없으면(비었거나
-     * 다른 conversationId면) null이라 호출부는 [restore] 로 폴백한다. 홈 쪽 인스턴스에서만
-     * 채워진 요약·감정 상태를 [restore] 와 같은 방식으로 이 인스턴스에도 시드해 둔다.
-     */
+    /** 홈 쪽 인스턴스에서만 채워진 요약·감정 상태를, [restore] 와 같은 방식으로 이 인스턴스에도 시드해 둔다. */
     suspend fun consumePendingReveal(conversationId: Long): SentMessage? {
         val sent = pendingReveal.consume(conversationId) ?: return null
         val utterances = listOf(sent.message).userUtterances()
