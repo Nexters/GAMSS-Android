@@ -85,13 +85,11 @@ private enum class OnboardingPage(
 @Composable
 fun OnboardingScreen(
     onComplete: () -> Unit,
-    onBackClick: () -> Unit,
     onNotificationPermissionRequest: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     OnboardingContent(
         onComplete = onComplete,
-        onBackClick = onBackClick,
         onNotificationPermissionRequest = onNotificationPermissionRequest,
         modifier = modifier,
     )
@@ -100,7 +98,6 @@ fun OnboardingScreen(
 @Composable
 private fun OnboardingContent(
     onComplete: () -> Unit,
-    onBackClick: () -> Unit,
     onNotificationPermissionRequest: () -> Unit,
     modifier: Modifier = Modifier,
     initialPage: Int = 0,
@@ -140,13 +137,10 @@ private fun OnboardingContent(
         }
 
         OnboardingTopBar(
+            showBack = pagerState.currentPage > 0,
             showSkip = pagerState.currentPage < pages.lastIndex,
             onBackClick = {
-                if (pagerState.currentPage == 0) {
-                    onBackClick()
-                } else {
-                    coroutineScope.launch { pagerState.animateScrollToPage(pagerState.currentPage - 1) }
-                }
+                coroutineScope.launch { pagerState.animateScrollToPage(pagerState.currentPage - 1) }
             },
             onSkipClick = onComplete,
             modifier = Modifier.align(Alignment.TopCenter),
@@ -199,6 +193,7 @@ private fun OnboardingActionButton(
 
 @Composable
 private fun OnboardingTopBar(
+    showBack: Boolean,
     showSkip: Boolean,
     onBackClick: () -> Unit,
     onSkipClick: () -> Unit,
@@ -208,7 +203,7 @@ private fun OnboardingTopBar(
         GamssTopNavigation(
             content = GamssTopNavigationContent.None,
             backgroundColor = GamssTheme.colors.background,
-            showLeftIcon = true,
+            showLeftIcon = showBack,
             leftIconContentDescription = stringResource(R.string.onboarding_back_description),
             onLeftIconClick = onBackClick,
         )
@@ -307,7 +302,6 @@ private fun OnboardingStep1Preview() {
     GamssTheme {
         OnboardingContent(
             onComplete = {},
-            onBackClick = {},
             onNotificationPermissionRequest = {},
         )
     }
@@ -320,7 +314,6 @@ private fun OnboardingStep3Preview() {
     GamssTheme {
         OnboardingContent(
             onComplete = {},
-            onBackClick = {},
             onNotificationPermissionRequest = {},
             initialPage = OnboardingPage.entries.lastIndex,
         )
