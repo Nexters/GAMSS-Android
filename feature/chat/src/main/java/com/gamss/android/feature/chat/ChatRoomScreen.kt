@@ -204,6 +204,11 @@ private fun ChatRoomContent(
     onBackClick: () -> Unit,
 ) {
     val listState = rememberLazyListState()
+    val messageAnimationState = rememberChatMessageAnimationState(
+        conversationId = state.conversationId,
+        isLoading = state.isLoading,
+        messageIds = state.messages.map(Message::id),
+    )
 
     LaunchedEffect(state.messages.size, state.isAwaitingComments) {
         val itemCount = state.messages.size + if (state.isAwaitingComments) 1 else 0
@@ -251,6 +256,7 @@ private fun ChatRoomContent(
                 state = state,
                 actions = actions,
                 listState = listState,
+                animationState = messageAnimationState,
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth(),
@@ -275,6 +281,7 @@ private fun ChatMessageList(
     state: ChatRoomState,
     actions: ChatRoomActions,
     listState: LazyListState,
+    animationState: ChatMessageAnimation,
     modifier: Modifier = Modifier,
 ) {
     LazyColumn(
@@ -302,11 +309,17 @@ private fun ChatMessageList(
             }
         }
         items(state.messages, key = { it.id }) { message ->
-            MessageBubble(
-                message = message,
-                messages = state.messages,
-                onCharacterMessageClick = actions.onCharacterMessageClick,
-            )
+            AnimatedChatMessage(
+                messageId = message.id,
+                shouldAnimate = animationState.shouldAnimate(message.id),
+                listState = listState,
+            ) {
+                MessageBubble(
+                    message = message,
+                    messages = state.messages,
+                    onCharacterMessageClick = actions.onCharacterMessageClick,
+                )
+            }
         }
         if (state.isAwaitingComments) {
             item { GeneratingIndicator() }
