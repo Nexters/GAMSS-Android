@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -183,21 +182,26 @@ private fun PaperPile(cards: List<Card>) {
         val boundsWidthPx = with(density) { (DetailPaperDesignWidth * scale).toPx() }
         val boundsHeightPx = with(density) { maxHeight.toPx() }
         val paperSizePx = with(density) { (DetailPaperSize * scale).toPx() }
-        val radiusPx = paperSizePx / 2f * PaperCollisionRadiusScale
+        val radiusPx = paperSizePx / 2f * PAPER_COLLISION_RADIUS_SCALE
 
         // 화면 회전 등으로 boundsWidthPx/boundsHeightPx만 바뀌었을 때는 키에서 빼서, 이미 쌓인 카드가
         // 처음부터 다시 쏟아지지 않게 한다 — cards 자체가 바뀔 때만 스폰/낙하를 새로 시작한다.
         val uiStates = remember(cards) {
             List(cards.size) { index ->
                 val spawnX = radiusPx + Random.nextFloat() * (boundsWidthPx - radiusPx * 2f).coerceAtLeast(0f)
-                val spawnY = -radiusPx - index * radiusPx * PaperSpawnStagger
-                val spawnRotation = (Random.nextFloat() - 0.5f) * 2f * PaperMaxTiltDegrees
+                val spawnY = -radiusPx - index * radiusPx * PAPER_SPAWN_STAGGER
+                val spawnRotation = (Random.nextFloat() - 0.5f) * 2f * PAPER_MAX_TILT_DEGREES
                 PaperUiState(x = spawnX, y = spawnY, rotationDegrees = spawnRotation)
             }
         }
 
         LaunchedEffect(cards) {
-            runPaperFall(uiStates = uiStates, boundsWidthPx = boundsWidthPx, boundsHeightPx = boundsHeightPx, radiusPx = radiusPx)
+            runPaperFall(
+                uiStates = uiStates,
+                boundsWidthPx = boundsWidthPx,
+                boundsHeightPx = boundsHeightPx,
+                radiusPx = radiusPx,
+            )
         }
 
         cards.forEachIndexed { index, card ->
@@ -231,8 +235,8 @@ private suspend fun CoroutineScope.runPaperFall(
             startY = ui.y,
             startAngle = ui.rotationDegrees.toRadians(),
             radius = radiusPx,
-            startVelX = (Random.nextFloat() - 0.5f) * PaperSpawnDrift,
-            startAngularVelocity = (Random.nextFloat() - 0.5f) * PaperSpawnSpin,
+            startVelX = (Random.nextFloat() - 0.5f) * PAPER_SPAWN_DRIFT,
+            startAngularVelocity = (Random.nextFloat() - 0.5f) * PAPER_SPAWN_SPIN,
         )
     }
     val world = PaperPhysicsWorld(bodies, boundsWidth = boundsWidthPx, boundsHeight = boundsHeightPx)
@@ -244,9 +248,9 @@ private suspend fun CoroutineScope.runPaperFall(
         withFrameNanos { frameNanos ->
             if (startFrameNanos < 0) startFrameNanos = frameNanos
             val dt = if (lastFrameNanos < 0) {
-                PhysicsFixedDt
+                PHYSICS_FIXED_DT
             } else {
-                ((frameNanos - lastFrameNanos) / 1_000_000_000f).coerceIn(0f, PhysicsMaxDt)
+                ((frameNanos - lastFrameNanos) / 1_000_000_000f).coerceIn(0f, PHYSICS_MAX_DT)
             }
             lastFrameNanos = frameNanos
 
@@ -258,23 +262,23 @@ private suspend fun CoroutineScope.runPaperFall(
                     rotationDegrees = body.angle.toDegrees()
                 }
             }
-            settledFrames = if (world.maxActivity() < PhysicsSettleThreshold) settledFrames + 1 else 0
+            settledFrames = if (world.maxActivity() < PHYSICS_SETTLE_THRESHOLD) settledFrames + 1 else 0
         }
         val elapsedNanos = lastFrameNanos - startFrameNanos
-        if (settledFrames >= PhysicsSettleFrames || elapsedNanos > PhysicsMaxDurationNanos) break
+        if (settledFrames >= PHYSICS_SETTLE_FRAMES || elapsedNanos > PHYSICS_MAX_DURATION_NANOS) break
     }
 }
 
-private const val PaperCollisionRadiusScale = 1.15f
-private const val PaperMaxTiltDegrees = 42f
-private const val PaperSpawnStagger = 0.9f
-private const val PaperSpawnDrift = 120f
-private const val PaperSpawnSpin = 0.15f
-private const val PhysicsFixedDt = 1f / 60f
-private const val PhysicsMaxDt = 1f / 30f
-private const val PhysicsSettleThreshold = 4f
-private const val PhysicsSettleFrames = 30
-private const val PhysicsMaxDurationNanos = 5_000_000_000L
+private const val PAPER_COLLISION_RADIUS_SCALE = 1.15f
+private const val PAPER_MAX_TILT_DEGREES = 42f
+private const val PAPER_SPAWN_STAGGER = 0.9f
+private const val PAPER_SPAWN_DRIFT = 120f
+private const val PAPER_SPAWN_SPIN = 0.15f
+private const val PHYSICS_FIXED_DT = 1f / 60f
+private const val PHYSICS_MAX_DT = 1f / 30f
+private const val PHYSICS_SETTLE_THRESHOLD = 4f
+private const val PHYSICS_SETTLE_FRAMES = 30
+private const val PHYSICS_MAX_DURATION_NANOS = 5_000_000_000L
 
 private val YearMonthFormatter = DateTimeFormatter.ofPattern("yyyy.MM")
 private val DetailTopBarStartPadding = 18.dp
@@ -292,6 +296,7 @@ private val DetailPaperSize = 88.dp
 
 @Preview(showBackground = true, widthDp = 402, heightDp = 874)
 @Composable
+@Suppress("UnusedPrivateMember")
 private fun ArchiveDetailPaperPilePreview() {
     GamssTheme(darkTheme = false) {
         ArchiveDetailFrame(

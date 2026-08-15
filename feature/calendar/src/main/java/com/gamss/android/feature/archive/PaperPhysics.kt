@@ -13,13 +13,12 @@ internal class PaperBody(
     startAngle: Float,
     val radius: Float,
     startVelX: Float = 0f,
-    startVelY: Float = 0f,
     startAngularVelocity: Float = 0f,
 ) {
     var x: Float = startX
     var y: Float = startY
     var velX: Float = startVelX
-    var velY: Float = startVelY
+    var velY: Float = 0f
     var angle: Float = startAngle
     var angularVelocity: Float = startAngularVelocity
 }
@@ -44,7 +43,8 @@ internal class PaperPhysicsWorld(
             body.angle += body.angularVelocity * dt
             body.velX *= LinearDamping
             body.velY *= LinearDamping
-            val dampedAngularVelocity = (body.angularVelocity * AngularDamping).coerceIn(-MaxAngularVelocity, MaxAngularVelocity)
+            val dampedAngularVelocity = (body.angularVelocity * AngularDamping)
+                .coerceIn(-MaxAngularVelocity, MaxAngularVelocity)
             // Snap near-zero spin to exactly zero, otherwise resting contacts keep re-injecting
             // sub-threshold torque every frame and the pile never stops turning in place.
             body.angularVelocity = if (abs(dampedAngularVelocity) < AngularSleepThreshold) 0f else dampedAngularVelocity

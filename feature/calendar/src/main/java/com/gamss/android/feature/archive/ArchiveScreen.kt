@@ -9,8 +9,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -58,14 +58,14 @@ fun ArchiveScreen(
                 modifier = Modifier
                     .width(gridWidth)
                     .padding(
-                    start = ArchiveHorizontalPadding * scale,
-                    end = ArchiveHorizontalPadding * scale,
-                    top = ArchiveTopPadding * scale,
-                    bottom = ArchiveBottomPadding * scale,
-                ),
+                        start = ArchiveHorizontalPadding * scale,
+                        end = ArchiveHorizontalPadding * scale,
+                        top = ArchiveTopPadding * scale,
+                        bottom = ArchiveBottomPadding * scale,
+                    ),
                 verticalArrangement = Arrangement.spacedBy(ArchiveVerticalSpacing * scale),
             ) {
-                archiveItems.chunked(ArchiveColumnCount).forEach { rowItems ->
+                archiveItems.chunked(ARCHIVE_COLUMN_COUNT).forEach { rowItems ->
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(ArchiveHorizontalSpacing * scale),
@@ -137,4 +137,4 @@ private val ArchiveCardWidth = 132.dp
 private val ArchiveCardHeight = 172.dp
 private val ArchiveTopBarStartPadding = 20.dp
 private val ArchiveTopBarEndPadding = 8.dp
-private const val ArchiveColumnCount = 2
+private const val ARCHIVE_COLUMN_COUNT = 2
