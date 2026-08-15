@@ -19,7 +19,7 @@ class CardDeleteViewModel @Inject constructor(
     override val container = container<CardDeleteState, CardDeleteSideEffect>(CardDeleteState())
 
     /** 누를 때마다 종이가 한 단계씩 내려간다. 끝까지 내려가면 전달받은 카드만 삭제한다. */
-    fun onShredTap(cardId: Long) = intent {
+    fun onShredTap(cardId: Long, isAnimationPreview: Boolean = false) = intent {
         if (state.isDeleting || state.shredTapCount >= SHRED_TOTAL_TAPS) return@intent
 
         val nextTapCount = state.shredTapCount + 1
@@ -27,6 +27,11 @@ class CardDeleteViewModel @Inject constructor(
         if (nextTapCount < SHRED_TOTAL_TAPS) return@intent
 
         reduce { state.copy(isDeleting = true) }
+        if (isAnimationPreview) {
+            delay(SHRED_COMPLETE_HOLD_MS)
+            reduce { state.copy(isDeleting = false, isCompleted = true) }
+            return@intent
+        }
         val result = coroutineScope {
             val minimumHold = launch { delay(SHRED_COMPLETE_HOLD_MS) }
             val outcome = deleteCard(cardId)

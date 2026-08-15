@@ -109,11 +109,17 @@ private fun mainEntryProvider(navigator: Navigator) = entryProvider {
             onAccountInfoClick = { navigator.navigate(AccountInfoKey) },
             onServiceTermsClick = { navigator.navigate(WebViewKey(GamssWebPage.ServiceTerms)) },
             onPrivacyPolicyClick = { navigator.navigate(WebViewKey(GamssWebPage.PrivacyPolicy)) },
+            onCardDeletePreviewClick = if (BuildConfig.BUILD_TYPE == "debug") {
+                { navigator.navigate(CardDeleteKey(cardId = 0L, isAnimationPreview = true)) }
+            } else {
+                null
+            },
         )
     }
     entry<CardDeleteKey> { key ->
         CardDeleteScreen(
             cardId = key.cardId,
+            isAnimationPreview = key.isAnimationPreview,
             onBackClick = navigator::goBack,
             onDeleteComplete = navigator::finishCurrentFlow,
         )

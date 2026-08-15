@@ -30,6 +30,7 @@ import org.orbitmvi.orbit.compose.collectSideEffect
 @Composable
 fun CardDeleteScreen(
     cardId: Long,
+    isAnimationPreview: Boolean,
     onBackClick: () -> Unit,
     onDeleteComplete: () -> Unit,
     modifier: Modifier = Modifier,
@@ -54,7 +55,7 @@ fun CardDeleteScreen(
             else -> onBackClick
         },
         onDeleteComplete = onDeleteComplete,
-        onShredTap = { viewModel.onShredTap(cardId) },
+        onShredTap = { viewModel.onShredTap(cardId, isAnimationPreview) },
         modifier = modifier,
     )
 }

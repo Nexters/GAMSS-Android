@@ -56,6 +56,19 @@ class CardDeleteViewModelTest {
         coVerify(exactly = 1) { deleteCard(CARD_ID) }
     }
 
+    @Test
+    fun `애니메이션 미리보기는 삭제 요청 없이 완료 상태를 보여준다`() = runTest {
+        CardDeleteViewModel(deleteCard).test(this) {
+            repeat(SHRED_TOTAL_TAPS) { containerHost.onShredTap(CARD_ID, isAnimationPreview = true) }
+            repeat(SHRED_TOTAL_TAPS) { tapIndex -> expectState { copy(shredTapCount = tapIndex + 1) } }
+            expectState { copy(shredTapCount = SHRED_TOTAL_TAPS, isDeleting = true) }
+            advanceTimeBy(SHRED_COMPLETE_HOLD_MS)
+            expectState { copy(isDeleting = false, isCompleted = true) }
+        }
+
+        coVerify(exactly = 0) { deleteCard(any()) }
+    }
+
     private companion object {
         const val CARD_ID = 42L
     }
