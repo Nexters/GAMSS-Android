@@ -1,10 +1,13 @@
 package com.gamss.android.core.designsystem.component
 
+import android.content.res.Configuration
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -21,6 +24,7 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.gamss.android.core.designsystem.theme.GamssTheme
 
@@ -111,5 +115,62 @@ fun GamssInputBar(
                 modifier = Modifier.size(SendButtonSize),
             )
         }
+    }
+}
+
+@Preview(name = "Light", showBackground = true, widthDp = 402)
+@Suppress("UnusedPrivateMember")
+@Composable
+private fun GamssInputBarLightPreview() {
+    GamssTheme(darkTheme = false) {
+        GamssInputBarPreviewContent()
+    }
+}
+
+@Preview(
+    name = "Dark",
+    showBackground = true,
+    backgroundColor = 0xFF000000,
+    uiMode = Configuration.UI_MODE_NIGHT_YES,
+    widthDp = 402,
+)
+@Suppress("UnusedPrivateMember")
+@Composable
+private fun GamssInputBarDarkPreview() {
+    GamssTheme(darkTheme = true) {
+        GamssInputBarPreviewContent()
+    }
+}
+
+@Composable
+private fun GamssInputBarPreviewContent() {
+    Column(
+        modifier = Modifier.padding(GamssTheme.spacing.spacing400),
+        verticalArrangement = Arrangement.spacedBy(GamssTheme.spacing.spacing400),
+    ) {
+        // 빈 상태 — 자리표시자가 보인다.
+        GamssInputBar(
+            value = "",
+            onValueChange = {},
+            onTrailingClick = {},
+            placeholder = "무슨 이야기를 버려볼까요?",
+            modifier = Modifier.fillMaxWidth(),
+        )
+        // 채워진 상태 — 전송 버튼이 활성화된다.
+        GamssInputBar(
+            value = "오늘 발표가 너무 떨려요",
+            onValueChange = {},
+            onTrailingClick = {},
+            modifier = Modifier.fillMaxWidth(),
+        )
+        // 비활성 상태 — 입력도, 전송도 막힌다.
+        GamssInputBar(
+            value = "",
+            onValueChange = {},
+            onTrailingClick = {},
+            placeholder = "지금은 입력할 수 없어요",
+            enabled = false,
+            modifier = Modifier.fillMaxWidth(),
+        )
     }
 }
