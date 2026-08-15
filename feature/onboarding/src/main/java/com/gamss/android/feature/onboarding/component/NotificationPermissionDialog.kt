@@ -1,4 +1,4 @@
-package com.gamss.android.feature.onboarding
+package com.gamss.android.feature.onboarding.component
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -28,6 +28,7 @@ import com.gamss.android.core.designsystem.button.GamssButton
 import com.gamss.android.core.designsystem.button.GamssButtonVariant
 import com.gamss.android.core.designsystem.component.GamssText
 import com.gamss.android.core.designsystem.theme.GamssTheme
+import com.gamss.android.feature.onboarding.R
 
 private val DialogMaxWidth = 360.dp
 private val DialogHorizontalMargin = 20.dp

@@ -41,6 +41,7 @@ import com.gamss.android.core.designsystem.component.GamssText
 import com.gamss.android.core.designsystem.theme.GamssTheme
 import com.gamss.android.core.designsystem.topnavigation.GamssTopNavigation
 import com.gamss.android.core.designsystem.topnavigation.GamssTopNavigationContent
+import com.gamss.android.feature.onboarding.component.NotificationPermissionDialog
 import kotlinx.coroutines.launch
 
 private val IllustrationMaxWidth = 340.dp
