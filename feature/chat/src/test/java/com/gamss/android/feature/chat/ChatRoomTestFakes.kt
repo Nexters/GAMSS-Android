@@ -52,9 +52,6 @@ internal fun chatRoomViewModel(
     classifier: EmotionClassifier = FlatClassifier,
     tokenUsageRefreshNotifier: TokenUsageRefreshNotifier = RecordingTokenUsageRefreshNotifier(),
     remoteConfigRepository: RemoteConfigRepository = FakeRemoteConfigRepository(),
-    // 실제 앱에서 채팅방이 받는 ConversationSession은 홈의 것과 다른 인스턴스다(무스코프 주입).
-    // 홈에서 먼저 보낸 시나리오를 검증하려면, 호출부가 홈 쪽 세션과 이 PendingConversationReveal
-    // 인스턴스만 공유해서 넘긴다 — 나머지 상태(요약·감정 누적)는 공유하지 않아야 실제 배선과 같다.
     pendingReveal: PendingConversationReveal = PendingConversationReveal(),
     session: ConversationSession = ConversationSession(
         sendMessage = SendMessageUseCase(conversationRepository),

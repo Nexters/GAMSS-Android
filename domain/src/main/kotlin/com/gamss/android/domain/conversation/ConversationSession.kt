@@ -83,13 +83,9 @@ class ConversationSession @Inject constructor(
     }
 
     /**
-     * 홈에서 새 대화를 열며 이미 받아온 첫 교환을 채팅방이 재조회 없이 그대로 이어받게 한다.
-     * 채팅방이 이 대화를 처음 여는 게 아니면(캐시가 비었거나 다른 conversationId면) null이라
-     * 호출부는 [restore] 경로로 폴백한다.
-     *
-     * 홈의 send() 는 홈 쪽 인스턴스의 요약·감정 상태만 채워 둔다. 이 인스턴스는 그 첫 발화를
-     * 한 번도 보지 못했으므로, [restore] 가 하는 것과 같은 방식으로 여기서도 시드해 둬야
-     * 다음 전송의 문맥 요약과 대화 종료 시 감정 결과가 비어 있지 않다.
+     * 홈에서 이미 받아온 첫 교환을 채팅방이 재조회 없이 이어받게 한다. 캐시가 없으면(비었거나
+     * 다른 conversationId면) null이라 호출부는 [restore] 로 폴백한다. 홈 쪽 인스턴스에서만
+     * 채워진 요약·감정 상태를 [restore] 와 같은 방식으로 이 인스턴스에도 시드해 둔다.
      */
     suspend fun consumePendingReveal(conversationId: Long): SentMessage? {
         val sent = pendingReveal.consume(conversationId) ?: return null
