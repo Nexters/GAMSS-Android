@@ -38,15 +38,17 @@ fun GamssButton(
     modifier: Modifier = Modifier,
     variant: GamssButtonVariant = GamssButtonVariant.Primary,
     enabled: Boolean = true,
+    isProcessing: Boolean = false,
 ) {
     val colors = gamssButtonColors(variant = variant, enabled = enabled)
+    val isClickable = enabled && !isProcessing
 
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(GamssTheme.radius.radius200))
             .background(colors.containerColor)
             .clickable(
-                enabled = enabled,
+                enabled = isClickable,
                 role = Role.Button,
                 indication = null,
                 interactionSource = null,
@@ -81,6 +83,11 @@ private fun gamssButtonColors(
     return when (variant) {
         GamssButtonVariant.Primary -> GamssButtonColors(
             containerColor = GamssTheme.colors.gray950,
+            contentColor = GamssTheme.colors.gray025,
+        )
+
+        GamssButtonVariant.PrimaryDark -> GamssButtonColors(
+            containerColor = GamssTheme.colors.gray900,
             contentColor = GamssTheme.colors.gray025,
         )
 

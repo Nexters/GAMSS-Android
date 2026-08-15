@@ -11,4 +11,7 @@ interface CardRepository {
         character: EmotionCharacter,
         summary: String,
     ): AppResult<Card>
+
+    /** 해당 카드와 카드가 나온 채팅방을 함께 삭제한다. 되돌릴 수 없다. */
+    suspend fun deleteCard(cardId: Long): AppResult<Unit>
 }

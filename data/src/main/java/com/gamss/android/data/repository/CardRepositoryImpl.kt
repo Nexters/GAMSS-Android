@@ -6,6 +6,7 @@ import com.gamss.android.data.remote.card.model.request.CreateCardRequest
 import com.gamss.android.data.remote.card.model.response.toDomain
 import com.gamss.android.data.remote.emotion.toServerEmotionType
 import com.gamss.android.data.remote.runCatchingApiCall
+import com.gamss.android.data.remote.throwIfFailed
 import com.gamss.android.domain.card.Card
 import com.gamss.android.domain.card.CardNotRetryableException
 import com.gamss.android.domain.card.CardRepository
@@ -31,7 +32,8 @@ internal class CardRepositoryImpl @Inject constructor(
                     summary = summary,
                 ),
             )
-            checkNotNull(response.data) { "No available card data" }.toDomain(character)
+            response.throwIfFailed()
+            checkNotNull(response.data) { "No available card data" }.toDomain()
         }
         return when (result) {
             is AppResult.Success -> result
@@ -42,6 +44,18 @@ internal class CardRepositoryImpl @Inject constructor(
                 } else {
                     result
                 }
+        }
+    }
+
+    override suspend fun deleteCard(cardId: Long): AppResult<Unit> {
+        val result = runCatchingApiCall {
+            cardService.deleteCard(cardId).throwIfFailed()
+        }
+        return when (result) {
+            is AppResult.Success -> AppResult.Success(Unit)
+            // 응답만 유실된 재시도일 수 있다. 이미 삭제됨도 사용자가 의도한 최종 상태다.
+            is AppResult.Failure ->
+                if (result.throwable.hasErrorCode(CARD_ALREADY_DELETED)) AppResult.Success(Unit) else result
         }
     }
 }

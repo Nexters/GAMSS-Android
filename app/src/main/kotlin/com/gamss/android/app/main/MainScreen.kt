@@ -35,6 +35,8 @@ import com.gamss.android.feature.chat.navigation.ChatRoomKey
 import com.gamss.android.feature.home.HomeScreen
 import com.gamss.android.feature.home.navigation.HomeKey
 import com.gamss.android.feature.setting.accountinfo.AccountInfoScreen
+import com.gamss.android.feature.carddelete.CardDeleteScreen
+import com.gamss.android.feature.carddelete.navigation.CardDeleteKey
 import com.gamss.android.feature.setting.main.SettingScreen
 import com.gamss.android.feature.setting.navigation.AccountInfoKey
 import com.gamss.android.feature.setting.navigation.NicknameChangeKey
@@ -108,6 +110,13 @@ private fun mainEntryProvider(navigator: Navigator) = entryProvider {
             onPrivacyPolicyClick = { navigator.navigate(WebViewKey(GamssWebPage.PrivacyPolicy)) },
         )
     }
+    entry<CardDeleteKey> { key ->
+        CardDeleteScreen(
+            cardId = key.cardId,
+            onBackClick = navigator::goBack,
+            onDeleteComplete = navigator::finishCurrentFlow,
+        )
+    }
     entry<AccountInfoKey> {
         AccountInfoScreen(
             onBackClick = navigator::goBack,
@@ -133,6 +142,7 @@ private fun mainEntryProvider(navigator: Navigator) = entryProvider {
         ChatRoomScreen(
             conversationId = key.conversationId,
             onCardClose = navigator::goBack,
+            onCardDeleteClick = { cardId -> navigator.navigate(CardDeleteKey(cardId)) },
         )
     }
 }

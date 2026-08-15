@@ -8,6 +8,8 @@ import com.gamss.android.domain.emotion.EmotionCharacter
  * @param summary 클라이언트가 보낸 압축본. 카드 제목으로 그대로 노출된다.
  */
 data class Card(
+    val id: Long,
+    val conversationId: Long,
     val character: EmotionCharacter,
     val summary: String,
     val message: String,

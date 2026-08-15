@@ -72,6 +72,7 @@ import org.orbitmvi.orbit.compose.collectSideEffect
 fun ChatRoomScreen(
     conversationId: Long,
     onCardClose: () -> Unit,
+    onCardDeleteClick: (Long) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: ChatRoomViewModel = hiltViewModel(),
 ) {
@@ -116,7 +117,11 @@ fun ChatRoomScreen(
             onConfirm = viewModel::onEndConfirm,
             onDismiss = viewModel::onEndCancel,
         )
-        is EndFlow.CardReady -> CardBottomSheet(card = endFlow.card, onDismiss = onCardClose)
+        is EndFlow.CardReady -> CardBottomSheet(
+            card = endFlow.card,
+            onDismiss = onCardClose,
+            onDeleteClick = { onCardDeleteClick(endFlow.card.id) },
+        )
         EndFlow.NotStarted,
         EndFlow.Ending,
         EndFlow.CreatingCard,
@@ -155,6 +160,7 @@ private fun EndConversationDialog(
 private fun CardBottomSheet(
     card: Card,
     onDismiss: () -> Unit,
+    onDeleteClick: () -> Unit,
 ) {
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(
@@ -175,6 +181,9 @@ private fun CardBottomSheet(
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            TextButton(onClick = onDeleteClick) {
+                Text(text = stringResource(R.string.chat_room_card_delete_button))
+            }
         }
     }
 }

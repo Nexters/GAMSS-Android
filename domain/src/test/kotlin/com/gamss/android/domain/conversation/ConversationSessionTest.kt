@@ -218,7 +218,9 @@ class ConversationSessionTest {
             conversationId: Long,
             character: EmotionCharacter,
             summary: String,
-        ): AppResult<Card> = AppResult.Success(Card(character = character, summary = summary, message = "대사"))
+        ): AppResult<Card> = AppResult.Success(Card(id = 1L, conversationId = conversationId, character = character, summary = summary, message = "대사"))
+
+        override suspend fun deleteCard(cardId: Long): AppResult<Unit> = AppResult.Success(Unit)
     }
 
     private class FakeConversationRepository(
