@@ -208,7 +208,15 @@ internal class CountingCardRepository(
         calls++
         gate?.await()
         return failure?.let { AppResult.Failure(it) }
-            ?: AppResult.Success(Card(id = 1L, conversationId = conversationId, character = character, summary = summary, message = "대사"))
+            ?: AppResult.Success(
+                Card(
+                    id = 1L,
+                    conversationId = conversationId,
+                    character = character,
+                    summary = summary,
+                    message = "대사",
+                ),
+            )
     }
 
     override suspend fun deleteCard(cardId: Long): AppResult<Unit> = error("채팅방 테스트에서 쓰지 않는다")

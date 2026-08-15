@@ -19,7 +19,15 @@ class CreateCardUseCaseTest {
             summary: String,
         ): AppResult<Card> {
             sentSummary = summary
-            return AppResult.Success(Card(id = 1L, conversationId = conversationId, character = character, summary = summary, message = "대사"))
+            return AppResult.Success(
+                Card(
+                    id = 1L,
+                    conversationId = conversationId,
+                    character = character,
+                    summary = summary,
+                    message = "대사",
+                ),
+            )
         }
 
         override suspend fun deleteCard(cardId: Long): AppResult<Unit> = AppResult.Success(Unit)

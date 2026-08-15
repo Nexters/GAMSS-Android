@@ -11,8 +11,11 @@ class DeleteCardUseCaseTest {
     private class RecordingRepository : CardRepository {
         var deletedCardId: Long? = null
 
-        override suspend fun createCard(conversationId: Long, character: EmotionCharacter, summary: String): AppResult<Card> =
-            error("사용하지 않음")
+        override suspend fun createCard(
+            conversationId: Long,
+            character: EmotionCharacter,
+            summary: String,
+        ): AppResult<Card> = error("사용하지 않음")
 
         override suspend fun deleteCard(cardId: Long): AppResult<Unit> {
             deletedCardId = cardId
