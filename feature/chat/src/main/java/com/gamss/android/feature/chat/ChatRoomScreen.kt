@@ -67,14 +67,12 @@ import org.orbitmvi.orbit.compose.collectSideEffect
 /**
  * @param onCardClose 카드 시트를 닫을 때 호출한다. 이 화면을 실제로 벗어나야 한다.
  *  머무르면 카드 단계가 그대로라 시트가 다시 열린다.
- * @param showEndButtonInDebug 원격 플래그와 무관하게 debug 빌드에서 종료 흐름을 검증한다.
  */
 @Composable
 fun ChatRoomScreen(
     conversationId: Long,
     onCardClose: () -> Unit,
     onCardDeleteClick: (Long) -> Unit,
-    showEndButtonInDebug: Boolean,
     modifier: Modifier = Modifier,
     viewModel: ChatRoomViewModel = hiltViewModel(),
 ) {
@@ -100,12 +98,7 @@ fun ChatRoomScreen(
         )
     }
 
-    ChatRoomContent(
-        state = state,
-        actions = actions,
-        showEndButtonInDebug = showEndButtonInDebug,
-        modifier = modifier,
-    )
+    ChatRoomContent(state = state, actions = actions, modifier = modifier)
 
     state.riskDetection?.let { detection ->
         SupportAgencyDialog(
@@ -208,7 +201,6 @@ private data class ChatRoomActions(
 private fun ChatRoomContent(
     state: ChatRoomState,
     actions: ChatRoomActions,
-    showEndButtonInDebug: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val listState = rememberLazyListState()
@@ -227,7 +219,7 @@ private fun ChatRoomContent(
             ChatRoomTopBar(
                 endFlow = state.endFlow,
                 canEnd = state.canEnd,
-                showEndButton = state.useChatEndFeature || showEndButtonInDebug,
+                showEndButton = state.useChatEndFeature,
                 onEndClick = actions.onEndClick,
             )
         },
