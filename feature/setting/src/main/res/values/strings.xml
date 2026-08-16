@@ -5,7 +5,6 @@
     <string name="setting_list_service_term">서비스 이용약관</string>
     <string name="setting_list_privacy_policy">개인정보 처리방침</string>
     <string name="setting_list_app_version">앱 버전</string>
-    <string name="setting_list_card_delete">카드 전체 삭제</string>
     <string name="account_info_nickname_change">닉네임 변경</string>
     <string name="account_info_email">이메일</string>
     <string name="account_info_logout">로그아웃</string>

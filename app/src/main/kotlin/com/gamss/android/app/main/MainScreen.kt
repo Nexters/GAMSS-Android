@@ -16,7 +16,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.ui.NavDisplay
-import com.gamss.android.app.BuildConfig
 import com.gamss.android.app.navigation.Navigator
 import com.gamss.android.app.navigation.bottomBarItems
 import com.gamss.android.app.navigation.keys
@@ -109,11 +108,6 @@ private fun mainEntryProvider(navigator: Navigator) = entryProvider {
             onAccountInfoClick = { navigator.navigate(AccountInfoKey) },
             onServiceTermsClick = { navigator.navigate(WebViewKey(GamssWebPage.ServiceTerms)) },
             onPrivacyPolicyClick = { navigator.navigate(WebViewKey(GamssWebPage.PrivacyPolicy)) },
-            onCardDeleteClick = if (BuildConfig.BUILD_TYPE == "debug") {
-                { navigator.navigate(CardDeleteKey) }
-            } else {
-                null
-            },
         )
     }
     entry<CardDeleteKey> {
