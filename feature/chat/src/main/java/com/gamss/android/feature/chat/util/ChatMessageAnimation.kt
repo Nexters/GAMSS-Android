@@ -66,16 +66,16 @@ internal fun AnimatedChatMessage(
         // 끊겨 보이던 문제를 없애고 하나의 유려한 움직임으로 이어지게 한다.
         enter = slideInVertically(
             animationSpec = spring(
-                dampingRatio = MessageEnterDampingRatio,
-                stiffness = MessageEnterStiffness,
+                dampingRatio = MESSAGE_ENTER_DAMPING_RATIO,
+                stiffness = MESSAGE_ENTER_STIFFNESS,
             ),
             initialOffsetY = { messageHeight ->
                 listState.offsetFromInput(messageId, messageHeight)
             },
         ) + fadeIn(
             animationSpec = spring(
-                dampingRatio = MessageEnterDampingRatio,
-                stiffness = MessageEnterStiffness,
+                dampingRatio = MESSAGE_ENTER_DAMPING_RATIO,
+                stiffness = MESSAGE_ENTER_STIFFNESS,
             ),
         ),
     ) {
@@ -89,5 +89,5 @@ private fun LazyListState.offsetFromInput(messageId: Long, messageHeight: Int): 
     return (layoutInfo.viewportEndOffset - messageItem.offset).coerceAtLeast(messageHeight)
 }
 
-private const val MessageEnterDampingRatio = Spring.DampingRatioLowBouncy
-private const val MessageEnterStiffness = Spring.StiffnessMediumLow
+private const val MESSAGE_ENTER_DAMPING_RATIO = Spring.DampingRatioLowBouncy
+private const val MESSAGE_ENTER_STIFFNESS = Spring.StiffnessMediumLow
