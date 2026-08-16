@@ -1,8 +1,17 @@
 package com.gamss.android.feature.chat.component
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import com.gamss.android.core.designsystem.theme.GamssTheme
 import com.gamss.android.core.designsystem.topnavigation.GamssTopNavigation
 import com.gamss.android.core.designsystem.topnavigation.GamssTopNavigationContent
@@ -20,23 +29,43 @@ import com.gamss.android.feature.chat.R
 internal fun ChattingListTopBar(
     isSelectionMode: Boolean,
     onSelectionCancel: () -> Unit,
+    onSearchClick: () -> Unit,
     onMenuClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    GamssTopNavigation(
-        modifier = modifier,
-        content = if (isSelectionMode) {
-            GamssTopNavigationContent.None
-        } else {
-            GamssTopNavigationContent.Logo
-        },
-        backgroundColor = GamssTheme.colors.background,
-        showLeftIcon = isSelectionMode,
-        showRightIcon = true,
-        leftIconContentDescription = stringResource(R.string.chatting_list_selection_cancel),
-        rightIconContentDescription = stringResource(R.string.chatting_list_menu_content_description),
-        onLeftIconClick = onSelectionCancel,
-        onRightIconClick = onMenuClick,
-        rightIcon = GamssTopNavigationIcon.Menu,
-    )
+    Box(modifier = modifier) {
+        GamssTopNavigation(
+            content = if (isSelectionMode) {
+                GamssTopNavigationContent.None
+            } else {
+                GamssTopNavigationContent.Logo
+            },
+            backgroundColor = GamssTheme.colors.background,
+            showLeftIcon = isSelectionMode,
+            showRightIcon = true,
+            leftIconContentDescription = stringResource(R.string.chatting_list_selection_cancel),
+            rightIconContentDescription = stringResource(R.string.chatting_list_menu_content_description),
+            onLeftIconClick = onSelectionCancel,
+            onRightIconClick = onMenuClick,
+            rightIcon = GamssTopNavigationIcon.Menu,
+        )
+
+        if (!isSelectionMode) {
+            IconButton(
+                onClick = onSearchClick,
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .offset(x = (-42).dp, y = 3.dp)
+                    .size(48.dp),
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Search,
+                    contentDescription = stringResource(
+                        R.string.chatting_list_search_content_description,
+                    ),
+                    tint = GamssTheme.colors.gray900,
+                )
+            }
+        }
+    }
 }
