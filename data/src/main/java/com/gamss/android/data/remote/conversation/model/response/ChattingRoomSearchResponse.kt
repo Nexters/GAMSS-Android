@@ -35,7 +35,6 @@ internal fun ChattingRoomResponse.toDomain(): ChattingRoomSummary? {
     return ChattingRoomSummary(
         conversationId = id,
         title = title.orEmpty(),
-        status = status.orEmpty(),
         createdAt = createdAt.orEmpty(),
     )
 }

@@ -15,4 +15,12 @@ sealed interface ChattingListSideEffect {
     data object ShowDeleteFailed : ChattingListSideEffect
 
     data object ShowSessionExpired : ChattingListSideEffect
+
+    data class ShowSearchFailed(val reason: SearchFailureReason) : ChattingListSideEffect
+}
+
+enum class SearchFailureReason {
+    INVALID_INPUT,
+    NETWORK,
+    UNKNOWN,
 }

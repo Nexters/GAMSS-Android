@@ -14,6 +14,5 @@ data class ChattingRoomSearch(
 data class ChattingRoomSummary(
     val conversationId: Long,
     val title: String,
-    val status: String,
     val createdAt: String,
 )

@@ -5,15 +5,21 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.paging.compose.LazyPagingItems
+import androidx.paging.compose.itemKey
+import com.gamss.android.domain.conversation.chattingsearch.ChattingRoomSummary
 import com.gamss.android.feature.chat.ChattingListActions
 import com.gamss.android.feature.chat.ChattingListState
 import com.gamss.android.feature.chat.ConversationGroup
 import com.gamss.android.feature.chat.R
+import com.gamss.android.feature.chat.toConversationRow
+import com.gamss.android.feature.chat.toDateLabel
 
 /**
  * 날짜 묶음별 헤더와 카드를 쌓은 목록.
@@ -44,6 +50,62 @@ internal fun ConversationList(
             }
             conversationCards(group = group, state = state, actions = actions, untitled = untitled)
         }
+    }
+}
+
+@Composable
+internal fun ConversationList(
+    chattingRooms: LazyPagingItems<ChattingRoomSummary>,
+    state: ChattingListState,
+    actions: ChattingListActions,
+    listState: LazyListState,
+    appendContent: LazyListScope.() -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val untitled = stringResource(R.string.chatting_list_untitled)
+
+    LazyColumn(
+        state = listState,
+        modifier = modifier.fillMaxSize(),
+        contentPadding = ListContentPadding,
+    ) {
+        items(
+            count = chattingRooms.itemCount,
+            key = chattingRooms.itemKey { it.conversationId },
+        ) { index ->
+            chattingRooms[index]?.let { room ->
+                val dateLabel = room.toDateLabel()
+                val previousDateLabel = if (index > 0) {
+                    chattingRooms.peek(index - 1)?.toDateLabel()
+                } else {
+                    null
+                }
+                val showHeader = index == 0 ||
+                    dateLabel != null && dateLabel != previousDateLabel
+                val row = room.toConversationRow()
+
+                if (showHeader) {
+                    ChattingListSectionHeader(
+                        modifier = HeaderModifier,
+                        dateLabel = dateLabel,
+                        showDeleteAction = index == 0,
+                        deleteActionEnabled = state.isDeleteActionEnabled,
+                        onDeleteActionClick = actions.onDeleteActionClick,
+                    )
+                }
+                ConversationCard(
+                    modifier = CardModifier,
+                    title = row.title ?: untitled,
+                    timeLabel = row.timeLabel,
+                    isSelectionMode = state.isSelectionMode,
+                    isSelected = row.id in state.selectedIds,
+                    onClick = { actions.onCardClick(row.id) },
+                    onLongClick = { actions.onCardLongClick(row.id) },
+                )
+            }
+        }
+
+        appendContent()
     }
 }
 

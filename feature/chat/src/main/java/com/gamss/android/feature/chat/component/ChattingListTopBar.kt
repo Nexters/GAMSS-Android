@@ -51,6 +51,7 @@ internal fun ChattingListTopBar(
         )
 
         if (!isSelectionMode) {
+            // GamssTopNavigation의 오른쪽에 복수의 아이콘 받는 컴포넌트로 변경되었을때 이 컴포넌트 삭제 예정 (검색 모드 진입을 위한 임시조치)
             IconButton(
                 onClick = onSearchClick,
                 modifier = Modifier

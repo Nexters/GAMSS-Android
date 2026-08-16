@@ -17,10 +17,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -28,13 +25,14 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.paging.compose.collectAsLazyPagingItems
 import com.gamss.android.core.designsystem.button.GamssButton
 import com.gamss.android.core.designsystem.button.GamssButtonVariant
 import com.gamss.android.core.designsystem.theme.GamssTheme
 import com.gamss.android.feature.chat.component.ChattingListTopBar
+import com.gamss.android.feature.chat.component.ChattingSearchContent
 import com.gamss.android.feature.chat.component.ConversationList
 import com.gamss.android.feature.chat.component.DeleteConversationDialog
-import com.gamss.android.feature.chatSearch.ChattingSearchModeContent
 import org.orbitmvi.orbit.compose.collectAsState
 import org.orbitmvi.orbit.compose.collectSideEffect
 
@@ -55,18 +53,16 @@ fun ChattingListScreen(
     viewModel: ChattingListViewModel = hiltViewModel(),
 ) {
     val state by viewModel.collectAsState()
-    var isSearchMode by rememberSaveable { mutableStateOf(false) }
+    val chattingRooms = viewModel.chattingRooms.collectAsLazyPagingItems()
 
     ChattingListSideEffectHandler(viewModel = viewModel, onChatClick = onChatClick)
 
     LaunchedEffect(Unit) { viewModel.load() }
 
-    BackHandler(enabled = isSearchMode && !state.canCancelSelection) { isSearchMode = false }
-    BackHandler(enabled = state.canCancelSelection) { viewModel.onSelectionCancel() }
-
-    LaunchedEffect(state.isSelectionMode) {
-        if (state.isSelectionMode) isSearchMode = false
+    BackHandler(enabled = state.search.isActive && !state.canCancelSelection) {
+        viewModel.onSearchCancel()
     }
+    BackHandler(enabled = state.canCancelSelection) { viewModel.onSelectionCancel() }
 
     val actions = remember(viewModel) {
         ChattingListActions(
@@ -84,13 +80,17 @@ fun ChattingListScreen(
         ChattingListTopBar(
             isSelectionMode = state.isSelectionMode,
             onSelectionCancel = viewModel::onSelectionCancel,
-            onSearchClick = { isSearchMode = true },
+            onSearchClick = viewModel::onSearchModeEnter,
             onMenuClick = onMenuClick,
         )
 
-        ChattingSearchModeContent(
-            isSearchMode = isSearchMode,
-            onCancel = { isSearchMode = false },
+        ChattingSearchContent(
+            state = state,
+            chattingRooms = chattingRooms,
+            actions = actions,
+            onKeywordChanged = viewModel::onSearchKeywordChanged,
+            onSearch = viewModel::search,
+            onCancel = viewModel::onSearchCancel,
             idleContent = {
                 ChattingListBody(
                     state = state,
@@ -142,6 +142,9 @@ private fun ChattingListSideEffectHandler(
 
             is ChattingListSideEffect.ShowSessionExpired ->
                 context.showToast(R.string.chatting_list_session_expired)
+
+            is ChattingListSideEffect.ShowSearchFailed ->
+                context.showToast(sideEffect.reason.messageRes)
         }
     }
 }
@@ -188,6 +191,13 @@ private fun ColumnScope.DeleteButton(enabled: Boolean, onClick: () -> Unit) {
 private fun Context.showToast(@StringRes resId: Int, vararg formatArgs: Any) {
     Toast.makeText(this, getString(resId, *formatArgs), Toast.LENGTH_SHORT).show()
 }
+
+private val SearchFailureReason.messageRes: Int
+    @StringRes get() = when (this) {
+        SearchFailureReason.NETWORK -> R.string.chatting_list_search_network_error
+        SearchFailureReason.INVALID_INPUT -> R.string.chatting_list_search_invalid_input
+        SearchFailureReason.UNKNOWN -> R.string.chatting_list_search_unknown_error
+    }
 
 @Preview(name = "Light", showBackground = true)
 @Suppress("UnusedPrivateMember")

@@ -20,6 +20,14 @@
     <string name="chatting_list_delete_dialog_dismiss">뒤로가기</string>
     <string name="chatting_list_menu_content_description">메뉴</string>
     <string name="chatting_list_search_content_description">채팅방 검색</string>
+    <string name="chatting_list_search_placeholder">검색어 입력</string>
+    <string name="chatting_list_search_clear_content_description">검색어 지우기</string>
+    <string name="chatting_list_search_cancel">취소</string>
+    <string name="chatting_list_search_empty">검색 결과가 없어요</string>
+    <string name="chatting_list_search_network_error">네트워크 연결을 확인해 주세요</string>
+    <string name="chatting_list_search_invalid_input">최소 2글자 이상 입력해주세요</string>
+    <string name="chatting_list_search_unknown_error">채팅방 검색에 실패했어요</string>
+    <string name="chatting_list_search_retry">재시도</string>
     <string name="chatting_list_selection_cancel">선택 취소</string>
     <string name="chatting_list_untitled">제목 없는 대화</string>
     <string name="chatting_list_empty">아직 나눈 대화가 없어요</string>
