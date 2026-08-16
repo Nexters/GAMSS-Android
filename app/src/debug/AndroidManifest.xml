@@ -17,10 +17,6 @@
             android:exported="false"
             android:theme="@style/Theme.GAMSS" />
 
-        <activity
-            android:name=".debug.ChatSearchDebugActivity"
-            android:exported="false"
-            android:theme="@style/Theme.GAMSS" />
     </application>
 
 </manifest>
