@@ -38,8 +38,12 @@ enum class GamssTopNavigationTitleAlignment {
  */
 enum class GamssTopNavigationIcon(@DrawableRes internal val drawableRes: Int) {
     LeftChevron(R.drawable.ic_left_chevron),
-    CreateCard(R.drawable.ic_create_card),
+
+    /// FIXME: 카드 이모티콘 추가필요
+    CreateCard(R.drawable.ic_menu),
     Menu(R.drawable.ic_menu),
+
+    CheckToken(R.drawable.ic_token_check)
 }
 
 /**

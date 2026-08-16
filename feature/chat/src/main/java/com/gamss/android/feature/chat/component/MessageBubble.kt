@@ -8,6 +8,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import com.gamss.android.core.designsystem.component.chat.ChatReplyQuote
 import com.gamss.android.core.designsystem.component.chat.ChatSender
+import com.gamss.android.core.designsystem.component.chat.GamssLoadingMessageBubble
 import com.gamss.android.core.designsystem.component.chat.GamssReceivedChatBubble
 import com.gamss.android.core.designsystem.component.chat.GamssSentChatBubble
 import com.gamss.android.core.designsystem.modifier.noRippleCombinedClickable
@@ -63,6 +64,11 @@ fun MessageBubble(
             )
         }
     }
+}
+
+@Composable
+fun LoadingMessageBubble() {
+    GamssLoadingMessageBubble(senderStatus = stringResource(R.string.chat_room_message_writing_label))
 }
 
 @Composable

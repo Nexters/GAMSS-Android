@@ -39,4 +39,7 @@ object GamssIcons {
 
     @DrawableRes
     val ClearButton: Int = R.drawable.ic_close
+
+    @DrawableRes
+    val ScrollDown: Int = R.drawable.ic_scroll_down
 }

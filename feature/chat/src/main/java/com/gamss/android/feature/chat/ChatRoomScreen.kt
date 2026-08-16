@@ -3,12 +3,12 @@ package com.gamss.android.feature.chat
 import android.content.res.Configuration
 import android.widget.Toast
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.exclude
 import androidx.compose.foundation.layout.fillMaxSize
@@ -22,8 +22,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
@@ -33,27 +35,24 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.gamss.android.core.common.util.formatConversationDate
-import com.gamss.android.core.designsystem.button.GamssButtonVariant
-import com.gamss.android.core.designsystem.component.GamssInputBar
-import com.gamss.android.core.designsystem.component.chat.ChatReplyQuote
-import com.gamss.android.core.designsystem.component.chat.ChatSender
-import com.gamss.android.core.designsystem.component.chat.GamssReceivedChatBubble
-import com.gamss.android.core.designsystem.component.chat.GamssSentChatBubble
-import com.gamss.android.core.designsystem.dialog.GamssDialog
-import com.gamss.android.core.designsystem.dialog.GamssDialogAction
-import com.gamss.android.core.designsystem.modifier.noRippleCombinedClickable
+import com.gamss.android.core.designsystem.component.GamssIcons
+import com.gamss.android.core.designsystem.modifier.gamssShadow
 import com.gamss.android.core.designsystem.theme.GamssTheme
 import com.gamss.android.core.designsystem.topnavigation.GamssTopNavigation
 import com.gamss.android.core.designsystem.topnavigation.GamssTopNavigationIcon
@@ -64,16 +63,20 @@ import com.gamss.android.domain.conversation.Message
 import com.gamss.android.domain.conversation.MessageSender
 import com.gamss.android.domain.emotion.EmotionCharacter
 import com.gamss.android.feature.chat.component.EndConversationDialog
+import com.gamss.android.feature.chat.component.LoadingMessageBubble
 import com.gamss.android.feature.chat.component.MessageBubble
 import com.gamss.android.feature.chat.component.MessageInputBar
+import com.gamss.android.feature.chat.component.NewMessageToast
 import com.gamss.android.feature.chat.component.SupportAgencyDialog
 import com.gamss.android.feature.chat.util.AnimatedChatMessage
 import com.gamss.android.feature.chat.util.ChatMessageAnimation
+import com.gamss.android.feature.chat.util.ChatScrollState
 import com.gamss.android.feature.chat.util.dialOrNotify
 import com.gamss.android.feature.chat.util.rememberChatMessageAnimationState
+import com.gamss.android.feature.chat.util.rememberChatScrollState
+import kotlinx.coroutines.delay
 import org.orbitmvi.orbit.compose.collectAsState
 import org.orbitmvi.orbit.compose.collectSideEffect
-import java.time.LocalDateTime
 
 /**
  * @param onCardClose 카드 시트를 닫을 때 호출한다. 이 화면을 실제로 벗어나야 한다.
@@ -194,13 +197,7 @@ private fun ChatRoomContent(
         isLoading = state.isLoading,
         messageIds = state.messages.map(Message::id),
     )
-
-    LaunchedEffect(state.messages.size, state.isAwaitingComments) {
-        val itemCount = state.messages.size + if (state.isAwaitingComments) 1 else 0
-        if (itemCount > 0) {
-            listState.animateScrollToItem(itemCount - 1)
-        }
-    }
+    val chatScrollState = rememberChatScrollState(state = state, listState = listState)
 
     val imeBottomPx = WindowInsets.ime.getBottom(LocalDensity.current)
     var previousImeBottomPx by remember { mutableIntStateOf(imeBottomPx) }
@@ -212,33 +209,21 @@ private fun ChatRoomContent(
         }
     }
 
+    // 키보드가 오르내리는 동안엔 위 보정 스크롤이 인셋 변화를 프레임 단위로 정확히 따라잡지
+    // 못해 listState.canScrollForward 가 순간적으로 흔들리고, 그 값을 그대로 따르는 스크롤
+    // 버튼이 깜빡인다. imeBottomPx 가 바뀔 때마다 이 이펙트가 재시작되므로(진행 중이던 delay는
+    // 취소됨), 인셋이 한동안(마지막 변화 후 IME_SETTLE_GRACE_PERIOD_MILLIS) 안 바뀌어 안정됐을
+    // 때만 버튼을 노출해 깜빡임을 없앤다.
+    var isImeInTransition by remember { mutableStateOf(false) }
+    LaunchedEffect(imeBottomPx) {
+        isImeInTransition = true
+        delay(IME_SETTLE_GRACE_PERIOD_MILLIS)
+        isImeInTransition = false
+    }
+
     Scaffold(
         modifier = modifier,
-        topBar = {
-            GamssTopNavigation(
-                title = state.conversationCreatedAt?.let(::formatConversationDate).orEmpty(),
-                titleAlignment = GamssTopNavigationTitleAlignment.Center,
-                showLeftIcon = true,
-                onLeftIconClick = onBackClick,
-                rightActions = listOfNotNull(
-                    if (state.useChatEndFeature) {
-                        if (!state.endFlow.isBusy && state.canEnd) {
-                            GamssTopNavigationIconAction(
-                                icon = GamssTopNavigationIcon.CreateCard,
-                                onClick = actions.onEndClick,
-                            )
-                        } else {
-                            null
-                        }
-                    } else {
-                        null
-                    },
-                    GamssTopNavigationIconAction(icon = GamssTopNavigationIcon.Menu, onClick = {
-                        // 토큰 확인 페이지?
-                    }),
-                ),
-            )
-        },
+        topBar = { ChatRoomTopBar(state = state, actions = actions, onBackClick = onBackClick) },
         // 상위 Scaffold 가 인셋을 이미 적용해, imePadding 을 그대로 쓰면 이중 적용된다.
         contentWindowInsets = WindowInsets(0),
     ) { innerPadding ->
@@ -254,6 +239,8 @@ private fun ChatRoomContent(
                 actions = actions,
                 listState = listState,
                 animationState = messageAnimationState,
+                scrollState = chatScrollState,
+                showScrollToBottomButton = chatScrollState.showScrollToBottomButton && !isImeInTransition,
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth(),
@@ -271,53 +258,126 @@ private fun ChatRoomContent(
 }
 
 @Composable
+private fun ChatRoomTopBar(
+    state: ChatRoomState,
+    actions: ChatRoomActions,
+    onBackClick: () -> Unit,
+) {
+    GamssTopNavigation(
+        title = state.conversationCreatedAt?.let(::formatConversationDate).orEmpty(),
+        titleAlignment = GamssTopNavigationTitleAlignment.Center,
+        showLeftIcon = true,
+        onLeftIconClick = onBackClick,
+        rightActions = listOfNotNull(
+            if (state.useChatEndFeature && !state.endFlow.isBusy && state.canEnd) {
+                GamssTopNavigationIconAction(
+                    icon = GamssTopNavigationIcon.CreateCard,
+                    onClick = actions.onEndClick,
+                )
+            } else {
+                null
+            },
+            GamssTopNavigationIconAction(icon = GamssTopNavigationIcon.Menu, onClick = {
+                // 토큰 확인 페이지?
+            }),
+        ),
+    )
+}
+
+@Composable
 private fun ChatMessageList(
     state: ChatRoomState,
     actions: ChatRoomActions,
     listState: LazyListState,
     animationState: ChatMessageAnimation,
+    scrollState: ChatScrollState,
+    showScrollToBottomButton: Boolean,
     modifier: Modifier = Modifier,
 ) {
-    LazyColumn(
-        state = listState,
-        modifier = modifier,
-        contentPadding = PaddingValues(horizontal = 18.dp, vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-    ) {
-        if (state.messages.isEmpty()) {
-            item {
-                Box(
-                    modifier = Modifier.fillParentMaxSize(),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    if (state.isLoading) {
-                        CircularProgressIndicator()
-                    } else {
-                        Text(
-                            text = "오늘 어떤 일이 있었나요?",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
+    Box(modifier = modifier) {
+        LazyColumn(
+            state = listState,
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(horizontal = 18.dp, vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            if (state.messages.isEmpty()) {
+                item {
+                    Box(
+                        modifier = Modifier.fillParentMaxSize(),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        if (state.isLoading) {
+                            CircularProgressIndicator()
+                        } else {
+                            Text(
+                                text = "오늘 어떤 일이 있었나요?",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
                     }
                 }
             }
-        }
-        items(state.messages, key = { it.id }) { message ->
-            AnimatedChatMessage(
-                messageId = message.id,
-                shouldAnimate = animationState.shouldAnimate(message.id),
-                listState = listState,
-            ) {
-                MessageBubble(
-                    message = message,
-                    messages = state.messages,
-                    onCharacterMessageClick = actions.onCharacterMessageClick,
-                )
+            items(state.messages, key = { it.id }) { message ->
+                AnimatedChatMessage(
+                    messageId = message.id,
+                    shouldAnimate = animationState.shouldAnimate(message.id),
+                    listState = listState,
+                ) {
+                    MessageBubble(
+                        message = message,
+                        messages = state.messages,
+                        onCharacterMessageClick = actions.onCharacterMessageClick,
+                    )
+                }
+            }
+            if (state.isAwaitingComments) {
+                item { LoadingMessageBubble() }
             }
         }
-        if (state.isAwaitingComments) {
-            item { GeneratingIndicator() }
+
+        scrollState.newMessageToast?.let { toastMessage ->
+            NewMessageToast(
+                message = toastMessage,
+                onClick = { scrollState.dismissToastAndScrollToBottom(state) },
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 12.dp),
+            )
         }
+
+        if (showScrollToBottomButton) {
+            ScrollToBottomButton(
+                onClick = { scrollState.scrollToBottom(state) },
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(end = 18.dp, bottom = 12.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun ScrollToBottomButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier
+            .size(36.dp)
+            .gamssShadow(shape = CircleShape)
+            .clip(CircleShape)
+            .background(GamssTheme.colors.gray700, CircleShape)
+            .clickable(role = Role.Button, onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            painter = painterResource(GamssIcons.ScrollDown),
+            contentDescription = stringResource(R.string.chat_room_scroll_to_bottom),
+            modifier = Modifier.size(24.dp),
+            tint = GamssTheme.colors.gray025,
+        )
     }
 }
 
@@ -352,24 +412,8 @@ private fun ChatRoomInputSection(
     )
 }
 
-@Composable
-private fun GeneratingIndicator(modifier: Modifier = Modifier) {
-    Row(
-        modifier = modifier,
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
-        Text(
-            text = "답장을 쓰고 있어요",
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
-}
-
 private const val EMERGENCY_PHONE_NUMBER = "119"
-
+private const val IME_SETTLE_GRACE_PERIOD_MILLIS = 120L
 
 @Preview(name = "Light", showBackground = true)
 @Suppress("UnusedPrivateMember")

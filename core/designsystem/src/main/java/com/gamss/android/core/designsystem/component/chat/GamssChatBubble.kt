@@ -17,12 +17,19 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.airbnb.lottie.compose.LottieAnimation
+import com.airbnb.lottie.compose.LottieCompositionSpec
+import com.airbnb.lottie.compose.LottieConstants
+import com.airbnb.lottie.compose.animateLottieCompositionAsState
+import com.airbnb.lottie.compose.rememberLottieComposition
+import com.gamss.android.core.designsystem.R
 import com.gamss.android.core.designsystem.theme.GamssTheme
 
 /**
@@ -57,6 +64,15 @@ object GamssChatBubbleDefaults {
 }
 
 private val AvatarSize = 24.dp
+
+// 로딩 bubble(54x36) 안에 정확히 맞도록 두 값 다 고정 크기로 지정한다. typing_loading.json
+private val TypingLottieWidth = 46.dp
+private val TypingLottieHeight = 32.dp
+
+// 46x32 Lottie 를 54x36 bubble 안에 정확히 담기 위한 여백. 실제 메시지 bubble 의
+// spacing200/spacing100 패딩과는 다른, 로딩 bubble 전용 값이다.
+private val LoadingBubbleHorizontalPadding = 4.dp
+private val LoadingBubbleVerticalPadding = 2.dp
 
 /**
  * 내가 보낸 채팅 메시지 말풍선. 시간이 왼쪽, 말풍선이 오른쪽에 정렬된다.
@@ -99,8 +115,6 @@ fun GamssReceivedChatBubble(
     replyQuote: ChatReplyQuote? = null,
 ) {
     BoxWithConstraints(modifier = modifier) {
-        // 아바타와 그 옆 간격은 말풍선보다 먼저 고정폭을 차지하므로, 반대쪽 벽 여백을 뺀
-        // 나머지 몫에서 그만큼을 한 번 더 제해야 말풍선 자체의 최대 너비가 나온다.
         val reservedWidth = GamssChatBubbleDefaults.OppositeWallGap + AvatarSize + GamssTheme.spacing.spacing100
         val bubbleMaxWidth = (maxWidth - reservedWidth).coerceAtLeast(0.dp)
         Row(
@@ -133,10 +147,46 @@ fun GamssReceivedChatBubble(
     }
 }
 
+/**
+ * 상대가 입력중일때 말풍선. 아바타 + 이름 + 말풍선이 왼쪽에 정렬된다.
+ */
+@Composable
+fun GamssLoadingMessageBubble(
+    senderStatus: String
+) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(GamssTheme.spacing.spacing100),
+        verticalAlignment = Alignment.Bottom,
+    ) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(GamssTheme.spacing.spacing100),
+            verticalAlignment = Alignment.Top,
+        ) {
+            ChatAvatar(avatar = null)
+            Column(verticalArrangement = Arrangement.spacedBy(GamssTheme.spacing.spacing075)) {
+                Text(
+                    text = senderStatus,
+                    style = GamssTheme.typography.body4Medium,
+                    color = GamssTheme.colors.gray800,
+                )
+                ChatBubbleSurface(
+                    isMine = false,
+                    horizontalPadding = LoadingBubbleHorizontalPadding,
+                    verticalPadding = LoadingBubbleVerticalPadding,
+                ) {
+                    TypingLottie()
+                }
+            }
+        }
+    }
+}
+
 @Composable
 private fun ChatBubbleSurface(
     isMine: Boolean,
     modifier: Modifier = Modifier,
+    horizontalPadding: Dp = GamssTheme.spacing.spacing200,
+    verticalPadding: Dp = GamssTheme.spacing.spacing100,
     content: @Composable () -> Unit,
 ) {
     Column(
@@ -146,15 +196,27 @@ private fun ChatBubbleSurface(
             .width(IntrinsicSize.Max)
             .background(if (isMine) GamssTheme.colors.gray900 else GamssTheme.colors.gray025)
             .border(width = 1.dp, color = GamssTheme.colors.gray950)
-            .padding(
-                horizontal = GamssTheme.spacing.spacing200,
-                vertical = GamssTheme.spacing.spacing100
-            ),
+            .padding(horizontal = horizontalPadding, vertical = verticalPadding),
         verticalArrangement = Arrangement.spacedBy(GamssTheme.spacing.spacing075),
         horizontalAlignment = if (isMine) Alignment.End else Alignment.Start,
     ) {
         content()
     }
+}
+
+/** 말풍선 안에서 무한 반복 재생되는 타이핑 로티. 54x36 로딩 bubble 안에 정확히 맞도록 고정 크기로 그린다. */
+@Composable
+private fun TypingLottie(modifier: Modifier = Modifier) {
+    val composition by rememberLottieComposition(LottieCompositionSpec.RawRes(R.raw.typing_loading))
+    val progress by animateLottieCompositionAsState(
+        composition = composition,
+        iterations = LottieConstants.IterateForever,
+    )
+    LottieAnimation(
+        composition = composition,
+        progress = { progress },
+        modifier = modifier.size(width = TypingLottieWidth, height = TypingLottieHeight),
+    )
 }
 
 @Composable
