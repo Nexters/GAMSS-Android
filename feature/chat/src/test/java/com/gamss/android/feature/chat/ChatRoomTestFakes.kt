@@ -1,5 +1,6 @@
 package com.gamss.android.feature.chat
 
+import androidx.paging.PagingData
 import com.gamss.android.core.common.AppResult
 import com.gamss.android.domain.card.Card
 import com.gamss.android.domain.card.CardRepository
@@ -20,6 +21,7 @@ import com.gamss.android.domain.conversation.MessageSender
 import com.gamss.android.domain.conversation.SendMessageUseCase
 import com.gamss.android.domain.conversation.SentMessage
 import com.gamss.android.domain.conversation.UpdateConversationTitleUseCase
+import com.gamss.android.domain.conversation.chattingsearch.ChattingRoomSummary
 import com.gamss.android.domain.emotion.ClassificationResult
 import com.gamss.android.domain.emotion.ConversationEmotionAccumulator
 import com.gamss.android.domain.emotion.EmotionCharacter
@@ -190,6 +192,9 @@ internal class FakeConversationRepository(
 
     override suspend fun deleteConversation(conversationId: Long): AppResult<Unit> =
         AppResult.Success(Unit)
+
+    override fun searchChattingRooms(keyword: String): Flow<PagingData<ChattingRoomSummary>> =
+        error("채팅방 테스트에서 쓰지 않는다")
 }
 
 /** 호출 횟수를 세고, [gate] 가 있으면 그때까지 응답을 붙든다. */
