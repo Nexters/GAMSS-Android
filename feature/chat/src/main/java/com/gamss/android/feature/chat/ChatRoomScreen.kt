@@ -64,7 +64,10 @@ import com.gamss.android.domain.conversation.Message
 import com.gamss.android.domain.conversation.MessageSender
 import com.gamss.android.domain.emotion.EmotionCharacter
 import com.gamss.android.feature.chat.component.SupportAgencyDialog
+import com.gamss.android.feature.chat.util.AnimatedChatMessage
+import com.gamss.android.feature.chat.util.ChatMessageAnimation
 import com.gamss.android.feature.chat.util.dialOrNotify
+import com.gamss.android.feature.chat.util.rememberChatMessageAnimationState
 import org.orbitmvi.orbit.compose.collectAsState
 import org.orbitmvi.orbit.compose.collectSideEffect
 import java.time.LocalDateTime
@@ -266,9 +269,10 @@ private fun ChatRoomContent(
                 endFlow = state.endFlow,
                 input = state.input,
                 // 전송 가능 여부(글자 유무)는 GamssInputBar 내부에서 계산한다. 여기서는 그 앞단
-                // 조건(전송 중·로딩 중·종료 흐름 진입)만 넘겨 입력칸 자체를 잠근다.
-                isInputEnabled = !state.isSending && !state.isLoading &&
-                    state.endFlow == EndFlow.NotStarted,
+                // 조건(로딩 중·종료 흐름 진입)만 넘겨 입력칸 자체를 잠근다. 전송 중(isSending)에
+                // 여기서 잠그면 텍스트필드가 disabled 되며 포커스와 키보드가 함께 내려가므로 넣지
+                // 않는다 — 연타 방지는 이미 ChatRoomState.canSend/onSend 쪽에서 보장된다.
+                isInputEnabled = !state.isLoading && state.endFlow == EndFlow.NotStarted,
                 replyTarget = state.replyTarget,
                 actions = actions,
             )
