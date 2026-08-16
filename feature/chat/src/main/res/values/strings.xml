@@ -19,6 +19,7 @@
     <string name="chatting_list_delete_dialog_confirm">삭제하기</string>
     <string name="chatting_list_delete_dialog_dismiss">뒤로가기</string>
     <string name="chatting_list_menu_content_description">메뉴</string>
+    <string name="chatting_list_search_content_description">채팅방 검색</string>
     <string name="chatting_list_selection_cancel">선택 취소</string>
     <string name="chatting_list_untitled">제목 없는 대화</string>
     <string name="chatting_list_empty">아직 나눈 대화가 없어요</string>

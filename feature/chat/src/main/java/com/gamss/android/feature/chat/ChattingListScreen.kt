@@ -17,7 +17,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -31,6 +34,7 @@ import com.gamss.android.core.designsystem.theme.GamssTheme
 import com.gamss.android.feature.chat.component.ChattingListTopBar
 import com.gamss.android.feature.chat.component.ConversationList
 import com.gamss.android.feature.chat.component.DeleteConversationDialog
+import com.gamss.android.feature.chatSearch.ChattingSearchModeContent
 import org.orbitmvi.orbit.compose.collectAsState
 import org.orbitmvi.orbit.compose.collectSideEffect
 
@@ -51,12 +55,18 @@ fun ChattingListScreen(
     viewModel: ChattingListViewModel = hiltViewModel(),
 ) {
     val state by viewModel.collectAsState()
+    var isSearchMode by rememberSaveable { mutableStateOf(false) }
 
     ChattingListSideEffectHandler(viewModel = viewModel, onChatClick = onChatClick)
 
     LaunchedEffect(Unit) { viewModel.load() }
 
+    BackHandler(enabled = isSearchMode && !state.canCancelSelection) { isSearchMode = false }
     BackHandler(enabled = state.canCancelSelection) { viewModel.onSelectionCancel() }
+
+    LaunchedEffect(state.isSelectionMode) {
+        if (state.isSelectionMode) isSearchMode = false
+    }
 
     val actions = remember(viewModel) {
         ChattingListActions(
@@ -74,10 +84,22 @@ fun ChattingListScreen(
         ChattingListTopBar(
             isSelectionMode = state.isSelectionMode,
             onSelectionCancel = viewModel::onSelectionCancel,
+            onSearchClick = { isSearchMode = true },
             onMenuClick = onMenuClick,
         )
 
-        ChattingListBody(state = state, actions = actions, modifier = Modifier.weight(1f))
+        ChattingSearchModeContent(
+            isSearchMode = isSearchMode,
+            onCancel = { isSearchMode = false },
+            idleContent = {
+                ChattingListBody(
+                    state = state,
+                    actions = actions,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            },
+            modifier = Modifier.weight(1f),
+        )
 
         if (state.isSelectionMode) {
             DeleteButton(enabled = state.canDelete, onClick = viewModel::onDeleteRequest)

@@ -42,6 +42,11 @@ class SearchChattingViewModel @Inject constructor(
         reduce { state.copy(keyword = keyword) }
     }
 
+    fun resetSearch() = intent {
+        searchResults.value = null
+        reduce { SearchChattingState() }
+    }
+
     fun search() = intent {
         val keyword = state.keyword.text.trim()
         val nextGeneration = state.searchGeneration + 1

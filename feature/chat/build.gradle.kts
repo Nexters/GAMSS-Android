@@ -8,6 +8,7 @@ android {
 
 dependencies {
     implementation(projects.domain)
+    implementation(projects.feature.chatSearch)
 
     implementation(libs.compose.material.icons.core)
 

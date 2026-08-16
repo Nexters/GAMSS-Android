@@ -1,6 +1,11 @@
 package com.gamss.android.feature.chatSearch
 
 import android.widget.Toast
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,15 +27,23 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
@@ -39,6 +52,7 @@ import androidx.paging.LoadState
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemKey
+import com.gamss.android.core.designsystem.theme.GamssTheme
 import com.gamss.android.domain.conversation.chattingsearch.ChattingRoomSummary
 import org.orbitmvi.orbit.compose.collectAsState
 import org.orbitmvi.orbit.compose.collectSideEffect
@@ -49,6 +63,74 @@ fun SearchChattingScreen(
 ) {
     val state by viewModel.collectAsState()
     val chattingRooms = viewModel.chattingRooms.collectAsLazyPagingItems()
+    SearchSideEffectHandler(viewModel)
+
+    SearchChattingContent(
+        state = state,
+        chattingRooms = chattingRooms,
+        onKeywordChanged = viewModel::onKeywordChanged,
+        onSearch = viewModel::search,
+    )
+}
+
+/**
+ * 채팅 목록 안에서 사용하는 검색 모드입니다. 입력창만 위에서 아래로 펼쳐지고, 검색 전에는 기존
+ * 목록인 [idleContent]를 그대로 유지합니다.
+ */
+@Composable
+fun ChattingSearchModeContent(
+    isSearchMode: Boolean,
+    onCancel: () -> Unit,
+    idleContent: @Composable () -> Unit,
+    modifier: Modifier = Modifier,
+    viewModel: SearchChattingViewModel = hiltViewModel(),
+) {
+    val state by viewModel.collectAsState()
+    val chattingRooms = viewModel.chattingRooms.collectAsLazyPagingItems()
+    val listState = rememberLazyListState()
+
+    SearchSideEffectHandler(viewModel)
+
+    LaunchedEffect(isSearchMode) {
+        if (!isSearchMode) viewModel.resetSearch()
+    }
+
+    Column(modifier = modifier.fillMaxSize()) {
+        AnimatedVisibility(
+            visible = isSearchMode,
+            enter = expandVertically(expandFrom = Alignment.Top) + fadeIn(),
+            exit = shrinkVertically(shrinkTowards = Alignment.Top) + fadeOut(),
+        ) {
+            SearchModeInput(
+                keyword = state.keyword,
+                onKeywordChanged = viewModel::onKeywordChanged,
+                onSearch = viewModel::search,
+                onCancel = onCancel,
+            )
+        }
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f),
+        ) {
+            if (isSearchMode && state.hasSearched) {
+                SearchResultContent(
+                    state = state,
+                    chattingRooms = chattingRooms,
+                    listState = listState,
+                    contentPadding = PaddingValues(0.dp),
+                    onRetry = viewModel::search,
+                )
+            } else {
+                idleContent()
+            }
+        }
+    }
+}
+
+@Composable
+private fun SearchSideEffectHandler(viewModel: SearchChattingViewModel) {
     val context = LocalContext.current
 
     viewModel.collectSideEffect { sideEffect ->
@@ -57,13 +139,61 @@ fun SearchChattingScreen(
                 Toast.makeText(context, sideEffect.reason.toMessage(), Toast.LENGTH_SHORT).show()
         }
     }
+}
 
-    SearchChattingContent(
-        state = state,
-        chattingRooms = chattingRooms,
-        onKeywordChanged = viewModel::onKeywordChanged,
-        onSearch = viewModel::search,
-    )
+@Composable
+private fun SearchModeInput(
+    keyword: TextFieldValue,
+    onKeywordChanged: (TextFieldValue) -> Unit,
+    onSearch: () -> Unit,
+    onCancel: () -> Unit,
+) {
+    val focusRequester = remember { FocusRequester() }
+    val keyboardController = LocalSoftwareKeyboardController.current
+
+    LaunchedEffect(Unit) {
+        focusRequester.requestFocus()
+        keyboardController?.show()
+    }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 18.dp, vertical = 12.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        TextField(
+            value = keyword,
+            onValueChange = onKeywordChanged,
+            modifier = Modifier
+                .weight(1f)
+                .focusRequester(focusRequester),
+            placeholder = { Text("검색어 입력") },
+            singleLine = true,
+            shape = RectangleShape,
+            colors = TextFieldDefaults.colors(
+                focusedContainerColor = GamssTheme.colors.gray075,
+                unfocusedContainerColor = GamssTheme.colors.gray075,
+                focusedIndicatorColor = GamssTheme.colors.gray075,
+                unfocusedIndicatorColor = GamssTheme.colors.gray075,
+            ),
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+            keyboardActions = KeyboardActions(onSearch = { onSearch() }),
+        )
+        TextButton(
+            onClick = {
+                keyboardController?.hide()
+                onCancel()
+            },
+        ) {
+            Text(
+                text = "취소",
+                style = GamssTheme.typography.body2Medium,
+                color = GamssTheme.colors.gray900,
+            )
+        }
+    }
 }
 
 @Composable
