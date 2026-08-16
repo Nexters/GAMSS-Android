@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -26,6 +25,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
+import com.gamss.android.core.designsystem.component.GamssText
 import com.gamss.android.core.designsystem.theme.GamssTheme
 import com.gamss.android.feature.carddelete.R
 
@@ -57,7 +57,7 @@ fun ShredStatusRow(
                     strokeWidth = strokeWidth,
                 )
             }
-            .padding(horizontal = GamssTheme.spacing.spacing400, vertical = 25.dp),
+            .padding(horizontal = GamssTheme.spacing.spacing400, vertical = GamssTheme.spacing.spacing500),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         StatusPillToggle(isOn = isShredding)
@@ -108,7 +108,7 @@ private fun ToggleCell(label: String, selected: Boolean, selectedColor: Color) {
             .background(backgroundColor),
         contentAlignment = Alignment.Center,
     ) {
-        Text(
+        GamssText(
             text = label,
             style = GamssTheme.typography.body5Medium,
             color = if (selected) GamssTheme.colors.white else GamssTheme.colors.gray500,
