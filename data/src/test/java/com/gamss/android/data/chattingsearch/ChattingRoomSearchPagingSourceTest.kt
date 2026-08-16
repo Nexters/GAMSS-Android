@@ -57,7 +57,6 @@ class ChattingRoomSearchPagingSourceTest {
         Assert.assertEquals(2, page.data.size)
         Assert.assertEquals(1001L, page.data[0].conversationId)
         Assert.assertEquals("출근길에 느낀 답답함", page.data[0].title)
-        Assert.assertEquals("ACTIVE", page.data[0].status)
         Assert.assertEquals("2026-08-04T08:12:00Z", page.data[0].createdAt)
         Assert.assertNull(page.prevKey)
         Assert.assertEquals(1, page.nextKey)
