@@ -6,10 +6,10 @@ import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
-class DeleteAllCardsUseCaseTest {
+class DeleteCardUseCaseTest {
 
     private class RecordingRepository : CardRepository {
-        var deleteAllCalled = false
+        var deletedCardId: Long? = null
 
         override suspend fun createCard(
             conversationId: Long,
@@ -17,24 +17,24 @@ class DeleteAllCardsUseCaseTest {
             summary: String,
         ): AppResult<Card> = error("사용하지 않음")
 
-        override suspend fun deleteAllCards(): AppResult<Unit> {
-            deleteAllCalled = true
+        override suspend fun deleteAllCards(): AppResult<Unit> = error("사용하지 않음")
+
+        override suspend fun deleteCard(cardId: Long): AppResult<Unit> {
+            deletedCardId = cardId
             return AppResult.Success(Unit)
         }
-
-        override suspend fun deleteCard(cardId: Long): AppResult<Unit> = error("사용하지 않음")
 
         override suspend fun deleteCardsByEmotion(character: EmotionCharacter): AppResult<Unit> =
             error("사용하지 않음")
     }
 
     @Test
-    fun 모든_카드_삭제를_리포지토리에_위임한다() = runBlocking {
+    fun 카드_삭제를_리포지토리에_위임한다() = runBlocking {
         val repository = RecordingRepository()
 
-        val result = DeleteAllCardsUseCase(repository)()
+        val result = DeleteCardUseCase(repository)(1L)
 
-        assertEquals(true, repository.deleteAllCalled)
+        assertEquals(1L, repository.deletedCardId)
         assertEquals(AppResult.Success(Unit), result)
     }
 }

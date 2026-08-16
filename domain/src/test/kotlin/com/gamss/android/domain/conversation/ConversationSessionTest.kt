@@ -229,6 +229,11 @@ class ConversationSessionTest {
         )
 
         override suspend fun deleteAllCards(): AppResult<Unit> = AppResult.Success(Unit)
+
+        override suspend fun deleteCard(cardId: Long): AppResult<Unit> = AppResult.Success(Unit)
+
+        override suspend fun deleteCardsByEmotion(character: EmotionCharacter): AppResult<Unit> =
+            AppResult.Success(Unit)
     }
 
     private class FakeConversationRepository(

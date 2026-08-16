@@ -53,4 +53,27 @@ internal class CardRepositoryImpl @Inject constructor(
         checkNotNull(response.data?.deletedCount) { "No deleted card count" }
         Unit
     }
+
+    override suspend fun deleteCard(cardId: Long): AppResult<Unit> {
+        val result = runCatchingApiCall {
+            cardService.deleteCard(cardId).throwIfFailed()
+        }
+        return when (result) {
+            is AppResult.Success -> AppResult.Success(Unit)
+            // 이미 지워진 카드면 목표는 달성된 상태다. 실패로 흘리면 재시도가 영원히 같은 오류를 받는다.
+            is AppResult.Failure ->
+                if (result.throwable.hasErrorCode(CARD_ALREADY_DELETED)) {
+                    AppResult.Success(Unit)
+                } else {
+                    result
+                }
+        }
+    }
+
+    override suspend fun deleteCardsByEmotion(character: EmotionCharacter): AppResult<Unit> = runCatchingApiCall {
+        val response = cardService.deleteCardsByEmotion(character.toServerEmotionType())
+        response.throwIfFailed()
+        checkNotNull(response.data?.deletedCount) { "No deleted card count" }
+        Unit
+    }
 }
