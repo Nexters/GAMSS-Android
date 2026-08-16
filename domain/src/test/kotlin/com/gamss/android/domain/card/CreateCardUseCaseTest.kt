@@ -30,7 +30,7 @@ class CreateCardUseCaseTest {
             )
         }
 
-        override suspend fun deleteCard(cardId: Long): AppResult<Unit> = AppResult.Success(Unit)
+        override suspend fun deleteAllCards(): AppResult<Unit> = AppResult.Success(Unit)
     }
 
     @Test

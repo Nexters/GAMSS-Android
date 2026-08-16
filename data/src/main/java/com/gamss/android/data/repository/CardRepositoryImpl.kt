@@ -47,15 +47,10 @@ internal class CardRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun deleteCard(cardId: Long): AppResult<Unit> {
-        val result = runCatchingApiCall {
-            cardService.deleteCard(cardId).throwIfFailed()
-        }
-        return when (result) {
-            is AppResult.Success -> AppResult.Success(Unit)
-            // 응답만 유실된 재시도일 수 있다. 이미 삭제됨도 사용자가 의도한 최종 상태다.
-            is AppResult.Failure ->
-                if (result.throwable.hasErrorCode(CARD_ALREADY_DELETED)) AppResult.Success(Unit) else result
-        }
+    override suspend fun deleteAllCards(): AppResult<Unit> = runCatchingApiCall {
+        val response = cardService.deleteAllCards()
+        response.throwIfFailed()
+        checkNotNull(response.data?.deletedCount) { "No deleted card count" }
+        Unit
     }
 }
