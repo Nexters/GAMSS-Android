@@ -63,6 +63,9 @@ import com.gamss.android.domain.card.Card
 import com.gamss.android.domain.conversation.Message
 import com.gamss.android.domain.conversation.MessageSender
 import com.gamss.android.domain.emotion.EmotionCharacter
+import com.gamss.android.feature.chat.component.EndConversationDialog
+import com.gamss.android.feature.chat.component.MessageBubble
+import com.gamss.android.feature.chat.component.MessageInputBar
 import com.gamss.android.feature.chat.component.SupportAgencyDialog
 import com.gamss.android.feature.chat.util.AnimatedChatMessage
 import com.gamss.android.feature.chat.util.ChatMessageAnimation
@@ -139,27 +142,6 @@ fun ChatRoomScreen(
     }
 }
 
-@Composable
-private fun EndConversationDialog(
-    onConfirm: () -> Unit,
-    onDismiss: () -> Unit,
-) {
-    GamssDialog(
-        title = stringResource(R.string.chat_room_end_dialog_title),
-        subtitle = stringResource(R.string.chat_room_end_dialog_subTitle),
-        secondaryAction = GamssDialogAction(
-            label = stringResource(R.string.chat_room_end_dialog_dismiss_button_label),
-            onClick = onDismiss,
-            variant = GamssButtonVariant.Secondary,
-        ),
-        primaryAction = GamssDialogAction(
-            label = stringResource(R.string.chat_room_end_dialog_confirm_button_label),
-            onClick = onConfirm,
-        ),
-        onDismissRequest = onDismiss,
-    )
-}
-
 // 카드생성 bottomsheet
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -220,9 +202,6 @@ private fun ChatRoomContent(
         }
     }
 
-    // 답장할 메시지까지 스크롤해 둔 채로 입력창을 탭하면, 키보드가 올라오며 줄어드는 높이만큼
-    // 뷰포트 아래쪽이 잘려 그 메시지가 화면 밖으로 밀려난다. 키보드가 커진 만큼 같이 스크롤해
-    // 같은 메시지가 입력창 위에 계속 보이게 한다. 키보드가 내려갈 때도 같은 식으로 되돌아온다.
     val imeBottomPx = WindowInsets.ime.getBottom(LocalDensity.current)
     var previousImeBottomPx by remember { mutableIntStateOf(imeBottomPx) }
     LaunchedEffect(imeBottomPx) {
@@ -236,13 +215,28 @@ private fun ChatRoomContent(
     Scaffold(
         modifier = modifier,
         topBar = {
-            ChatRoomTopBar(
-                conversationCreatedAt = state.conversationCreatedAt,
-                endFlow = state.endFlow,
-                canEnd = state.canEnd,
-                showEndButton = state.useChatEndFeature,
-                onEndClick = actions.onEndClick,
-                onBackClick = onBackClick,
+            GamssTopNavigation(
+                title = state.conversationCreatedAt?.let(::formatConversationDate).orEmpty(),
+                titleAlignment = GamssTopNavigationTitleAlignment.Center,
+                showLeftIcon = true,
+                onLeftIconClick = onBackClick,
+                rightActions = listOfNotNull(
+                    if (state.useChatEndFeature) {
+                        if (!state.endFlow.isBusy && state.canEnd) {
+                            GamssTopNavigationIconAction(
+                                icon = GamssTopNavigationIcon.CreateCard,
+                                onClick = actions.onEndClick,
+                            )
+                        } else {
+                            null
+                        }
+                    } else {
+                        null
+                    },
+                    GamssTopNavigationIconAction(icon = GamssTopNavigationIcon.Menu, onClick = {
+                        // 토큰 확인 페이지?
+                    }),
+                ),
             )
         },
         // 상위 Scaffold 가 인셋을 이미 적용해, imePadding 을 그대로 쓰면 이중 적용된다.
@@ -268,10 +262,6 @@ private fun ChatRoomContent(
             ChatRoomInputSection(
                 endFlow = state.endFlow,
                 input = state.input,
-                // 전송 가능 여부(글자 유무)는 GamssInputBar 내부에서 계산한다. 여기서는 그 앞단
-                // 조건(로딩 중·종료 흐름 진입)만 넘겨 입력칸 자체를 잠근다. 전송 중(isSending)에
-                // 여기서 잠그면 텍스트필드가 disabled 되며 포커스와 키보드가 함께 내려가므로 넣지
-                // 않는다 — 연타 방지는 이미 ChatRoomState.canSend/onSend 쪽에서 보장된다.
                 isInputEnabled = !state.isLoading && state.endFlow == EndFlow.NotStarted,
                 replyTarget = state.replyTarget,
                 actions = actions,
@@ -332,40 +322,6 @@ private fun ChatMessageList(
 }
 
 @Composable
-private fun ChatRoomTopBar(
-    conversationCreatedAt: LocalDateTime?,
-    endFlow: EndFlow,
-    canEnd: Boolean,
-    showEndButton: Boolean,
-    onEndClick: () -> Unit,
-    onBackClick: () -> Unit,
-) {
-    GamssTopNavigation(
-        title = conversationCreatedAt?.let(::formatConversationDate).orEmpty(),
-        titleAlignment = GamssTopNavigationTitleAlignment.Center,
-        showLeftIcon = true,
-        onLeftIconClick = onBackClick,
-        rightActions = listOfNotNull(
-            if (showEndButton) {
-                if (!endFlow.isBusy && canEnd) {
-                    GamssTopNavigationIconAction(
-                        icon = GamssTopNavigationIcon.CreateCard,
-                        onClick = onEndClick,
-                    )
-                } else {
-                    null
-                }
-            } else {
-                null
-            },
-            GamssTopNavigationIconAction(icon = GamssTopNavigationIcon.Menu, onClick = {
-                // 토큰 확인 페이지?
-            }),
-        ),
-    )
-}
-
-@Composable
 private fun ChatRoomInputSection(
     endFlow: EndFlow,
     input: String,
@@ -396,70 +352,6 @@ private fun ChatRoomInputSection(
     )
 }
 
-/**
- * @param messages 답장 대상 메시지의 내용을 찾기 위한 전체 목록. [Message.repliesToMessageId] 가
- *  가리키는 메시지가 이 목록에 없으면(예: 아직 로드되지 않은 과거 메시지) 답장 인용 없이 표시한다.
- */
-@Composable
-private fun MessageBubble(
-    message: Message,
-    messages: List<Message>,
-    onCharacterMessageClick: (Message) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val replyQuote = message.repliesToMessageId
-        ?.let { targetId -> messages.find { it.id == targetId } }
-        ?.toReplyQuote()
-
-    Box(
-        modifier = modifier.fillMaxWidth(),
-    ) {
-        when (val sender = message.sender) {
-            MessageSender.User -> GamssSentChatBubble(
-                message = message.content,
-                time = message.createdTime,
-                replyQuote = replyQuote,
-                modifier = Modifier.align(Alignment.CenterEnd),
-            )
-
-            is MessageSender.Character -> GamssReceivedChatBubble(
-                sender = ChatSender(name = sender.character.displayName),
-                message = message.content,
-                time = message.createdTime,
-                replyQuote = replyQuote,
-                modifier = Modifier
-                    .align(Alignment.CenterStart)
-                    .noRippleCombinedClickable(
-                        onClick = { onCharacterMessageClick(message) },
-                        onLongClick = null
-                    ),
-            )
-
-            MessageSender.Unknown -> GamssReceivedChatBubble(
-                sender = ChatSender(name = ""),
-                message = message.content,
-                time = message.createdTime,
-                replyQuote = replyQuote,
-                modifier = Modifier.align(Alignment.CenterStart),
-            )
-        }
-    }
-}
-
-@Composable
-private fun Message.toReplyQuote(): ChatReplyQuote {
-    val label = when (val target = sender) {
-        is MessageSender.Character -> stringResource(
-            R.string.chat_room_reply_to_character,
-            target.character.displayName,
-        )
-
-        MessageSender.User -> stringResource(R.string.chat_room_reply_to_me)
-        MessageSender.Unknown -> stringResource(R.string.chat_room_reply)
-    }
-    return ChatReplyQuote(senderLabel = label, message = content)
-}
-
 @Composable
 private fun GeneratingIndicator(modifier: Modifier = Modifier) {
     Row(
@@ -476,42 +368,8 @@ private fun GeneratingIndicator(modifier: Modifier = Modifier) {
     }
 }
 
-@Composable
-private fun MessageInputBar(
-    input: String,
-    enabled: Boolean,
-    replyTarget: ReplyTarget?,
-    onInputChange: (String) -> Unit,
-    onSendClick: () -> Unit,
-    onReplyClear: () -> Unit,
-) {
-    GamssInputBar(
-        value = input,
-        onValueChange = onInputChange,
-        onTrailingClick = onSendClick,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 18.dp, vertical = 12.dp),
-        placeholder = stringResource(R.string.chat_room_input_placeholder),
-        trailingContentDescription = "보내기",
-        enabled = enabled,
-        maxLines = MESSAGE_INPUT_MAX_LINES,
-        replyQuote = replyTarget?.let {
-            ChatReplyQuote(
-                senderLabel = stringResource(
-                    R.string.chat_room_reply_to_character,
-                    it.characterName
-                ),
-                message = it.content,
-            )
-        },
-        onReplyClear = onReplyClear,
-        replyClearContentDescription = "답장 취소",
-    )
-}
-
 private const val EMERGENCY_PHONE_NUMBER = "119"
-private const val MESSAGE_INPUT_MAX_LINES = 5
+
 
 @Preview(name = "Light", showBackground = true)
 @Suppress("UnusedPrivateMember")
