@@ -2,7 +2,12 @@ package com.gamss.android.feature.chat
 
 import com.gamss.android.core.common.util.formatKoreanTime
 import com.gamss.android.domain.conversation.Conversation
+import com.gamss.android.domain.conversation.chattingsearch.ChattingRoomSummary
+import java.time.LocalDateTime
+import java.time.OffsetDateTime
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.time.format.DateTimeParseException
 import java.util.Locale
 
 /**
@@ -40,6 +45,36 @@ private fun Conversation.toConversationRow(): ConversationRow = ConversationRow(
     title = title,
     timeLabel = createdAt?.let(::formatKoreanTime),
 )
+
+internal fun ChattingRoomSummary.toConversationRow(
+    zone: ZoneId = ZoneId.systemDefault(),
+): ConversationRow {
+    val createdAt = createdAt.toLocalDateTimeOrNull(zone)
+    return ConversationRow(
+        id = conversationId,
+        title = title,
+        timeLabel = createdAt?.let(::formatKoreanTime),
+    )
+}
+
+internal fun ChattingRoomSummary.toDateLabel(
+    zone: ZoneId = ZoneId.systemDefault(),
+): String? = createdAt.toLocalDateTimeOrNull(zone)?.toLocalDate()?.format(DateHeaderFormatter)
+
+private fun String.toLocalDateTimeOrNull(zone: ZoneId): LocalDateTime? {
+    val value = trim()
+    if (value.isEmpty()) return null
+
+    return try {
+        OffsetDateTime.parse(value).atZoneSameInstant(zone).toLocalDateTime()
+    } catch (_: DateTimeParseException) {
+        try {
+            LocalDateTime.parse(value)
+        } catch (_: DateTimeParseException) {
+            null
+        }
+    }
+}
 
 // 불교력이나 일본력 로케일에서 연도가 밀리지 않게 ROOT 로 고정한다.
 private val DateHeaderFormatter: DateTimeFormatter =

@@ -11,6 +11,7 @@ dependencies {
     implementation(projects.domain)
 
     implementation(libs.compose.material.icons.core)
+    implementation(libs.androidx.paging.compose)
 
     // 선택 모드를 뒤로가기로 빠져나가기 위한 BackHandler. compose-ui 에는 없는 API 다.
     implementation(libs.androidx.activity.compose)

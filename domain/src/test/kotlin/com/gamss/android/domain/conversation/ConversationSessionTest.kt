@@ -1,10 +1,12 @@
 package com.gamss.android.domain.conversation
 
+import androidx.paging.PagingData
 import com.gamss.android.core.common.AppResult
 import com.gamss.android.domain.card.Card
 import com.gamss.android.domain.card.CardRepository
 import com.gamss.android.domain.card.CreateCardUseCase
 import com.gamss.android.domain.card.CreateConversationCardUseCase
+import com.gamss.android.domain.conversation.chattingsearch.ChattingRoomSummary
 import com.gamss.android.domain.emotion.ClassificationResult
 import com.gamss.android.domain.emotion.ConversationEmotionAccumulator
 import com.gamss.android.domain.emotion.EmotionCharacter
@@ -16,6 +18,7 @@ import com.gamss.android.domain.summary.UtteranceTokenCounter
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
@@ -302,6 +305,9 @@ class ConversationSessionTest {
 
         override suspend fun deleteConversation(conversationId: Long): AppResult<Unit> =
             AppResult.Success(Unit)
+
+        override fun searchChattingRooms(keyword: String): Flow<PagingData<ChattingRoomSummary>> =
+            throw UnsupportedOperationException()
 
         suspend fun awaitTitleAttemptStart() {
             titleAttemptStarted.await()

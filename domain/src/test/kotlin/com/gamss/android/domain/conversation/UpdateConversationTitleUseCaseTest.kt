@@ -1,7 +1,10 @@
 package com.gamss.android.domain.conversation
 
+import androidx.paging.PagingData
 import com.gamss.android.core.common.AppResult
+import com.gamss.android.domain.conversation.chattingsearch.ChattingRoomSummary
 import com.gamss.android.domain.emotion.EmotionCharacter
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -98,6 +101,9 @@ class UpdateConversationTitleUseCaseTest {
             throw UnsupportedOperationException()
 
         override suspend fun deleteConversation(conversationId: Long): AppResult<Unit> =
+            throw UnsupportedOperationException()
+
+        override fun searchChattingRooms(keyword: String): Flow<PagingData<ChattingRoomSummary>> =
             throw UnsupportedOperationException()
     }
 }

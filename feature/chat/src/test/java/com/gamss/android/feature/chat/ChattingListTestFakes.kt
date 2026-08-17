@@ -1,5 +1,6 @@
 package com.gamss.android.feature.chat
 
+import androidx.paging.PagingData
 import com.gamss.android.core.common.AppResult
 import com.gamss.android.domain.conversation.Conversation
 import com.gamss.android.domain.conversation.ConversationRepository
@@ -7,8 +8,11 @@ import com.gamss.android.domain.conversation.DeleteConversationsUseCase
 import com.gamss.android.domain.conversation.GetOngoingConversationsUseCase
 import com.gamss.android.domain.conversation.Message
 import com.gamss.android.domain.conversation.SentMessage
+import com.gamss.android.domain.conversation.chattingsearch.ChattingRoomSummary
+import com.gamss.android.domain.conversation.chattingsearch.SearchChattingRoomsUseCase
 import com.gamss.android.domain.emotion.EmotionCharacter
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.flow.Flow
 import org.orbitmvi.orbit.test.Item
 import org.orbitmvi.orbit.test.OrbitTestContext
 import java.time.LocalDateTime
@@ -22,6 +26,7 @@ internal fun chattingListViewModel(
 ): ChattingListViewModel = ChattingListViewModel(
     getOngoingConversations = GetOngoingConversationsUseCase(repository),
     deleteConversations = DeleteConversationsUseCase(repository),
+    searchChattingRooms = SearchChattingRoomsUseCase(repository),
 )
 
 /**
@@ -41,6 +46,11 @@ internal class FakeChattingListRepository(
     var deleteGate: CompletableDeferred<Unit>? = null
 
     val deletedIds = mutableListOf<Long>()
+
+    val requestedKeywords = mutableListOf<String>()
+
+    var searchResult: Flow<PagingData<ChattingRoomSummary>> =
+        kotlinx.coroutines.flow.flowOf(PagingData.empty())
 
     var listCallCount = 0
         private set
@@ -73,6 +83,11 @@ internal class FakeChattingListRepository(
 
     override suspend fun endConversation(conversationId: Long): AppResult<Unit> =
         error("목록 테스트에서 쓰지 않는다")
+
+    override fun searchChattingRooms(keyword: String): Flow<PagingData<ChattingRoomSummary>> {
+        requestedKeywords += keyword
+        return searchResult
+    }
 }
 
 internal fun conversation(
