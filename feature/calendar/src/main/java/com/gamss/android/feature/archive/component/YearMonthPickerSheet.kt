@@ -73,10 +73,11 @@ internal fun YearMonthPickerSheet(
         // 벌어지므로 예약하지 않고, 아래에서 직접 계산한다.
         contentWindowInsets = { WindowInsets(0) },
     ) {
-        // 제스처 바는 디자인의 홈 인디케이터처럼 여백 위에 겹쳐도 된다. 다만 3버튼 내비처럼 인셋이
-        // 디자인 여백보다 큰 기기에서는 버튼이 가려지므로, 그때는 인셋만큼 확보한다.
+        // 제스처 바는 디자인의 홈 인디케이터처럼 여백 위에 겹쳐도 된다(24dp + 8dp = 디자인 32dp).
+        // 3버튼 내비처럼 인셋이 그보다 크면 여백이 남지 않아 버튼이 내비바에 붙으므로, 그때는 인셋
+        // 위로 최소 간격만큼 띄운다.
         val bottomPadding = SheetBottomPadding.coerceAtLeast(
-            WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding(),
+            WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + MinGapAboveSystemBar,
         )
         Column(modifier = Modifier.padding(bottom = bottomPadding)) {
             Row(
@@ -241,6 +242,7 @@ private const val WHEEL_VISIBLE_ROWS = 5
 private val SheetCornerRadius = 20.dp
 private val SheetTopPadding = 24.dp
 private val SheetBottomPadding = 32.dp
+private val MinGapAboveSystemBar = 8.dp
 private val SheetHorizontalPadding = 20.dp
 private val HitPadding = 12.dp
 private val WheelTopGap = 24.dp
