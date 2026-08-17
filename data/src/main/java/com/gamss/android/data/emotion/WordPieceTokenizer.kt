@@ -1,8 +1,6 @@
 package com.gamss.android.data.emotion
 
-import android.content.Context
-import com.gamss.android.data.model.OnDemandModelAssets
-import com.gamss.android.data.model.readBytes
+import com.gamss.android.data.model.ModelAssetSource
 import com.gamss.android.data.tokenizer.AddedVocabulary
 import com.gamss.android.data.tokenizer.REPLACEMENT_CODE_POINT
 import com.gamss.android.data.tokenizer.forEachCodePoint
@@ -184,12 +182,12 @@ internal class WordPieceTokenizer private constructor(
         private val TOKENIZER_JSON = Json { ignoreUnknownKeys = true }
 
         suspend fun load(
-            context: Context,
+            modelAssetSource: ModelAssetSource,
             packName: String,
             tokenizerAsset: String,
             seqLen: Int,
         ): WordPieceTokenizer {
-            val bytes = OnDemandModelAssets(context).resolve(packName, tokenizerAsset).readBytes()
+            val bytes = modelAssetSource.readBytes(packName, tokenizerAsset)
             return fromJson(bytes, seqLen)
         }
 

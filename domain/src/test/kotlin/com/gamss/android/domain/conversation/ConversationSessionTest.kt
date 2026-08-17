@@ -154,6 +154,68 @@ class ConversationSessionTest {
     }
 
     @Test
+    fun 홈이_새_대화를_열면_다른_인스턴스인_채팅방도_reveal_캐시를_받는다() = runBlocking {
+        val repository = FakeConversationRepository()
+        val reveal = PendingConversationReveal()
+        val homeSession = session(repository, reveal)
+        val chatSession = session(repository, reveal)
+
+        val result = homeSession.send(conversationId = null, content = SEED, replyToMessageId = null)
+        val sent = (result as AppResult.Success).data
+
+        assertEquals(sent, chatSession.consumePendingReveal(ROOM_ID))
+    }
+
+    @Test
+    fun 채팅방이_reveal_캐시를_소비하면_요약_상태도_이어받는다() = runBlocking {
+        val repository = FakeConversationRepository()
+        val reveal = PendingConversationReveal()
+        val homeSession = session(repository, reveal)
+        val chatSession = session(repository, reveal)
+
+        homeSession.send(conversationId = null, content = SEED, replyToMessageId = null)
+        chatSession.consumePendingReveal(ROOM_ID)
+        chatSession.send(conversationId = ROOM_ID, content = "팀장이 또 그랬어", replyToMessageId = null)
+
+        assertEquals(listOf(null, SEED), repository.sentContextSummaries)
+    }
+
+    @Test
+    fun reveal_캐시는_한_번_꺼내면_비워진다() = runBlocking {
+        val repository = FakeConversationRepository()
+        val reveal = PendingConversationReveal()
+        val homeSession = session(repository, reveal)
+        val chatSession = session(repository, reveal)
+
+        homeSession.send(conversationId = null, content = SEED, replyToMessageId = null)
+        chatSession.consumePendingReveal(ROOM_ID)
+
+        assertEquals(null, chatSession.consumePendingReveal(ROOM_ID))
+    }
+
+    @Test
+    fun 다른_대화_ID로는_reveal_캐시를_꺼내지_못한다() = runBlocking {
+        val repository = FakeConversationRepository()
+        val reveal = PendingConversationReveal()
+        val homeSession = session(repository, reveal)
+        val chatSession = session(repository, reveal)
+
+        homeSession.send(conversationId = null, content = SEED, replyToMessageId = null)
+
+        assertEquals(null, chatSession.consumePendingReveal(OTHER_ROOM_ID))
+    }
+
+    @Test
+    fun 이어_쓰는_대화는_reveal_캐시를_남기지_않는다() = runBlocking {
+        val repository = FakeConversationRepository()
+        val session = session(repository)
+
+        session.continueWith(SEED)
+
+        assertEquals(null, session.consumePendingReveal(ROOM_ID))
+    }
+
+    @Test
     fun 제목으로_쓸_글자가_없으면_지정을_시도하지_않는다() = runBlocking {
         val repository = FakeConversationRepository()
         val session = session(repository)
@@ -186,7 +248,15 @@ class ConversationSessionTest {
         finishSend()
     }
 
-    private fun session(repository: FakeConversationRepository) = ConversationSession(
+    /**
+     * 홈과 채팅방은 각자 다른 [ConversationSession] 인스턴스를 Hilt에서 주입받는다(무스코프).
+     * [pendingReveal]을 생략하면 새 인스턴스가 만들어져 서로 다른 화면처럼 격리되고, 같은
+     * [PendingConversationReveal]을 넘기면 그 두 인스턴스가 캐시만 공유하는 실제 배선을 재현한다.
+     */
+    private fun session(
+        repository: FakeConversationRepository,
+        pendingReveal: PendingConversationReveal = PendingConversationReveal(),
+    ) = ConversationSession(
         sendMessage = SendMessageUseCase(repository),
         getMessages = GetMessagesUseCase(repository),
         updateConversationTitle = UpdateConversationTitleUseCase(repository),
@@ -200,6 +270,7 @@ class ConversationSessionTest {
             tokenCounter = CharLengthTokenCounter,
         ),
         emotionAccumulator = ConversationEmotionAccumulator(FlatClassifier),
+        pendingReveal = pendingReveal,
     )
 
     private object PassThroughSummarizer : DiarySummarizer {

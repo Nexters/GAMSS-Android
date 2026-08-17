@@ -1,8 +1,6 @@
 package com.gamss.android.data.summary
 
-import android.content.Context
-import com.gamss.android.data.model.OnDemandModelAssets
-import com.gamss.android.data.model.readBytes
+import com.gamss.android.data.model.ModelAssetSource
 import com.gamss.android.data.tokenizer.AddedVocabulary
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -170,24 +168,24 @@ internal class KobartTokenizer private constructor(
         private val TOKENIZER_JSON = Json { ignoreUnknownKeys = true }
 
         suspend fun load(
-            context: Context,
+            modelAssetSource: ModelAssetSource,
             packName: String,
             tokenizerAsset: String,
             maxInput: Int,
-        ): KobartTokenizer = fromJson(readTokenizer(context, packName, tokenizerAsset), maxInput)
+        ): KobartTokenizer = fromJson(readTokenizer(modelAssetSource, packName, tokenizerAsset), maxInput)
 
         /** 토큰 수를 재려면 절단이 없어야 한다. 절단하면 한계 이상은 전부 같은 값으로 보인다. */
         suspend fun loadWithoutTruncation(
-            context: Context,
+            modelAssetSource: ModelAssetSource,
             packName: String,
             tokenizerAsset: String,
-        ): KobartTokenizer = fromJson(readTokenizer(context, packName, tokenizerAsset), maxInput = null)
+        ): KobartTokenizer = fromJson(readTokenizer(modelAssetSource, packName, tokenizerAsset), maxInput = null)
 
         private suspend fun readTokenizer(
-            context: Context,
+            modelAssetSource: ModelAssetSource,
             packName: String,
             tokenizerAsset: String,
-        ): ByteArray = OnDemandModelAssets(context).resolve(packName, tokenizerAsset).readBytes()
+        ): ByteArray = modelAssetSource.readBytes(packName, tokenizerAsset)
 
         /** Context 없이 tokenizer.json 을 직접 먹이는 경로. 골든 대조 단위 테스트가 쓴다. */
         fun fromJson(bytes: ByteArray, maxInput: Int?): KobartTokenizer {
