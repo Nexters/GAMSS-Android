@@ -1,6 +1,13 @@
 package com.gamss.android.app.navigation
+
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
+import android.Manifest
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CircularProgressIndicator
@@ -40,6 +47,7 @@ fun GamssRootNavHost(
                 CircularProgressIndicator()
             }
         }
+
         else -> RootNavDisplay(
             sessionState = state.sessionState,
             useCardFeature = state.useCardFeature,
