@@ -1,5 +1,6 @@
 package com.gamss.android.feature.chat
 
+import androidx.paging.PagingData
 import com.gamss.android.core.common.AppResult
 import com.gamss.android.domain.card.Card
 import com.gamss.android.domain.card.CardRepository
@@ -17,9 +18,11 @@ import com.gamss.android.domain.conversation.EndConversationUseCase
 import com.gamss.android.domain.conversation.GetMessagesUseCase
 import com.gamss.android.domain.conversation.Message
 import com.gamss.android.domain.conversation.MessageSender
+import com.gamss.android.domain.conversation.PendingConversationReveal
 import com.gamss.android.domain.conversation.SendMessageUseCase
 import com.gamss.android.domain.conversation.SentMessage
 import com.gamss.android.domain.conversation.UpdateConversationTitleUseCase
+import com.gamss.android.domain.conversation.chattingsearch.ChattingRoomSummary
 import com.gamss.android.domain.emotion.ClassificationResult
 import com.gamss.android.domain.emotion.ConversationEmotionAccumulator
 import com.gamss.android.domain.emotion.EmotionCharacter
@@ -51,14 +54,8 @@ internal fun chatRoomViewModel(
     classifier: EmotionClassifier = FlatClassifier,
     tokenUsageRefreshNotifier: TokenUsageRefreshNotifier = RecordingTokenUsageRefreshNotifier(),
     remoteConfigRepository: RemoteConfigRepository = FakeRemoteConfigRepository(),
-): ChatRoomViewModel = ChatRoomViewModel(
-    tokenUsageRefreshNotifier = tokenUsageRefreshNotifier,
-    detectRiskInText = DetectRiskInTextUseCase(
-        repository = NoRiskLexiconRepository,
-        matcher = RiskTermMatcher(),
-    ),
-    getRemoteConfigFlag = GetRemoteConfigFlagUseCase(remoteConfigRepository),
-    session = ConversationSession(
+    pendingReveal: PendingConversationReveal = PendingConversationReveal(),
+    session: ConversationSession = ConversationSession(
         sendMessage = SendMessageUseCase(conversationRepository),
         getMessages = GetMessagesUseCase(conversationRepository),
         updateConversationTitle = UpdateConversationTitleUseCase(conversationRepository),
@@ -72,7 +69,16 @@ internal fun chatRoomViewModel(
             tokenCounter = CharLengthTokenCounter,
         ),
         emotionAccumulator = ConversationEmotionAccumulator(classifier),
+        pendingReveal = pendingReveal,
     ),
+): ChatRoomViewModel = ChatRoomViewModel(
+    tokenUsageRefreshNotifier = tokenUsageRefreshNotifier,
+    detectRiskInText = DetectRiskInTextUseCase(
+        repository = NoRiskLexiconRepository,
+        matcher = RiskTermMatcher(),
+    ),
+    getRemoteConfigFlag = GetRemoteConfigFlagUseCase(remoteConfigRepository),
+    session = session,
 )
 
 /** 원격 설정 조회 없이 항상 켜진 값을 돌려준다. 값 자체를 검증하는 테스트는 별도로 stub 한다. */
@@ -190,6 +196,9 @@ internal class FakeConversationRepository(
 
     override suspend fun deleteConversation(conversationId: Long): AppResult<Unit> =
         AppResult.Success(Unit)
+
+    override fun searchChattingRooms(keyword: String): Flow<PagingData<ChattingRoomSummary>> =
+        error("채팅방 테스트에서 쓰지 않는다")
 }
 
 /** 호출 횟수를 세고, [gate] 가 있으면 그때까지 응답을 붙든다. */

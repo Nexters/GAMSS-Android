@@ -1,9 +1,6 @@
 package com.gamss.android.app.navigation
-
-import android.Manifest
-import android.os.Build
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CircularProgressIndicator
@@ -101,6 +98,9 @@ private fun RootNavDisplay(
                 entry<MainKey> { MainScreen(useCardFeature = useCardFeature) }
             },
         ),
+
+        transitionSpec = { fadeIn(tween(300)) togetherWith fadeOut(tween(300)) },
+        popTransitionSpec = { fadeIn(tween(300)) togetherWith fadeOut(tween(300)) },
         onBack = {
             if (backStack.size > 1) {
                 backStack.removeLastOrNull()
