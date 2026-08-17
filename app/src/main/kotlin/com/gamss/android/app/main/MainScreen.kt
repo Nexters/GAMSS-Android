@@ -8,6 +8,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -96,7 +97,12 @@ fun MainScreen(
                 },
             ) { innerPadding ->
                 NavDisplay(
-                    modifier = Modifier.padding(innerPadding),
+                    // 화면마다 각자 상태바를 피하게 두면 빠뜨리기 쉬우니, 탭 전환 화면들을 모두
+                    // 감싸는 이 지점에서 한 번에 처리한다. 배경은 GamssPaperBackground 가 Scaffold
+                    // 바깥에서 이미 상태바 뒤까지 이어지므로, 여기서는 콘텐츠만 아래로 민다.
+                    modifier = Modifier
+                        .padding(innerPadding)
+                        .statusBarsPadding(),
                     entries = navigationState.toEntries(entryProvider = entries),
                     onBack = {
                         if (navigationState.canGoBack) {
