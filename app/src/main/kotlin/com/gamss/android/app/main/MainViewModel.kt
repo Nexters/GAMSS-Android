@@ -3,9 +3,11 @@ package com.gamss.android.app.main
 import androidx.lifecycle.ViewModel
 import com.gamss.android.domain.auth.ObserveSessionStateUseCase
 import com.gamss.android.domain.auth.RestoreSessionUseCase
+import com.gamss.android.domain.auth.SessionState
 import com.gamss.android.domain.config.GetRemoteConfigFlagUseCase
 import com.gamss.android.domain.config.ObserveRemoteConfigReadyUseCase
 import com.gamss.android.domain.config.RemoteConfigKey
+import com.gamss.android.domain.push.SyncDeviceTokenUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
@@ -23,6 +25,7 @@ class MainViewModel @Inject constructor(
     private val observeSessionStateUseCase: ObserveSessionStateUseCase,
     private val observeRemoteConfigReadyUseCase: ObserveRemoteConfigReadyUseCase,
     private val getRemoteConfigFlagUseCase: GetRemoteConfigFlagUseCase,
+    private val syncDeviceTokenUseCase: SyncDeviceTokenUseCase,
 ) : ViewModel(), ContainerHost<MainState, Unit> {
 
     override val container = container<MainState, Unit>(MainState())
@@ -41,7 +44,16 @@ class MainViewModel @Inject constructor(
             sessionState to useCardFeature
         }.collect { (sessionState, useCardFeature) ->
             reduce { state.copy(sessionState = sessionState, useCardFeature = useCardFeature) }
+            if (sessionState == SessionState.Authenticated) syncDeviceTokenUseCase()
         }
+    }
+
+    /**
+     * 포그라운드 진입 시 호출한다. 로그인 직후는 [observeSessionState] 가 이미 처리하므로,
+     * 이 경로는 백그라운드에 있는 동안 OS 알림 권한이 바뀐 경우를 잡아낸다.
+     */
+    fun syncDeviceToken() = intent {
+        if (state.sessionState == SessionState.Authenticated) syncDeviceTokenUseCase()
     }
 
     /**

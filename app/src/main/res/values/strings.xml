@@ -5,4 +5,7 @@
     <string name="tab_archive">보관함</string>
     <string name="tab_home">홈</string>
     <string name="tab_chat">대화</string>
+
+    <string name="default_notification_channel_id" translatable="false">push_default</string>
+    <string name="default_notification_channel_name">알림</string>
 </resources>
