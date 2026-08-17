@@ -2,6 +2,7 @@ package com.gamss.android.data.repository
 
 import com.gamss.android.core.common.AppResult
 import com.gamss.android.core.common.network.ApiException
+import com.gamss.android.data.remote.model.response.ApiError
 import com.gamss.android.data.remote.model.response.ApiResponse
 import com.gamss.android.data.remote.push.DeviceTokenService
 import com.gamss.android.data.remote.push.model.request.RegisterDeviceTokenRequest
@@ -51,6 +52,68 @@ class DeviceTokenRepositoryImplTest {
         coVerify(exactly = 1) {
             deviceTokenService.unregister(UnregisterDeviceTokenRequest(token = "token-123"))
         }
+    }
+
+    @Test
+    fun `같은 상태로 다시 동기화하면 서버를 다시 호출하지 않는다`() = runTest {
+        coEvery { deviceTokenService.register(any()) } returns ApiResponse(success = true)
+
+        repository.registerToken("token-123")
+        repository.registerToken("token-123")
+
+        coVerify(exactly = 1) { deviceTokenService.register(any()) }
+    }
+
+    @Test
+    fun `등록이 실패하면 다음 동기화에서 다시 호출한다`() = runTest {
+        coEvery { deviceTokenService.register(any()) } throws httpException(UNAUTHORIZED)
+
+        repository.registerToken("token-123")
+
+        coEvery { deviceTokenService.register(any()) } returns ApiResponse(success = true)
+        val retried = repository.registerToken("token-123")
+
+        assertTrue(retried is AppResult.Success)
+        coVerify(exactly = 2) { deviceTokenService.register(any()) }
+    }
+
+    @Test
+    fun `등록 뒤 해제는 건너뛰지 않는다`() = runTest {
+        coEvery { deviceTokenService.register(any()) } returns ApiResponse(success = true)
+        coEvery { deviceTokenService.unregister(any()) } returns ApiResponse(success = true)
+
+        repository.registerToken("token-123")
+        repository.unregisterToken("token-123")
+
+        coVerify(exactly = 1) { deviceTokenService.unregister(any()) }
+    }
+
+    @Test
+    fun `토큰이 바뀌면 다시 등록한다`() = runTest {
+        coEvery { deviceTokenService.register(any()) } returns ApiResponse(success = true)
+
+        repository.registerToken("token-old")
+        repository.registerToken("token-new")
+
+        coVerify(exactly = 1) { deviceTokenService.register(RegisterDeviceTokenRequest("token-old")) }
+        coVerify(exactly = 1) { deviceTokenService.register(RegisterDeviceTokenRequest("token-new")) }
+    }
+
+    @Test
+    fun `200 응답이라도 success가 false면 실패로 돌려준다`() = runTest {
+        coEvery { deviceTokenService.register(any()) } returns ApiResponse(
+            success = false,
+            error = ApiError(
+                code = "INVALID_DEVICE_TOKEN",
+                message = "too long",
+            ),
+        )
+
+        val result = repository.registerToken("token-123")
+
+        val throwable = (result as AppResult.Failure).throwable
+        assertTrue(throwable is ApiException.Http)
+        assertEquals("INVALID_DEVICE_TOKEN", (throwable as ApiException.Http).code)
     }
 
     @Test
