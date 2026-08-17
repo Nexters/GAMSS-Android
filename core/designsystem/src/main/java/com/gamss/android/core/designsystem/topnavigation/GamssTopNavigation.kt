@@ -42,7 +42,9 @@ enum class GamssTopNavigationIcon(@DrawableRes internal val drawableRes: Int) {
     CreateCard(R.drawable.ic_create_card),
     Menu(R.drawable.ic_menu),
 
-    CheckToken(R.drawable.ic_token_check)
+    CheckToken(R.drawable.ic_token_check),
+
+    Search(R.drawable.ic_search)
 }
 
 /**
