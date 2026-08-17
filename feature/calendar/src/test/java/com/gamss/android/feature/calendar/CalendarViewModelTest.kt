@@ -165,6 +165,8 @@ class CalendarViewModelTest {
             summary: String,
         ): AppResult<Card> = error("Not used by the calendar")
 
+        override suspend fun deleteAllCards(): AppResult<Unit> = error("Not used by the calendar")
+
         override suspend fun deleteCard(cardId: Long): AppResult<Unit> {
             deletedCardId = cardId
             return if (deleteShouldFail) {
@@ -173,6 +175,9 @@ class CalendarViewModelTest {
                 AppResult.Success(Unit)
             }
         }
+
+        override suspend fun deleteCardsByEmotion(character: EmotionCharacter): AppResult<Unit> =
+            error("Not used by the calendar")
     }
 
     private class DelayingCardRepository : CardRepository {
@@ -204,7 +209,12 @@ class CalendarViewModelTest {
             summary: String,
         ): AppResult<Card> = error("Not used by the calendar")
 
+        override suspend fun deleteAllCards(): AppResult<Unit> = error("Not used by the calendar")
+
         override suspend fun deleteCard(cardId: Long): AppResult<Unit> = error("Not used by the calendar")
+
+        override suspend fun deleteCardsByEmotion(character: EmotionCharacter): AppResult<Unit> =
+            error("Not used by the calendar")
     }
 
     private fun card(date: LocalDate) = Card(

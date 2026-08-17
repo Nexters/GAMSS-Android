@@ -129,7 +129,12 @@ private object NoCardRepository : CardRepository {
         summary: String,
     ): AppResult<Card> = error("홈 테스트에서 쓰지 않는다")
 
+    override suspend fun deleteAllCards(): AppResult<Unit> = error("홈 테스트에서 쓰지 않는다")
+
     override suspend fun deleteCard(cardId: Long): AppResult<Unit> = error("홈 테스트에서 쓰지 않는다")
+
+    override suspend fun deleteCardsByEmotion(character: EmotionCharacter): AppResult<Unit> =
+        error("홈 테스트에서 쓰지 않는다")
 }
 
 private object PassThroughSummarizer : DiarySummarizer {
