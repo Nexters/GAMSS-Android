@@ -3,6 +3,7 @@ package com.gamss.android.data.repository
 import com.gamss.android.core.common.AppResult
 import com.gamss.android.data.remote.card.CardService
 import com.gamss.android.data.remote.card.model.request.CreateCardRequest
+import com.gamss.android.data.remote.card.model.response.toDomain
 import com.gamss.android.data.remote.card.model.response.toDomainOrNull
 import com.gamss.android.data.remote.emotion.toServerEmotionType
 import com.gamss.android.data.remote.runCatchingApiCall
@@ -11,6 +12,7 @@ import com.gamss.android.domain.card.Card
 import com.gamss.android.domain.card.CardNotRetryableException
 import com.gamss.android.domain.card.CardRepository
 import com.gamss.android.domain.emotion.EmotionCharacter
+import java.time.LocalDate
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -18,6 +20,12 @@ import javax.inject.Singleton
 internal class CardRepositoryImpl @Inject constructor(
     private val cardService: CardService,
 ) : CardRepository {
+
+    override suspend fun getCardsByDate(date: LocalDate): AppResult<List<Card>> = runCatchingApiCall {
+        val response = cardService.getCardsByDate(date.toString())
+        response.throwIfFailed()
+        checkNotNull(response.data) { "No available card data" }.mapNotNull { it.toDomainOrNull() }
+    }
 
     override suspend fun createCard(
         conversationId: Long,
@@ -33,7 +41,8 @@ internal class CardRepositoryImpl @Inject constructor(
                 ),
             )
             response.throwIfFailed()
-            checkNotNull(response.data?.toDomainOrNull()) { "No available valid card data" }
+            checkNotNull(response.data) { "No available card data" }
+                .toDomain(requestedCharacter = character, fallbackDate = LocalDate.now())
         }
         return when (result) {
             is AppResult.Success -> result

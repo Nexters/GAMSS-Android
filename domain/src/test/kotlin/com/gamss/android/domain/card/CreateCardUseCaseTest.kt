@@ -6,6 +6,7 @@ import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.time.LocalDate
 
 class CreateCardUseCaseTest {
 
@@ -24,18 +25,23 @@ class CreateCardUseCaseTest {
                     id = 1L,
                     conversationId = conversationId,
                     character = character,
+                    emotionLabel = character.displayName,
                     summary = summary,
                     message = "대사",
+                    date = LocalDate.of(2026, 8, 15),
                 ),
             )
         }
 
-        override suspend fun deleteAllCards(): AppResult<Unit> = AppResult.Success(Unit)
+        override suspend fun getCardsByDate(date: LocalDate): AppResult<List<Card>> =
+            AppResult.Success(emptyList())
 
-        override suspend fun deleteCard(cardId: Long): AppResult<Unit> = AppResult.Success(Unit)
+        override suspend fun deleteAllCards(): AppResult<Unit> = error("사용하지 않음")
+
+        override suspend fun deleteCard(cardId: Long): AppResult<Unit> = error("사용하지 않음")
 
         override suspend fun deleteCardsByEmotion(character: EmotionCharacter): AppResult<Unit> =
-            AppResult.Success(Unit)
+            error("사용하지 않음")
     }
 
     @Test

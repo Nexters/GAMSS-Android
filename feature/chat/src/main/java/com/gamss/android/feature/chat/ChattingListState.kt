@@ -1,6 +1,7 @@
 package com.gamss.android.feature.chat
 
 import androidx.compose.runtime.Immutable
+import androidx.compose.ui.text.input.TextFieldValue
 
 /**
  * 같은 날짜에 만들어진 대화 묶음.
@@ -25,9 +26,18 @@ data class ConversationRow(
 )
 
 @Immutable
+data class ChattingSearchState(
+    val isActive: Boolean = false,
+    val keyword: TextFieldValue = TextFieldValue(),
+    val hasSearched: Boolean = false,
+    val searchGeneration: Long = 0L,
+)
+
+@Immutable
 data class ChattingListState(
     val groups: List<ConversationGroup> = emptyList(),
     val phase: ChattingListPhase = ChattingListPhase.Loading,
+    val search: ChattingSearchState = ChattingSearchState(),
 ) {
     val isLoading: Boolean get() = phase is ChattingListPhase.Loading
 

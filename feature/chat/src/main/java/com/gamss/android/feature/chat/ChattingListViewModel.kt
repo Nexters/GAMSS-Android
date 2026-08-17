@@ -1,12 +1,25 @@
 package com.gamss.android.feature.chat
 
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import androidx.paging.PagingData
+import androidx.paging.cachedIn
 import com.gamss.android.core.common.AppResult
+import com.gamss.android.core.common.network.ApiException
 import com.gamss.android.domain.auth.SessionExpiredException
 import com.gamss.android.domain.conversation.DeleteConversationsResult
 import com.gamss.android.domain.conversation.DeleteConversationsUseCase
 import com.gamss.android.domain.conversation.GetOngoingConversationsUseCase
+import com.gamss.android.domain.conversation.chattingsearch.ChattingRoomSearchException
+import com.gamss.android.domain.conversation.chattingsearch.ChattingRoomSummary
+import com.gamss.android.domain.conversation.chattingsearch.SearchChattingRoomsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import org.orbitmvi.orbit.ContainerHost
 import org.orbitmvi.orbit.syntax.Syntax
 import org.orbitmvi.orbit.viewmodel.container
@@ -15,13 +28,23 @@ import javax.inject.Inject
 private typealias ChattingListSyntax = Syntax<ChattingListState, ChattingListSideEffect>
 
 @HiltViewModel
+@OptIn(ExperimentalCoroutinesApi::class)
 class ChattingListViewModel @Inject constructor(
     private val getOngoingConversations: GetOngoingConversationsUseCase,
     private val deleteConversations: DeleteConversationsUseCase,
+    private val searchChattingRooms: SearchChattingRoomsUseCase,
 ) : ViewModel(),
     ContainerHost<ChattingListState, ChattingListSideEffect> {
 
     override val container = container<ChattingListState, ChattingListSideEffect>(ChattingListState())
+
+    private val searchResults = MutableStateFlow<Flow<PagingData<ChattingRoomSummary>>>(
+        flowOf(PagingData.empty()),
+    )
+
+    val chattingRooms: Flow<PagingData<ChattingRoomSummary>> = searchResults
+        .flatMapLatest { it }
+        .cachedIn(viewModelScope)
 
     fun load() = intent {
         // 회전이나 재진입으로 다시 불린다. 목록을 보는 중이 아니면 단계를 건드리지 않는다.
@@ -51,6 +74,51 @@ class ChattingListViewModel @Inject constructor(
         }
     }
 
+    fun onSearchModeEnter() = intent {
+        if (state.isSelectionMode) return@intent
+        reduce { state.copy(search = state.search.copy(isActive = true)) }
+    }
+
+    fun onSearchCancel() = intent {
+        searchResults.value = flowOf(PagingData.empty())
+        reduce { state.copy(search = ChattingSearchState()) }
+    }
+
+    fun onSearchKeywordChanged(keyword: TextFieldValue) = intent {
+        reduce { state.copy(search = state.search.copy(keyword = keyword)) }
+    }
+
+    fun search() = intent { runSearch() }
+
+    private suspend fun ChattingListSyntax.runSearch() {
+        val keyword = state.search.keyword.text.trim()
+        val nextGeneration = state.search.searchGeneration + 1
+
+        when (val result = searchChattingRooms(keyword)) {
+            is AppResult.Success -> {
+                reduce {
+                    state.copy(
+                        search = state.search.copy(
+                            hasSearched = true,
+                            searchGeneration = nextGeneration,
+                        ),
+                    )
+                }
+                searchResults.value = result.data
+            }
+
+            is AppResult.Failure -> {
+                searchResults.value = flowOf(PagingData.empty())
+                reduce { state.copy(search = state.search.copy(hasSearched = false)) }
+                postSideEffect(
+                    ChattingListSideEffect.ShowSearchFailed(
+                        result.throwable.toSearchFailureReason(),
+                    ),
+                )
+            }
+        }
+    }
+
     fun onCardClick(conversationId: Long) = intent {
         when (val current = state.phase) {
             is ChattingListPhase.Browsing ->
@@ -69,8 +137,12 @@ class ChattingListViewModel @Inject constructor(
 
     fun onCardLongClick(conversationId: Long) = intent {
         when (val current = state.phase) {
-            is ChattingListPhase.Browsing -> reduce {
-                state.copy(phase = ChattingListPhase.Selecting(setOf(conversationId)))
+            is ChattingListPhase.Browsing -> {
+                reduce {
+                    state.copy(
+                        phase = ChattingListPhase.Selecting(setOf(conversationId)),
+                    )
+                }
             }
 
             is ChattingListPhase.Selecting -> reduce {
@@ -87,7 +159,11 @@ class ChattingListViewModel @Inject constructor(
     /** 헤더의 삭제 액션. 선택 모드로 들어가기만 한다. 실행은 [onDeleteRequest] 가 맡는다. */
     fun onDeleteActionClick() = intent {
         if (state.phase !is ChattingListPhase.Browsing) return@intent
-        reduce { state.copy(phase = ChattingListPhase.Selecting(emptySet())) }
+        reduce {
+            state.copy(
+                phase = ChattingListPhase.Selecting(emptySet()),
+            )
+        }
     }
 
     /** 하단 삭제 버튼. 바로 지우지 않고 확인 단계를 거친다. */
@@ -134,6 +210,7 @@ class ChattingListViewModel @Inject constructor(
         }
 
         reload(knownDeletedIds = result.deletedIds)
+        if (state.search.isActive && state.search.hasSearched) runSearch()
     }
 
     private suspend fun ChattingListSyntax.onDeleteFailed(targetIds: Set<Long>, throwable: Throwable) {
@@ -163,6 +240,12 @@ class ChattingListViewModel @Inject constructor(
                 reduce { state.copy(groups = state.groups.withoutIds(knownDeletedIds.toSet())) }
         }
     }
+}
+
+internal fun Throwable.toSearchFailureReason(): SearchFailureReason = when (this) {
+    is ChattingRoomSearchException.InvalidKeyword -> SearchFailureReason.INVALID_INPUT
+    is ApiException.Network -> SearchFailureReason.NETWORK
+    else -> SearchFailureReason.UNKNOWN
 }
 
 private fun Set<Long>.toggle(id: Long): Set<Long> = if (id in this) this - id else this + id

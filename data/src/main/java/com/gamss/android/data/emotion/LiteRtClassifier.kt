@@ -1,6 +1,6 @@
 package com.gamss.android.data.emotion
 
-import android.content.Context
+import com.gamss.android.data.model.ModelAssetSource
 import com.gamss.android.domain.emotion.ClassificationResult
 import org.tensorflow.lite.DataType
 import org.tensorflow.lite.Interpreter
@@ -86,9 +86,9 @@ internal class LiteRtClassifier private constructor(
         private const val NAME_ATTENTION_MASK = "attention_mask"
         private const val NAME_TOKEN_TYPE = "token_type"
 
-        suspend fun load(context: Context, spec: ClassifierSpec): LiteRtClassifier = LiteRtClassifier(
-            model = LiteRtModel.load(context, spec.packName, spec.modelAsset),
-            tokenizer = WordPieceTokenizer.load(context, spec.packName, spec.tokenizerAsset, spec.seqLen),
+        suspend fun load(modelAssetSource: ModelAssetSource, spec: ClassifierSpec): LiteRtClassifier = LiteRtClassifier(
+            model = LiteRtModel.load(modelAssetSource, spec.packName, spec.modelAsset),
+            tokenizer = WordPieceTokenizer.load(modelAssetSource, spec.packName, spec.tokenizerAsset, spec.seqLen),
             labels = spec.labels,
         )
 

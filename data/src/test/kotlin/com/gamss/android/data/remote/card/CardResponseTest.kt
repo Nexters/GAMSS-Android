@@ -1,46 +1,86 @@
 package com.gamss.android.data.remote.card
 
 import com.gamss.android.data.remote.card.model.response.CardResponse
+import com.gamss.android.data.remote.card.model.response.toDomain
 import com.gamss.android.data.remote.card.model.response.toDomainOrNull
-import com.gamss.android.data.remote.gamssJson
 import com.gamss.android.domain.emotion.EmotionCharacter
-import kotlinx.serialization.decodeFromString
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
 import org.junit.Test
+import java.time.LocalDate
 
 class CardResponseTest {
 
     @Test
-    fun `명세의 추가 필드가 있어도 카드 응답을 읽는다`() {
-        val response = gamssJson.decodeFromString<CardResponse>(
-            """
-            {"id":1,"conversationId":2,"emotion":"ANGER","summary":"요약","message":"대사",
-            "emotionLabel":"분노","date":"2026-08-15"}
-            """.trimIndent(),
-        )
+    fun `card response preserves the card fields returned by the server`() {
+        val card = CardResponse(
+            id = 10L,
+            conversationId = 20L,
+            emotion = "ANGER",
+            emotionLabel = "분노",
+            summary = "비 때문에 하루가 꼬였어요",
+            message = "비 때문에 하루가 꼬였어요",
+            date = "2026-08-15",
+        ).toDomain(requestedCharacter = EmotionCharacter.ANGER, fallbackDate = LocalDate.of(2026, 1, 1))
 
-        val card = response.toDomainOrNull()
-
-        assertEquals(1L, card?.id)
-        assertEquals(EmotionCharacter.ANGER, card?.character)
+        assertEquals(10L, card.id)
+        assertEquals(20L, card.conversationId)
+        assertEquals(EmotionCharacter.ANGER, card.character)
+        assertEquals("분노", card.emotionLabel)
+        assertEquals("비 때문에 하루가 꼬였어요", card.summary)
+        assertEquals(LocalDate.of(2026, 8, 15), card.date)
     }
 
     @Test
-    fun `필수 필드가 누락된 응답은 카드로 변환하지 않는다`() {
-        val response = gamssJson.decodeFromString<CardResponse>(
-            """{"conversationId":2,"emotion":"ANGER","summary":"요약","message":"대사"}""",
-        )
+    fun `card creation falls back to the requested values when the response cannot be mapped`() {
+        val fallbackDate = LocalDate.of(2026, 8, 17)
 
-        assertNull(response.toDomainOrNull())
+        val card = CardResponse(
+            id = 10L,
+            conversationId = 20L,
+            emotion = "FUTURE_EMOTION",
+            emotionLabel = "미래 감정",
+            summary = "요약",
+            message = "메시지",
+            date = "invalid-date",
+        ).toDomain(requestedCharacter = EmotionCharacter.ANGER, fallbackDate = fallbackDate)
+
+        assertEquals(10L, card.id)
+        assertEquals(EmotionCharacter.ANGER, card.character)
+        assertEquals(fallbackDate, card.date)
     }
 
     @Test
-    fun `알 수 없는 감정은 카드로 변환하지 않는다`() {
-        val response = gamssJson.decodeFromString<CardResponse>(
-            """{"id":1,"conversationId":2,"emotion":"NEW_EMOTION","summary":"요약","message":"대사"}""",
-        )
+    fun `invalid card responses do not hide valid cards in a list`() {
+        val cards = listOf(
+            CardResponse(
+                id = 10L,
+                conversationId = 20L,
+                emotion = "ANGER",
+                emotionLabel = "분노",
+                summary = "요약",
+                message = "메시지",
+                date = "2026-08-15",
+            ),
+            CardResponse(
+                id = 11L,
+                conversationId = 20L,
+                emotion = "FUTURE_EMOTION",
+                emotionLabel = "미래 감정",
+                summary = "요약",
+                message = "메시지",
+                date = "2026-08-15",
+            ),
+            CardResponse(
+                id = 12L,
+                conversationId = 20L,
+                emotion = "ANGER",
+                emotionLabel = "분노",
+                summary = "요약",
+                message = "메시지",
+                date = "invalid-date",
+            ),
+        ).mapNotNull { it.toDomainOrNull() }
 
-        assertNull(response.toDomainOrNull())
+        assertEquals(listOf(10L), cards.map { it.id })
     }
 }

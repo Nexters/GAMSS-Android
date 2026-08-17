@@ -5,11 +5,14 @@ import com.gamss.android.domain.emotion.EmotionCharacter
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Test
+import java.time.LocalDate
 
 class DeleteCardsByEmotionUseCaseTest {
 
     private class RecordingRepository : CardRepository {
         var deletedCharacter: EmotionCharacter? = null
+
+        override suspend fun getCardsByDate(date: LocalDate): AppResult<List<Card>> = error("사용하지 않음")
 
         override suspend fun createCard(
             conversationId: Long,
