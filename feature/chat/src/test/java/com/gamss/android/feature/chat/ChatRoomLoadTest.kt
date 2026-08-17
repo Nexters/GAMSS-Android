@@ -5,7 +5,7 @@ import com.gamss.android.domain.card.CreateConversationCardUseCase
 import com.gamss.android.domain.conversation.ConversationSession
 import com.gamss.android.domain.conversation.ConversationSummaryStore
 import com.gamss.android.domain.conversation.EndConversationUseCase
-import com.gamss.android.domain.conversation.GetMessagesUseCase
+import com.gamss.android.domain.conversation.GetConversationUseCase
 import com.gamss.android.domain.conversation.PendingConversationReveal
 import com.gamss.android.domain.conversation.SendMessageUseCase
 import com.gamss.android.domain.conversation.UpdateConversationTitleUseCase
@@ -93,7 +93,7 @@ class ChatRoomLoadTest {
     private fun homeSession(repository: FakeConversationRepository, pendingReveal: PendingConversationReveal) =
         ConversationSession(
             sendMessage = SendMessageUseCase(repository),
-            getMessages = GetMessagesUseCase(repository),
+            getConversation = GetConversationUseCase(repository),
             updateConversationTitle = UpdateConversationTitleUseCase(repository),
             endConversation = EndConversationUseCase(repository),
             createConversationCard = CreateConversationCardUseCase(

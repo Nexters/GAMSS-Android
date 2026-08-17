@@ -29,6 +29,7 @@ import com.gamss.android.domain.emotion.ConversationEmotionAccumulator
 import com.gamss.android.domain.emotion.EmotionCharacter
 import com.gamss.android.domain.emotion.EmotionClassifier
 import com.gamss.android.domain.emotion.EmotionLabel
+import com.gamss.android.domain.model.DailyTokenUsage
 import com.gamss.android.domain.repository.TokenUsageRefreshNotifier
 import com.gamss.android.domain.safety.DetectRiskInTextUseCase
 import com.gamss.android.domain.safety.RiskLexicon
@@ -37,10 +38,14 @@ import com.gamss.android.domain.safety.RiskTermMatcher
 import com.gamss.android.domain.summary.DiarySummarizer
 import com.gamss.android.domain.summary.SummarizeDiaryUseCase
 import com.gamss.android.domain.summary.UtteranceTokenCounter
+import com.gamss.android.domain.usecase.GetDailyTokenUsageUseCase
+import com.gamss.android.domain.user.UserProfile
+import com.gamss.android.domain.user.UserRepository
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emptyFlow
+import java.time.LocalDate
 
 /**
  * 채팅 ViewModel 조립을 한 곳에 둔다. 테스트마다 따로 조립하면 세션 구성이 갈라진다.
