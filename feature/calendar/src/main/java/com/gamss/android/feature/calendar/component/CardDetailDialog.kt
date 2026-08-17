@@ -1,24 +1,28 @@
 package com.gamss.android.feature.calendar.component
 
 import android.content.res.Configuration
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.gamss.android.core.designsystem.card.GamssEmotionCard
 import com.gamss.android.core.designsystem.card.GamssEmotionCardCharacter
 import com.gamss.android.core.designsystem.theme.GamssTheme
+import com.gamss.android.core.ui.card.cardTitleRes
 import com.gamss.android.core.ui.card.toGamssEmotionCardCharacter
 import com.gamss.android.domain.card.Card
 import com.gamss.android.feature.calendar.R
@@ -51,8 +55,8 @@ internal fun CardDetailDialog(
             GamssEmotionCard(
                 date = card.date.format(CardDetailDateFormatter),
                 character = card.character.toGamssEmotionCardCharacter(),
-                title = card.summary,
-                description = card.message,
+                title = stringResource(card.character.cardTitleRes()),
+                description = card.summary,
                 primaryActionLabel = stringResource(R.string.calendar_card_discard),
                 secondaryActionLabel = stringResource(R.string.calendar_card_view_conversation),
                 shareActionLabel = stringResource(R.string.calendar_card_share),
@@ -65,17 +69,38 @@ internal fun CardDetailDialog(
     }
 }
 
+/**
+ * 카드 우상단 닫기 버튼.
+ *
+ * 카드가 액션 슬롯을 Figma 값(우상단 28dp)에 맞춰 두므로 아이콘은 슬롯 좌상단에 딱 붙어야 한다.
+ * 그런데 터치 영역을 아이콘보다 크게 잡으면 그 차이만큼 아이콘이 안쪽으로 밀리므로,
+ * [CloseButtonCenteringInset] 만큼 되돌려 아이콘을 시안 위치로 보낸다.
+ *
+ * 터치 영역 크기를 [Box] 로 직접 정한다. `IconButton` 은 기본 크기와 최소 터치 크기 적용이
+ * 버전마다 달라 되돌릴 양을 코드에서 확정할 수 없다.
+ */
 @Composable
 private fun CardCloseButton(onClick: () -> Unit) {
-    IconButton(onClick = onClick) {
+    Box(
+        modifier = Modifier
+            .offset(x = CloseButtonCenteringInset, y = -CloseButtonCenteringInset)
+            .size(CloseButtonTouchSize)
+            .clickable(role = Role.Button, onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
         Icon(
             imageVector = Icons.Default.Close,
             contentDescription = stringResource(R.string.calendar_card_close_description),
             tint = GamssTheme.colors.gray300,
-            modifier = Modifier.size(GamssTheme.spacing.spacing400),
+            modifier = Modifier.size(CloseIconSize),
         )
     }
 }
+
+/** Figma 우상단 닫기 아이콘 크기. */
+private val CloseIconSize = 20.dp
+private val CloseButtonTouchSize = 48.dp
+private val CloseButtonCenteringInset = (CloseButtonTouchSize - CloseIconSize) / 2
 
 private val CardDetailDateFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yy.MM.dd")
 

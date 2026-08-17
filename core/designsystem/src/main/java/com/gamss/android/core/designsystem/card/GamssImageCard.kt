@@ -1,6 +1,7 @@
 package com.gamss.android.core.designsystem.card
 
 import android.content.res.Configuration
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -25,6 +26,8 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.layout.ContentScale
@@ -153,7 +156,7 @@ fun GamssEmotionCard(
         shape = shape,
         topEndAction = topEndAction,
     ) {
-        GamssEmotionCardContent(character = character) {
+        GamssEmotionCardContent(character = character, showDivider = true) {
             Text(
                 text = title,
                 modifier = Modifier.fillMaxWidth(),
@@ -168,10 +171,13 @@ fun GamssEmotionCard(
                 style = GamssTheme.typography.body4Regular,
                 color = GamssTheme.colors.gray800,
                 textAlign = TextAlign.Center,
-                maxLines = 2,
+                // Figma Description 은 높이 60 / lineHeight 20 으로 3줄까지 담는다.
+                maxLines = DESCRIPTION_MAX_LINES,
                 overflow = TextOverflow.Ellipsis,
             )
-            Spacer(modifier = Modifier.height(GamssTheme.spacing.spacing800))
+            Spacer(modifier = Modifier.height(DividerToContentGap))
+            GamssCardDashedDivider()
+            Spacer(modifier = Modifier.height(DividerToContentGap))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(GamssTheme.spacing.spacing100),
@@ -212,10 +218,16 @@ fun GamssEmotionCard(
     }
 }
 
-/** 감정 카드의 캐릭터 영역과 그 아래 콘텐츠 간격을 재사용한다. */
+/**
+ * 감정 카드의 캐릭터 영역과 그 아래 콘텐츠 간격을 재사용한다.
+ *
+ * [showDivider] 를 켜면 캐릭터와 콘텐츠 사이에 점선을 넣는다. 카드 목록처럼 점선이 없는
+ * 시안도 같은 캐릭터 영역을 쓰므로 기본값은 꺼짐이다.
+ */
 @Composable
 fun ColumnScope.GamssEmotionCardContent(
     character: GamssEmotionCardCharacter,
+    showDivider: Boolean = false,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     Spacer(modifier = Modifier.height(DateToCharacterGap))
@@ -226,8 +238,36 @@ fun ColumnScope.GamssEmotionCardContent(
     ) {
         GamssEmotionCardCharacterImage(character = character)
     }
-    Spacer(modifier = Modifier.height(CharacterToTitleGap))
+    if (showDivider) {
+        Spacer(modifier = Modifier.height(CharacterToDividerGap))
+        GamssCardDashedDivider()
+        Spacer(modifier = Modifier.height(DividerToContentGap))
+    } else {
+        Spacer(modifier = Modifier.height(CharacterToTitleGap))
+    }
     content()
+}
+
+/** 카드 안을 가로로 끊어 주는 점선. 콘텐츠 열 전체 폭을 쓴다. */
+@Composable
+private fun GamssCardDashedDivider(modifier: Modifier = Modifier) {
+    val color = GamssTheme.colors.gray600
+    Canvas(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(CardDividerThickness),
+    ) {
+        val y = size.height / 2f
+        drawLine(
+            color = color,
+            start = Offset(0f, y),
+            end = Offset(size.width, y),
+            strokeWidth = size.height,
+            pathEffect = PathEffect.dashPathEffect(
+                floatArrayOf(CardDividerDashLength.toPx(), CardDividerDashGap.toPx()),
+            ),
+        )
+    }
 }
 
 /**
@@ -365,3 +405,12 @@ private val CardAspectRatio = CardWidth.value / CardHeight.value
 private val DateToCharacterGap = 18.dp
 private val CharacterImageHeight = 156.dp
 private val CharacterToTitleGap = 42.dp
+
+// 점선 관련 값은 Figma Card(3557:5286)의 Divider 기준이다. 점선은 콘텐츠 열 전체 폭(270)을
+// 쓰고 위아래 22 씩 띄우며, 캐릭터 이미지와는 16 만 띄운다.
+private val CharacterToDividerGap = 16.dp
+private val DividerToContentGap = 22.dp
+private val CardDividerThickness = 1.dp
+private val CardDividerDashLength = 6.dp
+private val CardDividerDashGap = 4.dp
+private const val DESCRIPTION_MAX_LINES = 3
