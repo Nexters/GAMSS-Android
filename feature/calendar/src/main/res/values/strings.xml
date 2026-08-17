@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="archive_logo_description">감쓰</string>
+    <string name="archive_grid_title">다시 보고 싶은 쓰레기통을 열어보세요</string>
+    <string name="archive_setting_description">설정</string>
     <string name="archive_back_description">뒤로 가기</string>
     <string name="archive_detail_title">%1$s 쓰레기통</string>
     <string name="archive_cards_empty">아직 남겨둔 이야기가 없어요.</string>

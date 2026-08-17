@@ -24,11 +24,11 @@ internal class PaperBody(
 }
 
 /**
- * 원(circle) 충돌 근사 기반의 경량 2D 리지드바디 시뮬레이터.
- * 카드가 중력으로 낙하하다 바닥/벽/서로에게 부딪혀 자연스럽게 쌓이는 연출용.
+ * 원 충돌 근사 기반의 경량 2D 리지드바디 시뮬레이터. 종이가 중력으로 떨어져 바닥·벽·서로에게 부딪혀
+ * 쌓이는 연출용이다.
  *
- * 위치/속도를 불변 Vec2 대신 [PaperBody]의 원시 Float 필드로 들고, resolvePair()의 로컬 계산도
- * Float 변수로 풀어 쓴다 — 카드 20여 개 기준 프레임당 수천 개씩 생기던 임시 객체 할당을 없애 GC 압박을 줄인다.
+ * 위치/속도를 불변 Vec2 가 아니라 [PaperBody] 의 Float 필드로 들고 계산도 Float 로 풀어 쓴다 —
+ * 카드 20여 개면 프레임당 임시 객체가 수천 개씩 생겨 GC 를 압박한다.
  */
 internal class PaperPhysicsWorld(
     private val bodies: List<PaperBody>,
@@ -45,8 +45,8 @@ internal class PaperPhysicsWorld(
             body.velY *= LinearDamping
             val dampedAngularVelocity = (body.angularVelocity * AngularDamping)
                 .coerceIn(-MaxAngularVelocity, MaxAngularVelocity)
-            // Snap near-zero spin to exactly zero, otherwise resting contacts keep re-injecting
-            // sub-threshold torque every frame and the pile never stops turning in place.
+            // 0 에 가까운 회전은 0 으로 끊는다. 안 그러면 쌓인 종이끼리 매 프레임 미세한 토크를 주고받아
+            // 제자리에서 계속 돈다.
             body.angularVelocity = if (abs(dampedAngularVelocity) < AngularSleepThreshold) 0f else dampedAngularVelocity
         }
         bodies.forEach(::resolveBounds)
@@ -128,8 +128,7 @@ internal class PaperPhysicsWorld(
         val tangentX = -ny
         val tangentY = nx
         val tangentSpeed = relVelX * tangentX + relVelY * tangentY
-        // Resting bodies keep re-touching under gravity every frame with tiny tangential noise;
-        // ignoring it below this speed stops the pile from spinning in place once it has landed.
+        // 다 쌓인 뒤에도 중력으로 매 프레임 서로 닿으며 미세한 접선 속도가 생긴다. 그 이하는 무시한다.
         if (abs(tangentSpeed) > RestingTangentSpeed) {
             val spinImpulse = tangentSpeed * PairSpinTransfer
             a.angularVelocity -= spinImpulse
@@ -148,8 +147,7 @@ internal class PaperPhysicsWorld(
         const val Friction = 0.9f
         const val CollisionIterations = 4
 
-        // Kept deliberately tiny: cards should mostly keep the tilt they spawned with and only
-        // wobble a little on impact, not visibly spin while falling or colliding.
+        // 일부러 아주 작게 둔다. 종이는 처음 기울기를 대체로 유지하고 부딪힐 때만 살짝 흔들려야 한다.
         const val PairSpinTransfer = 0.00012f
         const val WallSpinTransfer = 0.0001f
         const val FloorSpinTransfer = 0.0002f

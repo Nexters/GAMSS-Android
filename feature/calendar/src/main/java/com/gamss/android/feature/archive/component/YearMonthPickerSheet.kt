@@ -35,6 +35,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.gamss.android.core.common.util.KoreanTimeZone
 import com.gamss.android.core.designsystem.component.GamssIconButton
@@ -45,11 +46,10 @@ import java.time.YearMonth
 import kotlin.math.abs
 
 /**
- * 연·월을 휠로 돌려 고르는 바텀시트. 휠을 돌리는 동안에는 아직 고르는 중이고, `선택하기` 를 눌러야
- * [onSelect] 로 확정된다.
+ * 연·월을 휠로 돌려 고르는 바텀시트. 휠을 돌리는 동안은 고르는 중이고 `선택하기` 를 눌러야 확정된다.
  *
- * 연도는 [latest] 로 끝나는 최근 [YEAR_RANGE_SIZE] 년, 월은 12개월을 그대로 준다. 실제로 카드가 있는
- * 달만 남기려면 휠이 서로를 잘라내야 하는데, 그렇게까지 하지 않고 카드가 없는 달은 빈 상태로 답한다.
+ * 월은 12개월을 그대로 준다 — 카드가 있는 달만 남기려면 두 휠이 서로를 잘라내야 해서, 카드가 없는
+ * 달은 빈 상태로 답하는 쪽을 택했다.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -69,32 +69,11 @@ internal fun YearMonthPickerSheet(
         containerColor = GamssTheme.colors.white,
         shape = RoundedCornerShape(topStart = SheetCornerRadius, topEnd = SheetCornerRadius),
         dragHandle = null,
-        // 디자인의 아래 여백은 화면 맨 아래까지 재는 값이다. 시트가 인셋을 따로 예약하면 그만큼 더
-        // 벌어지므로 예약하지 않고, 아래에서 직접 계산한다.
+        // 디자인 여백은 화면 맨 아래까지 재는 값이라, 시트가 인셋을 예약하면 그만큼 더 벌어진다.
         contentWindowInsets = { WindowInsets(0) },
     ) {
-        // 제스처 바는 디자인의 홈 인디케이터처럼 여백 위에 겹쳐도 된다(24dp + 8dp = 디자인 32dp).
-        // 3버튼 내비처럼 인셋이 그보다 크면 여백이 남지 않아 버튼이 내비바에 붙으므로, 그때는 인셋
-        // 위로 최소 간격만큼 띄운다.
-        val bottomPadding = SheetBottomPadding.coerceAtLeast(
-            WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + MinGapAboveSystemBar,
-        )
-        Column(modifier = Modifier.padding(bottom = bottomPadding)) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    // GamssIconButton 의 hitPadding 만큼 당겨, 아이콘 자체가 디자인 위치에 오게 한다.
-                    .padding(top = SheetTopPadding - HitPadding, end = SheetHorizontalPadding - HitPadding),
-                horizontalArrangement = Arrangement.End,
-            ) {
-                GamssIconButton(
-                    iconRes = GamssIcons.Close,
-                    contentDescription = stringResource(R.string.archive_month_picker_close),
-                    onClick = onDismiss,
-                    hitPadding = HitPadding,
-                    tint = GamssTheme.colors.gray400,
-                )
-            }
+        Column(modifier = Modifier.padding(bottom = sheetBottomPadding())) {
+            CloseButton(onClick = onDismiss)
             YearMonthWheels(
                 years = years,
                 months = months,
@@ -108,7 +87,36 @@ internal fun YearMonthPickerSheet(
     }
 }
 
-/** 가운데 칸을 덮는 하이라이트는 두 휠에 걸친 한 덩어리라, 휠 뒤에 한 번만 깔고 가운데 정렬한다. */
+/**
+ * 제스처 바(24dp)는 디자인의 홈 인디케이터처럼 여백 위에 겹쳐도 된다. 3버튼 내비처럼 인셋이 디자인
+ * 여백보다 크면 버튼이 내비바에 붙으므로, 그때는 인셋 위로 최소 간격만큼 띄운다.
+ */
+@Composable
+private fun sheetBottomPadding(): Dp {
+    val systemBarInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+    return SheetBottomPadding.coerceAtLeast(systemBarInset + MinGapAboveSystemBar)
+}
+
+@Composable
+private fun CloseButton(onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            // hitPadding 만큼 당겨, 아이콘 자체가 디자인 위치에 오게 한다.
+            .padding(top = SheetTopPadding - HitPadding, end = SheetHorizontalPadding - HitPadding),
+        horizontalArrangement = Arrangement.End,
+    ) {
+        GamssIconButton(
+            iconRes = GamssIcons.Close,
+            contentDescription = stringResource(R.string.archive_month_picker_close),
+            onClick = onClick,
+            hitPadding = HitPadding,
+            tint = GamssTheme.colors.gray400,
+        )
+    }
+}
+
+/** 가운데 칸 하이라이트는 두 휠에 걸친 한 덩어리라, 휠 뒤에 한 번만 깔고 가운데 정렬한다. */
 @Composable
 private fun YearMonthWheels(
     years: List<Int>,
@@ -123,8 +131,7 @@ private fun YearMonthWheels(
             .padding(
                 start = SheetHorizontalPadding,
                 end = SheetHorizontalPadding,
-                // 위 Row 는 아이콘 아래에도 hitPadding 을 물고 있다. 디자인 간격은 아이콘 자체에서
-                // 재는 값이라 그만큼 빼야 24dp 가 된다.
+                // 위 Row 가 아이콘 아래에도 hitPadding 을 물고 있어 그만큼 뺀다.
                 top = WheelTopGap - HitPadding,
             )
             .fillMaxWidth(),

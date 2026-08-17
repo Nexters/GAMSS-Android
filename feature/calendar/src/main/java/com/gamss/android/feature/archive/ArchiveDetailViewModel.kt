@@ -37,9 +37,9 @@ class ArchiveDetailViewModel @Inject constructor(
         reduce { state.copy(isMonthPickerVisible = false) }
     }
 
-    /** 고른 달이 지금 보고 있는 달이면 이미 쌓인 종이를 다시 쏟지 않고 시트만 닫는다. */
     fun selectMonth(yearMonth: YearMonth) = intent {
         val emotion = state.emotion
+        // 보고 있는 달을 다시 고르면 이미 쌓인 종이를 다시 쏟지 않고 시트만 닫는다.
         if (emotion == null || yearMonth == state.yearMonth) {
             reduce { state.copy(isMonthPickerVisible = false) }
             return@intent
@@ -63,10 +63,6 @@ private fun ArchiveDetailState.withCards(
     result: AppResult<List<CardEntry>>,
     emotion: EmotionCharacter,
 ): ArchiveDetailState = when (result) {
-    is AppResult.Success -> copy(
-        isLoading = false,
-        cards = result.data.filter { it.character == emotion },
-    )
-
+    is AppResult.Success -> copy(isLoading = false, cards = result.data.filter { it.character == emotion })
     is AppResult.Failure -> copy(isLoading = false, loadFailed = true)
 }

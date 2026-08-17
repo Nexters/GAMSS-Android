@@ -50,8 +50,7 @@ fun ArchiveScreen(
     Scaffold(
         containerColor = GamssTheme.colors.white,
         topBar = { ArchiveTopBar(onMenuClick = onNavigateToSetting) },
-        // 상태바는 GamssTopBar가, 내비게이션 바는 MainScreen의 탭바가 각자 직접 피하므로
-        // 이 Scaffold가 추가로 예약할 인셋은 없다.
+        // 상태바는 GamssTopBar 가, 내비게이션 바는 MainScreen 의 탭바가 각자 피한다.
         contentWindowInsets = WindowInsets(0),
     ) { innerPadding ->
         BoxWithConstraints(
@@ -60,40 +59,46 @@ fun ArchiveScreen(
                 .padding(innerPadding),
             contentAlignment = Alignment.Center,
         ) {
-            val scale = (maxWidth / ArchiveDesignWidth).coerceAtMost(1f)
-            val gridWidth = ArchiveDesignWidth * scale
+            val scale = designScale(maxWidth)
 
-            // 타이틀과 그리드는 Box 안에서 각자 따로 정렬되는 형제가 아니라, 하나의 Column으로 묶어야
-            // BoxWithConstraints의 Center 정렬이 이 그룹 전체에 적용된다.
-            Column(modifier = Modifier.width(gridWidth)) {
+            // 타이틀과 그리드를 한 Column 으로 묶어야 가운데 정렬이 그룹 전체에 걸린다.
+            Column(modifier = Modifier.width(designWidth(scale))) {
                 Text(
-                    text = "다시 보고 싶은 쓰레기통을 열어보세요",
+                    text = stringResource(R.string.archive_grid_title),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = ArchiveTitleTopPadding * scale),
+                        .padding(top = TitleTopPadding * scale),
                     style = GamssTheme.typography.body4Medium,
                     color = GamssTheme.colors.gray950,
                     textAlign = TextAlign.Center,
                 )
-                Column(
-                    modifier = Modifier.padding(
-                        start = ArchiveHorizontalPadding * scale,
-                        end = ArchiveHorizontalPadding * scale,
-                        top = ArchiveTopPadding * scale,
-                        bottom = ArchiveBottomPadding * scale,
-                    ),
-                    verticalArrangement = Arrangement.spacedBy(ArchiveVerticalSpacing * scale),
-                ) {
-                    archiveItems.chunked(ARCHIVE_COLUMN_COUNT).forEach { rowItems ->
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(ArchiveHorizontalSpacing * scale),
-                        ) {
-                            rowItems.forEach { item ->
-                                ArchiveCard(item = item, scale = scale, onClick = { onArchiveClick(item.emotion) })
-                            }
-                        }
-                    }
+                ArchiveGrid(scale = scale, onArchiveClick = onArchiveClick)
+            }
+        }
+    }
+}
+
+@Composable
+private fun ArchiveGrid(
+    scale: Float,
+    onArchiveClick: (EmotionCharacter) -> Unit,
+) {
+    Column(
+        modifier = Modifier.padding(
+            start = GridHorizontalPadding * scale,
+            end = GridHorizontalPadding * scale,
+            top = GridTopPadding * scale,
+            bottom = GridBottomPadding * scale,
+        ),
+        verticalArrangement = Arrangement.spacedBy(GridVerticalSpacing * scale),
+    ) {
+        archiveItems.chunked(GRID_COLUMN_COUNT).forEach { rowItems ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(GridHorizontalSpacing * scale),
+            ) {
+                rowItems.forEach { item ->
+                    ArchiveCard(item = item, scale = scale, onClick = { onArchiveClick(item.emotion) })
                 }
             }
         }
@@ -101,16 +106,14 @@ fun ArchiveScreen(
 }
 
 @Composable
-private fun ArchiveTopBar(
-    onMenuClick: () -> Unit,
-) {
+private fun ArchiveTopBar(onMenuClick: () -> Unit) {
     GamssTopBar(
-        contentPadding = PaddingValues(start = ArchiveTopBarStartPadding, end = ArchiveTopBarEndPadding),
+        contentPadding = PaddingValues(start = TopBarStartPadding, end = TopBarEndPadding),
         leading = { GamssLogo(contentDescription = stringResource(R.string.archive_logo_description)) },
         trailing = {
             GamssIconButton(
                 iconRes = GamssIcons.Setting,
-                contentDescription = "설정",
+                contentDescription = stringResource(R.string.archive_setting_description),
                 onClick = onMenuClick,
             )
         },
@@ -128,7 +131,7 @@ private fun ArchiveCard(
         painter = painterResource(item.binRes),
         contentDescription = stringResource(R.string.archive_open_description, item.emotion.displayName),
         modifier = Modifier
-            .size(width = ArchiveCardWidth * scale, height = ArchiveCardHeight * scale)
+            .size(width = CardWidth * scale, height = CardHeight * scale)
             .clickable(
                 interactionSource = interactionSource,
                 indication = null,
@@ -143,15 +146,15 @@ private data class ArchiveItem(
     @param:DrawableRes val binRes: Int,
 )
 
-private val ArchiveDesignWidth = 402.dp
-private val ArchiveHorizontalPadding = 48.dp
-private val ArchiveTopPadding = 32.dp
-private val ArchiveBottomPadding = 27.dp
-private val ArchiveTitleTopPadding = 8.dp
-private val ArchiveHorizontalSpacing = 40.dp
-private val ArchiveVerticalSpacing = 11.dp
-private val ArchiveCardWidth = 132.dp
-private val ArchiveCardHeight = 172.dp
-private val ArchiveTopBarStartPadding = 20.dp
-private val ArchiveTopBarEndPadding = 8.dp
-private const val ARCHIVE_COLUMN_COUNT = 2
+private const val GRID_COLUMN_COUNT = 2
+
+private val TitleTopPadding = 8.dp
+private val GridHorizontalPadding = 48.dp
+private val GridTopPadding = 32.dp
+private val GridBottomPadding = 27.dp
+private val GridHorizontalSpacing = 40.dp
+private val GridVerticalSpacing = 11.dp
+private val CardWidth = 132.dp
+private val CardHeight = 172.dp
+private val TopBarStartPadding = 20.dp
+private val TopBarEndPadding = 8.dp

@@ -12,12 +12,7 @@ internal data class CardCalendarResponse(
     val emotions: List<String> = emptyList(),
 )
 
-/**
- * 하루치 대표 감정 목록을 카드 한 건씩으로 펼친다.
- *
- * 순번은 알 수 없는 감정을 걸러낸 뒤를 기준으로 센다. 날짜별 조회도 같은 기준으로 걸러내므로,
- * 나중에 [CardEntry.indexInDate] 로 그 응답의 카드를 그대로 찾을 수 있다.
- */
+/** 하루치 대표 감정 목록을 카드 한 건씩으로 펼친다. 순번 기준은 [CardEntry] 참고. */
 internal fun CardCalendarResponse.toDomain(): List<CardEntry> {
     val createdDate = LocalDate.parse(date)
     return emotions.mapNotNull { it.toEmotionCharacter() }
