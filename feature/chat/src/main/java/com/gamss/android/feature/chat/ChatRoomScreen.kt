@@ -48,13 +48,19 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupProperties
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.gamss.android.core.common.util.formatConversationDate
 import com.gamss.android.core.designsystem.component.GamssIcons
+import com.gamss.android.core.designsystem.component.GamssTokenUsageTooltip
 import com.gamss.android.core.designsystem.modifier.gamssShadow
 import com.gamss.android.core.designsystem.theme.GamssTheme
 import com.gamss.android.core.designsystem.topnavigation.GamssTopNavigation
+import com.gamss.android.core.designsystem.topnavigation.GamssTopNavigationHeight
+import com.gamss.android.core.designsystem.topnavigation.GamssTopNavigationHorizontalPadding
 import com.gamss.android.core.designsystem.topnavigation.GamssTopNavigationIcon
 import com.gamss.android.core.designsystem.topnavigation.GamssTopNavigationIconAction
 import com.gamss.android.core.designsystem.topnavigation.GamssTopNavigationTitleAlignment
@@ -109,6 +115,8 @@ fun ChatRoomScreen(
             onCharacterMessageClick = viewModel::onReplyTargetSelect,
             onReplyTargetClear = viewModel::onReplyTargetClear,
             onEndClick = viewModel::onEndRequest,
+            onTokenUsageToggle = viewModel::onTokenUsageToggle,
+            onTokenUsageRetry = viewModel::onTokenUsageRetry
         )
     }
 
@@ -182,6 +190,8 @@ private data class ChatRoomActions(
     val onCharacterMessageClick: (Message) -> Unit,
     val onReplyTargetClear: () -> Unit,
     val onEndClick: () -> Unit,
+    val onTokenUsageToggle: () -> Unit,
+    val onTokenUsageRetry: () -> Unit,
 )
 
 @Composable
@@ -263,25 +273,70 @@ private fun ChatRoomTopBar(
     actions: ChatRoomActions,
     onBackClick: () -> Unit,
 ) {
-    GamssTopNavigation(
-        title = state.conversationCreatedAt?.let(::formatConversationDate).orEmpty(),
-        titleAlignment = GamssTopNavigationTitleAlignment.Center,
-        showLeftIcon = true,
-        onLeftIconClick = onBackClick,
-        rightActions = listOfNotNull(
-            if (state.useChatEndFeature && !state.endFlow.isBusy && state.canEnd) {
+    Box {
+        GamssTopNavigation(
+            title = state.conversationCreatedAt?.let(::formatConversationDate).orEmpty(),
+            titleAlignment = GamssTopNavigationTitleAlignment.Center,
+            showLeftIcon = true,
+            onLeftIconClick = onBackClick,
+            rightActions = listOfNotNull(
+                if (state.useChatEndFeature && !state.endFlow.isBusy && state.canEnd) {
+                    GamssTopNavigationIconAction(
+                        icon = GamssTopNavigationIcon.CreateCard,
+                        onClick = actions.onEndClick,
+                    )
+                } else {
+                    null
+                },
                 GamssTopNavigationIconAction(
-                    icon = GamssTopNavigationIcon.CreateCard,
-                    onClick = actions.onEndClick,
-                )
-            } else {
-                null
-            },
-            GamssTopNavigationIconAction(icon = GamssTopNavigationIcon.Menu, onClick = {
-                // 토큰 확인 페이지?
-            }),
-        ),
-    )
+                    icon = GamssTopNavigationIcon.CheckToken,
+                    onClick = actions.onTokenUsageToggle,
+                ),
+            ),
+        )
+
+        if (state.isTokenUsagePopupExpanded) {
+            TokenUsagePopup(
+                usagePercent = state.tokenUsagePercent,
+                onDismissRequest = actions.onTokenUsageToggle,
+                onRetryClick = actions.onTokenUsageRetry
+            )
+        }
+    }
+}
+
+/**
+ * 상단 CheckToken 아이콘 아래에 뜬다. 오프셋은 [GamssTopNavigation]이 공개한 크기 상수로
+ * 계산한다 — [GamssCharacterPicker] 를 입력바 아래에 띄울 때 쓰는 것과 같은 방식이다.
+ */
+@Composable
+private fun TokenUsagePopup(
+    usagePercent: Int?,
+    onDismissRequest: () -> Unit,
+    onRetryClick: () -> Unit,
+) {
+    val popupOffset = with(LocalDensity.current) {
+        IntOffset(
+            x = -GamssTopNavigationHorizontalPadding.roundToPx(),
+            y = GamssTopNavigationHeight.roundToPx(),
+        )
+    }
+    Popup(
+        alignment = Alignment.TopEnd,
+        offset = popupOffset,
+        onDismissRequest = onDismissRequest,
+        properties = PopupProperties(focusable = true),
+    ) {
+        GamssTokenUsageTooltip(
+            title = stringResource(R.string.chat_room_token_usage_title),
+            usagePercent = usagePercent,
+            usagePercentLabel = if(usagePercent != null) stringResource(R.string.chat_room_token_usage_percent, usagePercent) else "",
+            resetTimeLabel = stringResource(R.string.chat_room_token_usage_reset_time),
+            failMessage = stringResource(R.string.chat_room_check_token_usage_fail),
+            retryLabel = stringResource(R.string.chat_room_check_token_usage_button_label),
+            onRetryClick = onRetryClick,
+        )
+    }
 }
 
 @Composable
@@ -481,6 +536,8 @@ private fun ChatRoomPreviewContent() {
         onCharacterMessageClick = {},
         onReplyTargetClear = {},
         onEndClick = {},
+        onTokenUsageToggle = {},
+        onTokenUsageRetry = {}
     )
     ChatRoomContent(state = state, actions = actions, onBackClick = {})
 }

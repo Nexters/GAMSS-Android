@@ -41,7 +41,6 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emptyFlow
-import java.time.LocalDate
 
 /**
  * 채팅 ViewModel 조립을 한 곳에 둔다. 테스트마다 따로 조립하면 세션 구성이 갈라진다.
@@ -57,7 +56,16 @@ internal fun chatRoomViewModel(
     tokenUsageRefreshNotifier: TokenUsageRefreshNotifier = RecordingTokenUsageRefreshNotifier(),
     remoteConfigRepository: RemoteConfigRepository = FakeRemoteConfigRepository(),
     pendingReveal: PendingConversationReveal = PendingConversationReveal(),
-    session: ConversationSession = ConversationSession(
+    userRepository: UserRepository = FakeUserRepository(),
+): ChatRoomViewModel = ChatRoomViewModel(
+    tokenUsageRefreshNotifier = tokenUsageRefreshNotifier,
+    detectRiskInText = DetectRiskInTextUseCase(
+        repository = NoRiskLexiconRepository,
+        matcher = RiskTermMatcher(),
+    ),
+    getRemoteConfigFlag = GetRemoteConfigFlagUseCase(remoteConfigRepository),
+    getDailyTokenUsageUseCase = GetDailyTokenUsageUseCase(userRepository),
+    session = ConversationSession(
         sendMessage = SendMessageUseCase(conversationRepository),
         getConversation = GetConversationUseCase(conversationRepository),
         updateConversationTitle = UpdateConversationTitleUseCase(conversationRepository),
@@ -73,14 +81,6 @@ internal fun chatRoomViewModel(
         emotionAccumulator = ConversationEmotionAccumulator(classifier),
         pendingReveal = pendingReveal,
     ),
-): ChatRoomViewModel = ChatRoomViewModel(
-    tokenUsageRefreshNotifier = tokenUsageRefreshNotifier,
-    detectRiskInText = DetectRiskInTextUseCase(
-        repository = NoRiskLexiconRepository,
-        matcher = RiskTermMatcher(),
-    ),
-    getRemoteConfigFlag = GetRemoteConfigFlagUseCase(remoteConfigRepository),
-    session = session,
 )
 
 /** 원격 설정 조회 없이 항상 켜진 값을 돌려준다. 값 자체를 검증하는 테스트는 별도로 stub 한다. */
@@ -105,6 +105,22 @@ private object NoRiskLexiconRepository : RiskLexiconRepository {
     )
 
     override suspend fun refresh() = Unit
+}
+
+/** 토큰 사용량 조회만 있으면 되는 테스트용 스텁. 채팅 흐름은 닉네임/계정 API 를 쓰지 않는다. */
+internal class FakeUserRepository(
+    private val usage: DailyTokenUsage = DailyTokenUsage(usedTokens = 0, dailyLimit = 100, exceeded = false),
+) : UserRepository {
+    override suspend fun updateNickname(nickname: String): AppResult<UserProfile> =
+        error("Not needed for this test")
+
+    override suspend fun deleteUserAccount(): AppResult<Unit> =
+        error("Not needed for this test")
+
+    override suspend fun getUserInfo(): AppResult<UserProfile> =
+        error("Not needed for this test")
+
+    override suspend fun getDailyTokenUsage(): AppResult<DailyTokenUsage> = AppResult.Success(usage)
 }
 
 /** 갱신 요청 횟수만 센다. 홈 쪽 수신은 feature:home 테스트가 본다. */

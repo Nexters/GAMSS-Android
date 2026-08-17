@@ -15,6 +15,7 @@ import com.gamss.android.domain.conversation.takeWithinMessageLimit
 import com.gamss.android.domain.repository.TokenUsageRefreshNotifier
 import com.gamss.android.domain.safety.DetectRiskInTextUseCase
 import com.gamss.android.domain.safety.RiskLevel
+import com.gamss.android.domain.usecase.GetDailyTokenUsageUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancelAndJoin
@@ -34,6 +35,7 @@ class ChatRoomViewModel @Inject constructor(
     private val tokenUsageRefreshNotifier: TokenUsageRefreshNotifier,
     private val detectRiskInText: DetectRiskInTextUseCase,
     private val getRemoteConfigFlag: GetRemoteConfigFlagUseCase,
+    private val getDailyTokenUsageUseCase: GetDailyTokenUsageUseCase,
 ) : ViewModel(),
     ContainerHost<ChatRoomState, ChatRoomSideEffect> {
 
@@ -114,6 +116,39 @@ class ChatRoomViewModel @Inject constructor(
         reduce { state.copy(replyTarget = null) }
     }
 
+    fun onTokenUsageToggle() = intent {
+        if (!state.isTokenUsagePopupExpanded) {
+            refreshTokenUsage()
+        }
+        reduce { state.copy(isTokenUsagePopupExpanded = !state.isTokenUsagePopupExpanded) }
+    }
+
+    fun onTokenUsageRetry() = intent {
+        refreshTokenUsage()
+    }
+
+    /**
+     * 사용자가 직접 요청한 조회(팝업 열기·재시도)는 실패를 그대로 반영해야 재시도 UI가 뜬다.
+     * [onSend]의 백그라운드 갱신처럼 조용히 이전 값을 유지하는 fallback을 여기선 쓰지 않는다.
+     */
+    private suspend fun ChatRoomSyntax.refreshTokenUsage() {
+        val percent = fetchTokenUsagePercent()
+        reduce { state.copy(tokenUsagePercent = percent) }
+    }
+
+    /**
+     * 조회 실패는 채팅 자체를 막을 이유가 없어 화면에는 조용히 null 로만 반영한다.
+     */
+    private suspend fun fetchTokenUsagePercent(): Int? =
+        when (val result = getDailyTokenUsageUseCase()) {
+            is AppResult.Success -> {
+                result.data.usagePercent
+            }
+            is AppResult.Failure -> {
+                null
+            }
+        }
+
     fun onSend() = intent {
         flushPendingComments()
 
@@ -157,6 +192,10 @@ class ChatRoomViewModel @Inject constructor(
         when (result) {
             is AppResult.Success -> {
                 val sent = result.data
+                tokenUsageRefreshNotifier.requestRefresh()
+                // 메시지 반영과 같은 reduce 에 묶어야 한다 — 따로 reduce 하면 상태 스트림에
+                // 댓글 노출 사이로 사용량 갱신용 상태가 하나 더 끼어든다.
+                val usagePercent = fetchTokenUsagePercent()
                 reduce {
                     state.copy(
                         isSending = false,
@@ -165,11 +204,11 @@ class ChatRoomViewModel @Inject constructor(
                         pendingComments = sent.comments,
                         input = if (state.input == sending.content) "" else state.input,
                         replyTarget = state.replyTarget.takeIf { it?.messageId != sending.replyToMessageId },
+                        tokenUsagePercent = usagePercent ?: state.tokenUsagePercent,
                     )
                 }
                 launchCommentReveal()
                 sent.commentStatus.toUserMessage()?.let { postSideEffect(ChatRoomSideEffect.ShowToast(it)) }
-                tokenUsageRefreshNotifier.requestRefresh()
                 session.finishSend()
             }
             is AppResult.Failure -> {

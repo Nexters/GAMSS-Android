@@ -39,8 +39,7 @@ enum class GamssTopNavigationTitleAlignment {
 enum class GamssTopNavigationIcon(@DrawableRes internal val drawableRes: Int) {
     LeftChevron(R.drawable.ic_left_chevron),
 
-    /// FIXME: 카드 이모티콘 추가필요
-    CreateCard(R.drawable.ic_menu),
+    CreateCard(R.drawable.ic_create_card),
     Menu(R.drawable.ic_menu),
 
     CheckToken(R.drawable.ic_token_check)
@@ -310,8 +309,18 @@ private fun TopNavigationPreviewContent() {
     }
 }
 
-private val TopNavigationHeight = 64.dp
-private val TopNavigationContentHorizontalPadding = 18.dp
+/**
+ * 오른쪽 아이콘 아래에 팝업/툴팁을 띄우는 화면이 있어 공개한다. [GamssTopNavigation] 자체 높이는
+ * 이 값이지만, 컴포넌트 위에 얹히는 safety area 간격([GamssTheme.spacing.spacing075])까지 더해야
+ * 화면에 실제로 차지하는 전체 높이가 나온다.
+ */
+val GamssTopNavigationHeight = 64.dp
+
+/** 오른쪽 아이콘이 화면 끝에서 떨어진 여백. 그 아이콘에 맞춰 팝업 위치를 잡을 때 같이 쓴다. */
+val GamssTopNavigationHorizontalPadding = 18.dp
+
+private val TopNavigationHeight = GamssTopNavigationHeight
+private val TopNavigationContentHorizontalPadding = GamssTopNavigationHorizontalPadding
 private val TopNavigationTitleStartWithIcon = 60.dp
 private val TopNavigationTitleEndPadding = 60.dp
 private val TopNavigationRightActionSpacing = 20.dp
