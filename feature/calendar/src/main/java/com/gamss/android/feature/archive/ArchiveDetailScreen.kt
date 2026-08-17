@@ -3,6 +3,7 @@ package com.gamss.android.feature.archive
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -30,18 +31,20 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.gamss.android.core.common.util.KoreanTimeZone
 import com.gamss.android.core.designsystem.component.GamssIconButton
 import com.gamss.android.core.designsystem.component.GamssTopBar
 import com.gamss.android.core.designsystem.theme.GamssTheme
-import com.gamss.android.domain.card.Card
+import com.gamss.android.domain.card.CardEntry
 import com.gamss.android.domain.emotion.EmotionCharacter
+import com.gamss.android.feature.archive.component.YearMonthPickerSheet
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.isActive
 import org.orbitmvi.orbit.compose.collectAsState
+import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import kotlin.random.Random
@@ -57,7 +60,14 @@ fun ArchiveDetailScreen(
     LaunchedEffect(emotion) { viewModel.load(emotion) }
     BackHandler(onBack = onBackClick)
 
-    ArchiveDetailFrame(emotion = emotion, state = state, onBackClick = onBackClick)
+    ArchiveDetailFrame(
+        emotion = emotion,
+        state = state,
+        onBackClick = onBackClick,
+        onMonthClick = viewModel::showMonthPicker,
+        onMonthSelect = viewModel::selectMonth,
+        onMonthPickerDismiss = viewModel::dismissMonthPicker,
+    )
 }
 
 @Composable
@@ -65,6 +75,9 @@ private fun ArchiveDetailFrame(
     emotion: EmotionCharacter,
     state: ArchiveDetailState,
     onBackClick: () -> Unit,
+    onMonthClick: () -> Unit,
+    onMonthSelect: (YearMonth) -> Unit,
+    onMonthPickerDismiss: () -> Unit,
 ) {
     Scaffold(
         containerColor = GamssTheme.colors.white,
@@ -98,17 +111,34 @@ private fun ArchiveDetailFrame(
             )
         },
     ) { innerPadding ->
-        ArchiveDetailContent(state = state, modifier = Modifier.padding(innerPadding))
+        ArchiveDetailContent(
+            state = state,
+            onMonthClick = onMonthClick,
+            modifier = Modifier.padding(innerPadding),
+        )
+    }
+
+    if (state.isMonthPickerVisible) {
+        YearMonthPickerSheet(
+            selected = state.yearMonth,
+            onSelect = onMonthSelect,
+            onDismiss = onMonthPickerDismiss,
+        )
     }
 }
 
 @Composable
 private fun ArchiveDetailContent(
     state: ArchiveDetailState,
+    onMonthClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Box(modifier = modifier.fillMaxSize()) {
-        MonthSelector(modifier = Modifier.align(Alignment.TopCenter))
+        MonthSelector(
+            yearMonth = state.yearMonth,
+            onClick = onMonthClick,
+            modifier = Modifier.align(Alignment.TopCenter),
+        )
         when {
             state.isLoading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator(color = GamssTheme.colors.gray700)
@@ -134,7 +164,11 @@ private fun ArchiveDetailContent(
 }
 
 @Composable
-private fun MonthSelector(modifier: Modifier = Modifier) {
+private fun MonthSelector(
+    yearMonth: YearMonth,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     Row(
         modifier = modifier
             .padding(
@@ -145,18 +179,19 @@ private fun MonthSelector(modifier: Modifier = Modifier) {
             .fillMaxWidth()
             .height(DetailMonthHeight)
             .border(DetailMonthBorderWidth, GamssTheme.colors.gray900)
+            .clickable(role = Role.Button, onClick = onClick)
             .padding(horizontal = DetailMonthHorizontalPadding),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            text = YearMonth.now(KoreanTimeZone).format(YearMonthFormatter),
+            text = yearMonth.format(YearMonthFormatter),
             style = GamssTheme.typography.title4,
             color = GamssTheme.colors.gray900,
         )
         Image(
             painter = painterResource(com.gamss.android.core.designsystem.R.drawable.ic_right_chevron),
-            contentDescription = null,
+            contentDescription = stringResource(R.string.archive_select_month_description),
             modifier = Modifier.graphicsLayer { rotationZ = 90f },
         )
     }
@@ -170,7 +205,7 @@ private class PaperUiState(x: Float, y: Float, rotationDegrees: Float) {
 }
 
 @Composable
-private fun PaperPile(cards: List<Card>) {
+private fun PaperPile(cards: List<CardEntry>) {
     BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
@@ -208,7 +243,11 @@ private fun PaperPile(cards: List<Card>) {
             val ui = uiStates.getOrNull(index) ?: return@forEachIndexed
             Image(
                 painter = painterResource(R.drawable.archive_paper),
-                contentDescription = card.summary,
+                contentDescription = stringResource(
+                    R.string.archive_paper_description,
+                    card.date.monthValue,
+                    card.date.dayOfMonth,
+                ),
                 modifier = Modifier
                     .align(Alignment.TopStart)
                     .size(DetailPaperSize * scale)
@@ -303,16 +342,20 @@ private fun ArchiveDetailPaperPilePreview() {
             emotion = EmotionCharacter.QUIRKY,
             state = ArchiveDetailState(
                 emotion = EmotionCharacter.QUIRKY,
+                yearMonth = YearMonth.of(2026, 7),
                 isLoading = false,
-                cards = List(24) { PreviewCard },
+                cards = List(24) { index -> PreviewCard.copy(indexInDate = index) },
             ),
             onBackClick = {},
+            onMonthClick = {},
+            onMonthSelect = {},
+            onMonthPickerDismiss = {},
         )
     }
 }
 
-private val PreviewCard = Card(
+private val PreviewCard = CardEntry(
+    date = LocalDate.of(2026, 7, 23),
+    indexInDate = 0,
     character = EmotionCharacter.QUIRKY,
-    summary = "미리보기 카드",
-    message = "",
 )

@@ -8,6 +8,11 @@
     <string name="archive_open_description">%1$s 쓰레기통 열기</string>
     <string name="archive_clear">비우기</string>
     <string name="archive_select_month_description">월 선택</string>
+    <string name="archive_month_picker_close">월 선택 닫기</string>
+    <string name="archive_month_picker_confirm">선택하기</string>
+    <string name="archive_picker_year">%1$d년</string>
+    <string name="archive_picker_month">%1$d월</string>
+    <string name="archive_paper_description">%1$d월 %2$d일 카드</string>
     <string name="calendar_month_title">%1$d년 %2$d월</string>
     <string name="calendar_previous_month">이전 달</string>
     <string name="calendar_next_month">다음 달</string>
