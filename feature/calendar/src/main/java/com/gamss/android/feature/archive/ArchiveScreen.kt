@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -55,7 +56,9 @@ fun ArchiveScreen(
         contentWindowInsets = WindowInsets.statusBars,
     ) { innerPadding ->
         BoxWithConstraints(
-            modifier = Modifier.padding(innerPadding),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding),
             contentAlignment = Alignment.Center,
         ) {
             val scale = (maxWidth / ArchiveDesignWidth).coerceAtMost(1f)
