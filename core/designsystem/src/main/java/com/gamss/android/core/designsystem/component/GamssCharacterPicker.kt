@@ -2,7 +2,6 @@ package com.gamss.android.core.designsystem.component
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -12,16 +11,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.selection.toggleable
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
-import com.gamss.android.core.designsystem.theme.GamssRadius
 import com.gamss.android.core.designsystem.theme.GamssTheme
 
 // Figma 노드 3331:3950 의 auto layout 값. 패널 211x94(hug), 패딩 20, 3x2 그리드, 간격 18.
@@ -47,9 +43,11 @@ fun <T> GamssCharacterPicker(
 ) {
     Column(
         modifier = modifier
-            .clip(RoundedCornerShape(GamssRadius.radius050))
             .background(GamssTheme.colors.white)
-            .border(PanelBorderWidth, GamssTheme.colors.gray200, RoundedCornerShape(GamssRadius.radius050))
+            .gamssSketchyBorder(
+                color = GamssTheme.colors.black,
+                width = PanelBorderWidth,
+            )
             .padding(PickerPadding),
         verticalArrangement = Arrangement.spacedBy(PickerGap),
     ) {

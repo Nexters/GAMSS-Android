@@ -17,6 +17,7 @@ import javax.inject.Inject
 
 internal const val LAST_CHARACTER_BLOCKED = "한 명은 남겨 주세요"
 internal const val SEND_FAILED = "보내지 못했어요. 잠시 후 다시 시도해 주세요."
+internal const val MESSAGE_LENGTH_EXCEEDED = "메시지는 140자까지 입력할 수 있어요."
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
@@ -33,6 +34,10 @@ class HomeViewModel @Inject constructor(
 
     fun onInputChange(text: String) = blockingIntent {
         reduce { state.copy(input = text.takeWithinMessageLimit()) }
+    }
+
+    fun onMessageLengthExceeded() = intent {
+        postSideEffect(HomeSideEffect.ShowToast(MESSAGE_LENGTH_EXCEEDED))
     }
 
     fun onEmotionPickerToggle() = intent {

@@ -2,6 +2,7 @@ package com.gamss.android.feature.home
 
 import android.widget.Toast
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -12,6 +13,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -19,14 +21,19 @@ import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -41,7 +48,6 @@ import com.gamss.android.core.designsystem.component.GamssCharacterPickerItem
 import com.gamss.android.core.designsystem.component.GamssIconButton
 import com.gamss.android.core.designsystem.component.GamssIcons
 import com.gamss.android.core.designsystem.component.GamssInputBar
-import com.gamss.android.core.designsystem.component.GamssInputBarHeight
 import com.gamss.android.core.designsystem.component.GamssLogo
 import com.gamss.android.core.designsystem.component.GamssMarkerHighlight
 import com.gamss.android.core.designsystem.component.GamssPaperSlip
@@ -50,6 +56,7 @@ import com.gamss.android.core.designsystem.component.GamssTape
 import com.gamss.android.core.designsystem.component.GamssText
 import com.gamss.android.core.designsystem.component.GamssTopBar
 import com.gamss.android.core.designsystem.theme.GamssTheme
+import com.gamss.android.domain.conversation.takeWithinMessageLimit
 import com.gamss.android.domain.emotion.EmotionCharacter
 import org.orbitmvi.orbit.compose.collectAsState
 import org.orbitmvi.orbit.compose.collectSideEffect
@@ -77,6 +84,7 @@ fun HomeScreen(
         HomeActions(
             onSettingClick = viewModel::navigateToSetting,
             onInputChange = viewModel::onInputChange,
+            onMessageLengthExceeded = viewModel::onMessageLengthExceeded,
             onSubmit = viewModel::onSubmit,
             onEmotionPickerToggle = viewModel::onEmotionPickerToggle,
             onEmotionToggle = viewModel::onEmotionToggle,
@@ -90,6 +98,7 @@ fun HomeScreen(
 private data class HomeActions(
     val onSettingClick: () -> Unit,
     val onInputChange: (String) -> Unit,
+    val onMessageLengthExceeded: () -> Unit,
     val onSubmit: () -> Unit,
     val onEmotionPickerToggle: () -> Unit,
     val onEmotionToggle: (EmotionCharacter) -> Unit,
@@ -101,9 +110,7 @@ private fun HomeContent(
     actions: HomeActions,
     modifier: Modifier = Modifier,
 ) {
-    val pickerItems = remember(state.selectedCharacters) { state.selectedCharacters.toPickerItems() }
-
-    Box(modifier = modifier.fillMaxSize()) {
+    Box(modifier = modifier.fillMaxSize().dismissKeyboardOnTapOutside()) {
         HomeDecorations()
 
         Column(modifier = Modifier.fillMaxSize()) {
@@ -131,44 +138,85 @@ private fun HomeContent(
 
             Spacer(modifier = Modifier.height(GreetingToInputGap))
 
-            // 패널은 Popup 으로 띄운다. 흐름에 넣으면 펼칠 때마다 인사말과 입력바가 위로 밀린다.
-            Box(modifier = Modifier.fillMaxWidth().padding(horizontal = InputBarHorizontalPadding)) {
-                GamssInputBar(
-                    value = state.input,
-                    onValueChange = actions.onInputChange,
-                    onTrailingClick = actions.onSubmit,
-                    placeholder = stringResource(R.string.home_input_placeholder),
-                    trailingContentDescription = stringResource(R.string.home_input_submit_description),
-                    enabled = !state.isSending,
-                    trailingAction = {
-                        CharacterPickerToggle(
-                            expanded = state.isEmotionPickerExpanded,
-                            onClick = actions.onEmotionPickerToggle,
-                        )
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                )
-
-                if (state.isEmotionPickerExpanded) {
-                    val pickerOffset = with(LocalDensity.current) {
-                        IntOffset(x = 0, y = (GamssInputBarHeight + PickerTopGap).roundToPx())
-                    }
-                    Popup(
-                        alignment = Alignment.TopEnd,
-                        offset = pickerOffset,
-                        onDismissRequest = actions.onEmotionPickerToggle,
-                    ) {
-                        GamssCharacterPicker(
-                            items = pickerItems,
-                            onToggle = actions.onEmotionToggle,
-                        )
-                    }
-                }
-            }
+            HomeInputSection(state = state, actions = actions)
 
             Spacer(modifier = Modifier.weight(GREETING_BOTTOM_WEIGHT))
         }
     }
+}
+
+@Composable
+private fun HomeInputSection(
+    state: HomeState,
+    actions: HomeActions,
+) {
+    val pickerItems = remember(state.selectedCharacters) { state.selectedCharacters.toPickerItems() }
+    var inputBarHeightPx by remember { mutableIntStateOf(0) }
+
+    // 한 번 알린 뒤에는 계속 이어 쳐도 다시 알리지 않고, 길이를 줄였다 다시 넘길 때만 알린다.
+    var lengthWarned by remember { mutableStateOf(false) }
+
+    // 패널은 Popup 으로 띄운다. 흐름에 넣으면 펼칠 때마다 인사말과 입력바가 위로 밀린다.
+    Box(modifier = Modifier.fillMaxWidth().padding(horizontal = InputBarHorizontalPadding)) {
+        GamssInputBar(
+            value = state.input,
+            // ViewModel도 같은 도메인 정책으로 방어하지만, IME 입력 순간에도 140자를 넘겨
+            // 화면에 보이지 않도록 UI 경계에서 먼저 제한한다.
+            onValueChange = {
+                val limited = it.takeWithinMessageLimit()
+                if (limited != it) {
+                    if (!lengthWarned) {
+                        actions.onMessageLengthExceeded()
+                        lengthWarned = true
+                    }
+                } else {
+                    lengthWarned = false
+                }
+                actions.onInputChange(limited)
+            },
+            onTrailingClick = actions.onSubmit,
+            placeholder = stringResource(R.string.home_input_placeholder),
+            trailingContentDescription = stringResource(R.string.home_input_submit_description),
+            enabled = !state.isSending,
+            trailingAction = {
+                CharacterPickerToggle(
+                    expanded = state.isEmotionPickerExpanded,
+                    onClick = actions.onEmotionPickerToggle,
+                )
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .onSizeChanged { inputBarHeightPx = it.height },
+        )
+
+        if (state.isEmotionPickerExpanded) {
+            val pickerOffset = with(LocalDensity.current) {
+                // 입력창 높이가 64dp/149dp+ 로 달라지므로 겹침 폭만 고정해 실측 높이 기준으로 잡는다.
+                IntOffset(
+                    x = PickerHorizontalInset.roundToPx(),
+                    y = (inputBarHeightPx.toDp() - PickerOverlapHeight).roundToPx(),
+                )
+            }
+            Popup(
+                alignment = Alignment.TopEnd,
+                offset = pickerOffset,
+                onDismissRequest = actions.onEmotionPickerToggle,
+            ) {
+                GamssCharacterPicker(items = pickerItems, onToggle = actions.onEmotionToggle)
+            }
+        }
+    }
+}
+
+/** 입력창 바깥을 누르면 포커스를 내려놓아야 collapsed 로 돌아가고 키보드도 닫힌다. */
+@Composable
+private fun Modifier.dismissKeyboardOnTapOutside(): Modifier {
+    val focusManager = LocalFocusManager.current
+    return clickable(
+        interactionSource = remember { MutableInteractionSource() },
+        indication = null,
+        onClick = { focusManager.clearFocus() },
+    )
 }
 
 @Composable
@@ -177,9 +225,9 @@ private fun CharacterPickerToggle(
     onClick: () -> Unit,
 ) {
     Row(
-        // fillMaxHeight 를 쓰면 안 된다. 입력바 높이가 내용 기반이라 자식이 최대 제약을 먹고 화면을 채운다.
-        // 터치 영역은 세로 여백으로 벌린다.
+        // collapsed 에서만 48dp 까지 넓어진다. expanded 컨트롤 행은 32dp 로 고정 측정돼 그만큼만 잡힌다.
         modifier = Modifier
+            .heightIn(min = 48.dp)
             .clickable(role = Role.DropdownList, onClick = onClick)
             .padding(horizontal = PickerToggleHitPadding, vertical = PickerToggleVerticalPadding),
         verticalAlignment = Alignment.CenterVertically,
@@ -188,13 +236,14 @@ private fun CharacterPickerToggle(
         GamssText(
             text = stringResource(R.string.home_character_picker),
             style = GamssTheme.typography.body4Medium,
-            color = GamssTheme.colors.gray900,
+            // 흰 입력바 위에서 다크 테마의 흰 전경색이 사라지지 않게 Figma 전경색을 유지한다.
+            color = GamssTheme.colors.black,
             maxLines = 1,
         )
         Icon(
             painter = painterResource(GamssIcons.RightChevron),
             contentDescription = null,
-            tint = GamssTheme.colors.gray900,
+            tint = GamssTheme.colors.black,
             // 아래위 셰브론 에셋이 없어 오른쪽 셰브론을 돌려 쓴다. 글리프가 뷰포트 중심에서 벗어나 있어
             // 회전축을 글리프 자신의 중심으로 옮긴다. 그러지 않으면 펼칠 때마다 위아래로 튄다.
             modifier = Modifier
@@ -281,14 +330,19 @@ private val HeaderEndPadding = 8.dp
 private val GreetingStartPadding = 27.dp
 private val GreetingWordGap = 6.dp
 private val GreetingToInputGap = 22.dp
-private val InputBarHorizontalPadding: Dp = 20.dp
 
-private val PickerTopGap = 4.dp
+// Figma 입력창은 402dp 화면에서 366dp 폭이므로 좌우 여백은 각각 18dp다.
+private val InputBarHorizontalPadding: Dp = 18.dp
+
+private val PickerHorizontalInset = (-61).dp
+
+// 64dp/149dp 두 입력창 높이 모두에서 Figma가 보여 준 9~10dp 겹침 폭.
+private val PickerOverlapHeight = 9.dp
 private val PickerToggleGap = 4.dp
 private val PickerToggleHitPadding = 4.dp
 
-// 라벨 줄높이가 20dp 라 위아래 14dp 씩 더하면 터치 영역이 48dp 가 된다.
-private val PickerToggleVerticalPadding = 14.dp
+// SVG 입력바 내부 높이에 맞춰 라벨의 시각 높이만 사용한다.
+private val PickerToggleVerticalPadding = 0.dp
 private val PickerToggleChevronSize = 16.dp
 private const val CHEVRON_ROTATION = 90f
 
@@ -331,6 +385,7 @@ private fun previewState() = HomeState(isLoading = false, nickname = "이소연"
 private fun previewActions() = HomeActions(
     onSettingClick = {},
     onInputChange = {},
+    onMessageLengthExceeded = {},
     onSubmit = {},
     onEmotionPickerToggle = {},
     onEmotionToggle = {},
