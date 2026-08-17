@@ -299,7 +299,7 @@ private fun ChatRoomTopBar(
             TokenUsagePopup(
                 usagePercent = state.tokenUsagePercent,
                 onDismissRequest = actions.onTokenUsageToggle,
-                onRetryClick = actions.onTokenUsageRetry
+                onRetryClick = actions.onTokenUsageRetry,
             )
         }
     }
@@ -330,7 +330,14 @@ private fun TokenUsagePopup(
         GamssTokenUsageTooltip(
             title = stringResource(R.string.chat_room_token_usage_title),
             usagePercent = usagePercent,
-            usagePercentLabel = if(usagePercent != null) stringResource(R.string.chat_room_token_usage_percent, usagePercent) else "",
+            usagePercentLabel = if (usagePercent != null) {
+                stringResource(
+                    R.string.chat_room_token_usage_percent,
+                    usagePercent,
+                )
+            } else {
+                ""
+            },
             resetTimeLabel = stringResource(R.string.chat_room_token_usage_reset_time),
             failMessage = stringResource(R.string.chat_room_check_token_usage_fail),
             retryLabel = stringResource(R.string.chat_room_check_token_usage_button_label),
