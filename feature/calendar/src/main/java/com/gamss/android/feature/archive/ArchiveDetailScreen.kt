@@ -1,6 +1,5 @@
 package com.gamss.android.feature.archive
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -51,6 +50,10 @@ import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import kotlin.random.Random
 
+/**
+ * 시스템 뒤로가기는 여기서 BackHandler 로 받지 않는다. 먼저 가로채면 NavDisplay 의 onBack 에
+ * 닿지 않아, predictive back 미리보기와 pop 트랜지션이 이 화면에서만 빠진다.
+ */
 @Composable
 fun ArchiveDetailScreen(
     emotion: EmotionCharacter,
@@ -60,7 +63,6 @@ fun ArchiveDetailScreen(
     val state by viewModel.collectAsState()
 
     LaunchedEffect(emotion) { viewModel.load(emotion) }
-    BackHandler(onBack = onBackClick)
 
     ArchiveDetailFrame(
         emotion = emotion,

@@ -1,5 +1,6 @@
 package com.gamss.android.feature.home
 
+import androidx.paging.PagingData
 import com.gamss.android.core.common.AppResult
 import com.gamss.android.domain.card.Card
 import com.gamss.android.domain.card.CardWriteRepository
@@ -17,6 +18,7 @@ import com.gamss.android.domain.conversation.MessageSender
 import com.gamss.android.domain.conversation.SendMessageUseCase
 import com.gamss.android.domain.conversation.SentMessage
 import com.gamss.android.domain.conversation.UpdateConversationTitleUseCase
+import com.gamss.android.domain.conversation.chattingsearch.ChattingRoomSummary
 import com.gamss.android.domain.emotion.ClassificationResult
 import com.gamss.android.domain.emotion.ConversationEmotionAccumulator
 import com.gamss.android.domain.emotion.EmotionCharacter
@@ -26,6 +28,7 @@ import com.gamss.android.domain.summary.DiarySummarizer
 import com.gamss.android.domain.summary.SummarizeDiaryUseCase
 import com.gamss.android.domain.summary.UtteranceTokenCounter
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.flow.Flow
 
 internal const val NEW_ROOM_ID = 42L
 
@@ -108,6 +111,9 @@ internal class RecordingConversationRepository(
 
     override suspend fun deleteConversation(conversationId: Long): AppResult<Unit> =
         AppResult.Success(Unit)
+
+    override fun searchChattingRooms(keyword: String): Flow<PagingData<ChattingRoomSummary>> =
+        error("홈 테스트에서 쓰지 않는다")
 }
 
 private object NoCardRepository : CardWriteRepository {

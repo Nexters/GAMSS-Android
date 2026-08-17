@@ -25,10 +25,12 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.paging.compose.collectAsLazyPagingItems
 import com.gamss.android.core.designsystem.button.GamssButton
 import com.gamss.android.core.designsystem.button.GamssButtonVariant
 import com.gamss.android.core.designsystem.theme.GamssTheme
 import com.gamss.android.feature.chat.component.ChattingListTopBar
+import com.gamss.android.feature.chat.component.ChattingSearchContent
 import com.gamss.android.feature.chat.component.ConversationList
 import com.gamss.android.feature.chat.component.DeleteConversationDialog
 import org.orbitmvi.orbit.compose.collectAsState
@@ -51,11 +53,15 @@ fun ChattingListScreen(
     viewModel: ChattingListViewModel = hiltViewModel(),
 ) {
     val state by viewModel.collectAsState()
+    val chattingRooms = viewModel.chattingRooms.collectAsLazyPagingItems()
 
     ChattingListSideEffectHandler(viewModel = viewModel, onChatClick = onChatClick)
 
     LaunchedEffect(Unit) { viewModel.load() }
 
+    BackHandler(enabled = state.search.isActive && !state.canCancelSelection) {
+        viewModel.onSearchCancel()
+    }
     BackHandler(enabled = state.canCancelSelection) { viewModel.onSelectionCancel() }
 
     val actions = remember(viewModel) {
@@ -74,10 +80,26 @@ fun ChattingListScreen(
         ChattingListTopBar(
             isSelectionMode = state.isSelectionMode,
             onSelectionCancel = viewModel::onSelectionCancel,
+            onSearchClick = viewModel::onSearchModeEnter,
             onMenuClick = onMenuClick,
         )
 
-        ChattingListBody(state = state, actions = actions, modifier = Modifier.weight(1f))
+        ChattingSearchContent(
+            state = state,
+            chattingRooms = chattingRooms,
+            actions = actions,
+            onKeywordChanged = viewModel::onSearchKeywordChanged,
+            onSearch = viewModel::search,
+            onCancel = viewModel::onSearchCancel,
+            idleContent = {
+                ChattingListBody(
+                    state = state,
+                    actions = actions,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            },
+            modifier = Modifier.weight(1f),
+        )
 
         if (state.isSelectionMode) {
             DeleteButton(enabled = state.canDelete, onClick = viewModel::onDeleteRequest)
@@ -120,6 +142,9 @@ private fun ChattingListSideEffectHandler(
 
             is ChattingListSideEffect.ShowSessionExpired ->
                 context.showToast(R.string.chatting_list_session_expired)
+
+            is ChattingListSideEffect.ShowSearchFailed ->
+                context.showToast(sideEffect.reason.messageRes)
         }
     }
 }
@@ -166,6 +191,13 @@ private fun ColumnScope.DeleteButton(enabled: Boolean, onClick: () -> Unit) {
 private fun Context.showToast(@StringRes resId: Int, vararg formatArgs: Any) {
     Toast.makeText(this, getString(resId, *formatArgs), Toast.LENGTH_SHORT).show()
 }
+
+private val SearchFailureReason.messageRes: Int
+    @StringRes get() = when (this) {
+        SearchFailureReason.NETWORK -> R.string.chatting_list_search_network_error
+        SearchFailureReason.INVALID_INPUT -> R.string.chatting_list_search_invalid_input
+        SearchFailureReason.UNKNOWN -> R.string.chatting_list_search_unknown_error
+    }
 
 @Preview(name = "Light", showBackground = true)
 @Suppress("UnusedPrivateMember")

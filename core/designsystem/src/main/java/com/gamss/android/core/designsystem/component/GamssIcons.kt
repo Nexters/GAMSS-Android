@@ -40,4 +40,7 @@ object GamssIcons {
     /** 테두리와 체크 모두 gray500. */
     @DrawableRes
     val CheckCircleOff: Int = R.drawable.ic_check_circle_off
+
+    @DrawableRes
+    val ClearButton: Int = R.drawable.ic_close
 }
