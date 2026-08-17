@@ -3,13 +3,10 @@ package com.gamss.android.app.main
 import androidx.activity.compose.LocalActivity
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ContentTransform
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.padding
@@ -85,13 +82,7 @@ fun MainScreen(
                 // Scaffold 기본 인셋까지 함께 적용하면 이중으로 여백이 생긴다.
                 contentWindowInsets = WindowInsets(0),
                 bottomBar = {
-                    // 하위 화면으로 이동할 때 탭바가 애니메이션 없이 바로 사라지면, 그 자리만큼
-                    // 콘텐츠 영역이 갑자기 넓어져 화면이 커지는 것처럼 보인다. 접히는 애니메이션으로 완충한다.
-                    AnimatedVisibility(
-                        visible = navigationState.currentKey == navigationState.currentTopLevelKey,
-                        enter = fadeIn() + expandVertically(),
-                        exit = fadeOut() + shrinkVertically(),
-                    ) {
+                    if (navigationState.currentKey == navigationState.currentTopLevelKey) {
                         GamssBottomBar(
                             items = destinations.bottomBarItems(),
                             selectedValue = navigationState.currentTopLevelKey,
