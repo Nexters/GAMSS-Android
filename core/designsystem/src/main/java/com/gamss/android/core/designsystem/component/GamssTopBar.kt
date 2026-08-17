@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -17,7 +18,11 @@ import com.gamss.android.core.designsystem.R
 
 private val TopBarHeight = 62.dp
 
-/** 가운데 슬롯이 없다. 타이틀이 필요한 화면은 [leading] 안에서 직접 배치한다. */
+/**
+ * 가운데 슬롯이 없다. 타이틀이 필요한 화면은 [leading] 안에서 직접 배치한다.
+ *
+ * 화면이 edge-to-edge 라 상태바 영역은 이 컴포넌트가 직접 피한다.
+ */
 @Composable
 fun GamssTopBar(
     modifier: Modifier = Modifier,
@@ -28,6 +33,7 @@ fun GamssTopBar(
     Row(
         modifier = modifier
             .fillMaxWidth()
+            .statusBarsPadding()
             .height(TopBarHeight)
             .padding(contentPadding),
         verticalAlignment = Alignment.CenterVertically,

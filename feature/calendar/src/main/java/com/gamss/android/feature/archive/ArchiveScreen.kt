@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -51,9 +50,9 @@ fun ArchiveScreen(
     Scaffold(
         containerColor = GamssTheme.colors.white,
         topBar = { ArchiveTopBar(onMenuClick = onNavigateToSetting) },
-        // 보관함 탭은 항상 MainScreen 의 탭바 위에 떠서, 화면 하단에 직접 닿지 않는다.
-        // 기본 인셋대로 두면 이미 탭바가 피해준 내비게이션 바 공간을 여기서 또 예약해 이중 여백이 생긴다.
-        contentWindowInsets = WindowInsets.statusBars,
+        // 상태바는 GamssTopBar가, 내비게이션 바는 MainScreen의 탭바가 각자 직접 피하므로
+        // 이 Scaffold가 추가로 예약할 인셋은 없다.
+        contentWindowInsets = WindowInsets(0),
     ) { innerPadding ->
         BoxWithConstraints(
             modifier = Modifier
