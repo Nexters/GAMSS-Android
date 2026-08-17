@@ -95,7 +95,12 @@ private fun ArchiveGrid(
         archiveItems.chunked(GRID_COLUMN_COUNT).forEach { rowItems ->
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(GridHorizontalSpacing * scale),
+                // 카드 두 장과 간격을 합쳐도 가용 폭보다 2dp 모자란다(디자인도 그렇다). 그 여분을
+                // 한쪽에 몰지 않고 좌우로 나눠야 그리드가 실제로 가운데 온다.
+                horizontalArrangement = Arrangement.spacedBy(
+                    space = GridHorizontalSpacing * scale,
+                    alignment = Alignment.CenterHorizontally,
+                ),
             ) {
                 rowItems.forEach { item ->
                     ArchiveCard(item = item, scale = scale, onClick = { onArchiveClick(item.emotion) })
