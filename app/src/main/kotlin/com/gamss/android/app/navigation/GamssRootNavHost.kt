@@ -38,7 +38,6 @@ fun GamssRootNavHost(
         }
         else -> RootNavDisplay(
             sessionState = state.sessionState,
-            useCardFeature = state.useCardFeature,
         )
     }
 }
@@ -46,7 +45,6 @@ fun GamssRootNavHost(
 @Composable
 private fun RootNavDisplay(
     sessionState: SessionState,
-    useCardFeature: Boolean,
 ) {
     val initialKey = if (sessionState == SessionState.Authenticated) MainKey else LoginKey
     val backStack = rememberNavBackStack(initialKey)
@@ -71,7 +69,7 @@ private fun RootNavDisplay(
                         googleWebClientId = stringResource(R.string.default_web_client_id),
                     )
                 }
-                entry<MainKey> { MainScreen(useCardFeature = useCardFeature) }
+                entry<MainKey> { MainScreen() }
             },
         ),
         onBack = {

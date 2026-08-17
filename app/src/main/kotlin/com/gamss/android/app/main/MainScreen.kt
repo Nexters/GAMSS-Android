@@ -29,7 +29,6 @@ import com.gamss.android.app.navigation.keys
 import com.gamss.android.app.navigation.rememberNavigationState
 import com.gamss.android.app.navigation.toEntries
 import com.gamss.android.app.navigation.topLevelDestinations
-import com.gamss.android.app.navigation.visibleIn
 import com.gamss.android.core.designsystem.component.GamssBottomBar
 import com.gamss.android.core.designsystem.component.GamssPaperBackground
 import com.gamss.android.core.designsystem.theme.GamssTheme
@@ -55,17 +54,15 @@ import com.gamss.android.feature.webview.navigation.WebViewKey
 
 @Composable
 fun MainScreen(
-    useCardFeature: Boolean,
     modelDownloadPromptViewModel: ModelDownloadPromptViewModel = hiltViewModel(),
 ) {
     val destinations = remember { topLevelDestinations() }
-    val visibleDestinations = remember(destinations, useCardFeature) { destinations.visibleIn(useCardFeature) }
     val navigationState = rememberNavigationState(
         startKey = HomeKey,
         topLevelKeys = remember(destinations) { destinations.keys() },
     )
     val navigator = remember(navigationState) { Navigator(navigationState) }
-    val entries = remember(navigator, useCardFeature) { mainEntryProvider(navigator, useCardFeature) }
+    val entries = remember(navigator) { mainEntryProvider(navigator) }
     val snackbarHostState = remember { SnackbarHostState() }
 
     ModelDownloadConfirmationEffect(modelDownloadPromptViewModel, snackbarHostState)
@@ -89,7 +86,7 @@ fun MainScreen(
                         exit = fadeOut() + shrinkVertically(),
                     ) {
                         GamssBottomBar(
-                            items = visibleDestinations.bottomBarItems(),
+                            items = destinations.bottomBarItems(),
                             selectedValue = navigationState.currentTopLevelKey,
                             onItemClick = navigator::navigate,
                         )
@@ -115,7 +112,7 @@ fun MainScreen(
     }
 }
 
-private fun mainEntryProvider(navigator: Navigator, useCardFeature: Boolean) = entryProvider {
+private fun mainEntryProvider(navigator: Navigator) = entryProvider {
     entry<HomeKey> {
         HomeScreen(
             onNavigateToSetting = { navigator.navigate(SettingKey) },
@@ -123,15 +120,10 @@ private fun mainEntryProvider(navigator: Navigator, useCardFeature: Boolean) = e
         )
     }
     entry<ArchiveKey> {
-        // 백스택 복원이나 플래그가 도중에 꺼지는 경우, 탭바에서 숨겨진 화면이 그려지지 않도록 홈으로 되돌린다.
-        if (useCardFeature) {
-            ArchiveScreen(
-                onNavigateToSetting = { navigator.navigate(SettingKey) },
-                onArchiveClick = { navigator.navigate(ArchiveDetailKey(it)) },
-            )
-        } else {
-            LaunchedEffect(Unit) { navigator.navigate(HomeKey) }
-        }
+        ArchiveScreen(
+            onNavigateToSetting = { navigator.navigate(SettingKey) },
+            onArchiveClick = { navigator.navigate(ArchiveDetailKey(it)) },
+        )
     }
     entry<ArchiveDetailKey> { key ->
         ArchiveDetailScreen(emotion = key.emotion, onBackClick = navigator::goBack)

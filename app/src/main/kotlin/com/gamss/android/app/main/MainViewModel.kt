@@ -4,9 +4,6 @@ import androidx.lifecycle.ViewModel
 import com.gamss.android.domain.auth.ObserveSessionStateUseCase
 import com.gamss.android.domain.auth.RestoreSessionUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.flow
 import org.orbitmvi.orbit.ContainerHost
 import org.orbitmvi.orbit.viewmodel.container
 import javax.inject.Inject
@@ -29,15 +26,8 @@ class MainViewModel @Inject constructor(
     }
 
     private fun observeSessionState() = intent {
-        combine(observeSessionStateUseCase(), remoteConfigGate()) { sessionState, useCardFeature ->
-            sessionState to useCardFeature
-        }.collect { (sessionState, useCardFeature) ->
-            reduce { state.copy(sessionState = sessionState, useCardFeature = useCardFeature) }
+        observeSessionStateUseCase().collect { sessionState ->
+            reduce { state.copy(sessionState = sessionState) }
         }
-    }
-
-    /** 카드 기능은 현재 원격 설정과 무관하게 항상 노출한다. */
-    private fun remoteConfigGate(): Flow<Boolean> = flow {
-        emit(true)
     }
 }
