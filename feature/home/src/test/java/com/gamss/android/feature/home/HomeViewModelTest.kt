@@ -137,10 +137,42 @@ class HomeViewModelTest {
     }
 
     @Test
-    fun `상한을 넘긴 입력은 140자까지만 남는다`() = runTest {
+    fun `상한을 넘긴 입력은 140자까지만 남고 한 번 알린다`() = runTest {
         viewModel().test(this) {
             containerHost.onInputChange("가".repeat(MAX_MESSAGE_LENGTH + 20))
             expectState { copy(input = "가".repeat(MAX_MESSAGE_LENGTH)) }
+            expectSideEffect(HomeSideEffect.ShowToast(MESSAGE_LENGTH_EXCEEDED))
+        }
+    }
+
+    @Test
+    fun `상한을 넘긴 채로 이어 쳐도 다시 알리지 않는다`() = runTest {
+        viewModel().test(this) {
+            val filled = "가".repeat(MAX_MESSAGE_LENGTH)
+            containerHost.onInputChange(filled + "가")
+            expectState { copy(input = filled) }
+            expectSideEffect(HomeSideEffect.ShowToast(MESSAGE_LENGTH_EXCEEDED))
+
+            // 상태가 그대로라 expectState 는 없고, 안내도 다시 오지 않는다.
+            containerHost.onInputChange(filled + "나")
+        }
+    }
+
+    @Test
+    fun `상한 아래로 줄였다 다시 넘기면 또 알린다`() = runTest {
+        viewModel().test(this) {
+            val filled = "가".repeat(MAX_MESSAGE_LENGTH)
+            containerHost.onInputChange(filled + "가")
+            expectState { copy(input = filled) }
+            expectSideEffect(HomeSideEffect.ShowToast(MESSAGE_LENGTH_EXCEEDED))
+
+            val shorter = "가".repeat(MAX_MESSAGE_LENGTH - 1)
+            containerHost.onInputChange(shorter)
+            expectState { copy(input = shorter) }
+
+            containerHost.onInputChange(shorter + "나다")
+            expectState { copy(input = shorter + "나") }
+            expectSideEffect(HomeSideEffect.ShowToast(MESSAGE_LENGTH_EXCEEDED))
         }
     }
 
