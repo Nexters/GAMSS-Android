@@ -20,7 +20,7 @@ class CardResponseTest {
             summary = "비 때문에 하루가 꼬였어요",
             message = "비 때문에 하루가 꼬였어요",
             date = "2026-08-15",
-        ).toDomain()
+        ).toDomain(requestedCharacter = EmotionCharacter.ANGER, fallbackDate = LocalDate.of(2026, 1, 1))
 
         assertEquals(10L, card.id)
         assertEquals(20L, card.conversationId)
@@ -28,6 +28,25 @@ class CardResponseTest {
         assertEquals("분노", card.emotionLabel)
         assertEquals("비 때문에 하루가 꼬였어요", card.summary)
         assertEquals(LocalDate.of(2026, 8, 15), card.date)
+    }
+
+    @Test
+    fun `card creation falls back to the requested values when the response cannot be mapped`() {
+        val fallbackDate = LocalDate.of(2026, 8, 17)
+
+        val card = CardResponse(
+            id = 10L,
+            conversationId = 20L,
+            emotion = "FUTURE_EMOTION",
+            emotionLabel = "미래 감정",
+            summary = "요약",
+            message = "메시지",
+            date = "invalid-date",
+        ).toDomain(requestedCharacter = EmotionCharacter.ANGER, fallbackDate = fallbackDate)
+
+        assertEquals(10L, card.id)
+        assertEquals(EmotionCharacter.ANGER, card.character)
+        assertEquals(fallbackDate, card.date)
     }
 
     @Test

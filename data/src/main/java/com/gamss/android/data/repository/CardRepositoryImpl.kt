@@ -41,7 +41,8 @@ internal class CardRepositoryImpl @Inject constructor(
                 ),
             )
             response.throwIfFailed()
-            checkNotNull(response.data) { "No available card data" }.toDomain()
+            checkNotNull(response.data) { "No available card data" }
+                .toDomain(requestedCharacter = character, fallbackDate = LocalDate.now())
         }
         return when (result) {
             is AppResult.Success -> result

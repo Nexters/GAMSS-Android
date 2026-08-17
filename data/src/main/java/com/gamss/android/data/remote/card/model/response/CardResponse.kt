@@ -2,6 +2,7 @@ package com.gamss.android.data.remote.card.model.response
 
 import com.gamss.android.data.remote.emotion.toEmotionCharacter
 import com.gamss.android.domain.card.Card
+import com.gamss.android.domain.emotion.EmotionCharacter
 import kotlinx.serialization.Serializable
 import java.time.LocalDate
 import java.time.format.DateTimeParseException
@@ -17,14 +18,22 @@ internal data class CardResponse(
     val date: String,
 )
 
-internal fun CardResponse.toDomain(): Card = Card(
+/**
+ * 생성 응답을 변환한다. POST 는 이미 성공한 뒤라 여기서 실패로 돌리면 서버엔 카드가 있는데
+ * 클라만 실패로 보고, 재시도는 CARD_ALREADY_EXISTS 로 막혀 그 카드에 영영 닿지 못한다.
+ * 그래서 매핑하지 못한 값은 요청에 쓴 값으로 메운다.
+ */
+internal fun CardResponse.toDomain(
+    requestedCharacter: EmotionCharacter,
+    fallbackDate: LocalDate,
+): Card = Card(
     id = id,
     conversationId = conversationId,
-    character = requireNotNull(emotion.toEmotionCharacter()) { "Unknown card emotion=$emotion" },
+    character = emotion.toEmotionCharacter() ?: requestedCharacter,
     emotionLabel = emotionLabel,
     summary = summary,
     message = message,
-    date = LocalDate.parse(date),
+    date = date.toLocalDateOrNull() ?: fallbackDate,
 )
 
 /** 목록 응답의 예상 가능한 서버 데이터 오류가 정상 카드까지 가리지 않도록 안전하게 변환한다. */
