@@ -65,7 +65,6 @@
             </intent-filter>
         </service>
 
-        <!-- 앱이 백그라운드일 때 알림(notification) 페이로드를 시스템이 자동으로 트레이에 띄울 때 쓰는 기본값. -->
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_icon"
             android:resource="@drawable/ic_notification" />

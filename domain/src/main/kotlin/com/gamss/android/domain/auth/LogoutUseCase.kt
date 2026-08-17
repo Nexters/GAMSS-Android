@@ -10,7 +10,6 @@ class LogoutUseCase @Inject constructor(
     private val unregisterCurrentDeviceToken: UnregisterCurrentDeviceTokenUseCase,
 ) : NoParamUseCase<AppResult<Unit>> {
 
-    /** 토큰이 무효화되기 전에 먼저 해제해야 해제 API가 인증을 통과한다. */
     override suspend fun invoke(): AppResult<Unit> {
         unregisterCurrentDeviceToken()
         return authRepository.logout()

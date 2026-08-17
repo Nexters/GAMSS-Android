@@ -15,7 +15,6 @@ internal class AndroidNotificationPermissionChecker @Inject constructor(
     @ApplicationContext private val context: Context,
 ) : NotificationPermissionChecker {
 
-    // POST_NOTIFICATIONS는 API 33부터 필요하다. 그 이전에는 권한 없이도 알림을 보낼 수 있다.
     override fun isGranted(): Boolean =
         Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
             ContextCompat.checkSelfPermission(

@@ -1,5 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 상태 표시줄 알림 아이콘. 시스템이 알파 채널만 사용해 단색으로 그리므로 단순 실루엣이어야 한다. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"

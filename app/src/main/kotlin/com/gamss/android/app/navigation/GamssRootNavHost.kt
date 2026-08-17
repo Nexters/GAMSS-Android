@@ -1,5 +1,8 @@
 package com.gamss.android.app.navigation
 
+import android.Manifest
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CircularProgressIndicator
@@ -10,6 +13,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.LifecycleStartEffect
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
@@ -26,6 +30,21 @@ fun GamssRootNavHost(
     mainViewModel: MainViewModel = hiltViewModel(),
 ) {
     val state by mainViewModel.collectAsState()
+
+    val requestNotificationPermission = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { mainViewModel.syncDeviceToken() }
+
+    LaunchedEffect(Unit) {
+        if (!mainViewModel.isNotificationPermissionGranted()) {
+            requestNotificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
+
+    LifecycleStartEffect(Unit) {
+        mainViewModel.syncDeviceToken()
+        onStopOrDispose { }
+    }
 
     when (state.sessionState) {
         SessionState.Loading -> {

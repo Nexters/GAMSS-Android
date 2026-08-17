@@ -41,7 +41,6 @@ class GamssApplication : Application() {
         applicationScope.launch { initializeRemoteConfig() }
     }
 
-    /** API 26+에서는 채널이 없으면 알림이 표시되지 않는다. 알림 발송 전에 미리 만들어 둔다. */
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         val channel = NotificationChannel(

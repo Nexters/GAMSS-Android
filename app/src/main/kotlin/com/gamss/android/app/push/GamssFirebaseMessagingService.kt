@@ -17,6 +17,7 @@ import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -43,34 +44,53 @@ class GamssFirebaseMessagingService : FirebaseMessagingService() {
     }
 
     override fun onMessageReceived(message: RemoteMessage) {
-        val title = message.notification?.title ?: message.data["title"] ?: return
-        val body = message.notification?.body ?: message.data["body"]
-        showNotification(title, body)
+        val content = message.toNotificationContentOrNull() ?: return
+        showNotification(content)
     }
 
-    // notificationPermissionChecker가 POST_NOTIFICATIONS를 이미 확인한다. lint는 모듈 경계를
-    // 넘는 이 체크를 추적하지 못해 오탐(MissingPermission)을 낸다.
+    override fun onDestroy() {
+        serviceScope.cancel()
+        super.onDestroy()
+    }
+
+    // 권한 확인이 모듈 경계 너머에 있어 lint 가 추적하지 못한다.
     @SuppressLint("MissingPermission")
-    private fun showNotification(title: String, body: String?) {
+    @Suppress("TooGenericExceptionCaught")
+    private fun showNotification(content: PushNotificationContent) {
         if (!notificationPermissionChecker.isGranted()) return
 
-        val contentIntent = PendingIntent.getActivity(
-            this,
-            0,
-            Intent(this, MainActivity::class.java).setFlags(
-                Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP,
-            ),
-            PendingIntent.FLAG_IMMUTABLE,
-        )
+        try {
+            val contentIntent = PendingIntent.getActivity(
+                this,
+                0,
+                Intent(this, MainActivity::class.java).setFlags(
+                    Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP,
+                ),
+                PendingIntent.FLAG_IMMUTABLE,
+            )
 
-        val notification = NotificationCompat.Builder(this, getString(R.string.default_notification_channel_id))
-            .setSmallIcon(R.drawable.ic_notification)
-            .setContentTitle(title)
-            .setContentText(body)
-            .setAutoCancel(true)
-            .setContentIntent(contentIntent)
-            .build()
+            val notification = NotificationCompat.Builder(this, getString(R.string.default_notification_channel_id))
+                .setSmallIcon(R.drawable.ic_notification)
+                .setContentTitle(content.title)
+                .setContentText(content.body)
+                .setAutoCancel(true)
+                .setContentIntent(contentIntent)
+                .build()
 
-        NotificationManagerCompat.from(this).notify(System.currentTimeMillis().toInt(), notification)
+            NotificationManagerCompat.from(this).notify(System.currentTimeMillis().toInt(), notification)
+        } catch (e: Exception) {
+            Log.w(TAG, "failed to show push notification", e)
+        }
     }
+}
+
+internal data class PushNotificationContent(
+    val title: String,
+    val body: String?,
+)
+
+internal fun RemoteMessage.toNotificationContentOrNull(): PushNotificationContent? {
+    val title = notification?.title ?: data["title"] ?: return null
+    val body = notification?.body ?: data["body"]
+    return PushNotificationContent(title, body)
 }
