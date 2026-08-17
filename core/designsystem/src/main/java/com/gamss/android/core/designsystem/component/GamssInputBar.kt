@@ -41,9 +41,7 @@ private val InputBarTopPadding = 16.dp
 private val InputBarBottomPadding = 16.dp
 private val ControlsRowHeight = 32.dp
 
-// 좌우 여백은 Figma 가 두 상태에서 다르게 잡혀 있다(default 20, focus 16).
-private val CollapsedHorizontalPadding = 20.dp
-private val ExpandedHorizontalPadding = 16.dp
+private val InputBarHorizontalPadding = 20.dp
 
 // 배경까지 담긴 에셋이라 tint 하지 않는다. 컨트롤 행이 32dp 고정이라
 // Android 권장 터치 영역(48dp)은 주지 못하고 아이콘 크기가 곧 터치 영역이다.
@@ -87,8 +85,6 @@ fun GamssInputBar(
     val barHeight =
         animatedBaseHeight + (InputLineHeight * lineCount - textAreaHeight).coerceAtLeast(0.dp)
 
-    val horizontalPadding = if (isExpanded) ExpandedHorizontalPadding else CollapsedHorizontalPadding
-
     Layout(
         modifier = modifier
             .height(barHeight)
@@ -115,7 +111,7 @@ fun GamssInputBar(
         },
     ) { measurables, constraints ->
         val (textFieldMeasurable, controlsMeasurable) = measurables
-        val sidePad = horizontalPadding.roundToPx()
+        val sidePad = InputBarHorizontalPadding.roundToPx()
         // 폭이 열려 있는 부모(가로 스크롤 등) 아래에서는 maxWidth 가 Infinity 라 그대로 쓰면 터진다.
         val barWidth = constraints.constrainWidth(
             if (constraints.hasBoundedWidth) constraints.maxWidth else constraints.minWidth,
