@@ -4,6 +4,11 @@ on:
   push:
     branches: [develop]
   workflow_dispatch:
+    inputs:
+      deploy_firebase:
+        description: "Firebase App Distribution 배포 여부 (수동 실행 전용 — push 트리거는 항상 배포)"
+        type: boolean
+        default: true
 
 concurrency:
   group: cd-${{ github.workflow }}-${{ github.ref }}
@@ -13,7 +18,14 @@ permissions:
   contents: read
 
 jobs:
-  distribute:
+  # QA/기능 테스트용. `internal` buildType 은 debug 서명 + 온디바이스 모델을 APK 에 그대로 번들해서
+  # (PAD 미사용) 테스터가 설치하자마자 모든 기능을 바로 쓸 수 있다 — data/build.gradle.kts,
+  # fastlane/Fastfile 의 `distribute` lane 참고. release 서명 키스토어는 필요 없다.
+  #
+  # push(develop)는 항상 배포하고, workflow_dispatch(수동 실행)만 deploy_firebase 입력으로 건너뛸 수
+  # 있다 — 예: release AAB만 다시 뽑아서 확인하고 싶을 때 테스터에게 알림이 가는 걸 막는 용도.
+  firebase-distribution:
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.deploy_firebase }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -39,7 +51,7 @@ jobs:
           bundler-cache: true
 
       - name: Prepare secret directories
-        run: mkdir -p fastlane/config keystore
+        run: mkdir -p fastlane/config
 
       - name: Write google-services.json
         run: echo "${{ secrets.GOOGLE_SERVICES_JSON }}" | base64 -d > app/google-services.json
@@ -58,6 +70,78 @@ jobs:
       - name: Write Firebase service account key
         run: echo "${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}" | base64 -d > fastlane/config/gamss-key.json
 
+      - name: Compute CI version
+        run: |
+          echo "VERSION_CODE=$((100000 + GITHUB_RUN_NUMBER))" >> "$GITHUB_ENV"
+
+      - name: Distribute to Firebase App Distribution
+        env:
+          FIREBASE_SERVICE_CREDENTIALS_FILE: ${{ github.workspace }}/fastlane/config/gamss-key.json
+          FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
+          FIREBASE_TESTER_GROUPS: inner-tester
+        run: bundle exec fastlane android distribute
+
+      - name: Upload reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: firebase-distribution-reports
+          path: |
+            **/build/reports/**
+          if-no-files-found: ignore
+          retention-days: 7
+
+  # Play Console 에 올릴 서명된 운영용 AAB 를 만들어 워크플로 아티팩트로 남긴다. `release` buildType
+  # 그대로라 기존 PAD 정책(emotion=fast-follow, summary=on-demand)이 유지되고, internal 배포용 설정이
+  # 여기 섞이지 않는다.
+  #
+  # Play Console 로 자동 업로드(upload_to_play_store)는 아직 안 한다 — 서비스 계정 JSON secret
+  # (PLAY_STORE_SERVICE_ACCOUNT_JSON)이 리포지토리에 아직 없어서 지금 붙이면 이 job 이 매번 실패한다.
+  # 그래서 지금은 서명된 AAB 를 여기까지만 만들고, Actions 탭에서 아티팩트를 받아 Play Console에
+  # 수동으로 올린다. secret 이 준비되면 fastlane/Fastfile 의 build_play_release_aab lane 주석대로
+  # upload_to_play_store 호출을 다시 붙이면 된다.
+  play-release-aab:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          validate-wrappers: true
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+          bundler-cache: true
+
+      - name: Prepare secret directories
+        run: mkdir -p keystore
+
+      - name: Write google-services.json
+        run: echo "${{ secrets.GOOGLE_SERVICES_JSON }}" | base64 -d > app/google-services.json
+
+      - name: Write local.properties
+        shell: bash
+        env:
+          DEV_BASE_URL: ${{ secrets.DEV_BASE_URL }}
+          PROD_BASE_URL: ${{ secrets.PROD_BASE_URL }}
+        run: |
+          : "${DEV_BASE_URL:?DEV_BASE_URL secret is not configured}"
+          : "${PROD_BASE_URL:?PROD_BASE_URL secret is not configured}"
+          printf 'DEV_BASE_URL=%s\n' "$DEV_BASE_URL" > local.properties
+          printf 'PROD_BASE_URL=%s\n' "$PROD_BASE_URL" >> local.properties
+
       - name: Write release keystore
         run: echo "${{ secrets.RELEASE_KEYSTORE }}" | base64 -d > keystore/release.jks
 
@@ -65,33 +149,15 @@ jobs:
         run: |
           echo "VERSION_CODE=$((100000 + GITHUB_RUN_NUMBER))" >> "$GITHUB_ENV"
 
-      - name: Distribute to Firebase App Distribution
+      - name: Build signed release AAB
         env:
           RELEASE_KEYSTORE_PATH: ${{ github.workspace }}/keystore/release.jks
           RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
           RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
           RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
-          FIREBASE_SERVICE_CREDENTIALS_FILE: ${{ github.workspace }}/fastlane/config/gamss-key.json
-          FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
-          FIREBASE_TESTER_GROUPS: inner-tester
-        run: bundle exec fastlane android distribute
-
-      # 위 Firebase 배포는 installTimeModels 로 모델을 박아 넣은 전용 AAB(~400MB)를 쓴다. 이 스텝은
-      # 그거와 별개로, 실제 운영 배포 형태(on-demand/fast-follow 유지, 작은 크기)의 AAB 를 워크플로
-      # 아티팩트로 남긴다 — Play Console 내부 테스트 트랙에 수동으로 올리거나 bundletool
-      # --local-testing 으로 로컬 설치해 PAD 동작을 검증할 때 쓴다. 실패해도 위 Firebase 배포는 이미
-      # 끝났으므로 파이프라인 전체를 실패시키지 않는다.
-      - name: Build release AAB
-        continue-on-error: true
-        env:
-          RELEASE_KEYSTORE_PATH: ${{ github.workspace }}/keystore/release.jks
-          RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
-          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
-          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
-        run: ./gradlew :app:bundleRelease -PversionCode="$VERSION_CODE" --stacktrace
+        run: bundle exec fastlane android build_play_release_aab
 
       - name: Upload release AAB artifact
-        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: app-release-aab
@@ -103,7 +169,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: cd-reports
+          name: play-release-aab-reports
           path: |
             **/build/reports/**
           if-no-files-found: ignore
