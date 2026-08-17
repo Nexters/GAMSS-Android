@@ -37,7 +37,7 @@ android {
     // debug/internal sourceSet 참고) — 이 경우엔 APK zip 엔트리이므로 noCompress 가 필요하다. .onnx 는
     // 명시하지 않으면 압축돼 mmap(assets.openFd)이 실패한다. .tflite 는 AGP 가 기본으로 비압축 처리한다.
     androidResources {
-        noCompress += "onnx"
+        noCompress += listOf("tflite", "onnx")
     }
 
     val releaseKeystorePath = providers.environmentVariable("RELEASE_KEYSTORE_PATH").orNull
