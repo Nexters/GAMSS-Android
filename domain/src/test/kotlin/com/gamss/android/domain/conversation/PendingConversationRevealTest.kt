@@ -4,6 +4,8 @@ import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
+import java.time.Instant
+import java.time.ZoneId
 
 class PendingConversationRevealTest {
 
@@ -14,7 +16,20 @@ class PendingConversationRevealTest {
 
         reveal.save(sent, now = BASE_TIME)
 
-        assertEquals(sent, reveal.consume(ROOM_ID, now = BASE_TIME))
+        assertEquals(sent, reveal.consume(ROOM_ID, now = BASE_TIME)?.sent)
+    }
+
+    @Test
+    fun 저장_시각이_생성_일시로_즉시_채워진다() = runBlocking {
+        val reveal = PendingConversationReveal()
+        reveal.save(sentMessage(), now = BASE_TIME)
+
+        val result = reveal.consume(ROOM_ID, now = BASE_TIME)
+
+        assertEquals(
+            Instant.ofEpochMilli(BASE_TIME).atZone(ZoneId.systemDefault()).toLocalDateTime(),
+            result?.createdAt,
+        )
     }
 
     @Test
@@ -34,7 +49,7 @@ class PendingConversationRevealTest {
         reveal.save(sent, now = BASE_TIME)
 
         assertNull(reveal.consume(OTHER_ROOM_ID, now = BASE_TIME))
-        assertEquals(sent, reveal.consume(ROOM_ID, now = BASE_TIME))
+        assertEquals(sent, reveal.consume(ROOM_ID, now = BASE_TIME)?.sent)
     }
 
     @Test
@@ -44,7 +59,7 @@ class PendingConversationRevealTest {
 
         val result = reveal.consume(ROOM_ID, now = BASE_TIME + PENDING_REVEAL_EXPIRY_MILLIS)
 
-        assertEquals(ROOM_ID, result?.message?.conversationId)
+        assertEquals(ROOM_ID, result?.sent?.message?.conversationId)
     }
 
     @Test

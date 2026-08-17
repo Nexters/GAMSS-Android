@@ -70,8 +70,9 @@ class ChatRoomViewModel @Inject constructor(
             reduce {
                 state.copy(
                     isLoading = false,
-                    messages = listOf(pending.message),
-                    pendingComments = pending.comments,
+                    conversationCreatedAt = pending.createdAt,
+                    messages = listOf(pending.sent.message),
+                    pendingComments = pending.sent.comments,
                 )
             }
             launchCommentReveal()

@@ -163,7 +163,7 @@ class ConversationSessionTest {
         val result = homeSession.send(conversationId = null, content = SEED, replyToMessageId = null)
         val sent = (result as AppResult.Success).data
 
-        assertEquals(sent, chatSession.consumePendingReveal(ROOM_ID))
+        assertEquals(sent, chatSession.consumePendingReveal(ROOM_ID)?.sent)
     }
 
     @Test

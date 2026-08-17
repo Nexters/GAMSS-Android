@@ -56,6 +56,8 @@ class ChatRoomLoadTest {
                 listOf(COMMENT_ID_BASE + 0, COMMENT_ID_BASE + 1, COMMENT_ID_BASE + 2),
                 afterLoad.pendingComments.map { it.id },
             )
+            // reveal 캐시 경로도 서버 재조회 없이 top bar 제목(생성 일시)을 즉시 채운다.
+            assertTrue(afterLoad.conversationCreatedAt != null)
 
             val firstReveal = awaitState()
             assertEquals(COMMENT_ID_BASE + 0, firstReveal.messages.last().id)
