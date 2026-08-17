@@ -1,10 +1,14 @@
 package com.gamss.android.feature.chat.component
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import com.gamss.android.core.designsystem.component.chat.ChatReplyQuote
 import com.gamss.android.core.designsystem.component.chat.ChatSender
@@ -43,7 +47,17 @@ fun MessageBubble(
             )
 
             is MessageSender.Character -> GamssReceivedChatBubble(
-                sender = ChatSender(name = sender.character.displayName),
+                sender = ChatSender(
+                    name = sender.character.displayName,
+                    avatar = {
+                        Image(
+                            painter = painterResource(sender.character.avatarIconRes),
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                    },
+                ),
                 message = message.content,
                 time = message.createdTime,
                 replyQuote = replyQuote,

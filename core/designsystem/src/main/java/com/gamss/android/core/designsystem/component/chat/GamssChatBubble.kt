@@ -78,7 +78,8 @@ object GamssChatBubbleDefaults {
     val OppositeWallGap: Dp = 84.dp
 }
 
-private val AvatarSize = 24.dp
+private val AvatarSize = 26.dp
+private val AvatarStrokeWidth = 0.5.dp
 
 // 로딩 bubble(54x36) 안에 정확히 맞도록 두 값 다 고정 크기로 지정한다. typing_loading.json
 private val TypingLottieWidth = 46.dp
@@ -329,19 +330,8 @@ private fun ChatAvatar(
         modifier = modifier
             .size(AvatarSize)
             .clip(CircleShape)
-            .then(
-                if (avatar == null) {
-                    Modifier
-                        .background(GamssTheme.colors.gray025)
-                        .border(
-                            width = 1.dp,
-                            color = GamssTheme.colors.gray200,
-                            shape = CircleShape
-                        )
-                } else {
-                    Modifier
-                },
-            ),
+            .background(GamssTheme.colors.gray025)
+            .border(width = AvatarStrokeWidth, color = GamssTheme.colors.gray200, shape = CircleShape),
         contentAlignment = Alignment.Center,
     ) {
         avatar?.invoke()

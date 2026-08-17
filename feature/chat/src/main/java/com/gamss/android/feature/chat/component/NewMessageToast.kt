@@ -1,10 +1,13 @@
 package com.gamss.android.feature.chat.component
 
 import android.content.res.Configuration
+import androidx.annotation.DrawableRes
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -14,6 +17,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -28,7 +33,7 @@ import com.gamss.android.domain.emotion.EmotionCharacter
 // 디자인 상 각지게 그려진다(둥근 pill 아님).
 private val ToastShape = RectangleShape
 private val AvatarSize = 16.dp
-private val ToastStrokeWidth = 1.dp
+private val ToastStrokeWidth = 0.5.dp
 private val ToastHorizontalMargin = 40.dp
 private val ToastHorizontalPadding = 16.dp
 private val ToastVerticalPadding = 10.dp
@@ -48,11 +53,9 @@ fun NewMessageToast(
     modifier: Modifier = Modifier,
 ) {
     // 발신자는 항상 캐릭터다 — 본인이 보낸 메시지는 호출부에서 애초에 이 토스트 대상으로 넘기지
-    // 않는다. Unknown 은 MessageBubble 과 동일하게 빈 이름으로 둔다.
-    val senderName = when (val sender = message.sender) {
-        is MessageSender.Character -> sender.character.displayName
-        MessageSender.User, MessageSender.Unknown -> ""
-    }
+    // 않는다. Unknown 은 MessageBubble 과 동일하게 빈 이름/빈 아바타로 둔다.
+    val character = (message.sender as? MessageSender.Character)?.character
+    val senderName = character?.displayName.orEmpty()
 
     Row(
         modifier = modifier
@@ -66,7 +69,7 @@ fun NewMessageToast(
             .padding(horizontal = ToastHorizontalPadding, vertical = ToastVerticalPadding),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        ToastAvatar()
+        ToastAvatar(avatarIconRes = character?.avatarIconRes)
         GamssText(
             text = senderName,
             modifier = Modifier.padding(start = ToastContentGap),
@@ -89,13 +92,22 @@ fun NewMessageToast(
 }
 
 @Composable
-private fun ToastAvatar(modifier: Modifier = Modifier) {
+private fun ToastAvatar(@DrawableRes avatarIconRes: Int?, modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
             .size(AvatarSize)
             .clip(CircleShape)
             .background(GamssTheme.colors.gray025),
-    )
+    ) {
+        if (avatarIconRes != null) {
+            Image(
+                painter = painterResource(avatarIconRes),
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
+    }
 }
 
 @Preview(name = "Light", showBackground = true)
