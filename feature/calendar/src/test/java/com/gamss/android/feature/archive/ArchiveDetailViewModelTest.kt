@@ -5,6 +5,8 @@ import com.gamss.android.core.common.util.KoreanTimeZone
 import com.gamss.android.domain.card.Card
 import com.gamss.android.domain.card.CardEntry
 import com.gamss.android.domain.card.CardRepository
+import com.gamss.android.domain.card.DeleteCardUseCase
+import com.gamss.android.domain.card.GetCardsByDateUseCase
 import com.gamss.android.domain.card.GetCardsByMonthUseCase
 import com.gamss.android.domain.emotion.EmotionCharacter
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -20,7 +22,7 @@ class ArchiveDetailViewModelTest {
 
     @Test
     fun `선택한 감정의 카드만 종이 목록으로 남긴다`() = runTest {
-        val viewModel = viewModel(AppResult.Success(listOf(angerEntry, joyEntry)))
+        val viewModel = viewModel(FakeCardRepository(AppResult.Success(listOf(angerEntry, joyEntry))))
 
         viewModel.test(this) {
             containerHost.load(EmotionCharacter.ANGER)
@@ -38,7 +40,7 @@ class ArchiveDetailViewModelTest {
 
     @Test
     fun `카드 조회에 실패하면 오류 상태를 표시한다`() = runTest {
-        val viewModel = viewModel(AppResult.Failure(IllegalStateException("network")))
+        val viewModel = viewModel(FakeCardRepository(AppResult.Failure(IllegalStateException("network"))))
 
         viewModel.test(this) {
             containerHost.load(EmotionCharacter.ANGER)
@@ -57,7 +59,7 @@ class ArchiveDetailViewModelTest {
     @Test
     fun `다른 달을 고르면 그 달을 다시 조회하고 시트를 닫는다`() = runTest {
         val repository = FakeCardRepository(AppResult.Success(listOf(angerEntry)))
-        val viewModel = ArchiveDetailViewModel(GetCardsByMonthUseCase(repository))
+        val viewModel = viewModel(repository)
         val previousMonth = YearMonth.of(2026, 7)
 
         viewModel.test(this) {
@@ -87,7 +89,7 @@ class ArchiveDetailViewModelTest {
     @Test
     fun `보고 있는 달을 다시 고르면 다시 조회하지 않고 시트만 닫는다`() = runTest {
         val repository = FakeCardRepository(AppResult.Success(listOf(angerEntry)))
-        val viewModel = ArchiveDetailViewModel(GetCardsByMonthUseCase(repository))
+        val viewModel = viewModel(repository)
         val currentMonth = YearMonth.now(KoreanTimeZone)
 
         viewModel.test(this) {
@@ -105,36 +107,140 @@ class ArchiveDetailViewModelTest {
         assertEquals(listOf(currentMonth), repository.requestedMonths)
     }
 
-    private fun viewModel(result: AppResult<List<CardEntry>>) = ArchiveDetailViewModel(
-        GetCardsByMonthUseCase(FakeCardRepository(result)),
+    @Test
+    fun `종이를 누르면 그 날짜의 그날 순번 카드를 상세로 올린다`() = runTest {
+        val repository = FakeCardRepository(
+            monthResult = AppResult.Success(listOf(angerEntry, joyEntry)),
+            dateResult = AppResult.Success(listOf(firstCardOfDay, secondCardOfDay)),
+        )
+        val viewModel = viewModel(repository)
+
+        viewModel.test(this) {
+            containerHost.load(EmotionCharacter.ANGER)
+            expectState { copy(emotion = EmotionCharacter.ANGER) }
+            expectState { copy(emotion = EmotionCharacter.ANGER, isLoading = false, cards = listOf(angerEntry)) }
+
+            containerHost.selectCard(joyEntry)
+            expectState { copy(isCardLoading = true) }
+            expectState { copy(isCardLoading = false, selectedCard = secondCardOfDay) }
+        }
+
+        assertEquals(listOf(joyEntry.date), repository.requestedDates)
+    }
+
+    @Test
+    fun `그 순번에 카드가 없으면 상세를 올리지 않고 실패를 알린다`() = runTest {
+        val repository = FakeCardRepository(
+            monthResult = AppResult.Success(listOf(angerEntry)),
+            dateResult = AppResult.Success(emptyList()),
+        )
+        val viewModel = viewModel(repository)
+
+        viewModel.test(this) {
+            containerHost.load(EmotionCharacter.ANGER)
+            expectState { copy(emotion = EmotionCharacter.ANGER) }
+            expectState { copy(emotion = EmotionCharacter.ANGER, isLoading = false, cards = listOf(angerEntry)) }
+
+            containerHost.selectCard(angerEntry)
+            expectState { copy(isCardLoading = true) }
+            expectState { copy(isCardLoading = false) }
+            expectSideEffect(ArchiveDetailSideEffect.CardLoadFailed)
+        }
+    }
+
+    @Test
+    fun `카드를 버리면 삭제하고 그 달을 다시 조회한다`() = runTest {
+        val repository = FakeCardRepository(
+            monthResult = AppResult.Success(listOf(angerEntry)),
+            dateResult = AppResult.Success(listOf(firstCardOfDay)),
+        )
+        val viewModel = viewModel(repository)
+
+        viewModel.test(this) {
+            containerHost.load(EmotionCharacter.ANGER)
+            expectState { copy(emotion = EmotionCharacter.ANGER) }
+            expectState { copy(emotion = EmotionCharacter.ANGER, isLoading = false, cards = listOf(angerEntry)) }
+
+            containerHost.selectCard(angerEntry)
+            expectState { copy(isCardLoading = true) }
+            expectState { copy(isCardLoading = false, selectedCard = firstCardOfDay) }
+
+            containerHost.discardSelectedCard()
+            expectState { copy(selectedCard = null) }
+        }
+
+        // 재조회 결과가 이전과 같은 상태라 emission 이 더 없다. 다시 받아 왔는지는 호출로 확인한다.
+        assertEquals(listOf(firstCardOfDay.id), repository.deletedCardIds)
+        assertEquals(2, repository.requestedMonths.size)
+    }
+
+    @Test
+    fun `대화보기를 누르면 그 카드의 대화방을 연다`() = runTest {
+        val repository = FakeCardRepository(
+            monthResult = AppResult.Success(listOf(angerEntry)),
+            dateResult = AppResult.Success(listOf(firstCardOfDay)),
+        )
+        val viewModel = viewModel(repository)
+
+        viewModel.test(this) {
+            containerHost.load(EmotionCharacter.ANGER)
+            expectState { copy(emotion = EmotionCharacter.ANGER) }
+            expectState { copy(emotion = EmotionCharacter.ANGER, isLoading = false, cards = listOf(angerEntry)) }
+
+            containerHost.selectCard(angerEntry)
+            expectState { copy(isCardLoading = true) }
+            expectState { copy(isCardLoading = false, selectedCard = firstCardOfDay) }
+
+            containerHost.viewSelectedConversation()
+            expectState { copy(selectedCard = null) }
+            expectSideEffect(ArchiveDetailSideEffect.OpenChatRoom(firstCardOfDay.conversationId))
+        }
+    }
+
+    private fun viewModel(repository: FakeCardRepository) = ArchiveDetailViewModel(
+        getCardsByMonth = GetCardsByMonthUseCase(repository),
+        getCardsByDate = GetCardsByDateUseCase(repository),
+        deleteCard = DeleteCardUseCase(repository),
     )
 
     private companion object {
-        val angerEntry = CardEntry(
-            date = LocalDate.of(2026, 8, 15),
-            indexInDate = 0,
-            character = EmotionCharacter.ANGER,
-        )
-        val joyEntry = CardEntry(
-            date = LocalDate.of(2026, 8, 15),
-            indexInDate = 1,
-            character = EmotionCharacter.JOY,
+        val DATE: LocalDate = LocalDate.of(2026, 8, 15)
+
+        val angerEntry = CardEntry(date = DATE, indexInDate = 0, character = EmotionCharacter.ANGER)
+        val joyEntry = CardEntry(date = DATE, indexInDate = 1, character = EmotionCharacter.JOY)
+
+        val firstCardOfDay = card(id = 1L, character = EmotionCharacter.ANGER)
+        val secondCardOfDay = card(id = 2L, character = EmotionCharacter.JOY)
+
+        fun card(id: Long, character: EmotionCharacter) = Card(
+            id = id,
+            conversationId = id * 10,
+            character = character,
+            emotionLabel = character.displayName,
+            summary = "요약 $id",
+            message = "대사 $id",
+            date = DATE,
         )
     }
 }
 
 private class FakeCardRepository(
-    private val entriesResult: AppResult<List<CardEntry>>,
+    private val monthResult: AppResult<List<CardEntry>>,
+    private val dateResult: AppResult<List<Card>> = AppResult.Success(emptyList()),
 ) : CardRepository {
 
     val requestedMonths = mutableListOf<YearMonth>()
+    val requestedDates = mutableListOf<LocalDate>()
+    val deletedCardIds = mutableListOf<Long>()
 
-    override suspend fun getCardsByDate(date: LocalDate): AppResult<List<Card>> =
-        AppResult.Success(emptyList())
+    override suspend fun getCardsByDate(date: LocalDate): AppResult<List<Card>> {
+        requestedDates += date
+        return dateResult
+    }
 
     override suspend fun getCardsByMonth(yearMonth: YearMonth): AppResult<List<CardEntry>> {
         requestedMonths += yearMonth
-        return entriesResult
+        return monthResult
     }
 
     override suspend fun createCard(
@@ -143,5 +249,8 @@ private class FakeCardRepository(
         summary: String,
     ): AppResult<Card> = error("보관함 테스트에서 쓰지 않는다")
 
-    override suspend fun deleteCard(cardId: Long): AppResult<Unit> = error("보관함 테스트에서 쓰지 않는다")
+    override suspend fun deleteCard(cardId: Long): AppResult<Unit> {
+        deletedCardIds += cardId
+        return AppResult.Success(Unit)
+    }
 }

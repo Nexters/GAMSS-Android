@@ -1,6 +1,7 @@
 package com.gamss.android.feature.archive.component
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -19,6 +20,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.gamss.android.domain.card.CardEntry
 import com.gamss.android.feature.archive.PaperBody
@@ -34,7 +36,10 @@ import kotlin.random.Random
 
 /** 카드 한 장씩을 종이로 위에서 쏟아, 물리 시뮬레이션으로 바닥에 쌓는다. */
 @Composable
-internal fun PaperPile(cards: List<CardEntry>) {
+internal fun PaperPile(
+    cards: List<CardEntry>,
+    onPaperClick: (CardEntry) -> Unit,
+) {
     BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
@@ -67,11 +72,13 @@ internal fun PaperPile(cards: List<CardEntry>) {
                 modifier = Modifier
                     .align(Alignment.TopStart)
                     .size(PaperSize * scale)
+                    // 터치 영역도 그려진 자리를 따라가야 하므로 clickable 을 레이어 안쪽에 둔다.
                     .graphicsLayer {
                         translationX = ui.x - paperSizePx / 2f
                         translationY = ui.y - paperSizePx / 2f
                         rotationZ = ui.rotationDegrees
-                    },
+                    }
+                    .clickable(role = Role.Button) { onPaperClick(card) },
             )
         }
     }

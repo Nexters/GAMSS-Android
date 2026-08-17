@@ -130,7 +130,11 @@ private fun mainEntryProvider(navigator: Navigator) = entryProvider {
     }
     // 보관함 상세도 탭 안쪽의 상세 화면이라 다른 상세들과 같은 슬라이드를 쓴다.
     entry<ArchiveDetailKey>(metadata = detailSlideTransition) { key ->
-        ArchiveDetailScreen(emotion = key.emotion, onBackClick = navigator::goBack)
+        ArchiveDetailScreen(
+            emotion = key.emotion,
+            onBackClick = navigator::goBack,
+            onOpenConversation = { conversationId -> navigator.navigate(ChatRoomKey(conversationId)) },
+        )
     }
     entry<SettingKey>(metadata = detailSlideTransition) {
         SettingScreen(

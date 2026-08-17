@@ -1,5 +1,8 @@
 package com.gamss.android.feature.archive
 
+import android.content.Context
+import android.content.Intent
+import android.widget.Toast
 import androidx.annotation.StringRes
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -17,6 +20,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.tooling.preview.Preview
@@ -28,12 +32,15 @@ import com.gamss.android.core.designsystem.component.GamssTopBar
 import com.gamss.android.core.designsystem.dialog.GamssDialog
 import com.gamss.android.core.designsystem.dialog.GamssDialogAction
 import com.gamss.android.core.designsystem.theme.GamssTheme
+import com.gamss.android.domain.card.Card
 import com.gamss.android.domain.card.CardEntry
 import com.gamss.android.domain.emotion.EmotionCharacter
 import com.gamss.android.feature.archive.component.MonthSelector
 import com.gamss.android.feature.archive.component.PaperPile
 import com.gamss.android.feature.archive.component.YearMonthPickerSheet
+import com.gamss.android.feature.calendar.component.CardDetailDialog
 import org.orbitmvi.orbit.compose.collectAsState
+import org.orbitmvi.orbit.compose.collectSideEffect
 import java.time.LocalDate
 import java.time.YearMonth
 import com.gamss.android.core.designsystem.R as DesignSystemR
@@ -46,21 +53,42 @@ import com.gamss.android.core.designsystem.R as DesignSystemR
 fun ArchiveDetailScreen(
     emotion: EmotionCharacter,
     onBackClick: () -> Unit,
+    onOpenConversation: (Long) -> Unit,
     viewModel: ArchiveDetailViewModel = hiltViewModel(),
 ) {
     val state by viewModel.collectAsState()
+    val context = LocalContext.current
+    val shareChooserTitle = stringResource(R.string.calendar_card_share_chooser_title)
+    val cardLoadFailedMessage = stringResource(R.string.calendar_card_load_error)
+    val discardFailedMessage = stringResource(R.string.calendar_card_discard_failure)
 
     LaunchedEffect(emotion) { viewModel.load(emotion) }
+
+    viewModel.collectSideEffect { sideEffect ->
+        when (sideEffect) {
+            is ArchiveDetailSideEffect.OpenChatRoom -> onOpenConversation(sideEffect.conversationId)
+            ArchiveDetailSideEffect.CardLoadFailed ->
+                Toast.makeText(context, cardLoadFailedMessage, Toast.LENGTH_SHORT).show()
+
+            ArchiveDetailSideEffect.CardDiscardFailed ->
+                Toast.makeText(context, discardFailedMessage, Toast.LENGTH_SHORT).show()
+        }
+    }
 
     ArchiveDetailFrame(
         emotion = emotion,
         state = state,
         onBackClick = onBackClick,
+        onPaperClick = viewModel::selectCard,
+        onCardDismiss = viewModel::dismissCard,
+        onCardDiscard = viewModel::discardSelectedCard,
+        onCardConversationClick = viewModel::viewSelectedConversation,
+        onCardShare = { card -> shareCard(context, card, shareChooserTitle) },
         onMonthClick = viewModel::showMonthPicker,
         onMonthSelect = viewModel::selectMonth,
         onMonthPickerDismiss = viewModel::dismissMonthPicker,
         onClearClick = viewModel::showClearDialog,
-        // 삭제 API 가 붙기 전이라 확인도 닫기만 한다.
+        // 무엇을 비울지(감정별·달별·전체) 정해지기 전이라 확인도 닫기만 한다.
         onClearConfirm = viewModel::dismissClearDialog,
         onClearDismiss = viewModel::dismissClearDialog,
     )
@@ -71,6 +99,11 @@ private fun ArchiveDetailFrame(
     emotion: EmotionCharacter,
     state: ArchiveDetailState,
     onBackClick: () -> Unit,
+    onPaperClick: (CardEntry) -> Unit,
+    onCardDismiss: () -> Unit,
+    onCardDiscard: () -> Unit,
+    onCardConversationClick: () -> Unit,
+    onCardShare: (Card) -> Unit,
     onMonthClick: () -> Unit,
     onMonthSelect: (YearMonth) -> Unit,
     onMonthPickerDismiss: () -> Unit,
@@ -94,7 +127,7 @@ private fun ArchiveDetailFrame(
                 onClick = onMonthClick,
                 modifier = Modifier.align(Alignment.TopCenter),
             )
-            ArchiveDetailCards(state = state)
+            ArchiveDetailCards(state = state, onPaperClick = onPaperClick)
         }
     }
 
@@ -109,6 +142,24 @@ private fun ArchiveDetailFrame(
     if (state.isClearDialogVisible) {
         ClearConfirmDialog(onConfirm = onClearConfirm, onDismiss = onClearDismiss)
     }
+
+    state.selectedCard?.let { card ->
+        CardDetailDialog(
+            card = card,
+            onDismiss = onCardDismiss,
+            onDiscardClick = onCardDiscard,
+            onViewConversationClick = onCardConversationClick,
+            onShareClick = { onCardShare(card) },
+        )
+    }
+}
+
+private fun shareCard(context: Context, card: Card, chooserTitle: String) {
+    val sendIntent = Intent(Intent.ACTION_SEND).apply {
+        type = "text/plain"
+        putExtra(Intent.EXTRA_TEXT, "${card.summary}\n\n${card.message}")
+    }
+    context.startActivity(Intent.createChooser(sendIntent, chooserTitle))
 }
 
 /** 되돌릴 수 없는 삭제라 확인을 한 번 받는다. 무엇을 지울지는 [onConfirm] 을 넘기는 쪽이 정한다. */
@@ -177,13 +228,16 @@ private fun ArchiveDetailTopBar(
 }
 
 @Composable
-private fun ArchiveDetailCards(state: ArchiveDetailState) {
+private fun ArchiveDetailCards(
+    state: ArchiveDetailState,
+    onPaperClick: (CardEntry) -> Unit,
+) {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         when {
             state.isLoading -> CircularProgressIndicator(color = GamssTheme.colors.gray700)
             state.loadFailed -> EmptyMessage(textRes = R.string.archive_cards_load_failed)
             state.cards.isEmpty() -> EmptyMessage(textRes = R.string.archive_cards_empty)
-            else -> PaperPile(cards = state.cards)
+            else -> PaperPile(cards = state.cards, onPaperClick = onPaperClick)
         }
     }
 }
@@ -217,6 +271,11 @@ private fun ArchiveDetailPaperPilePreview() {
                 cards = List(24) { index -> PreviewCard.copy(indexInDate = index) },
             ),
             onBackClick = {},
+            onPaperClick = {},
+            onCardDismiss = {},
+            onCardDiscard = {},
+            onCardConversationClick = {},
+            onCardShare = {},
             onMonthClick = {},
             onMonthSelect = {},
             onMonthPickerDismiss = {},

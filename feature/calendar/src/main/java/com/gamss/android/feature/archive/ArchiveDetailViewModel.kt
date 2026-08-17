@@ -4,10 +4,13 @@ import androidx.lifecycle.ViewModel
 import com.gamss.android.core.common.AppResult
 import com.gamss.android.core.common.util.KoreanTimeZone
 import com.gamss.android.domain.card.CardEntry
+import com.gamss.android.domain.card.DeleteCardUseCase
+import com.gamss.android.domain.card.GetCardsByDateUseCase
 import com.gamss.android.domain.card.GetCardsByMonthUseCase
 import com.gamss.android.domain.emotion.EmotionCharacter
 import dagger.hilt.android.lifecycle.HiltViewModel
 import org.orbitmvi.orbit.ContainerHost
+import org.orbitmvi.orbit.syntax.Syntax
 import org.orbitmvi.orbit.viewmodel.container
 import java.time.YearMonth
 import javax.inject.Inject
@@ -15,9 +18,11 @@ import javax.inject.Inject
 @HiltViewModel
 class ArchiveDetailViewModel @Inject constructor(
     private val getCardsByMonth: GetCardsByMonthUseCase,
-) : ViewModel(), ContainerHost<ArchiveDetailState, Nothing> {
+    private val getCardsByDate: GetCardsByDateUseCase,
+    private val deleteCard: DeleteCardUseCase,
+) : ViewModel(), ContainerHost<ArchiveDetailState, ArchiveDetailSideEffect> {
 
-    override val container = container<ArchiveDetailState, Nothing>(
+    override val container = container<ArchiveDetailState, ArchiveDetailSideEffect>(
         ArchiveDetailState(yearMonth = YearMonth.now(KoreanTimeZone)),
     )
 
@@ -25,8 +30,7 @@ class ArchiveDetailViewModel @Inject constructor(
         if (state.emotion == emotion) return@intent
 
         reduce { state.copy(emotion = emotion) }
-        val result = getCardsByMonth(state.yearMonth)
-        reduce { state.withCards(result, emotion) }
+        loadMonth(emotion, state.yearMonth)
     }
 
     fun showMonthPicker() = intent {
@@ -62,15 +66,63 @@ class ArchiveDetailViewModel @Inject constructor(
                 loadFailed = false,
             )
         }
-        val result = getCardsByMonth(yearMonth)
-        reduce { state.withCards(result, emotion) }
+        loadMonth(emotion, yearMonth)
     }
-}
 
-private fun ArchiveDetailState.withCards(
-    result: AppResult<List<CardEntry>>,
-    emotion: EmotionCharacter,
-): ArchiveDetailState = when (result) {
-    is AppResult.Success -> copy(isLoading = false, cards = result.data.filter { it.character == emotion })
-    is AppResult.Failure -> copy(isLoading = false, loadFailed = true)
+    /**
+     * 월별 응답에는 카드 식별자가 없어 종이는 날짜와 그날 순번만 들고 있다. 눌린 종이의 날짜로 다시
+     * 조회해 그 순번의 카드를 집어야 요약·대사와 id 가 손에 들어온다.
+     */
+    fun selectCard(entry: CardEntry) = intent {
+        if (state.isCardLoading) return@intent
+
+        reduce { state.copy(isCardLoading = true) }
+        val card = when (val result = getCardsByDate(entry.date)) {
+            is AppResult.Success -> result.data.getOrNull(entry.indexInDate)
+            is AppResult.Failure -> null
+        }
+        reduce { state.copy(isCardLoading = false, selectedCard = card) }
+
+        if (card == null) postSideEffect(ArchiveDetailSideEffect.CardLoadFailed)
+    }
+
+    fun dismissCard() = intent {
+        reduce { state.copy(selectedCard = null) }
+    }
+
+    fun discardSelectedCard() = intent {
+        val card = state.selectedCard ?: return@intent
+        val emotion = state.emotion ?: return@intent
+        reduce { state.copy(selectedCard = null) }
+
+        when (deleteCard(card.id)) {
+            // 카드를 지우면 같은 날짜 뒤 순번이 한 칸씩 당겨진다. 목록에서 빼는 것으로는 남은 종이의
+            // 순번이 어긋나므로 그 달을 다시 받아 온다.
+            is AppResult.Success -> loadMonth(emotion, state.yearMonth)
+            is AppResult.Failure -> postSideEffect(ArchiveDetailSideEffect.CardDiscardFailed)
+        }
+    }
+
+    fun viewSelectedConversation() = intent {
+        val conversationId = state.selectedCard?.conversationId ?: return@intent
+        reduce { state.copy(selectedCard = null) }
+        postSideEffect(ArchiveDetailSideEffect.OpenChatRoom(conversationId))
+    }
+
+    private suspend fun Syntax<ArchiveDetailState, ArchiveDetailSideEffect>.loadMonth(
+        emotion: EmotionCharacter,
+        yearMonth: YearMonth,
+    ) {
+        when (val result = getCardsByMonth(yearMonth)) {
+            is AppResult.Success -> reduce {
+                state.copy(
+                    isLoading = false,
+                    loadFailed = false,
+                    cards = result.data.filter { it.character == emotion },
+                )
+            }
+
+            is AppResult.Failure -> reduce { state.copy(isLoading = false, loadFailed = true) }
+        }
+    }
 }
