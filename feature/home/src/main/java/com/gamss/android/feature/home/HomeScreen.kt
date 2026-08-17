@@ -166,7 +166,7 @@ private fun HomeInputSection(
 
         if (state.isEmotionPickerExpanded) {
             val pickerOffset = with(LocalDensity.current) {
-                // 입력창 높이가 64dp/149dp+ 로 달라지므로 겹침 폭만 고정해 실측 높이 기준으로 잡는다.
+                // 입력창 높이가 100dp/149dp+ 로 달라지므로 겹침 폭만 고정해 실측 높이 기준으로 잡는다.
                 IntOffset(
                     x = PickerHorizontalInset.roundToPx(),
                     y = (inputBarHeightPx.toDp() - PickerOverlapHeight).roundToPx(),
@@ -271,7 +271,7 @@ private val InputBarHorizontalPadding: Dp = 18.dp
 
 private val PickerHorizontalInset = (-61).dp
 
-// 64dp/149dp 두 입력창 높이 모두에서 Figma가 보여 준 9~10dp 겹침 폭.
+// 100dp/149dp 두 입력창 높이 모두에서 Figma가 보여 준 9~10dp 겹침 폭.
 private val PickerOverlapHeight = 9.dp
 
 @Preview(name = "Home - Light", showBackground = true, widthDp = 402, heightDp = 720)

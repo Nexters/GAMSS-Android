@@ -3,6 +3,23 @@ package com.gamss.android.core.designsystem.modifier
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
+
+/**
+ * ripple 없이 클릭을 받습니다. 디자인에 눌림 표현이 없어, 기본 indication 을 두면 손그림 배경 위에
+ * 회색 사각형이 덧그려집니다.
+ */
+fun Modifier.noRippleClickable(
+    enabled: Boolean = true,
+    role: Role? = null,
+    onClick: () -> Unit,
+): Modifier = clickable(
+    enabled = enabled,
+    role = role,
+    onClick = onClick,
+    indication = null,
+    interactionSource = null,
+)
 
 /**
  * [onClick]이 null이 아닐 때만, ripple 없이 [Modifier.clickable]을 적용합니다.

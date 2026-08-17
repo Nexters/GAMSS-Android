@@ -1,6 +1,5 @@
 package com.gamss.android.core.designsystem.component
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.heightIn
@@ -15,6 +14,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
+import com.gamss.android.core.designsystem.modifier.noRippleClickable
 import com.gamss.android.core.designsystem.theme.GamssTheme
 
 private val ToggleMinTouchHeight = 48.dp
@@ -43,7 +43,7 @@ fun GamssDisclosureToggle(
     Row(
         modifier = modifier
             .heightIn(min = ToggleMinTouchHeight)
-            .clickable(role = Role.DropdownList, onClick = onClick)
+            .noRippleClickable(role = Role.DropdownList, onClick = onClick)
             .padding(horizontal = ToggleHitPadding),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(LabelChevronGap),

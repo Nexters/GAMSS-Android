@@ -99,6 +99,8 @@ class HomeViewModel @Inject constructor(
                 // applicationScope 로 돌려서 이 화면을 벗어나도 끊기지 않는다.
                 viewModelScope.launch { session.finishSend() }
                 reduce { state.copy(input = "") }
+                // 비운 입력은 상한과 무관해졌으므로, 다시 넘기면 새로 알린다.
+                lengthWarned = false
                 postSideEffect(HomeSideEffect.OpenConversation(result.data.message.conversationId))
             }
             // 입력은 남겨 둔다. 실패한 문구를 다시 치게 하면 안 된다.

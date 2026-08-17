@@ -1,7 +1,6 @@
 package com.gamss.android.core.designsystem.component
 
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -31,7 +30,6 @@ private val ItemWidth = 45.dp
 private val ItemMinHeight = 18.dp
 private val IndicatorSize = 18.dp
 private val IndicatorLabelGap = 2.dp
-private val PanelBorderWidth = 1.dp
 private const val COLUMNS = 3
 
 /** 반응할 캐릭터를 고르는 패널. 한 줄에 [COLUMNS] 개씩 끊어 놓는다. */
@@ -43,11 +41,7 @@ fun <T> GamssCharacterPicker(
 ) {
     Column(
         modifier = modifier
-            .background(GamssTheme.colors.white)
-            .gamssSketchyBorder(
-                color = GamssTheme.colors.black,
-                width = PanelBorderWidth,
-            )
+            .gamssSketchyBox()
             .padding(PickerPadding),
         verticalArrangement = Arrangement.spacedBy(PickerGap),
     ) {
