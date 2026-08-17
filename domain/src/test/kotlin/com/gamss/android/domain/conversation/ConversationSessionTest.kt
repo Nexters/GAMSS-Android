@@ -24,6 +24,7 @@ import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.time.LocalDate
 
 class ConversationSessionTest {
 
@@ -288,11 +289,26 @@ class ConversationSessionTest {
     }
 
     private object NoOpCardRepository : CardRepository {
+        override suspend fun getCardsByDate(date: LocalDate): AppResult<List<Card>> =
+            AppResult.Success(emptyList())
+
         override suspend fun createCard(
             conversationId: Long,
             character: EmotionCharacter,
             summary: String,
-        ): AppResult<Card> = AppResult.Success(Card(character = character, summary = summary, message = "대사"))
+        ): AppResult<Card> = AppResult.Success(
+            Card(
+                id = 1L,
+                conversationId = conversationId,
+                character = character,
+                emotionLabel = character.displayName,
+                summary = summary,
+                message = "대사",
+                date = LocalDate.of(2026, 8, 15),
+            ),
+        )
+
+        override suspend fun deleteCard(cardId: Long): AppResult<Unit> = error("사용하지 않음")
     }
 
     private class FakeConversationRepository(

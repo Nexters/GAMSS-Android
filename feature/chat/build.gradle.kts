@@ -7,6 +7,7 @@ android {
 }
 
 dependencies {
+    implementation(projects.core.ui)
     implementation(projects.domain)
 
     implementation(libs.compose.material.icons.core)

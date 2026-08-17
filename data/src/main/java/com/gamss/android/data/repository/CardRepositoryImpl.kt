@@ -4,12 +4,15 @@ import com.gamss.android.core.common.AppResult
 import com.gamss.android.data.remote.card.CardService
 import com.gamss.android.data.remote.card.model.request.CreateCardRequest
 import com.gamss.android.data.remote.card.model.response.toDomain
+import com.gamss.android.data.remote.card.model.response.toDomainOrNull
 import com.gamss.android.data.remote.emotion.toServerEmotionType
 import com.gamss.android.data.remote.runCatchingApiCall
+import com.gamss.android.data.remote.throwIfFailed
 import com.gamss.android.domain.card.Card
 import com.gamss.android.domain.card.CardNotRetryableException
 import com.gamss.android.domain.card.CardRepository
 import com.gamss.android.domain.emotion.EmotionCharacter
+import java.time.LocalDate
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -17,6 +20,12 @@ import javax.inject.Singleton
 internal class CardRepositoryImpl @Inject constructor(
     private val cardService: CardService,
 ) : CardRepository {
+
+    override suspend fun getCardsByDate(date: LocalDate): AppResult<List<Card>> = runCatchingApiCall {
+        val response = cardService.getCardsByDate(date.toString())
+        response.throwIfFailed()
+        checkNotNull(response.data) { "No available card data" }.mapNotNull { it.toDomainOrNull() }
+    }
 
     override suspend fun createCard(
         conversationId: Long,
@@ -31,7 +40,9 @@ internal class CardRepositoryImpl @Inject constructor(
                     summary = summary,
                 ),
             )
-            checkNotNull(response.data) { "No available card data" }.toDomain(character)
+            response.throwIfFailed()
+            checkNotNull(response.data) { "No available card data" }
+                .toDomain(requestedCharacter = character, fallbackDate = LocalDate.now())
         }
         return when (result) {
             is AppResult.Success -> result
@@ -39,6 +50,22 @@ internal class CardRepositoryImpl @Inject constructor(
             is AppResult.Failure ->
                 if (result.throwable.hasErrorCode(CARD_ALREADY_EXISTS)) {
                     AppResult.Failure(CardNotRetryableException.AlreadyExists(result.throwable))
+                } else {
+                    result
+                }
+        }
+    }
+
+    override suspend fun deleteCard(cardId: Long): AppResult<Unit> {
+        val result = runCatchingApiCall {
+            cardService.deleteCard(cardId).throwIfFailed()
+        }
+        return when (result) {
+            is AppResult.Success -> AppResult.Success(Unit)
+            // 이미 지워진 카드면 목표는 달성된 상태다. 실패로 흘리면 재시도가 영원히 같은 오류를 받는다.
+            is AppResult.Failure ->
+                if (result.throwable.hasErrorCode(CARD_ALREADY_DELETED)) {
+                    AppResult.Success(Unit)
                 } else {
                     result
                 }

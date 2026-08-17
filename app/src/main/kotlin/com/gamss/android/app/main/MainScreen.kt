@@ -113,7 +113,11 @@ private fun mainEntryProvider(navigator: Navigator) = entryProvider {
             onOpenConversation = { conversationId -> navigator.navigate(ChatRoomKey(conversationId)) },
         )
     }
-    entry<CalendarKey> { CalendarScreen() }
+    entry<CalendarKey> {
+        CalendarScreen(
+            onOpenConversation = { conversationId -> navigator.navigate(ChatRoomKey(conversationId)) },
+        )
+    }
     entry<SettingKey>(metadata = detailSlideTransition) {
         SettingScreen(
             onBackClick = navigator::goBack,

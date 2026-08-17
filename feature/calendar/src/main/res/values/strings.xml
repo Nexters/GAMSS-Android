@@ -5,4 +5,15 @@
     <string name="calendar_next_month">다음 달</string>
     <string name="calendar_date_description">%1$d년 %2$d월 %3$d일</string>
     <string name="calendar_date_description_today">%1$d년 %2$d월 %3$d일, 오늘</string>
+    <string name="calendar_card_result_title">%1$d월 %2$d일의 카드</string>
+    <string name="calendar_card_empty">이 날짜에는 카드가 없어요.</string>
+    <string name="calendar_card_load_error">카드를 불러오지 못했어요.</string>
+    <string name="calendar_card_retry">다시 시도</string>
+    <string name="calendar_card_detail_description">카드 상세 보기</string>
+    <string name="calendar_card_close_description">카드 닫기</string>
+    <string name="calendar_card_discard">기록 버리기</string>
+    <string name="calendar_card_view_conversation">대화보기</string>
+    <string name="calendar_card_share">공유하기</string>
+    <string name="calendar_card_share_chooser_title">카드 공유하기</string>
+    <string name="calendar_card_discard_failure">기록을 버리지 못했어요. 다시 시도해주세요</string>
 </resources>
