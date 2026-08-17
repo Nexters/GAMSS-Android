@@ -7,6 +7,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertSame
 import org.junit.Test
 import java.time.LocalDate
+import java.time.YearMonth
 
 class GetCardsByDateUseCaseTest {
 
@@ -34,5 +35,8 @@ class GetCardsByDateUseCaseTest {
             requestedDate = date
             return result
         }
+
+        override suspend fun getCardsByMonth(yearMonth: YearMonth): AppResult<List<CardEntry>> =
+            AppResult.Success(emptyList())
     }
 }
