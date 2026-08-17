@@ -251,7 +251,7 @@ fun ColumnScope.GamssEmotionCardContent(
 /** 카드 안을 가로로 끊어 주는 점선. 콘텐츠 열 전체 폭을 쓴다. */
 @Composable
 private fun GamssCardDashedDivider(modifier: Modifier = Modifier) {
-    val color = GamssTheme.colors.gray600
+    val color = GamssTheme.colors.gray950
     Canvas(
         modifier = modifier
             .fillMaxWidth()
@@ -410,7 +410,7 @@ private val CharacterToTitleGap = 42.dp
 // 쓰고 위아래 22 씩 띄우며, 캐릭터 이미지와는 16 만 띄운다.
 private val CharacterToDividerGap = 16.dp
 private val DividerToContentGap = 22.dp
-private val CardDividerThickness = 1.dp
+private val CardDividerThickness = 1.3.dp
 private val CardDividerDashLength = 6.dp
 private val CardDividerDashGap = 4.dp
 private const val DESCRIPTION_MAX_LINES = 3
