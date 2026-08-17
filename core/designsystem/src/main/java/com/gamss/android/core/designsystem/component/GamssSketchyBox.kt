@@ -1,6 +1,7 @@
 package com.gamss.android.core.designsystem.component
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
@@ -20,6 +21,9 @@ import com.gamss.android.core.designsystem.theme.GamssTheme
 // 모서리는 늘리지 않고 원본 크기로 찍어 낸다. 굴곡이 가장 심한 구간이라 넉넉히 잡는다.
 private val ArtCorner = 12.dp
 
+// 아트의 모서리가 둥글어, 배경을 직각으로 칠하면 흰 모서리가 선 밖으로 삐져나온다.
+private val BackgroundCorner = 4.dp
+
 /**
  * 손그림 사각 테두리를 9-slice 로 그린다. 모서리는 원본 크기로 두고 직선 구간만 늘리므로,
  * 어떤 크기에 올려도 선 굵기가 변하지 않는다. 통째로 늘리면 늘린 방향의 선만 두꺼워진다.
@@ -28,7 +32,7 @@ private val ArtCorner = 12.dp
 fun Modifier.gamssSketchyBox(background: Color = GamssTheme.colors.white): Modifier {
     val art = painterResource(R.drawable.bg_input_box)
     return this
-        .background(background)
+        .background(background, RoundedCornerShape(BackgroundCorner))
         .drawBehind { drawNineSlice(art) }
 }
 

@@ -43,9 +43,15 @@ private val ControlsRowHeight = 32.dp
 
 private val InputBarHorizontalPadding = 20.dp
 
-// 배경까지 담긴 에셋이라 tint 하지 않는다. 컨트롤 행이 32dp 고정이라
-// Android 권장 터치 영역(48dp)은 주지 못하고 아이콘 크기가 곧 터치 영역이다.
+// 배경까지 담긴 에셋이라 tint 하지 않는다.
 private val SendButtonSize = 32.dp
+
+// 시안의 컨트롤 행은 32dp 지만 그대로 두면 터치 영역이 Android 권장(48dp)에 못 미친다.
+// 행을 48dp 로 재고 32dp 밴드 중앙에 맞춰 놓으면, 보이는 위치는 그대로고 터치만 넓어진다.
+// 넘치는 위쪽은 빈 텍스트 자리, 아래·오른쪽은 여백이라 겹쳐도 가려지는 것이 없다.
+private val ControlsTouchHeight = 48.dp
+private val SendButtonTouchSize = 48.dp
+private val ControlsTouchOverhang = (ControlsTouchHeight - ControlsRowHeight) / 2
 private const val INPUT_MAX_LINES = 6
 private val InputLineHeight = 20.dp
 
@@ -123,12 +129,15 @@ fun GamssInputBar(
         val textHeight =
             (totalHeight - topPad - InputBarBottomPadding.roundToPx() - controlsHeight).coerceAtLeast(0)
 
-        val controls = controlsMeasurable.measure(Constraints.fixed(availableWidth, controlsHeight))
+        val overhang = ControlsTouchOverhang.roundToPx()
+        val controls = controlsMeasurable.measure(
+            Constraints.fixed(availableWidth + overhang, ControlsTouchHeight.roundToPx()),
+        )
         val text = textFieldMeasurable.measure(Constraints.fixed(availableWidth, textHeight))
 
         layout(barWidth, totalHeight) {
             text.place(sidePad, topPad)
-            controls.place(sidePad, topPad + textHeight)
+            controls.place(sidePad, topPad + textHeight - overhang)
         }
     }
 }
@@ -199,11 +208,16 @@ private fun SendButton(
     contentDescription: String?,
     onClick: () -> Unit,
 ) {
-    Image(
-        painter = painterResource(if (canSubmit) GamssIcons.SendButtonOn else GamssIcons.SendButtonOff),
-        contentDescription = contentDescription,
+    Box(
         modifier = Modifier
-            .size(SendButtonSize)
+            .size(SendButtonTouchSize)
             .noRippleClickable(enabled = canSubmit, role = Role.Button, onClick = onClick),
-    )
+        contentAlignment = Alignment.Center,
+    ) {
+        Image(
+            painter = painterResource(if (canSubmit) GamssIcons.SendButtonOn else GamssIcons.SendButtonOff),
+            contentDescription = contentDescription,
+            modifier = Modifier.size(SendButtonSize),
+        )
+    }
 }
