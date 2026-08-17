@@ -5,6 +5,7 @@ import com.gamss.android.domain.usecase.UseCase
 import java.time.LocalDate
 import javax.inject.Inject
 
+/** 선택한 날짜(KST)의 카드 목록을 조회한다. */
 class GetCardsByDateUseCase @Inject constructor(
     private val cardRepository: CardRepository,
 ) : UseCase<LocalDate, AppResult<List<Card>>> {

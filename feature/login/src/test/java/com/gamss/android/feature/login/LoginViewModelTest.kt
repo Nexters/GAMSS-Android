@@ -60,9 +60,23 @@ class LoginViewModelTest {
             containerHost.onGoogleCredentialResolved("google-id-token")
             expectState { copy(googleSignInRequestId = null) }
             expectState { copy(isLoading = false) }
+            expectSideEffect(LoginSideEffect.LoginSucceeded(isFirstLogin = false))
         }
 
         coVerify(exactly = 1) { loginUseCase("google-id-token") }
+    }
+
+    @Test
+    fun `첫 로그인에 성공하면 온보딩 분기에 사용할 결과를 전달한다`() = runTest {
+        coEvery { loginUseCase(any()) } returns AppResult.Success(LoginResult(isFirstLogin = true))
+
+        viewModel().test(this) {
+            containerHost.onGoogleCredentialResolved("google-id-token")
+
+            expectState { copy(isLoading = true) }
+            expectState { copy(isLoading = false) }
+            expectSideEffect(LoginSideEffect.LoginSucceeded(isFirstLogin = true))
+        }
     }
 
     @Test

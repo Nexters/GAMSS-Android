@@ -27,8 +27,20 @@ class CreateCardUseCaseTest {
             summary: String,
         ): AppResult<Card> {
             sentSummary = summary
-            return AppResult.Success(Card(character = character, summary = summary, message = "대사"))
+            return AppResult.Success(
+                Card(
+                    id = 1L,
+                    conversationId = conversationId,
+                    character = character,
+                    emotionLabel = character.displayName,
+                    summary = summary,
+                    message = "대사",
+                    date = LocalDate.of(2026, 8, 15),
+                ),
+            )
         }
+
+        override suspend fun deleteCard(cardId: Long): AppResult<Unit> = error("사용하지 않음")
     }
 
     @Test

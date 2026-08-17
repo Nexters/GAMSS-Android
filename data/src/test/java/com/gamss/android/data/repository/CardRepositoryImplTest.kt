@@ -1,6 +1,7 @@
 package com.gamss.android.data.repository
 
 import com.gamss.android.core.common.AppResult
+import com.gamss.android.core.common.network.ApiException
 import com.gamss.android.data.remote.card.CardService
 import com.gamss.android.data.remote.card.model.response.CardCalendarResponse
 import com.gamss.android.data.remote.card.model.response.CardResponse
@@ -29,13 +30,7 @@ class CardRepositoryImplTest {
         val date = LocalDate.of(2026, 8, 15)
         coEvery { cardService.getCardsByDate("2026-08-15") } returns ApiResponse(
             success = true,
-            data = listOf(
-                CardResponse(
-                    emotion = "ANGER",
-                    summary = "회의가 길어졌다",
-                    message = "오늘 많이 힘들었겠다",
-                ),
-            ),
+            data = listOf(cardResponse(emotion = "ANGER")),
         )
 
         val result = repository.getCardsByDate(date)
@@ -50,8 +45,8 @@ class CardRepositoryImplTest {
         coEvery { cardService.getCardsByDate(any()) } returns ApiResponse(
             success = true,
             data = listOf(
-                CardResponse(emotion = "UNKNOWN", summary = "제외", message = "제외"),
-                CardResponse(emotion = "GRUMPY", summary = "남김", message = "남김"),
+                cardResponse(emotion = "UNKNOWN"),
+                cardResponse(emotion = "GRUMPY"),
             ),
         )
 
@@ -125,7 +120,49 @@ class CardRepositoryImplTest {
         )
     }
 
+    @Test
+    fun `카드 삭제 요청을 전달한다`() = runTest {
+        coEvery { cardService.deleteCard(1L) } returns ApiResponse(success = true, data = Unit)
+
+        assertEquals(AppResult.Success(Unit), repository.deleteCard(1L))
+    }
+
+    @Test
+    fun `이미 삭제된 카드는 성공으로 전달한다`() = runTest {
+        coEvery { cardService.deleteCard(1L) } returns ApiResponse<Unit>(
+            success = false,
+            error = ApiError(code = "CARD_ALREADY_DELETED", message = "이미 삭제됨"),
+        )
+
+        assertEquals(AppResult.Success(Unit), repository.deleteCard(1L))
+    }
+
+    @Test
+    fun `카드 삭제 실패 envelope는 실패로 전달한다`() = runTest {
+        coEvery { cardService.deleteCard(1L) } returns ApiResponse<Unit>(
+            success = false,
+            error = ApiError(code = "CARD_NOT_FOUND", message = "존재하지 않음"),
+        )
+
+        val result = repository.deleteCard(1L)
+
+        assertEquals(
+            "CARD_NOT_FOUND",
+            ((result as AppResult.Failure).throwable as ApiException).code,
+        )
+    }
+
     private companion object {
         val DATE: LocalDate = LocalDate.of(2026, 8, 15)
+
+        fun cardResponse(emotion: String) = CardResponse(
+            id = 1L,
+            conversationId = 10L,
+            emotion = emotion,
+            emotionLabel = "분노",
+            summary = "회의가 길어졌다",
+            message = "오늘 많이 힘들었겠다",
+            date = "2026-08-15",
+        )
     }
 }

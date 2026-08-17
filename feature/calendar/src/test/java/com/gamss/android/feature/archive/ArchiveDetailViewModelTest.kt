@@ -142,4 +142,6 @@ private class FakeCardRepository(
         character: EmotionCharacter,
         summary: String,
     ): AppResult<Card> = error("보관함 테스트에서 쓰지 않는다")
+
+    override suspend fun deleteCard(cardId: Long): AppResult<Unit> = error("보관함 테스트에서 쓰지 않는다")
 }

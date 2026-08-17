@@ -44,5 +44,8 @@ class GetCardsByMonthUseCaseTest {
             character: EmotionCharacter,
             summary: String,
         ): AppResult<Card> = error("월 조회 테스트에서 쓰지 않는다")
+
+        override suspend fun deleteCard(cardId: Long): AppResult<Unit> =
+            error("월 조회 테스트에서 쓰지 않는다")
     }
 }

@@ -15,7 +15,17 @@ class GetCardsByDateUseCaseTest {
     fun `선택한 날짜를 그대로 저장소에 전달한다`() = runBlocking {
         val date = LocalDate.of(2026, 8, 15)
         val expected = AppResult.Success(
-            listOf(Card(EmotionCharacter.ANGER, "회의가 길어졌다", "오늘 많이 힘들었겠다")),
+            listOf(
+                Card(
+                    id = 1L,
+                    conversationId = 10L,
+                    character = EmotionCharacter.ANGER,
+                    emotionLabel = "분노",
+                    summary = "회의가 길어졌다",
+                    message = "오늘 많이 힘들었겠다",
+                    date = LocalDate.of(2026, 8, 15),
+                ),
+            ),
         )
         val repository = RecordingRepository(expected)
 
@@ -44,5 +54,8 @@ class GetCardsByDateUseCaseTest {
             character: EmotionCharacter,
             summary: String,
         ): AppResult<Card> = error("날짜 조회 테스트에서 쓰지 않는다")
+
+        override suspend fun deleteCard(cardId: Long): AppResult<Unit> =
+            error("날짜 조회 테스트에서 쓰지 않는다")
     }
 }

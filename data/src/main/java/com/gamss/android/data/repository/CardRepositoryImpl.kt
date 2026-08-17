@@ -26,8 +26,7 @@ internal class CardRepositoryImpl @Inject constructor(
     override suspend fun getCardsByDate(date: LocalDate): AppResult<List<Card>> = runCatchingApiCall {
         val response = cardService.getCardsByDate(date.toString())
         response.throwIfFailed()
-        checkNotNull(response.data) { "No available card data" }
-            .mapNotNull { it.toDomainOrNull() }
+        checkNotNull(response.data) { "No available card data" }.mapNotNull { it.toDomainOrNull() }
     }
 
     // YearMonth.toString() 이 서버가 요구하는 yyyy-MM 그대로다.
@@ -51,7 +50,9 @@ internal class CardRepositoryImpl @Inject constructor(
                     summary = summary,
                 ),
             )
-            checkNotNull(response.data) { "No available card data" }.toDomain(character)
+            response.throwIfFailed()
+            checkNotNull(response.data) { "No available card data" }
+                .toDomain(requestedCharacter = character, fallbackDate = LocalDate.now())
         }
         return when (result) {
             is AppResult.Success -> result
@@ -59,6 +60,22 @@ internal class CardRepositoryImpl @Inject constructor(
             is AppResult.Failure ->
                 if (result.throwable.hasErrorCode(CARD_ALREADY_EXISTS)) {
                     AppResult.Failure(CardNotRetryableException.AlreadyExists(result.throwable))
+                } else {
+                    result
+                }
+        }
+    }
+
+    override suspend fun deleteCard(cardId: Long): AppResult<Unit> {
+        val result = runCatchingApiCall {
+            cardService.deleteCard(cardId).throwIfFailed()
+        }
+        return when (result) {
+            is AppResult.Success -> AppResult.Success(Unit)
+            // 이미 지워진 카드면 목표는 달성된 상태다. 실패로 흘리면 재시도가 영원히 같은 오류를 받는다.
+            is AppResult.Failure ->
+                if (result.throwable.hasErrorCode(CARD_ALREADY_DELETED)) {
+                    AppResult.Success(Unit)
                 } else {
                     result
                 }

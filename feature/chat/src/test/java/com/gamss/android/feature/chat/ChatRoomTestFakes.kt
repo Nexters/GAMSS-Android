@@ -226,8 +226,20 @@ internal class CountingCardRepository(
         calls++
         gate?.await()
         return failure?.let { AppResult.Failure(it) }
-            ?: AppResult.Success(Card(character = character, summary = summary, message = "대사"))
+            ?: AppResult.Success(
+                Card(
+                    id = 1L,
+                    conversationId = conversationId,
+                    character = character,
+                    emotionLabel = character.displayName,
+                    summary = summary,
+                    message = "대사",
+                    date = LocalDate.of(2026, 8, 15),
+                ),
+            )
     }
+
+    override suspend fun deleteCard(cardId: Long): AppResult<Unit> = error("채팅방 테스트에서 쓰지 않는다")
 }
 
 internal fun message(id: Long, conversationId: Long, sender: MessageSender, content: String) = Message(
