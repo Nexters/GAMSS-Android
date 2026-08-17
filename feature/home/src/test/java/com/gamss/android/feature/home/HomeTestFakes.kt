@@ -3,7 +3,8 @@ package com.gamss.android.feature.home
 import androidx.paging.PagingData
 import com.gamss.android.core.common.AppResult
 import com.gamss.android.domain.card.Card
-import com.gamss.android.domain.card.CardWriteRepository
+import com.gamss.android.domain.card.CardEntry
+import com.gamss.android.domain.card.CardRepository
 import com.gamss.android.domain.card.CreateCardUseCase
 import com.gamss.android.domain.card.CreateConversationCardUseCase
 import com.gamss.android.domain.conversation.CommentGenerationStatus
@@ -30,6 +31,8 @@ import com.gamss.android.domain.summary.SummarizeDiaryUseCase
 import com.gamss.android.domain.summary.UtteranceTokenCounter
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.Flow
+import java.time.LocalDate
+import java.time.YearMonth
 
 internal const val NEW_ROOM_ID = 42L
 
@@ -118,7 +121,13 @@ internal class RecordingConversationRepository(
         error("홈 테스트에서 쓰지 않는다")
 }
 
-private object NoCardRepository : CardWriteRepository {
+private object NoCardRepository : CardRepository {
+    override suspend fun getCardsByDate(date: LocalDate): AppResult<List<Card>> =
+        error("홈 테스트에서 쓰지 않는다")
+
+    override suspend fun getCardsByMonth(yearMonth: YearMonth): AppResult<List<CardEntry>> =
+        error("홈 테스트에서 쓰지 않는다")
+
     override suspend fun createCard(
         conversationId: Long,
         character: EmotionCharacter,

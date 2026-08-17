@@ -3,7 +3,8 @@ package com.gamss.android.feature.chat
 import androidx.paging.PagingData
 import com.gamss.android.core.common.AppResult
 import com.gamss.android.domain.card.Card
-import com.gamss.android.domain.card.CardWriteRepository
+import com.gamss.android.domain.card.CardEntry
+import com.gamss.android.domain.card.CardRepository
 import com.gamss.android.domain.card.CreateCardUseCase
 import com.gamss.android.domain.card.CreateConversationCardUseCase
 import com.gamss.android.domain.config.GetRemoteConfigFlagUseCase
@@ -40,6 +41,8 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emptyFlow
+import java.time.LocalDate
+import java.time.YearMonth
 
 /**
  * 채팅 ViewModel 조립을 한 곳에 둔다. 테스트마다 따로 조립하면 세션 구성이 갈라진다.
@@ -49,7 +52,7 @@ import kotlinx.coroutines.flow.emptyFlow
 @Suppress("LongParameterList")
 internal fun chatRoomViewModel(
     conversationRepository: ConversationRepository = FakeConversationRepository(),
-    cardRepository: CardWriteRepository = CountingCardRepository(),
+    cardRepository: CardRepository = CountingCardRepository(),
     summarizer: DiarySummarizer = PassThroughSummarizer,
     classifier: EmotionClassifier = FlatClassifier,
     tokenUsageRefreshNotifier: TokenUsageRefreshNotifier = RecordingTokenUsageRefreshNotifier(),
@@ -205,9 +208,15 @@ internal class FakeConversationRepository(
 internal class CountingCardRepository(
     private val gate: CompletableDeferred<Unit>? = null,
     private val failure: Throwable? = null,
-) : CardWriteRepository {
+) : CardRepository {
     var calls = 0
         private set
+
+    override suspend fun getCardsByDate(date: LocalDate): AppResult<List<Card>> =
+        error("채팅 테스트에서 쓰지 않는다")
+
+    override suspend fun getCardsByMonth(yearMonth: YearMonth): AppResult<List<CardEntry>> =
+        error("채팅 테스트에서 쓰지 않는다")
 
     override suspend fun createCard(
         conversationId: Long,

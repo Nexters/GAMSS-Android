@@ -27,7 +27,7 @@ class GetCardsByMonthUseCaseTest {
 
     private class RecordingRepository(
         private val result: AppResult<List<CardEntry>>,
-    ) : CardQueryRepository {
+    ) : CardRepository {
         var requestedMonth: YearMonth? = null
             private set
 
@@ -38,5 +38,11 @@ class GetCardsByMonthUseCaseTest {
             requestedMonth = yearMonth
             return result
         }
+
+        override suspend fun createCard(
+            conversationId: Long,
+            character: EmotionCharacter,
+            summary: String,
+        ): AppResult<Card> = error("월 조회 테스트에서 쓰지 않는다")
     }
 }

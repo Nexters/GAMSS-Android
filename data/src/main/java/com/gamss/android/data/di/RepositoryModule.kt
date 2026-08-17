@@ -12,8 +12,7 @@ import com.gamss.android.data.repository.ConversationRepositoryImpl
 import com.gamss.android.data.repository.TokenUsageRefreshNotifierImpl
 import com.gamss.android.data.repository.UserRepositoryImpl
 import com.gamss.android.domain.auth.AuthRepository
-import com.gamss.android.domain.card.CardQueryRepository
-import com.gamss.android.domain.card.CardWriteRepository
+import com.gamss.android.domain.card.CardRepository
 import com.gamss.android.domain.conversation.ConversationRepository
 import com.gamss.android.domain.repository.TokenUsageRefreshNotifier
 import com.gamss.android.domain.user.UserRepository
@@ -51,14 +50,9 @@ internal abstract class RepositoryModule {
     ): ConversationRepository
 
     @Binds
-    abstract fun bindCardQueryRepository(
+    abstract fun bindCardRepository(
         cardRepositoryImpl: CardRepositoryImpl
-    ): CardQueryRepository
-
-    @Binds
-    abstract fun bindCardWriteRepository(
-        cardRepositoryImpl: CardRepositoryImpl
-    ): CardWriteRepository
+    ): CardRepository
 
     @Binds
     abstract fun bindTokenUsageRefreshNotifier(

@@ -11,8 +11,7 @@ import com.gamss.android.data.remote.throwIfFailed
 import com.gamss.android.domain.card.Card
 import com.gamss.android.domain.card.CardEntry
 import com.gamss.android.domain.card.CardNotRetryableException
-import com.gamss.android.domain.card.CardQueryRepository
-import com.gamss.android.domain.card.CardWriteRepository
+import com.gamss.android.domain.card.CardRepository
 import com.gamss.android.domain.emotion.EmotionCharacter
 import java.time.LocalDate
 import java.time.YearMonth
@@ -22,7 +21,7 @@ import javax.inject.Singleton
 @Singleton
 internal class CardRepositoryImpl @Inject constructor(
     private val cardService: CardService,
-) : CardQueryRepository, CardWriteRepository {
+) : CardRepository {
 
     override suspend fun getCardsByDate(date: LocalDate): AppResult<List<Card>> = runCatchingApiCall {
         val response = cardService.getCardsByDate(date.toString())

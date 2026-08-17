@@ -4,7 +4,7 @@ import com.gamss.android.core.common.AppResult
 import com.gamss.android.core.common.util.KoreanTimeZone
 import com.gamss.android.domain.card.Card
 import com.gamss.android.domain.card.CardEntry
-import com.gamss.android.domain.card.CardQueryRepository
+import com.gamss.android.domain.card.CardRepository
 import com.gamss.android.domain.card.GetCardsByMonthUseCase
 import com.gamss.android.domain.emotion.EmotionCharacter
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -125,7 +125,7 @@ class ArchiveDetailViewModelTest {
 
 private class FakeCardRepository(
     private val entriesResult: AppResult<List<CardEntry>>,
-) : CardQueryRepository {
+) : CardRepository {
 
     val requestedMonths = mutableListOf<YearMonth>()
 
@@ -136,4 +136,10 @@ private class FakeCardRepository(
         requestedMonths += yearMonth
         return entriesResult
     }
+
+    override suspend fun createCard(
+        conversationId: Long,
+        character: EmotionCharacter,
+        summary: String,
+    ): AppResult<Card> = error("보관함 테스트에서 쓰지 않는다")
 }

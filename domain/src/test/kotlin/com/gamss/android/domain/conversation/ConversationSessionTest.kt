@@ -3,7 +3,8 @@ package com.gamss.android.domain.conversation
 import androidx.paging.PagingData
 import com.gamss.android.core.common.AppResult
 import com.gamss.android.domain.card.Card
-import com.gamss.android.domain.card.CardWriteRepository
+import com.gamss.android.domain.card.CardEntry
+import com.gamss.android.domain.card.CardRepository
 import com.gamss.android.domain.card.CreateCardUseCase
 import com.gamss.android.domain.card.CreateConversationCardUseCase
 import com.gamss.android.domain.conversation.chattingsearch.ChattingRoomSummary
@@ -24,6 +25,8 @@ import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.time.LocalDate
+import java.time.YearMonth
 
 class ConversationSessionTest {
 
@@ -287,7 +290,13 @@ class ConversationSessionTest {
         }
     }
 
-    private object NoOpCardRepository : CardWriteRepository {
+    private object NoOpCardRepository : CardRepository {
+        override suspend fun getCardsByDate(date: LocalDate): AppResult<List<Card>> =
+            error("대화 세션 테스트에서 쓰지 않는다")
+
+        override suspend fun getCardsByMonth(yearMonth: YearMonth): AppResult<List<CardEntry>> =
+            error("대화 세션 테스트에서 쓰지 않는다")
+
         override suspend fun createCard(
             conversationId: Long,
             character: EmotionCharacter,

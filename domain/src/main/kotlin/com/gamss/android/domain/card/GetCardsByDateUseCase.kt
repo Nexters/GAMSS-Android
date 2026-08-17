@@ -6,7 +6,7 @@ import java.time.LocalDate
 import javax.inject.Inject
 
 class GetCardsByDateUseCase @Inject constructor(
-    private val cardRepository: CardQueryRepository,
+    private val cardRepository: CardRepository,
 ) : UseCase<LocalDate, AppResult<List<Card>>> {
 
     override suspend fun invoke(params: LocalDate): AppResult<List<Card>> =

@@ -27,7 +27,7 @@ class GetCardsByDateUseCaseTest {
 
     private class RecordingRepository(
         private val result: AppResult<List<Card>>,
-    ) : CardQueryRepository {
+    ) : CardRepository {
         var requestedDate: LocalDate? = null
             private set
 
@@ -38,5 +38,11 @@ class GetCardsByDateUseCaseTest {
 
         override suspend fun getCardsByMonth(yearMonth: YearMonth): AppResult<List<CardEntry>> =
             AppResult.Success(emptyList())
+
+        override suspend fun createCard(
+            conversationId: Long,
+            character: EmotionCharacter,
+            summary: String,
+        ): AppResult<Card> = error("날짜 조회 테스트에서 쓰지 않는다")
     }
 }
