@@ -3,6 +3,7 @@ package com.gamss.android.feature.calendar
 import com.gamss.android.core.common.AppResult
 import com.gamss.android.domain.card.Card
 import com.gamss.android.domain.card.CardRepository
+import com.gamss.android.domain.card.DeleteCardUseCase
 import com.gamss.android.domain.card.GetCardsByDateUseCase
 import com.gamss.android.domain.emotion.EmotionCharacter
 import kotlinx.coroutines.CompletableDeferred
@@ -24,7 +25,7 @@ class CalendarViewModelTest {
         val expectedCard = card(date = selectedDate)
         val repository = RecordingCardRepository(expectedCard)
 
-        CalendarViewModel(GetCardsByDateUseCase(repository)).test(this) {
+        CalendarViewModel(GetCardsByDateUseCase(repository), DeleteCardUseCase(repository)).test(this) {
             containerHost.selectDate(selectedDate)
             runCurrent()
             runCurrent()
@@ -43,7 +44,7 @@ class CalendarViewModelTest {
         val selectedDate = LocalDate.of(2026, 8, 15)
         val repository = RecordingCardRepository(card(selectedDate), shouldFail = true)
 
-        CalendarViewModel(GetCardsByDateUseCase(repository)).test(this) {
+        CalendarViewModel(GetCardsByDateUseCase(repository), DeleteCardUseCase(repository)).test(this) {
             containerHost.selectDate(selectedDate)
             runCurrent()
             runCurrent()
@@ -69,7 +70,7 @@ class CalendarViewModelTest {
         val secondDate = LocalDate.of(2026, 8, 16)
         val repository = DelayingCardRepository()
 
-        CalendarViewModel(GetCardsByDateUseCase(repository)).test(this) {
+        CalendarViewModel(GetCardsByDateUseCase(repository), DeleteCardUseCase(repository)).test(this) {
             containerHost.selectDate(firstDate)
             repository.awaitFirstRequest()
             containerHost.selectDate(secondDate)
@@ -86,13 +87,66 @@ class CalendarViewModelTest {
         }
     }
 
+    @Test
+    fun `discarding a card deletes it and removes it from the list`() = runTest {
+        val selectedDate = LocalDate.of(2026, 8, 15)
+        val expectedCard = card(date = selectedDate)
+        val repository = RecordingCardRepository(expectedCard)
+
+        CalendarViewModel(GetCardsByDateUseCase(repository), DeleteCardUseCase(repository)).test(this) {
+            containerHost.selectDate(selectedDate)
+            runCurrent()
+            runCurrent()
+            containerHost.selectCard(expectedCard)
+            runCurrent()
+
+            containerHost.discardSelectedCard()
+            runCurrent()
+
+            val state = containerHost.container.stateFlow.value
+            assertEquals(expectedCard.id, repository.deletedCardId)
+            assertEquals(null, state.selectedCard)
+            assertEquals(CalendarCardLoadState.Empty, state.cardLoadState)
+
+            cancelAndIgnoreRemainingItems()
+        }
+    }
+
+    @Test
+    fun `a failed discard posts a side effect and keeps the card in the list`() = runTest {
+        val selectedDate = LocalDate.of(2026, 8, 15)
+        val expectedCard = card(date = selectedDate)
+        val repository = RecordingCardRepository(expectedCard, deleteShouldFail = true)
+
+        CalendarViewModel(GetCardsByDateUseCase(repository), DeleteCardUseCase(repository)).test(this) {
+            containerHost.selectDate(selectedDate)
+            runCurrent()
+            runCurrent()
+            containerHost.selectCard(expectedCard)
+            runCurrent()
+
+            containerHost.discardSelectedCard()
+            runCurrent()
+            skipItems(4)
+            expectSideEffect(CalendarSideEffect.CardDiscardFailed)
+
+            val state = containerHost.container.stateFlow.value
+            assertEquals(CalendarCardLoadState.Content(listOf(expectedCard)), state.cardLoadState)
+
+            cancelAndIgnoreRemainingItems()
+        }
+    }
+
     private class RecordingCardRepository(
         private val card: Card,
         var shouldFail: Boolean = false,
+        var deleteShouldFail: Boolean = false,
     ) : CardRepository {
         var requestedDate: LocalDate? = null
             private set
         var requestCount: Int = 0
+            private set
+        var deletedCardId: Long? = null
             private set
 
         override suspend fun getCardsByDate(date: LocalDate): AppResult<List<Card>> {
@@ -110,6 +164,15 @@ class CalendarViewModelTest {
             character: EmotionCharacter,
             summary: String,
         ): AppResult<Card> = error("Not used by the calendar")
+
+        override suspend fun deleteCard(cardId: Long): AppResult<Unit> {
+            deletedCardId = cardId
+            return if (deleteShouldFail) {
+                AppResult.Failure(IllegalStateException("Delete failure"))
+            } else {
+                AppResult.Success(Unit)
+            }
+        }
     }
 
     private class DelayingCardRepository : CardRepository {
@@ -140,6 +203,8 @@ class CalendarViewModelTest {
             character: EmotionCharacter,
             summary: String,
         ): AppResult<Card> = error("Not used by the calendar")
+
+        override suspend fun deleteCard(cardId: Long): AppResult<Unit> = error("Not used by the calendar")
     }
 
     private fun card(date: LocalDate) = Card(

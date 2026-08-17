@@ -233,6 +233,8 @@ class ConversationSessionTest {
                 date = LocalDate.of(2026, 8, 15),
             ),
         )
+
+        override suspend fun deleteCard(cardId: Long): AppResult<Unit> = error("사용하지 않음")
     }
 
     private class FakeConversationRepository(

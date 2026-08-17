@@ -12,3 +12,4 @@ internal fun Throwable.hasErrorCode(code: String): Boolean =
 internal const val CONVERSATION_ALREADY_ENDED = "CONVERSATION_ALREADY_ENDED"
 internal const val CONVERSATION_ALREADY_DELETED = "CONVERSATION_ALREADY_DELETED"
 internal const val CARD_ALREADY_EXISTS = "CARD_ALREADY_EXISTS"
+internal const val CARD_ALREADY_DELETED = "CARD_ALREADY_DELETED"
