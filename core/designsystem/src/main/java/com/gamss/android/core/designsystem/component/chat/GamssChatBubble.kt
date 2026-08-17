@@ -1,5 +1,8 @@
 package com.gamss.android.core.designsystem.component.chat
 
+import android.graphics.drawable.Drawable
+import androidx.annotation.DrawableRes
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -18,12 +21,23 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import com.airbnb.lottie.compose.LottieAnimation
 import com.airbnb.lottie.compose.LottieCompositionSpec
 import com.airbnb.lottie.compose.LottieConstants
@@ -31,6 +45,7 @@ import com.airbnb.lottie.compose.animateLottieCompositionAsState
 import com.airbnb.lottie.compose.rememberLottieComposition
 import com.gamss.android.core.designsystem.R
 import com.gamss.android.core.designsystem.theme.GamssTheme
+import kotlin.math.roundToInt
 
 /**
  * [GamssSentChatBubble], [GamssReceivedChatBubble] 말풍선 안에 표시할 답장 인용 정보.
@@ -189,18 +204,68 @@ private fun ChatBubbleSurface(
     verticalPadding: Dp = GamssTheme.spacing.spacing100,
     content: @Composable () -> Unit,
 ) {
-    Column(
-        // 답장 인용문의 구분선(HorizontalDivider)이 본문과 같은 너비로 맞춰지도록
-        // 가장 넓은 자식의 고유 너비에 맞춰 hug 하되, widthIn(max) 로 넘어오는 상한은 그대로 유지한다.
-        modifier = modifier
-            .width(IntrinsicSize.Max)
-            .background(if (isMine) GamssTheme.colors.gray900 else GamssTheme.colors.gray025)
-            .border(width = 1.dp, color = GamssTheme.colors.gray950)
-            .padding(horizontal = horizontalPadding, vertical = verticalPadding),
-        verticalArrangement = Arrangement.spacedBy(GamssTheme.spacing.spacing075),
-        horizontalAlignment = if (isMine) Alignment.End else Alignment.Start,
-    ) {
-        content()
+    // painterResource() 는 9-patch를 지원하지 않아
+    // rememberNinePatchPainter 로 직접 그린다. fill(배경)·stroke(테두리)는 같은 손그림 윤곽에서
+    // 나온 한 쌍이라 어떤 크기로 늘어나도 모서리가 서로 어긋나지 않는다.
+    val bubbleColor = if (isMine) GamssTheme.colors.gray900 else GamssTheme.colors.gray025
+    Box(modifier = modifier.width(IntrinsicSize.Max)) {
+        Image(
+            painter = rememberNinePatchPainter(id = R.drawable.chatmessage_fill, tint = bubbleColor),
+            contentDescription = null,
+            contentScale = ContentScale.FillBounds,
+            modifier = Modifier.matchParentSize(),
+        )
+        Image(
+            painter = rememberNinePatchPainter(id = R.drawable.chatmessage_stroke, tint = GamssTheme.colors.gray950),
+            contentDescription = null,
+            contentScale = ContentScale.FillBounds,
+            modifier = Modifier.matchParentSize(),
+        )
+        Column(
+            // 답장 인용문의 구분선(HorizontalDivider)이 본문과 같은 너비로 맞춰지도록
+            // 가장 넓은 자식의 고유 너비에 맞춰 hug 하되, widthIn(max) 로 넘어오는 상한은 그대로 유지한다.
+            modifier = Modifier.padding(horizontal = horizontalPadding, vertical = verticalPadding),
+            verticalArrangement = Arrangement.spacedBy(GamssTheme.spacing.spacing075),
+            horizontalAlignment = if (isMine) Alignment.End else Alignment.Start,
+        ) {
+            content()
+        }
+    }
+}
+
+/**
+ * 9-patch(.9.png) 전용 [Painter]. `painterResource()` 는 NinePatchDrawable을 BitmapDrawable로
+ * 강제 캐스팅해 크래시가 나므로, [Drawable]을 직접 canvas에 그려서 우회한다.
+ *
+ * @param tint 지정하면 SRC_IN 방식으로 색만 덧칠한다(투명 영역·모양은 그대로 유지).
+ */
+@Composable
+private fun rememberNinePatchPainter(@DrawableRes id: Int, tint: Color? = null): Painter {
+    val context = LocalContext.current
+    return remember(context, id, tint) {
+        val drawable = requireNotNull(ContextCompat.getDrawable(context, id)) {
+            "리소스를 찾을 수 없습니다: $id"
+        }.mutate()
+        if (tint != null) {
+            drawable.setTint(tint.toArgb())
+        }
+        NinePatchPainter(drawable)
+    }
+}
+
+private class NinePatchPainter(private val drawable: Drawable) : Painter() {
+    override val intrinsicSize: Size
+        get() = if (drawable.intrinsicWidth >= 0 && drawable.intrinsicHeight >= 0) {
+            Size(drawable.intrinsicWidth.toFloat(), drawable.intrinsicHeight.toFloat())
+        } else {
+            Size.Unspecified
+        }
+
+    override fun DrawScope.onDraw() {
+        drawIntoCanvas { canvas ->
+            drawable.setBounds(0, 0, size.width.roundToInt(), size.height.roundToInt())
+            drawable.draw(canvas.nativeCanvas)
+        }
     }
 }
 
