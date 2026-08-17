@@ -15,6 +15,7 @@ import com.gamss.android.domain.conversation.EndConversationUseCase
 import com.gamss.android.domain.conversation.GetMessagesUseCase
 import com.gamss.android.domain.conversation.Message
 import com.gamss.android.domain.conversation.MessageSender
+import com.gamss.android.domain.conversation.PendingConversationReveal
 import com.gamss.android.domain.conversation.SendMessageUseCase
 import com.gamss.android.domain.conversation.SentMessage
 import com.gamss.android.domain.conversation.UpdateConversationTitleUseCase
@@ -46,6 +47,7 @@ internal fun conversationSession(repository: ConversationRepository) = Conversat
         tokenCounter = CharLengthTokenCounter,
     ),
     emotionAccumulator = ConversationEmotionAccumulator(FlatClassifier),
+    pendingReveal = PendingConversationReveal(),
 )
 
 /**
