@@ -38,7 +38,7 @@ private fun GamssInputBarEmptyPreview() {
             GamssInputBar(
                 value = "",
                 onValueChange = {},
-                onTrailingClick = {},
+                onSend = {},
                 placeholder = "무슨 이야기를 버려볼까요?",
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -55,7 +55,7 @@ private fun GamssInputBarFilledPreview() {
             GamssInputBar(
                 value = "오늘 발표가 너무 떨려요",
                 onValueChange = {},
-                onTrailingClick = {},
+                onSend = {},
                 modifier = Modifier.fillMaxWidth(),
             )
         }

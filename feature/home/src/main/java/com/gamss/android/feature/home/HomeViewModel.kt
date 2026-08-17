@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gamss.android.core.common.AppResult
 import com.gamss.android.domain.conversation.ConversationSession
+import com.gamss.android.domain.conversation.MAX_MESSAGE_LENGTH
 import com.gamss.android.domain.conversation.takeWithinMessageLimit
 import com.gamss.android.domain.emotion.EmotionCharacter
 import com.gamss.android.domain.user.GetUserInfoUseCase
@@ -17,7 +18,7 @@ import javax.inject.Inject
 
 internal const val LAST_CHARACTER_BLOCKED = "한 명은 남겨 주세요"
 internal const val SEND_FAILED = "보내지 못했어요. 잠시 후 다시 시도해 주세요."
-internal const val MESSAGE_LENGTH_EXCEEDED = "메시지는 140자까지 입력할 수 있어요."
+internal val MESSAGE_LENGTH_EXCEEDED = "메시지는 ${MAX_MESSAGE_LENGTH}자까지 입력할 수 있어요."
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
@@ -32,12 +33,21 @@ class HomeViewModel @Inject constructor(
         postSideEffect(HomeSideEffect.NavigateToSetting)
     }
 
-    fun onInputChange(text: String) = blockingIntent {
-        reduce { state.copy(input = text.takeWithinMessageLimit()) }
-    }
+    // 이어 치는 동안 토스트가 쌓이지 않게, 넘긴 상태에서 벗어날 때까지 한 번만 알린다.
+    private var lengthWarned = false
 
-    fun onMessageLengthExceeded() = intent {
-        postSideEffect(HomeSideEffect.ShowToast(MESSAGE_LENGTH_EXCEEDED))
+    fun onInputChange(text: String) = blockingIntent {
+        val limited = text.takeWithinMessageLimit()
+        reduce { state.copy(input = limited) }
+
+        if (limited != text) {
+            if (!lengthWarned) {
+                lengthWarned = true
+                postSideEffect(HomeSideEffect.ShowToast(MESSAGE_LENGTH_EXCEEDED))
+            }
+        } else {
+            lengthWarned = false
+        }
     }
 
     fun onEmotionPickerToggle() = intent {

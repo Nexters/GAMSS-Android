@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- state=focus.svg 를 그대로 옮긴 손그림 테두리. aapt2 가 32KB 넘는 pathData 를
-     STRING_TOO_LARGE 로 치환해 버려서, 독립 서브패스 단위로 나눠 담는다. -->
+<!-- aapt2 가 32KB 넘는 pathData 를 STRING_TOO_LARGE 로 치환하므로 서브패스 단위로 나눠 담는다. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="368dp"
     android:height="152dp"
