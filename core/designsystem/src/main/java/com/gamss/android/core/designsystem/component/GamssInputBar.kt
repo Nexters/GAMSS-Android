@@ -23,6 +23,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.paint
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.SolidColor
@@ -110,7 +111,10 @@ fun GamssInputBar(
     Layout(
         modifier = modifier
             .height(animatedHeight)
-            .inputBarBackground(useFocusArt = useFocusArt, isAnimating = isAnimating),
+            .inputBarBackground(useFocusArt = useFocusArt, isAnimating = isAnimating)
+            // 확장 첫 프레임엔 높이가 아직 collapsed 라 텍스트 자리가 0dp 로 잡힌다.
+            // 그대로 두면 넘친 텍스트가 컨트롤 행 위로 비어져 나온다.
+            .clipToBounds(),
         content = {
             InputTextField(
                 value = value,
@@ -225,13 +229,11 @@ private fun ControlsRow(
 ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         trailingAction?.invoke()
-        if (trailingAction != null) {
-            // collapsed 에서는 전송 버튼 바로 앞에 좁은 간격만, expanded 에서는 양 끝으로 벌어진다.
-            if (isExpanded) {
-                Spacer(modifier = Modifier.weight(1f))
-            } else {
-                Spacer(modifier = Modifier.width(ControlsRowGap))
-            }
+        // expanded 행은 폭이 고정 측정돼 남는 자리가 생긴다. trailingAction 이 없어도 밀어내지 않으면
+        // 전송 버튼이 왼쪽 끝에 붙는다. collapsed 에서는 버튼 앞 간격만 둔다.
+        when {
+            isExpanded -> Spacer(modifier = Modifier.weight(1f))
+            trailingAction != null -> Spacer(modifier = Modifier.width(ControlsRowGap))
         }
         SendButton(canSubmit = canSubmit, contentDescription = trailingContentDescription, onClick = onTrailingClick)
     }
