@@ -6,12 +6,16 @@ import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.time.LocalDate
+import java.time.YearMonth
 
 class DeleteCardUseCaseTest {
 
     private class RecordingRepository : CardRepository {
         var deletedCardId: Long? = null
             private set
+
+        override suspend fun getCardsByMonth(yearMonth: YearMonth): AppResult<List<CardEntry>> =
+            error("카드 삭제 테스트에서 쓰지 않는다")
 
         override suspend fun getCardsByDate(date: LocalDate): AppResult<List<Card>> = error("사용하지 않음")
 

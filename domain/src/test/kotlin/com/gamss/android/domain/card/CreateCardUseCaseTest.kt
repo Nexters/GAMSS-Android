@@ -7,6 +7,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.LocalDate
+import java.time.YearMonth
 
 class CreateCardUseCaseTest {
 
@@ -32,6 +33,9 @@ class CreateCardUseCaseTest {
                 ),
             )
         }
+
+        override suspend fun getCardsByMonth(yearMonth: YearMonth): AppResult<List<CardEntry>> =
+            error("카드 생성 테스트에서 쓰지 않는다")
 
         override suspend fun getCardsByDate(date: LocalDate): AppResult<List<Card>> =
             AppResult.Success(emptyList())
