@@ -2,7 +2,6 @@ package com.gamss.android.feature.archive
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -27,7 +26,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.paint
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -178,7 +180,12 @@ private fun MonthSelector(
             )
             .fillMaxWidth()
             .height(DetailMonthHeight)
-            .border(DetailMonthBorderWidth, GamssTheme.colors.gray900)
+            // 입력바와 같은 손그림 테두리 에셋을 그대로 쓴다. 화면마다 따로 만들면 같은 그림이 리소스로
+            // 중복된다.
+            .paint(
+                painter = painterResource(com.gamss.android.core.designsystem.R.drawable.bg_input_box),
+                contentScale = ContentScale.FillBounds,
+            )
             .clickable(role = Role.Button, onClick = onClick)
             .padding(horizontal = DetailMonthHorizontalPadding),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -192,7 +199,16 @@ private fun MonthSelector(
         Image(
             painter = painterResource(com.gamss.android.core.designsystem.R.drawable.ic_right_chevron),
             contentDescription = stringResource(R.string.archive_select_month_description),
-            modifier = Modifier.graphicsLayer { rotationZ = 90f },
+            // 글리프가 뷰포트 오른쪽에 몰려 있어, 박스 중심으로 돌리면 그 가로 편차가 세로 어긋남으로
+            // 바뀐다. 회전축을 글리프 중심에 두면 제자리에서 돌아 세로 중앙에 남는다.
+            // 대신 돌아간 잉크가 레이아웃 박스를 오른쪽으로 넘어가, 그만큼 밀어 좌우 여백을 맞춘다.
+            modifier = Modifier
+                .padding(end = DetailChevronInkOverflow)
+                .size(DetailChevronSize)
+                .graphicsLayer {
+                    rotationZ = CHEVRON_ROTATION
+                    transformOrigin = TransformOrigin(CHEVRON_CENTER_X, CHEVRON_CENTER_Y)
+                },
         )
     }
 }
@@ -308,6 +324,12 @@ private suspend fun CoroutineScope.runPaperFall(
     }
 }
 
+private const val CHEVRON_ROTATION = 90f
+
+// ic_right_chevron 글리프의 실제 중심. 24 뷰포트에서 stroke 포함 x 12.4~21.3, y 3.9~20.2 다.
+private const val CHEVRON_CENTER_X = 16.85f / 24f
+private const val CHEVRON_CENTER_Y = 12.03f / 24f
+
 private const val PAPER_COLLISION_RADIUS_SCALE = 1.15f
 private const val PAPER_MAX_TILT_DEGREES = 42f
 private const val PAPER_SPAWN_STAGGER = 0.9f
@@ -327,8 +349,13 @@ private val DetailTitleStartPadding = 12.dp
 private val DetailHorizontalPadding = 18.dp
 private val DetailMonthTopPadding = 24.dp
 private val DetailMonthHeight = 48.dp
-private val DetailMonthBorderWidth = 1.dp
 private val DetailMonthHorizontalPadding = 12.dp
+
+// 디자인의 셰브론 프레임은 18dp 다. 드로어블 고유 크기(24dp)로 두면 그만큼 커 보인다.
+private val DetailChevronSize = 18.dp
+
+// 회전한 잉크가 레이아웃 박스를 넘는 양(뷰포트 기준 1dp × 18/24)에 텍스트 사이드베어링을 더한 값.
+private val DetailChevronInkOverflow = 1.dp
 private val DetailPaperPileTopPadding = 136.dp
 private val DetailPaperDesignWidth = 402.dp
 private val DetailPaperSize = 88.dp

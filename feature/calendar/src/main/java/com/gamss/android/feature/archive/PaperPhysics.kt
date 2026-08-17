@@ -141,7 +141,7 @@ internal class PaperPhysicsWorld(
     // 단위는 px/s, px/s², rad/s 등 시뮬레이션 내부 단위 기준이며, 다른 값으로 바꾸면 반드시
     // 실기기에서 낙하 애니메이션을 재확인해야 한다.
     private companion object {
-        const val Gravity = 1700f
+        const val Gravity = 2600f
         const val LinearDamping = 0.995f
         const val AngularDamping = 0.9f
         const val Restitution = 0.32f
