@@ -2,4 +2,6 @@ package com.gamss.android.feature.login
 
 sealed interface LoginSideEffect {
     data class ShowToast(val message: String) : LoginSideEffect
+
+    data class LoginSucceeded(val isFirstLogin: Boolean) : LoginSideEffect
 }
