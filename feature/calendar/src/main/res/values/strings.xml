@@ -9,6 +9,9 @@
     <string name="archive_cards_load_failed">이야기를 불러오지 못했어요.</string>
     <string name="archive_open_description">%1$s 쓰레기통 열기</string>
     <string name="archive_clear">비우기</string>
+    <string name="archive_clear_dialog_title">대화 전체 비우기</string>
+    <string name="archive_clear_dialog_description">모든 대화 기록이 삭제돼요. 삭제한 내용은 다시 복구할 수 없어요.</string>
+    <string name="archive_clear_dialog_cancel">취소</string>
     <string name="archive_select_month_description">월 선택</string>
     <string name="archive_month_picker_close">월 선택 닫기</string>
     <string name="archive_month_picker_confirm">선택하기</string>

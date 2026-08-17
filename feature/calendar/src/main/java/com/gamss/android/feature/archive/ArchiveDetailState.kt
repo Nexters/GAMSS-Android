@@ -11,4 +11,5 @@ data class ArchiveDetailState(
     val cards: List<CardEntry> = emptyList(),
     val loadFailed: Boolean = false,
     val isMonthPickerVisible: Boolean = false,
+    val isClearDialogVisible: Boolean = false,
 )

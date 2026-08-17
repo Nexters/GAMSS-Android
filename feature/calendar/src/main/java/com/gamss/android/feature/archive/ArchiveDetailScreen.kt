@@ -1,11 +1,13 @@
 package com.gamss.android.feature.archive
 
 import androidx.annotation.StringRes
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -14,12 +16,17 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.gamss.android.core.designsystem.button.GamssButtonVariant
 import com.gamss.android.core.designsystem.component.GamssIconButton
 import com.gamss.android.core.designsystem.component.GamssTopBar
+import com.gamss.android.core.designsystem.dialog.GamssDialog
+import com.gamss.android.core.designsystem.dialog.GamssDialogAction
 import com.gamss.android.core.designsystem.theme.GamssTheme
 import com.gamss.android.domain.card.CardEntry
 import com.gamss.android.domain.emotion.EmotionCharacter
@@ -52,6 +59,10 @@ fun ArchiveDetailScreen(
         onMonthClick = viewModel::showMonthPicker,
         onMonthSelect = viewModel::selectMonth,
         onMonthPickerDismiss = viewModel::dismissMonthPicker,
+        onClearClick = viewModel::showClearDialog,
+        // 삭제 API 가 붙기 전이라 확인도 닫기만 한다.
+        onClearConfirm = viewModel::dismissClearDialog,
+        onClearDismiss = viewModel::dismissClearDialog,
     )
 }
 
@@ -63,10 +74,19 @@ private fun ArchiveDetailFrame(
     onMonthClick: () -> Unit,
     onMonthSelect: (YearMonth) -> Unit,
     onMonthPickerDismiss: () -> Unit,
+    onClearClick: () -> Unit,
+    onClearConfirm: () -> Unit,
+    onClearDismiss: () -> Unit,
 ) {
     Scaffold(
         containerColor = GamssTheme.colors.white,
-        topBar = { ArchiveDetailTopBar(emotion = emotion, onBackClick = onBackClick) },
+        topBar = {
+            ArchiveDetailTopBar(
+                emotion = emotion,
+                onBackClick = onBackClick,
+                onClearClick = onClearClick,
+            )
+        },
     ) { innerPadding ->
         Box(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
             MonthSelector(
@@ -85,15 +105,47 @@ private fun ArchiveDetailFrame(
             onDismiss = onMonthPickerDismiss,
         )
     }
+
+    if (state.isClearDialogVisible) {
+        ClearConfirmDialog(onConfirm = onClearConfirm, onDismiss = onClearDismiss)
+    }
+}
+
+/** 되돌릴 수 없는 삭제라 확인을 한 번 받는다. 무엇을 지울지는 [onConfirm] 을 넘기는 쪽이 정한다. */
+@Composable
+private fun ClearConfirmDialog(
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    GamssDialog(
+        title = stringResource(R.string.archive_clear_dialog_title),
+        subtitle = stringResource(R.string.archive_clear_dialog_description),
+        primaryAction = GamssDialogAction(
+            label = stringResource(R.string.archive_clear),
+            onClick = onConfirm,
+            variant = GamssButtonVariant.Destructive,
+        ),
+        secondaryAction = GamssDialogAction(
+            label = stringResource(R.string.archive_clear_dialog_cancel),
+            onClick = onDismiss,
+            variant = GamssButtonVariant.Secondary,
+        ),
+        onDismissRequest = onDismiss,
+    )
 }
 
 @Composable
 private fun ArchiveDetailTopBar(
     emotion: EmotionCharacter,
     onBackClick: () -> Unit,
+    onClearClick: () -> Unit,
 ) {
     GamssTopBar(
-        contentPadding = PaddingValues(horizontal = TopBarHorizontalPadding),
+        // 비우기는 터치 영역만큼 안쪽 여백을 물고 있어, 오른쪽은 그만큼 뺀다.
+        contentPadding = PaddingValues(
+            start = TopBarHorizontalPadding,
+            end = TopBarHorizontalPadding - ClearHitPadding,
+        ),
         leading = {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 GamssIconButton(
@@ -111,11 +163,14 @@ private fun ArchiveDetailTopBar(
             }
         },
         trailing = {
-            // 확인 다이얼로그가 준비되기 전에는 표시만 한다. 실제 카드/대화를 지우는 동작이다.
             Text(
                 text = stringResource(R.string.archive_clear),
                 style = GamssTheme.typography.body4Medium,
                 color = GamssTheme.colors.gray900,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(ClearRippleRadius))
+                    .clickable(role = Role.Button, onClick = onClearClick)
+                    .padding(ClearHitPadding),
             )
         },
     )
@@ -145,6 +200,8 @@ private fun EmptyMessage(@StringRes textRes: Int) {
 private val TopBarHorizontalPadding = 18.dp
 private val BackHitPadding = 0.dp
 private val TitleStartPadding = 12.dp
+private val ClearHitPadding = 8.dp
+private val ClearRippleRadius = 8.dp
 
 @Preview(showBackground = true, widthDp = 402, heightDp = 874)
 @Composable
@@ -163,6 +220,9 @@ private fun ArchiveDetailPaperPilePreview() {
             onMonthClick = {},
             onMonthSelect = {},
             onMonthPickerDismiss = {},
+            onClearClick = {},
+            onClearConfirm = {},
+            onClearDismiss = {},
         )
     }
 }

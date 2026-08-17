@@ -37,6 +37,14 @@ class ArchiveDetailViewModel @Inject constructor(
         reduce { state.copy(isMonthPickerVisible = false) }
     }
 
+    fun showClearDialog() = intent {
+        reduce { state.copy(isClearDialogVisible = true) }
+    }
+
+    fun dismissClearDialog() = intent {
+        reduce { state.copy(isClearDialogVisible = false) }
+    }
+
     fun selectMonth(yearMonth: YearMonth) = intent {
         val emotion = state.emotion
         // 보고 있는 달을 다시 고르면 이미 쌓인 종이를 다시 쏟지 않고 시트만 닫는다.
