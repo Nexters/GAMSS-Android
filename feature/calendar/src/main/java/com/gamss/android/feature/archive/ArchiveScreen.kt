@@ -3,18 +3,22 @@ package com.gamss.android.feature.archive
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
@@ -46,45 +50,50 @@ fun ArchiveScreen(
     Scaffold(
         containerColor = GamssTheme.colors.white,
         topBar = { ArchiveTopBar(onMenuClick = onNavigateToSetting) },
+        // 보관함 탭은 항상 MainScreen 의 탭바 위에 떠서, 화면 하단에 직접 닿지 않는다.
+        // 기본 인셋대로 두면 이미 탭바가 피해준 내비게이션 바 공간을 여기서 또 예약해 이중 여백이 생긴다.
+        contentWindowInsets = WindowInsets.statusBars,
     ) { innerPadding ->
         BoxWithConstraints(
             modifier = Modifier.padding(innerPadding),
-            contentAlignment = Alignment.TopCenter,
+            contentAlignment = Alignment.Center,
         ) {
             val scale = (maxWidth / ArchiveDesignWidth).coerceAtMost(1f)
             val gridWidth = ArchiveDesignWidth * scale
 
-            Column(
-                modifier = Modifier
-                    .width(gridWidth)
-                    .padding(
+            // 타이틀과 그리드는 Box 안에서 각자 따로 정렬되는 형제가 아니라, 하나의 Column으로 묶어야
+            // BoxWithConstraints의 Center 정렬이 이 그룹 전체에 적용된다.
+            Column(modifier = Modifier.width(gridWidth)) {
+                Text(
+                    text = "다시 보고 싶은 쓰레기통을 열어보세요",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = ArchiveTitleTopPadding * scale),
+                    style = GamssTheme.typography.body4Medium,
+                    color = GamssTheme.colors.gray950,
+                    textAlign = TextAlign.Center,
+                )
+                Column(
+                    modifier = Modifier.padding(
                         start = ArchiveHorizontalPadding * scale,
                         end = ArchiveHorizontalPadding * scale,
                         top = ArchiveTopPadding * scale,
                         bottom = ArchiveBottomPadding * scale,
                     ),
-                verticalArrangement = Arrangement.spacedBy(ArchiveVerticalSpacing * scale),
-            ) {
-                archiveItems.chunked(ARCHIVE_COLUMN_COUNT).forEach { rowItems ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(ArchiveHorizontalSpacing * scale),
-                    ) {
-                        rowItems.forEach { item ->
-                            ArchiveCard(item = item, scale = scale, onClick = { onArchiveClick(item.emotion) })
+                    verticalArrangement = Arrangement.spacedBy(ArchiveVerticalSpacing * scale),
+                ) {
+                    archiveItems.chunked(ARCHIVE_COLUMN_COUNT).forEach { rowItems ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(ArchiveHorizontalSpacing * scale),
+                        ) {
+                            rowItems.forEach { item ->
+                                ArchiveCard(item = item, scale = scale, onClick = { onArchiveClick(item.emotion) })
+                            }
                         }
                     }
                 }
             }
-            Text(
-                text = "다시 보고 싶은 쓰레기통을 열어보세요",
-                modifier = Modifier
-                    .width(gridWidth)
-                    .padding(top = ArchiveTitleTopPadding * scale),
-                style = GamssTheme.typography.body4Medium,
-                color = GamssTheme.colors.gray950,
-                textAlign = TextAlign.Center,
-            )
         }
     }
 }
@@ -112,12 +121,18 @@ private fun ArchiveCard(
     scale: Float,
     onClick: () -> Unit,
 ) {
+    val interactionSource = remember { MutableInteractionSource() }
     Image(
         painter = painterResource(item.binRes),
         contentDescription = stringResource(R.string.archive_open_description, item.emotion.displayName),
         modifier = Modifier
             .size(width = ArchiveCardWidth * scale, height = ArchiveCardHeight * scale)
-            .clickable(role = Role.Button, onClick = onClick),
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                role = Role.Button,
+                onClick = onClick,
+            ),
     )
 }
 
