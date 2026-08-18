@@ -40,5 +40,3 @@ include(":feature:setting")
 include(":feature:webview")
 include(":core:designsystem")
 include(":feature:onboarding")
-
-project(":feature:archive").projectDir = file("feature/calendar")

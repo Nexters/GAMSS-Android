@@ -115,7 +115,6 @@ GAMSS-Android/
 | 네트워크 | Retrofit |
 | 로컬 DB | Room 3.0 |
 | 이미지 로드 | Coil |
-| 캘린더 | [kizitonwose/Calendar](https://github.com/kizitonwose/Calendar) |
 | 테스트 | JUnit |
 | 앱 트래킹 | Firebase / Google Analytics |
 | CI/CD | GitHub Actions |
