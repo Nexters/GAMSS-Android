@@ -29,6 +29,10 @@ object GamssIcons {
     @DrawableRes
     val RightChevron: Int = R.drawable.ic_right_chevron
 
+    /** 선으로만 그린 X. 원형으로 채운 지우기 버튼(ic_close)과 다른 에셋이다. */
+    @DrawableRes
+    val Close: Int = R.drawable.ic_close_line
+
     /** 두 가지 색이 들어 있어 tint 하지 않는다. 채움은 gray700, 체크는 gray025. */
     @DrawableRes
     val CheckCircleOn: Int = R.drawable.ic_check_circle_on

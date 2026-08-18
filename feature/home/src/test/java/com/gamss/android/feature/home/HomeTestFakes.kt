@@ -132,7 +132,7 @@ private object NoCardRepository : CardRepository {
         error("홈 테스트에서 쓰지 않는다")
 
     override suspend fun getCardsByDate(date: LocalDate): AppResult<List<Card>> =
-        AppResult.Success(emptyList())
+        error("홈 테스트에서 쓰지 않는다")
 
     override suspend fun createCard(
         conversationId: Long,

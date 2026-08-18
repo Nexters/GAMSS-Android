@@ -25,7 +25,6 @@ okhttp = "5.4.0"
 room = "3.0.0-alpha06"
 coil = "3.5.0"
 lottie = "6.7.1"
-calendar = "2.10.0"
 firebase-bom = "34.15.0"
 firebase-crashlytics-gradle = "3.0.7"
 google-services = "4.4.4"
@@ -47,8 +46,8 @@ paging = "3.4.2"
 [libraries]
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidx-activity" }
 androidx-hilt-navigation-compose = { module = "androidx.hilt:hilt-navigation-compose", version.ref = "androidx-hilt" }
-androidx-lifecycle-runtime-ktx = { module = "androidx.lifecycle:lifecycle-runtime-ktx", version.ref = "androidx-lifecycle" }
 androidx-lifecycle-runtime-compose = { module = "androidx.lifecycle:lifecycle-runtime-compose", version.ref = "androidx-lifecycle" }
+androidx-lifecycle-runtime-ktx = { module = "androidx.lifecycle:lifecycle-runtime-ktx", version.ref = "androidx-lifecycle" }
 androidx-lifecycle-viewmodel-ktx = { module = "androidx.lifecycle:lifecycle-viewmodel-ktx", version.ref = "androidx-lifecycle" }
 androidx-lifecycle-viewmodel-navigation3 = { module = "androidx.lifecycle:lifecycle-viewmodel-navigation3-android", version.ref = "lifecycle-viewmodel-navigation3" }
 
@@ -101,8 +100,6 @@ coil-compose = { module = "io.coil-kt.coil3:coil-compose" }
 coil-network-okhttp = { module = "io.coil-kt.coil3:coil-network-okhttp" }
 
 lottie-compose = { module = "com.airbnb.android:lottie-compose", version.ref = "lottie" }
-
-calendar-compose = { module = "com.kizitonwose.calendar:compose", version.ref = "calendar" }
 
 firebase-bom = { module = "com.google.firebase:firebase-bom", version.ref = "firebase-bom" }
 firebase-analytics = { module = "com.google.firebase:firebase-analytics" }

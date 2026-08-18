@@ -96,11 +96,7 @@ sealed interface GamssTopNavigationContent {
 fun GamssTopNavigation(
     content: GamssTopNavigationContent,
     modifier: Modifier = Modifier,
-    backgroundColor: Color = if (GamssTheme.isDarkTheme) {
-        GamssTheme.colors.black
-    } else {
-        GamssTheme.colors.white
-    },
+    backgroundColor: Color = GamssTheme.colors.background,
     showLeftIcon: Boolean = false,
     leftIconContentDescription: String? = null,
     onLeftIconClick: () -> Unit = {},

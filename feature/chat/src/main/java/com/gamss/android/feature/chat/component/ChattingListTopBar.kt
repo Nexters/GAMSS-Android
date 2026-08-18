@@ -33,7 +33,6 @@ internal fun ChattingListTopBar(
             } else {
                 GamssTopNavigationContent.Logo
             },
-            backgroundColor = GamssTheme.colors.background,
             showLeftIcon = isSelectionMode,
             onLeftIconClick = onSelectionCancel,
             leftIconContentDescription = stringResource(R.string.chatting_list_selection_cancel),

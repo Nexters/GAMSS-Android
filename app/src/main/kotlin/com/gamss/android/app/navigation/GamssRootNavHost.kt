@@ -59,7 +59,6 @@ fun GamssRootNavHost(
 
         else -> RootNavDisplay(
             sessionState = state.sessionState,
-            useCardFeature = state.useCardFeature,
             shouldPromptNotificationPermission = mainViewModel::shouldPromptNotificationPermission,
             onNotificationPermissionPrompted = mainViewModel::markNotificationPermissionPrompted,
             onNotificationPermissionResult = mainViewModel::syncDeviceToken,
@@ -70,7 +69,6 @@ fun GamssRootNavHost(
 @Composable
 private fun RootNavDisplay(
     sessionState: SessionState,
-    useCardFeature: Boolean,
     shouldPromptNotificationPermission: suspend () -> Boolean,
     onNotificationPermissionPrompted: () -> Unit,
     onNotificationPermissionResult: () -> Unit,
@@ -140,7 +138,7 @@ private fun RootNavDisplay(
                             requestNotificationPermission()
                         }
                     }
-                    MainScreen(useCardFeature = useCardFeature)
+                    MainScreen()
                 }
             },
         ),

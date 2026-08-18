@@ -10,5 +10,6 @@ dependencies {
     implementation(projects.core.common)
     implementation(projects.core.ui)
     implementation(projects.domain)
+    implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.compose.material.icons.core)
 }
