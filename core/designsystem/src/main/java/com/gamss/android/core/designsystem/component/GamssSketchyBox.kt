@@ -24,6 +24,9 @@ private val ArtCorner = 12.dp
 // 아트의 모서리가 둥글어, 배경을 직각으로 칠하면 흰 모서리가 선 밖으로 삐져나온다.
 private val BackgroundCorner = 4.dp
 
+// 링 안쪽(가운데 칸)은 비어 있어 그릴 것이 없다. 그리기마다 새로 만들지 않게 한 번만 계산한다.
+private val NineSliceCells = (0..2).flatMap { col -> (0..2).map { row -> col to row } } - (1 to 1)
+
 /**
  * 손그림 사각 테두리를 9-slice 로 그린다. 모서리는 원본 크기로 두고 직선 구간만 늘리므로,
  * 어떤 크기에 올려도 선 굵기가 변하지 않는다. 통째로 늘리면 늘린 방향의 선만 두꺼워진다.
@@ -48,10 +51,7 @@ private fun DrawScope.drawNineSlice(art: Painter) {
     val dstX = floatArrayOf(0f, corner, size.width - corner, size.width)
     val dstY = floatArrayOf(0f, corner, size.height - corner, size.height)
 
-    // 링 안쪽(가운데 칸)은 비어 있어 그릴 것이 없다.
-    val slices = (0..2).flatMap { col -> (0..2).map { row -> col to row } } - (1 to 1)
-
-    slices.forEach { (col, row) ->
+    NineSliceCells.forEach { (col, row) ->
         val scaleX = sliceScale(srcX, dstX, col)
         val scaleY = sliceScale(srcY, dstY, row)
         if (scaleX <= 0f || scaleY <= 0f) return@forEach

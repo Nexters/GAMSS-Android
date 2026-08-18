@@ -72,7 +72,7 @@ fun MainScreen(
 
     ModelDownloadConfirmationEffect(modelDownloadPromptViewModel, snackbarHostState)
 
-    // 배경/탭바 에셋이 라이트 전용이라 다크 시안이 나올 때까지 셸은 라이트로 고정한다.
+    // 종이 배경과 손그림 에셋이 라이트 전용이라 다크 시안이 나올 때까지 셸은 라이트로 고정한다.
     GamssTheme(darkTheme = false) {
         // 종이 보드가 상태바와 탭바 뒤까지 이어져야 해서 Scaffold 바깥에 깐다.
         GamssPaperBackground {

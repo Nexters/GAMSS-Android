@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- 손그림 사각 테두리 원본. 9-slice 로 그려야 늘려도 선 굵기가 안 변한다.
-     aapt2 가 32KB 넘는 pathData 를 STRING_TOO_LARGE 로 치환하므로 서브패스 단위로 나눠 담는다. -->
+     pathData 한 개는 aapt2 의 32KB 문자열 한도 아래여야 한다. 넘기면 STRING_TOO_LARGE 로 조용히
+     잘리므로, 에셋을 갈아 끼울 때 크기를 확인하고 필요하면 서브패스 단위로 나눠 담는다. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="99dp"
     android:height="38dp"
