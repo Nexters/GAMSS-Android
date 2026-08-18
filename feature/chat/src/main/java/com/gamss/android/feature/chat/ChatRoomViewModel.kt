@@ -138,6 +138,18 @@ class ChatRoomViewModel @Inject constructor(
     }
 
     /**
+     * [onSend] 성공 직후의 백그라운드 갱신. 메시지를 반영하는 reduce와 분리된 별도 인텐트로
+     * 띄워, 사용량 조회가 느려도 이미 도착한 메시지 표시가 지연되지 않게 한다. 실패 시엔
+     * 이전 값을 조용히 유지한다.
+     */
+    private fun refreshTokenUsageInBackground() {
+        intent {
+            val usagePercent = fetchTokenUsagePercent()
+            reduce { state.copy(tokenUsagePercent = usagePercent ?: state.tokenUsagePercent) }
+        }
+    }
+
+    /**
      * 조회 실패는 채팅 자체를 막을 이유가 없어 화면에는 조용히 null 로만 반영한다.
      */
     private suspend fun fetchTokenUsagePercent(): Int? =
@@ -194,9 +206,6 @@ class ChatRoomViewModel @Inject constructor(
             is AppResult.Success -> {
                 val sent = result.data
                 tokenUsageRefreshNotifier.requestRefresh()
-                // 메시지 반영과 같은 reduce 에 묶어야 한다 — 따로 reduce 하면 상태 스트림에
-                // 댓글 노출 사이로 사용량 갱신용 상태가 하나 더 끼어든다.
-                val usagePercent = fetchTokenUsagePercent()
                 reduce {
                     state.copy(
                         isSending = false,
@@ -205,12 +214,12 @@ class ChatRoomViewModel @Inject constructor(
                         pendingComments = sent.comments,
                         input = if (state.input == sending.content) "" else state.input,
                         replyTarget = state.replyTarget.takeIf { it?.messageId != sending.replyToMessageId },
-                        tokenUsagePercent = usagePercent ?: state.tokenUsagePercent,
                     )
                 }
                 launchCommentReveal()
                 sent.commentStatus.toUserMessage()?.let { postSideEffect(ChatRoomSideEffect.ShowToast(it)) }
                 session.finishSend()
+                refreshTokenUsageInBackground()
             }
             is AppResult.Failure -> {
                 reduce { state.copy(isSending = false) }
