@@ -43,6 +43,9 @@ internal class ChatScrollState(
     // 또 새 메시지로 처리해 토스트를 잠깐 띄웠다 지우는 걸 막는다.
     private var lastAutoScrolledMessageId: Long? = null
 
+    // handleSendingChanged 가 true→false 전환만 골라내는 데 쓰는 직전 값.
+    private var wasSending = false
+
     val showScrollToBottomButton: Boolean by derivedStateOf {
         listState.canScrollForward && newMessageToast == null
     }
@@ -67,9 +70,18 @@ internal class ChatScrollState(
         hasScrolledToInitialBottom = true
     }
 
+    /** [state]의 isSending 값이 바뀔 때마다 호출한다. true→false 전환일 때만 전송 완료 처리를 한다. */
+    suspend fun handleSendingChanged(state: ChatRoomState) {
+        val isSending = state.isSending
+        if (wasSending && !isSending) {
+            handleSendConcluded(state)
+        }
+        wasSending = isSending
+    }
+
     // 스크롤(애니메이션이라 시간이 걸림)보다 커서 갱신이 먼저 반영돼야, 그 사이 handleNewMessage
     // 가 같은 메시지를 놓치고 토스트를 잠깐 띄우는 경합을 막을 수 있다.
-    suspend fun handleSendConcluded(state: ChatRoomState) {
+    private suspend fun handleSendConcluded(state: ChatRoomState) {
         if (!hasScrolledToInitialBottom) return
         lastAutoScrolledMessageId = state.messages.lastOrNull()?.id
         newMessageToast = null
@@ -135,26 +147,23 @@ internal fun rememberChatScrollState(
         scrollState.handleInitialLoad(state)
     }
 
-    var wasSending by remember(state.conversationId) { mutableStateOf(false) }
     LaunchedEffect(state.isSending) {
-        if (wasSending && !state.isSending) {
-            scrollState.handleSendConcluded(state)
-        }
-        wasSending = state.isSending
+        scrollState.handleSendingChanged(state)
     }
 
     LaunchedEffect(state.messages.lastOrNull()?.id, scrollState.hasScrolledToInitialBottom) {
         scrollState.handleNewMessage(state)
     }
 
-    // scrollState 를 key 에 반드시 포함해야 한다 — 홈에서 새로 보낸 첫 메시지처럼 conversationId 가
-    // 나중에(전송 성공 시점에) 채워지는 대화는 remember(conversationId) 로 새 ChatScrollState 인스턴스가
-    // 만들어지는데, listState 는 그대로라 key 에 scrollState 가 없으면 이 effect 는 재시작되지 않고
-    // 이미 못 쓰게 된 옛 인스턴스의 클로저를 계속 붙든 채 실행된다 — 실제로 화면에 쓰이는(새)
-    // 인스턴스의 newMessageToast 는 영영 지워지지 않는다.
+
     LaunchedEffect(scrollState, listState) {
-        snapshotFlow { listState.layoutInfo.visibleItemsInfo.map { it.key } }
-            .collect { scrollState.clearToastIfMessageVisible() }
+        // 보이는 아이템 "목록"이 아니라 보이는 범위의 양 끝 인덱스만 본다 — 스크롤 중이면 매
+        // 프레임 바뀌는 값이라, visibleItemsInfo 전체를 새 List로 매핑하는 비용을 피한다. 목록은
+        // 항상 연속된 범위라 양 끝이 그대로면 그 안의 가시성도 그대로다.
+        snapshotFlow {
+            val visible = listState.layoutInfo.visibleItemsInfo
+            visible.firstOrNull()?.index to visible.lastOrNull()?.index
+        }.collect { scrollState.clearToastIfMessageVisible() }
     }
 
     return scrollState
