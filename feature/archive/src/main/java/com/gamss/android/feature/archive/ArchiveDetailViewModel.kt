@@ -61,9 +61,7 @@ class ArchiveDetailViewModel @Inject constructor(
             state.copy(
                 yearMonth = yearMonth,
                 isMonthPickerVisible = false,
-                isLoading = true,
-                cards = emptyList(),
-                loadFailed = false,
+                cards = ArchiveCards.Loading,
             )
         }
         loadMonth(emotion, yearMonth)
@@ -109,20 +107,15 @@ class ArchiveDetailViewModel @Inject constructor(
         postSideEffect(ArchiveDetailSideEffect.OpenChatRoom(conversationId))
     }
 
+    /** 월별 응답은 모든 감정을 섞어 주므로 이 화면이 보고 있는 감정만 남긴다. */
     private suspend fun Syntax<ArchiveDetailState, ArchiveDetailSideEffect>.loadMonth(
         emotion: EmotionCharacter,
         yearMonth: YearMonth,
     ) {
-        when (val result = getCardsByMonth(yearMonth)) {
-            is AppResult.Success -> reduce {
-                state.copy(
-                    isLoading = false,
-                    loadFailed = false,
-                    cards = result.data.filter { it.character == emotion },
-                )
-            }
-
-            is AppResult.Failure -> reduce { state.copy(isLoading = false, loadFailed = true) }
+        val cards = when (val result = getCardsByMonth(yearMonth)) {
+            is AppResult.Success -> ArchiveCards.Loaded(result.data.filter { it.character == emotion })
+            is AppResult.Failure -> ArchiveCards.LoadFailed
         }
+        reduce { state.copy(cards = cards) }
     }
 }

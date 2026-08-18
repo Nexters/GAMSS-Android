@@ -1,4 +1,4 @@
-package com.gamss.android.feature.calendar.component
+package com.gamss.android.feature.archive.component
 
 import android.content.res.Configuration
 import androidx.compose.foundation.clickable
@@ -52,9 +52,9 @@ internal fun CardDetailDialog(
                 character = card.character.toGamssEmotionCardCharacter(),
                 title = stringResource(card.character.cardTitleRes()),
                 description = card.summary,
-                primaryActionLabel = stringResource(R.string.calendar_card_discard),
-                secondaryActionLabel = stringResource(R.string.calendar_card_view_conversation),
-                shareActionLabel = stringResource(R.string.calendar_card_share),
+                primaryActionLabel = stringResource(R.string.archive_card_discard),
+                secondaryActionLabel = stringResource(R.string.archive_card_view_conversation),
+                shareActionLabel = stringResource(R.string.archive_card_share),
                 onPrimaryActionClick = onDiscardClick,
                 onSecondaryActionClick = onViewConversationClick,
                 onShareClick = onShareClick,
@@ -83,7 +83,7 @@ private fun CardCloseButton(onClick: () -> Unit) {
     ) {
         Icon(
             imageVector = Icons.Default.Close,
-            contentDescription = stringResource(R.string.calendar_card_close_description),
+            contentDescription = stringResource(R.string.archive_card_close_description),
             tint = GamssTheme.colors.gray300,
             modifier = Modifier.size(CloseIconSize),
         )
@@ -127,9 +127,9 @@ private fun CardDetailDialogPreviewContent() {
         character = GamssEmotionCardCharacter.ANGER,
         title = "오늘 화~나네",
         description = "설느닛람햄을 긱에자네에 신손 겅투히오의 흐랸비의 수매해으는 하어이",
-        primaryActionLabel = stringResource(R.string.calendar_card_discard),
-        secondaryActionLabel = stringResource(R.string.calendar_card_view_conversation),
-        shareActionLabel = stringResource(R.string.calendar_card_share),
+        primaryActionLabel = stringResource(R.string.archive_card_discard),
+        secondaryActionLabel = stringResource(R.string.archive_card_view_conversation),
+        shareActionLabel = stringResource(R.string.archive_card_share),
         onPrimaryActionClick = {},
         onSecondaryActionClick = {},
         onShareClick = {},

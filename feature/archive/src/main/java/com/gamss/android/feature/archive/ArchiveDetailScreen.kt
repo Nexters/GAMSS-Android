@@ -35,10 +35,10 @@ import com.gamss.android.core.designsystem.theme.GamssTheme
 import com.gamss.android.domain.card.Card
 import com.gamss.android.domain.card.CardEntry
 import com.gamss.android.domain.emotion.EmotionCharacter
+import com.gamss.android.feature.archive.component.CardDetailDialog
 import com.gamss.android.feature.archive.component.MonthSelector
 import com.gamss.android.feature.archive.component.PaperPile
 import com.gamss.android.feature.archive.component.YearMonthPickerSheet
-import com.gamss.android.feature.calendar.component.CardDetailDialog
 import org.orbitmvi.orbit.compose.collectAsState
 import org.orbitmvi.orbit.compose.collectSideEffect
 import java.time.LocalDate
@@ -58,9 +58,9 @@ fun ArchiveDetailScreen(
 ) {
     val state by viewModel.collectAsState()
     val context = LocalContext.current
-    val shareChooserTitle = stringResource(R.string.calendar_card_share_chooser_title)
-    val cardLoadFailedMessage = stringResource(R.string.calendar_card_load_error)
-    val discardFailedMessage = stringResource(R.string.calendar_card_discard_failure)
+    val shareChooserTitle = stringResource(R.string.archive_card_share_chooser_title)
+    val cardLoadFailedMessage = stringResource(R.string.archive_card_load_error)
+    val discardFailedMessage = stringResource(R.string.archive_card_discard_failure)
 
     LaunchedEffect(emotion) { viewModel.load(emotion) }
 
@@ -80,36 +80,33 @@ fun ArchiveDetailScreen(
         state = state,
         onBackClick = onBackClick,
         onPaperClick = viewModel::selectCard,
+        onMonthClick = viewModel::showMonthPicker,
+        onClearClick = viewModel::showClearDialog,
+    )
+
+    ArchiveDetailOverlays(
+        state = state,
+        onMonthSelect = viewModel::selectMonth,
+        onMonthPickerDismiss = viewModel::dismissMonthPicker,
+        // 무엇을 비울지(감정별·달별·전체) 정해지기 전이라 확인도 닫기만 한다.
+        onClearConfirm = viewModel::dismissClearDialog,
+        onClearDismiss = viewModel::dismissClearDialog,
         onCardDismiss = viewModel::dismissCard,
         onCardDiscard = viewModel::discardSelectedCard,
         onCardConversationClick = viewModel::viewSelectedConversation,
         onCardShare = { card -> shareCard(context, card, shareChooserTitle) },
-        onMonthClick = viewModel::showMonthPicker,
-        onMonthSelect = viewModel::selectMonth,
-        onMonthPickerDismiss = viewModel::dismissMonthPicker,
-        onClearClick = viewModel::showClearDialog,
-        // 무엇을 비울지(감정별·달별·전체) 정해지기 전이라 확인도 닫기만 한다.
-        onClearConfirm = viewModel::dismissClearDialog,
-        onClearDismiss = viewModel::dismissClearDialog,
     )
 }
 
+/** 항상 보이는 부분. 위에 겹쳐 뜨는 시트·다이얼로그는 [ArchiveDetailOverlays] 가 맡는다. */
 @Composable
 private fun ArchiveDetailFrame(
     emotion: EmotionCharacter,
     state: ArchiveDetailState,
     onBackClick: () -> Unit,
     onPaperClick: (CardEntry) -> Unit,
-    onCardDismiss: () -> Unit,
-    onCardDiscard: () -> Unit,
-    onCardConversationClick: () -> Unit,
-    onCardShare: (Card) -> Unit,
     onMonthClick: () -> Unit,
-    onMonthSelect: (YearMonth) -> Unit,
-    onMonthPickerDismiss: () -> Unit,
     onClearClick: () -> Unit,
-    onClearConfirm: () -> Unit,
-    onClearDismiss: () -> Unit,
 ) {
     Scaffold(
         containerColor = GamssTheme.colors.white,
@@ -127,10 +124,24 @@ private fun ArchiveDetailFrame(
                 onClick = onMonthClick,
                 modifier = Modifier.align(Alignment.TopCenter),
             )
-            ArchiveDetailCards(state = state, onPaperClick = onPaperClick)
+            ArchiveDetailCards(cards = state.cards, onPaperClick = onPaperClick)
         }
     }
+}
 
+/** 셋 다 아무것도 안 뜬 상태가 기본이라, 프레임과 떼어 여기서만 켜고 끈다. */
+@Composable
+private fun ArchiveDetailOverlays(
+    state: ArchiveDetailState,
+    onMonthSelect: (YearMonth) -> Unit,
+    onMonthPickerDismiss: () -> Unit,
+    onClearConfirm: () -> Unit,
+    onClearDismiss: () -> Unit,
+    onCardDismiss: () -> Unit,
+    onCardDiscard: () -> Unit,
+    onCardConversationClick: () -> Unit,
+    onCardShare: (Card) -> Unit,
+) {
     if (state.isMonthPickerVisible) {
         YearMonthPickerSheet(
             selected = state.yearMonth,
@@ -229,15 +240,18 @@ private fun ArchiveDetailTopBar(
 
 @Composable
 private fun ArchiveDetailCards(
-    state: ArchiveDetailState,
+    cards: ArchiveCards,
     onPaperClick: (CardEntry) -> Unit,
 ) {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        when {
-            state.isLoading -> CircularProgressIndicator(color = GamssTheme.colors.gray700)
-            state.loadFailed -> EmptyMessage(textRes = R.string.archive_cards_load_failed)
-            state.cards.isEmpty() -> EmptyMessage(textRes = R.string.archive_cards_empty)
-            else -> PaperPile(cards = state.cards, onPaperClick = onPaperClick)
+        when (cards) {
+            ArchiveCards.Loading -> CircularProgressIndicator(color = GamssTheme.colors.gray700)
+            ArchiveCards.LoadFailed -> EmptyMessage(textRes = R.string.archive_cards_load_failed)
+            is ArchiveCards.Loaded -> if (cards.entries.isEmpty()) {
+                EmptyMessage(textRes = R.string.archive_cards_empty)
+            } else {
+                PaperPile(cards = cards.entries, onPaperClick = onPaperClick)
+            }
         }
     }
 }
@@ -267,21 +281,12 @@ private fun ArchiveDetailPaperPilePreview() {
             state = ArchiveDetailState(
                 emotion = EmotionCharacter.QUIRKY,
                 yearMonth = YearMonth.of(2026, 7),
-                isLoading = false,
-                cards = List(24) { index -> PreviewCard.copy(indexInDate = index) },
+                cards = ArchiveCards.Loaded(List(24) { index -> PreviewCard.copy(indexInDate = index) }),
             ),
             onBackClick = {},
             onPaperClick = {},
-            onCardDismiss = {},
-            onCardDiscard = {},
-            onCardConversationClick = {},
-            onCardShare = {},
             onMonthClick = {},
-            onMonthSelect = {},
-            onMonthPickerDismiss = {},
             onClearClick = {},
-            onClearConfirm = {},
-            onClearDismiss = {},
         )
     }
 }

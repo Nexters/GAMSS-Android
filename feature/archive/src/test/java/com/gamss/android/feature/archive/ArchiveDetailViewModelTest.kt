@@ -28,13 +28,7 @@ class ArchiveDetailViewModelTest {
             containerHost.load(EmotionCharacter.ANGER)
 
             expectState { copy(emotion = EmotionCharacter.ANGER) }
-            expectState {
-                copy(
-                    emotion = EmotionCharacter.ANGER,
-                    isLoading = false,
-                    cards = listOf(angerEntry),
-                )
-            }
+            expectState { copy(cards = ArchiveCards.Loaded(listOf(angerEntry))) }
         }
     }
 
@@ -46,13 +40,7 @@ class ArchiveDetailViewModelTest {
             containerHost.load(EmotionCharacter.ANGER)
 
             expectState { copy(emotion = EmotionCharacter.ANGER) }
-            expectState {
-                copy(
-                    emotion = EmotionCharacter.ANGER,
-                    isLoading = false,
-                    loadFailed = true,
-                )
-            }
+            expectState { copy(cards = ArchiveCards.LoadFailed) }
         }
     }
 
@@ -65,7 +53,7 @@ class ArchiveDetailViewModelTest {
         viewModel.test(this) {
             containerHost.load(EmotionCharacter.ANGER)
             expectState { copy(emotion = EmotionCharacter.ANGER) }
-            expectState { copy(emotion = EmotionCharacter.ANGER, isLoading = false, cards = listOf(angerEntry)) }
+            expectState { copy(cards = ArchiveCards.Loaded(listOf(angerEntry))) }
 
             containerHost.showMonthPicker()
             expectState { copy(isMonthPickerVisible = true) }
@@ -75,11 +63,10 @@ class ArchiveDetailViewModelTest {
                 copy(
                     yearMonth = previousMonth,
                     isMonthPickerVisible = false,
-                    isLoading = true,
-                    cards = emptyList(),
+                    cards = ArchiveCards.Loading,
                 )
             }
-            expectState { copy(isLoading = false, cards = listOf(angerEntry)) }
+            expectState { copy(cards = ArchiveCards.Loaded(listOf(angerEntry))) }
         }
 
         assertEquals(previousMonth, repository.requestedMonths.last())
@@ -95,7 +82,7 @@ class ArchiveDetailViewModelTest {
         viewModel.test(this) {
             containerHost.load(EmotionCharacter.ANGER)
             expectState { copy(emotion = EmotionCharacter.ANGER) }
-            expectState { copy(emotion = EmotionCharacter.ANGER, isLoading = false, cards = listOf(angerEntry)) }
+            expectState { copy(cards = ArchiveCards.Loaded(listOf(angerEntry))) }
 
             containerHost.showMonthPicker()
             expectState { copy(isMonthPickerVisible = true) }
@@ -118,7 +105,7 @@ class ArchiveDetailViewModelTest {
         viewModel.test(this) {
             containerHost.load(EmotionCharacter.ANGER)
             expectState { copy(emotion = EmotionCharacter.ANGER) }
-            expectState { copy(emotion = EmotionCharacter.ANGER, isLoading = false, cards = listOf(angerEntry)) }
+            expectState { copy(cards = ArchiveCards.Loaded(listOf(angerEntry))) }
 
             containerHost.selectCard(joyEntry)
             expectState { copy(isCardLoading = true) }
@@ -139,7 +126,7 @@ class ArchiveDetailViewModelTest {
         viewModel.test(this) {
             containerHost.load(EmotionCharacter.ANGER)
             expectState { copy(emotion = EmotionCharacter.ANGER) }
-            expectState { copy(emotion = EmotionCharacter.ANGER, isLoading = false, cards = listOf(angerEntry)) }
+            expectState { copy(cards = ArchiveCards.Loaded(listOf(angerEntry))) }
 
             containerHost.selectCard(angerEntry)
             expectState { copy(isCardLoading = true) }
@@ -159,7 +146,7 @@ class ArchiveDetailViewModelTest {
         viewModel.test(this) {
             containerHost.load(EmotionCharacter.ANGER)
             expectState { copy(emotion = EmotionCharacter.ANGER) }
-            expectState { copy(emotion = EmotionCharacter.ANGER, isLoading = false, cards = listOf(angerEntry)) }
+            expectState { copy(cards = ArchiveCards.Loaded(listOf(angerEntry))) }
 
             containerHost.selectCard(angerEntry)
             expectState { copy(isCardLoading = true) }
@@ -185,7 +172,7 @@ class ArchiveDetailViewModelTest {
         viewModel.test(this) {
             containerHost.load(EmotionCharacter.ANGER)
             expectState { copy(emotion = EmotionCharacter.ANGER) }
-            expectState { copy(emotion = EmotionCharacter.ANGER, isLoading = false, cards = listOf(angerEntry)) }
+            expectState { copy(cards = ArchiveCards.Loaded(listOf(angerEntry))) }
 
             containerHost.selectCard(angerEntry)
             expectState { copy(isCardLoading = true) }
