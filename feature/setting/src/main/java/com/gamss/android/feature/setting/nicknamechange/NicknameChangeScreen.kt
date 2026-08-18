@@ -55,6 +55,9 @@ fun NicknameChangeScreen(
     val canSave = trimmedInput.isNotEmpty() &&
         trimmedInput != state.originalNickname &&
         trimmedInput.length in NicknamePolicy.MIN_LENGTH..NicknamePolicy.MAX_LENGTH
+    // 최대 길이는 onValueChange 에서 이미 막으므로, 최소 길이만 안내한다. 판정 기준은 canSave 와 같은 공백 제외 길이다.
+    val showMinLengthError = state.nicknameInput.isNotEmpty() &&
+        trimmedInput.length < NicknamePolicy.MIN_LENGTH
 
     Column(
         modifier = modifier
@@ -74,9 +77,14 @@ fun NicknameChangeScreen(
                 .padding(horizontal = ScreenHorizontalPadding)
                 .padding(top = GamssTheme.spacing.spacing300),
             label = stringResource(R.string.nickname_change_input_label),
+            placeholder = stringResource(R.string.nickname_change_input_placeholder),
+            errorMessage = stringResource(R.string.nickname_change_input_error_min_length)
+                .takeIf { showMinLengthError },
             value = state.nicknameInput,
             onValueChange = { nickname ->
-                if (nickname.length <= NicknamePolicy.MAX_LENGTH) {
+                // 저장 판정과 같은 공백 제외 길이로 막는다. 원본 길이로 재면 뒤에 붙은 공백 때문에
+                // 유효 글자를 20자까지 채우지 못한다.
+                if (nickname.trim().length <= NicknamePolicy.MAX_LENGTH) {
                     viewModel.onNicknameInputChange(nickname)
                 }
             },

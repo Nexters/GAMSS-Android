@@ -32,6 +32,8 @@ fun GamssTextField(
     value: String,
     onValueChange: (String) -> Unit,
     modifier: Modifier = Modifier,
+    placeholder: String? = null,
+    errorMessage: String? = null,
     singleLine: Boolean = true,
 ) {
     Column(modifier = modifier) {
@@ -58,8 +60,23 @@ fun GamssTextField(
                     .padding(horizontal = GamssTheme.spacing.spacing300),
                 contentAlignment = Alignment.CenterStart,
             ) {
+                if (placeholder != null && value.isEmpty()) {
+                    Text(
+                        text = placeholder,
+                        style = GamssTheme.typography.body3Medium,
+                        color = GamssTheme.colors.gray400,
+                    )
+                }
                 innerTextField()
             }
+        }
+        if (errorMessage != null) {
+            Spacer(modifier = Modifier.height(GamssTheme.spacing.spacing100))
+            Text(
+                text = errorMessage,
+                style = GamssTheme.typography.body5Medium,
+                color = GamssTheme.colors.red,
+            )
         }
     }
 }
@@ -75,7 +92,39 @@ private fun GamssTextFieldPreview() {
         GamssTextField(
             modifier = Modifier.fillMaxWidth(),
             label = "변경할 닉네임을 입력해주세요.",
+            placeholder = "닉네임은 2~20자 사이로 입력해주세요.",
             value = "송지연",
+            onValueChange = {},
+        )
+    }
+}
+
+@Preview(name = "GamssTextField - Placeholder", showBackground = true)
+@Composable
+@Suppress("UnusedPrivateMember")
+private fun GamssTextFieldPlaceholderPreview() {
+    GamssTheme {
+        GamssTextField(
+            modifier = Modifier.fillMaxWidth(),
+            label = "변경할 닉네임을 입력해주세요.",
+            placeholder = "닉네임은 2~20자 사이로 입력해주세요.",
+            value = "",
+            onValueChange = {},
+        )
+    }
+}
+
+@Preview(name = "GamssTextField - Error", showBackground = true)
+@Composable
+@Suppress("UnusedPrivateMember")
+private fun GamssTextFieldErrorPreview() {
+    GamssTheme {
+        GamssTextField(
+            modifier = Modifier.fillMaxWidth(),
+            label = "변경할 닉네임을 입력해주세요.",
+            placeholder = "닉네임은 2~20자 사이로 입력해주세요.",
+            errorMessage = "닉네임은 2자 이상으로 입력해주세요.",
+            value = "아",
             onValueChange = {},
         )
     }
