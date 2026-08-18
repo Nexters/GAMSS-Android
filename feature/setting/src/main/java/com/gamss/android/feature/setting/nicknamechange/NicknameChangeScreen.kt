@@ -5,16 +5,19 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.exclude
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -55,20 +58,19 @@ fun NicknameChangeScreen(
         }
     }
 
+    var maxLengthExceeded by rememberSaveable { mutableStateOf(false) }
+
     val trimmedInput = state.nicknameInput.trim()
     val canSave = trimmedInput.isNotEmpty() &&
         trimmedInput != state.originalNickname &&
         trimmedInput.length in NicknamePolicy.MIN_LENGTH..NicknamePolicy.MAX_LENGTH
-    // 길이를 벗어난 입력도 막지 않고 그대로 받아 안내 문구로 알린다. 저장은 canSave 가 막는다.
-    // 판정 기준은 canSave 와 같은 공백 제외 길이다.
     val lengthErrorMessage = when {
+        maxLengthExceeded -> stringResource(R.string.nickname_change_input_error_max_length)
+
         state.nicknameInput.isEmpty() -> null
 
         trimmedInput.length < NicknamePolicy.MIN_LENGTH ->
             stringResource(R.string.nickname_change_input_error_min_length)
-
-        trimmedInput.length > NicknamePolicy.MAX_LENGTH ->
-            stringResource(R.string.nickname_change_input_error_max_length)
 
         else -> null
     }
@@ -77,7 +79,7 @@ fun NicknameChangeScreen(
         modifier = modifier
             .fillMaxSize()
             .background(GamssTheme.colors.background)
-            .windowInsetsPadding(WindowInsets.ime.exclude(WindowInsets.navigationBars)),
+            .windowInsetsPadding(WindowInsets.ime.union(WindowInsets.navigationBars)),
     ) {
         GamssTopNavigation(
             title = stringResource(R.string.account_info_nickname_change),
@@ -91,10 +93,16 @@ fun NicknameChangeScreen(
                 .padding(horizontal = ScreenHorizontalPadding)
                 .padding(top = GamssTheme.spacing.spacing300),
             label = stringResource(R.string.nickname_change_input_label),
-            placeholder = stringResource(R.string.nickname_change_input_placeholder),
             errorMessage = lengthErrorMessage,
             value = state.nicknameInput,
-            onValueChange = viewModel::onNicknameInputChange,
+            onValueChange = { nickname ->
+                if (nickname.trim().length > NicknamePolicy.MAX_LENGTH) {
+                    maxLengthExceeded = true
+                } else {
+                    maxLengthExceeded = false
+                    viewModel.onNicknameInputChange(nickname)
+                }
+            },
         )
 
         Spacer(modifier = Modifier.weight(1f))
