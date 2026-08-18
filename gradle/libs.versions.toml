@@ -24,6 +24,7 @@ retrofit = "3.0.0"
 okhttp = "5.4.0"
 room = "3.0.0-alpha06"
 coil = "3.5.0"
+lottie = "6.7.1"
 firebase-bom = "34.15.0"
 firebase-crashlytics-gradle = "3.0.7"
 google-services = "4.4.4"
@@ -97,6 +98,8 @@ room-compiler = { module = "androidx.room3:room3-compiler", version.ref = "room"
 coil-bom = { module = "io.coil-kt.coil3:coil-bom", version.ref = "coil" }
 coil-compose = { module = "io.coil-kt.coil3:coil-compose" }
 coil-network-okhttp = { module = "io.coil-kt.coil3:coil-network-okhttp" }
+
+lottie-compose = { module = "com.airbnb.android:lottie-compose", version.ref = "lottie" }
 
 firebase-bom = { module = "com.google.firebase:firebase-bom", version.ref = "firebase-bom" }
 firebase-analytics = { module = "com.google.firebase:firebase-analytics" }
