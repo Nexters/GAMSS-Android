@@ -155,7 +155,6 @@ internal fun rememberChatScrollState(
         scrollState.handleNewMessage(state)
     }
 
-
     LaunchedEffect(scrollState, listState) {
         // 보이는 아이템 "목록"이 아니라 보이는 범위의 양 끝 인덱스만 본다 — 스크롤 중이면 매
         // 프레임 바뀌는 값이라, visibleItemsInfo 전체를 새 List로 매핑하는 비용을 피한다. 목록은

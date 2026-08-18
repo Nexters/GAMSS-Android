@@ -1,8 +1,12 @@
 package com.gamss.android.core.common.util
 
 import java.time.LocalDateTime
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+
+/** 기기 시간대와 무관하게 한국 기준으로 "오늘"/"이번 달"을 고정해야 할 때 쓴다. */
+val KoreanTimeZone: ZoneId = ZoneId.of("Asia/Seoul")
 
 private const val KOREAN_TIME_PATTERN = "a h:mm"
 
