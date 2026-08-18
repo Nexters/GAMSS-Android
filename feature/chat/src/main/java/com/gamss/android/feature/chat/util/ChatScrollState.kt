@@ -55,7 +55,7 @@ internal class ChatScrollState(
     fun scrollToBottom(state: ChatRoomState) {
         val index = state.lastItemIndex
         if (index < 0) return
-        coroutineScope.launch { listState.animateScrollToItem(index) }
+        coroutineScope.launch { listState.scrollToItem(index) }
     }
 
     suspend fun handleInitialLoad(state: ChatRoomState) {
@@ -75,7 +75,7 @@ internal class ChatScrollState(
         newMessageToast = null
         val index = state.lastItemIndex
         if (index >= 0) {
-            listState.animateScrollToItem(index)
+            listState.scrollToItem(index)
         }
     }
 
