@@ -51,7 +51,7 @@ jobs:
           bundler-cache: true
 
       - name: Prepare secret directories
-        run: mkdir -p fastlane/config
+        run: mkdir -p fastlane/config keystore
 
       - name: Write google-services.json
         run: echo "${{ secrets.GOOGLE_SERVICES_JSON }}" | base64 -d > app/google-services.json
@@ -67,6 +67,9 @@ jobs:
           printf 'DEV_BASE_URL=%s\n' "$DEV_BASE_URL" > local.properties
           printf 'PROD_BASE_URL=%s\n' "$PROD_BASE_URL" >> local.properties
 
+      - name: Write release keystore
+        run: echo "${{ secrets.RELEASE_KEYSTORE }}" | base64 -d > keystore/release.jks
+
       - name: Write Firebase service account key
         run: echo "${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}" | base64 -d > fastlane/config/gamss-key.json
 
@@ -79,6 +82,10 @@ jobs:
           FIREBASE_SERVICE_CREDENTIALS_FILE: ${{ github.workspace }}/fastlane/config/gamss-key.json
           FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
           FIREBASE_TESTER_GROUPS: inner-tester
+          RELEASE_KEYSTORE_PATH: ${{ github.workspace }}/keystore/release.jks
+          RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
         run: bundle exec fastlane android distribute
 
       - name: Upload reports
