@@ -2,6 +2,8 @@ package com.gamss.android.feature.archive
 
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -16,10 +18,12 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.gamss.android.core.designsystem.component.GamssIconButton
@@ -41,6 +45,7 @@ private val archiveItems = listOf(
 @Composable
 fun ArchiveScreen(
     onNavigateToSetting: () -> Unit,
+    onArchiveClick: (EmotionCharacter) -> Unit,
 ) {
     Scaffold(
         containerColor = GamssTheme.colors.white,
@@ -67,14 +72,17 @@ fun ArchiveScreen(
                     color = GamssTheme.colors.gray950,
                     textAlign = TextAlign.Center,
                 )
-                ArchiveGrid(scale = scale)
+                ArchiveGrid(scale = scale, onArchiveClick = onArchiveClick)
             }
         }
     }
 }
 
 @Composable
-private fun ArchiveGrid(scale: Float) {
+private fun ArchiveGrid(
+    scale: Float,
+    onArchiveClick: (EmotionCharacter) -> Unit,
+) {
     Column(
         modifier = Modifier.padding(
             start = GridHorizontalPadding * scale,
@@ -95,7 +103,7 @@ private fun ArchiveGrid(scale: Float) {
                 ),
             ) {
                 rowItems.forEach { item ->
-                    ArchiveCard(item = item, scale = scale)
+                    ArchiveCard(item = item, scale = scale, onClick = { onArchiveClick(item.emotion) })
                 }
             }
         }
@@ -121,11 +129,20 @@ private fun ArchiveTopBar(onMenuClick: () -> Unit) {
 private fun ArchiveCard(
     item: ArchiveItem,
     scale: Float,
+    onClick: () -> Unit,
 ) {
+    val interactionSource = remember { MutableInteractionSource() }
     Image(
         painter = painterResource(item.binRes),
-        contentDescription = item.emotion.displayName,
-        modifier = Modifier.size(width = CardWidth * scale, height = CardHeight * scale),
+        contentDescription = stringResource(R.string.archive_open_description, item.emotion.displayName),
+        modifier = Modifier
+            .size(width = CardWidth * scale, height = CardHeight * scale)
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                role = Role.Button,
+                onClick = onClick,
+            ),
     )
 }
 

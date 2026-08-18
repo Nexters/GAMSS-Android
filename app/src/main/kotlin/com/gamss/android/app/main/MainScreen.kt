@@ -36,7 +36,9 @@ import com.gamss.android.app.navigation.topLevelDestinations
 import com.gamss.android.core.designsystem.component.GamssBottomBar
 import com.gamss.android.core.designsystem.component.GamssPaperBackground
 import com.gamss.android.core.designsystem.theme.GamssTheme
+import com.gamss.android.feature.archive.ArchiveDetailScreen
 import com.gamss.android.feature.archive.ArchiveScreen
+import com.gamss.android.feature.archive.navigation.ArchiveDetailKey
 import com.gamss.android.feature.archive.navigation.ArchiveKey
 import com.gamss.android.feature.carddelete.CardDeleteScreen
 import com.gamss.android.feature.carddelete.navigation.CardDeleteKey
@@ -125,6 +127,16 @@ private fun mainEntryProvider(navigator: Navigator) = entryProvider {
     entry<ArchiveKey> {
         ArchiveScreen(
             onNavigateToSetting = { navigator.navigate(SettingKey) },
+            onArchiveClick = { navigator.navigate(ArchiveDetailKey(it)) },
+        )
+    }
+    // 보관함 상세도 탭 안쪽의 상세 화면이라 다른 상세들과 같은 슬라이드를 쓴다.
+    entry<ArchiveDetailKey>(metadata = detailSlideTransition) { key ->
+        ArchiveDetailScreen(
+            emotion = key.emotion,
+            onBackClick = navigator::goBack,
+            onOpenConversation = { conversationId -> navigator.navigate(ChatRoomKey(conversationId)) },
+            onNavigateToCardDelete = { navigator.navigate(CardDeleteKey) },
         )
     }
     entry<SettingKey>(metadata = detailSlideTransition) {
