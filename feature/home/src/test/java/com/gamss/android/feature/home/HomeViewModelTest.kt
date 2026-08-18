@@ -192,6 +192,26 @@ class HomeViewModelTest {
     }
 
     @Test
+    fun `보내서 입력을 비운 뒤 다시 넘기면 또 알린다`() = runTest {
+        viewModel().test(this) {
+            val filled = "가".repeat(MAX_MESSAGE_LENGTH)
+            containerHost.onInputChange(filled + "가")
+            expectState { copy(input = filled) }
+            expectSideEffect(HomeSideEffect.ShowToast(MESSAGE_LENGTH_EXCEEDED))
+
+            containerHost.onSubmit()
+            expectState { copy(isSending = true) }
+            expectState { copy(isSending = false) }
+            expectState { copy(input = "") }
+            expectSideEffect(HomeSideEffect.OpenConversation(NEW_ROOM_ID))
+
+            containerHost.onInputChange(filled + "나")
+            expectState { copy(input = filled) }
+            expectSideEffect(HomeSideEffect.ShowToast(MESSAGE_LENGTH_EXCEEDED))
+        }
+    }
+
+    @Test
     fun `공백만 적힌 입력은 보내도 대화를 시작하지 않는다`() = runTest {
         viewModel().test(this) {
             containerHost.onInputChange(BLANK)

@@ -33,21 +33,13 @@ class HomeViewModel @Inject constructor(
         postSideEffect(HomeSideEffect.NavigateToSetting)
     }
 
-    // 이어 치는 동안 토스트가 쌓이지 않게, 넘긴 상태에서 벗어날 때까지 한 번만 알린다.
-    private var lengthWarned = false
-
     fun onInputChange(text: String) = blockingIntent {
         val limited = text.takeWithinMessageLimit()
+        // 잘린 결과가 넣어 둔 값과 같으면 상한에 붙은 채 계속 치는 중이다. 넘어서는 순간에만 알린다.
+        val crossedLimit = limited != text && limited != state.input
         reduce { state.copy(input = limited) }
 
-        if (limited != text) {
-            if (!lengthWarned) {
-                lengthWarned = true
-                postSideEffect(HomeSideEffect.ShowToast(MESSAGE_LENGTH_EXCEEDED))
-            }
-        } else {
-            lengthWarned = false
-        }
+        if (crossedLimit) postSideEffect(HomeSideEffect.ShowToast(MESSAGE_LENGTH_EXCEEDED))
     }
 
     fun onEmotionPickerToggle() = intent {
@@ -104,8 +96,6 @@ class HomeViewModel @Inject constructor(
                 // applicationScope 로 돌려서 이 화면을 벗어나도 끊기지 않는다.
                 viewModelScope.launch { session.finishSend() }
                 reduce { state.copy(input = "") }
-                // 비운 입력은 상한과 무관해졌으므로, 다시 넘기면 새로 알린다.
-                lengthWarned = false
                 postSideEffect(HomeSideEffect.OpenConversation(result.data.message.conversationId))
             }
             // 입력은 남겨 둔다. 실패한 문구를 다시 치게 하면 안 된다.
