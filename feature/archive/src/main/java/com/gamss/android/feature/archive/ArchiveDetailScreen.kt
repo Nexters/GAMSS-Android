@@ -119,12 +119,14 @@ private fun ArchiveDetailFrame(
         },
     ) { innerPadding ->
         Box(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
+            ArchiveDetailCards(cards = state.cards, onPaperClick = onPaperClick)
+            // 종이가 쌓일 자리보다 나중에 둔다. 카드가 많아 더미가 위로 넘치면 종이가 셀렉터를
+            // 가리고 탭까지 먹어 달을 못 바꾸게 된다.
             MonthSelector(
                 yearMonth = state.yearMonth,
                 onClick = onMonthClick,
                 modifier = Modifier.align(Alignment.TopCenter),
             )
-            ArchiveDetailCards(cards = state.cards, onPaperClick = onPaperClick)
         }
     }
 }

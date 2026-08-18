@@ -33,7 +33,6 @@ internal fun PaperPile(
         modifier = Modifier
             .fillMaxSize()
             .padding(top = PileTopPadding),
-        contentAlignment = Alignment.TopCenter,
     ) {
         val scale = designScale(maxWidth)
         val density = LocalDensity.current
@@ -41,6 +40,9 @@ internal fun PaperPile(
         val boundsHeightPx = with(density) { maxHeight.toPx() }
         val paperSizePx = with(density) { (PaperSize * scale).toPx() }
         val radiusPx = paperSizePx / 2f * PAPER_COLLISION_RADIUS_SCALE
+        // 시뮬레이션은 시안 폭(402dp) 안에서만 돈다. 더 넓은 화면에서는 그 폭을 가운데로 밀어야
+        // 상단바·월 셀렉터와 축이 맞는다. 종이는 TopStart 기준이라 contentAlignment 로는 안 된다.
+        val pileOffsetX = with(density) { ((maxWidth - designWidth(scale)) / 2).toPx() }
 
         // 키에 화면 크기를 넣지 않는다. 회전 등으로 크기만 바뀌었을 때 이미 쌓인 종이가 다시 쏟아진다.
         val fall = remember(cards) {
@@ -63,7 +65,7 @@ internal fun PaperPile(
                     .size(PaperSize * scale)
                     // 터치 영역도 그려진 자리를 따라가야 하므로 clickable 을 레이어 안쪽에 둔다.
                     .graphicsLayer {
-                        translationX = paper.x - paperSizePx / 2f
+                        translationX = pileOffsetX + paper.x - paperSizePx / 2f
                         translationY = paper.y - paperSizePx / 2f
                         rotationZ = paper.rotationDegrees
                     }
