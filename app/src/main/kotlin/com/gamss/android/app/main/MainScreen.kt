@@ -32,6 +32,7 @@ import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.scene.Scene
 import androidx.navigation3.ui.NavDisplay
 import androidx.navigationevent.NavigationEvent
+import com.gamss.android.app.R
 import com.gamss.android.app.navigation.Navigator
 import com.gamss.android.app.navigation.bottomBarItems
 import com.gamss.android.app.navigation.keys
@@ -103,7 +104,6 @@ fun MainScreen(
                     // 최상위 탭(Home/Calendar/Chat) 전환 기본값. 탭은 위계 없는 형제 화면이라
                     // 방향성 있는 슬라이드 대신 fade-through를 쓴다. 상세 화면은 아래 entry의
                     // metadata(detailTransition)가 이 기본값을 덮어쓴다.
-                    // 탭 entry에는 metadata가 없어 세 spec을 모두 지정한다. 빠뜨리면 그 경로만 scaleOut이 된다.
                     transitionSpec = tabFadeThroughSpec,
                     popTransitionSpec = tabFadeThroughSpec,
                     predictivePopTransitionSpec = { tabFadeThroughSpec(this) },
@@ -185,10 +185,8 @@ private val tabFadeThroughSpec: AnimatedContentTransitionScope<Scene<NavKey>>.()
  * 탭 내부의 상세 화면(Setting/AccountInfo/NicknameChange/ChatRoom/WebView) push·pop 전용
  * 트랜지션. 계층 이동이라는 방향감을 주기 위해 좌우 슬라이드(shared axis X)를 쓴다.
  *
- * popTransitionSpec과 predictivePopTransitionSpec을 반드시 같이 지정해야 한다. 진행 중인 제스처
- * 뒤로가기만 predictivePopTransitionSpec을 타고, 인앱 뒤로가기 아이콘(Navigator.goBack() 직접
- * 호출)과 3버튼 뒤로가기는 popTransitionSpec을 타기 때문에, 하나만 지정하면 트리거 경로에 따라
- * 모션이 달라져 버린다.
+ * 진행 중인 제스처 뒤로가기만 predictivePopTransitionSpec을 타고 나머지 트리거는
+ * popTransitionSpec을 타므로, 셋 다 지정하지 않으면 트리거 경로에 따라 모션이 갈린다.
  */
 private val detailSlideTransition: Map<String, Any> = NavDisplay.transitionSpec {
     (slideIntoContainer(SlideDirection.Start, tween(300)) + fadeIn(tween(300))) togetherWith
@@ -197,36 +195,35 @@ private val detailSlideTransition: Map<String, Any> = NavDisplay.transitionSpec 
     (slideIntoContainer(SlideDirection.End, tween(300)) + fadeIn(tween(300))) togetherWith
         (slideOutOfContainer(SlideDirection.End, tween(300)) + fadeOut(tween(150)))
 } + NavDisplay.predictivePopTransitionSpec { swipeEdge ->
-    // 제스처를 시작한 엣지 쪽으로 화면이 빠져야 손가락 방향과 모션이 어긋나지 않는다.
+    // 제스처를 시작한 엣지 쪽으로 빠져야 손가락 방향과 맞는다.
     val towards = if (swipeEdge == NavigationEvent.EDGE_RIGHT) SlideDirection.Start else SlideDirection.End
     (slideIntoContainer(towards, tween(300)) + fadeIn(tween(300))) togetherWith
         (slideOutOfContainer(towards, tween(300)) + fadeOut(tween(150)))
 }
 
 /**
- * 홈 루트에서만 뒤로가기를 가로채 두 번 연타로 앱을 종료한다. 홈 루트에서는 NavDisplay의
- * previousEntries가 비어 자체 back handler가 꺼지므로, 이 handler가 시스템 뒤로가기를 대신 받는다.
+ * 홈 루트에서는 NavDisplay의 previousEntries가 비어 자체 back handler가 꺼지므로 이 handler가 받는다.
  */
 @Composable
 private fun DoubleBackToExitHandler(enabled: () -> Boolean) {
     val activity = LocalActivity.current
     val context = LocalContext.current
-    // 같은 인스턴스를 재사용해야 연타 시 토스트가 큐에 쌓이지 않고, 종료 직전 취소할 수 있다.
-    val toast = remember(context) { Toast.makeText(context, EXIT_CONFIRM_MESSAGE, Toast.LENGTH_SHORT) }
+    val toast = remember(context) {
+        Toast.makeText(context, R.string.back_press_exit_confirm, Toast.LENGTH_SHORT)
+    }
     var lastBackPressedAt by remember { mutableLongStateOf(NO_BACK_PRESS) }
     val isEnabled = enabled()
 
-    // 다른 화면을 거쳐 홈으로 돌아오면 직전 경고는 무효다. 남겨두면 경고 없이 바로 종료된다.
+    // 다른 화면을 거쳐 돌아오면 직전 경고는 무효다. 남겨두면 경고 없이 종료된다.
     LaunchedEffect(isEnabled) {
         if (!isEnabled) lastBackPressedAt = NO_BACK_PRESS
     }
 
     BackHandler(enabled = isEnabled) {
-        // 벽시계(currentTimeMillis)는 시간 보정으로 뒤로 점프해 창 계산을 깨뜨린다.
         val now = SystemClock.elapsedRealtime()
         val withinWindow = lastBackPressedAt != NO_BACK_PRESS && now - lastBackPressedAt <= EXIT_CONFIRM_WINDOW_MS
         if (withinWindow) {
-            // 취소하지 않으면 앱이 사라진 뒤에도 런처 위에 토스트가 남는다.
+            // 취소하지 않으면 앱이 사라진 뒤에도 런처 위에 남는다.
             toast.cancel()
             activity?.finish()
         } else {
@@ -265,7 +262,6 @@ private fun ModelDownloadConfirmationEffect(
 
 private const val NO_BACK_PRESS = 0L
 private const val EXIT_CONFIRM_WINDOW_MS = 2000L
-private const val EXIT_CONFIRM_MESSAGE = "뒤로가기를 한 번 더 누르면 종료돼요"
 
 private const val MODEL_DOWNLOAD_MESSAGE = "추가 다운로드가 필요해요"
 private const val MODEL_DOWNLOAD_ACTION = "모바일 데이터로 받기"

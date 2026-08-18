@@ -5,4 +5,6 @@
     <string name="tab_archive">보관함</string>
     <string name="tab_home">홈</string>
     <string name="tab_chat">대화</string>
+
+    <string name="back_press_exit_confirm">뒤로가기를 한 번 더 누르면 종료돼요</string>
 </resources>
