@@ -1,6 +1,7 @@
 package com.gamss.android.feature.setting.nicknamechange
 
 import android.widget.Toast
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -58,9 +59,12 @@ fun NicknameChangeScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
+            .background(GamssTheme.colors.background)
             .imePadding(),
     ) {
         GamssTopNavigation(
+            // 기본값은 기기의 다크 모드를 보므로, 라이트로 고정된 앱 테마와 어긋나지 않게 직접 넘긴다.
+            backgroundColor = GamssTheme.colors.background,
             title = stringResource(R.string.account_info_nickname_change),
             showLeftIcon = true,
             onLeftIconClick = onBackClick,
@@ -69,11 +73,9 @@ fun NicknameChangeScreen(
         GamssTextField(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(
-                    horizontal = 18.dp,
-                    vertical = GamssTheme.spacing.spacing400,
-                ),
-            label = stringResource(R.string.account_info_nickname_change),
+                .padding(horizontal = ScreenHorizontalPadding)
+                .padding(top = GamssTheme.spacing.spacing300),
+            label = stringResource(R.string.nickname_change_input_label),
             value = state.nicknameInput,
             onValueChange = { nickname ->
                 if (nickname.length <= NicknamePolicy.MAX_LENGTH) {
@@ -87,7 +89,8 @@ fun NicknameChangeScreen(
         GamssButton(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(18.dp),
+                .padding(horizontal = ScreenHorizontalPadding)
+                .padding(bottom = GamssTheme.spacing.spacing200),
             label = stringResource(R.string.nickname_change_save),
             onClick = viewModel::saveNickname,
             variant = GamssButtonVariant.Primary,
@@ -95,6 +98,8 @@ fun NicknameChangeScreen(
         )
     }
 }
+
+private val ScreenHorizontalPadding = 18.dp
 
 private fun NicknameFailureReason.toMessage(): String =
     when (this) {
