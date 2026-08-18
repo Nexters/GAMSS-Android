@@ -7,7 +7,8 @@ import com.gamss.android.domain.auth.SessionState
 import com.gamss.android.domain.config.GetRemoteConfigFlagUseCase
 import com.gamss.android.domain.config.ObserveRemoteConfigReadyUseCase
 import com.gamss.android.domain.config.RemoteConfigKey
-import com.gamss.android.domain.push.IsNotificationPermissionGrantedUseCase
+import com.gamss.android.domain.push.MarkNotificationPermissionPromptedUseCase
+import com.gamss.android.domain.push.ShouldPromptNotificationPermissionUseCase
 import com.gamss.android.domain.push.SyncDeviceTokenUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.Flow
@@ -21,13 +22,15 @@ import javax.inject.Inject
 import kotlin.time.Duration.Companion.seconds
 
 @HiltViewModel
+@Suppress("LongParameterList")
 class MainViewModel @Inject constructor(
     private val restoreSessionUseCase: RestoreSessionUseCase,
     private val observeSessionStateUseCase: ObserveSessionStateUseCase,
     private val observeRemoteConfigReadyUseCase: ObserveRemoteConfigReadyUseCase,
     private val getRemoteConfigFlagUseCase: GetRemoteConfigFlagUseCase,
     private val syncDeviceTokenUseCase: SyncDeviceTokenUseCase,
-    private val isNotificationPermissionGrantedUseCase: IsNotificationPermissionGrantedUseCase,
+    private val shouldPromptNotificationPermissionUseCase: ShouldPromptNotificationPermissionUseCase,
+    private val markNotificationPermissionPromptedUseCase: MarkNotificationPermissionPromptedUseCase,
 ) : ViewModel(), ContainerHost<MainState, Unit> {
 
     override val container = container<MainState, Unit>(MainState())
@@ -54,7 +57,11 @@ class MainViewModel @Inject constructor(
         syncDeviceTokenIfAuthenticated(state.sessionState)
     }
 
-    suspend fun isNotificationPermissionGranted(): Boolean = isNotificationPermissionGrantedUseCase()
+    suspend fun shouldPromptNotificationPermission(): Boolean = shouldPromptNotificationPermissionUseCase()
+
+    fun markNotificationPermissionPrompted() = intent {
+        markNotificationPermissionPromptedUseCase()
+    }
 
     private suspend fun syncDeviceTokenIfAuthenticated(sessionState: SessionState) {
         if (sessionState == SessionState.Authenticated) syncDeviceTokenUseCase()

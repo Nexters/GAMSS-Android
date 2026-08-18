@@ -1,6 +1,7 @@
 package com.gamss.android.domain.card
 
 import com.gamss.android.domain.emotion.EmotionCharacter
+import java.time.LocalDate
 
 /**
  * 대화 종료로 만들어진 감정 카드.
@@ -8,9 +9,13 @@ import com.gamss.android.domain.emotion.EmotionCharacter
  * @param summary 클라이언트가 보낸 압축본. 카드 제목으로 그대로 노출된다.
  */
 data class Card(
+    val id: Long,
+    val conversationId: Long,
     val character: EmotionCharacter,
+    val emotionLabel: String,
     val summary: String,
     val message: String,
+    val date: LocalDate,
 )
 
 /** 다시 시도해도 결과가 같은 카드 실패. 호출부가 재시도 경로를 접는 기준이다. */

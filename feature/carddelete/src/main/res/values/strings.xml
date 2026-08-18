@@ -1,0 +1,11 @@
+<resources>
+    <string name="card_delete_title">비우기</string>
+    <string name="card_delete_shred_button">파쇄하기</string>
+    <string name="card_delete_complete_button">완료</string>
+    <string name="card_delete_status_off">OFF</string>
+    <string name="card_delete_status_on">ON</string>
+    <string name="card_delete_status_ready">파쇄 준비됨</string>
+    <string name="card_delete_status_shredding">파쇄 중</string>
+    <string name="card_delete_success_message">카드를 파쇄했어요</string>
+    <string name="card_delete_failure_message">파쇄에 실패했어요. 다시 시도해주세요</string>
+</resources>

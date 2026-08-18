@@ -40,3 +40,18 @@ internal class FakeDeviceTokenRepository(
         return unregisterResult
     }
 }
+
+internal class FakeNotificationPermissionPromptHistory(
+    private var prompted: Boolean = false,
+) : NotificationPermissionPromptHistory {
+
+    var markPromptedCallCount: Int = 0
+        private set
+
+    override suspend fun hasPrompted(): Boolean = prompted
+
+    override suspend fun markPrompted() {
+        markPromptedCallCount++
+        prompted = true
+    }
+}

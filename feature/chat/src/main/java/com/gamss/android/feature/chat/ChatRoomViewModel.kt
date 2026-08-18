@@ -62,6 +62,20 @@ class ChatRoomViewModel @Inject constructor(
 
     private fun loadMessages(conversationId: Long) = intent {
         reduce { state.copy(conversationId = conversationId, isLoading = true) }
+
+        val pending = session.consumePendingReveal(conversationId)
+        if (pending != null) {
+            reduce {
+                state.copy(
+                    isLoading = false,
+                    messages = listOf(pending.message),
+                    pendingComments = pending.comments,
+                )
+            }
+            launchCommentReveal()
+            return@intent
+        }
+
         when (val result = session.restore(conversationId)) {
             is AppResult.Success ->
                 reduce { state.copy(isLoading = false, messages = result.data, pendingComments = emptyList()) }
@@ -136,8 +150,8 @@ class ChatRoomViewModel @Inject constructor(
                     state.copy(
                         isSending = false,
                         conversationId = sent.message.conversationId,
-                        messages = state.messages + sent.message + sent.comments.take(1),
-                        pendingComments = sent.comments.drop(1),
+                        messages = state.messages + sent.message,
+                        pendingComments = sent.comments,
                         input = if (state.input == sending.content) "" else state.input,
                         replyTarget = state.replyTarget.takeIf { it?.messageId != sending.replyToMessageId },
                     )

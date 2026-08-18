@@ -8,6 +8,9 @@ android {
 }
 
 dependencies {
+    implementation(projects.core.designsystem)
+    implementation(projects.domain)
+
     implementation(libs.androidx.core.ktx)
     implementation(libs.compose.material.icons.core)
 

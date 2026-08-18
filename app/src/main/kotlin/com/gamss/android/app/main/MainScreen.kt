@@ -1,6 +1,13 @@
 package com.gamss.android.app.main
 
 import androidx.activity.compose.LocalActivity
+import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection
+import androidx.compose.animation.ContentTransform
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -14,7 +21,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
+import androidx.navigation3.scene.Scene
 import androidx.navigation3.ui.NavDisplay
 import com.gamss.android.app.navigation.Navigator
 import com.gamss.android.app.navigation.bottomBarItems
@@ -28,6 +37,8 @@ import com.gamss.android.core.designsystem.component.GamssPaperBackground
 import com.gamss.android.core.designsystem.theme.GamssTheme
 import com.gamss.android.feature.calendar.CalendarScreen
 import com.gamss.android.feature.calendar.navigation.CalendarKey
+import com.gamss.android.feature.carddelete.CardDeleteScreen
+import com.gamss.android.feature.carddelete.navigation.CardDeleteKey
 import com.gamss.android.feature.chat.ChatRoomScreen
 import com.gamss.android.feature.chat.ChattingListScreen
 import com.gamss.android.feature.chat.navigation.ChatKey
@@ -81,6 +92,11 @@ fun MainScreen(
                 NavDisplay(
                     modifier = Modifier.padding(innerPadding),
                     entries = navigationState.toEntries(entryProvider = entries),
+                    // 최상위 탭(Home/Calendar/Chat) 전환 기본값. 탭은 위계 없는 형제 화면이라
+                    // 방향성 있는 슬라이드 대신 fade-through를 쓴다. 상세 화면은 아래 entry의
+                    // metadata(detailTransition)가 이 기본값을 덮어쓴다.
+                    transitionSpec = tabFadeThroughSpec,
+                    popTransitionSpec = tabFadeThroughSpec,
                     onBack = {
                         if (navigationState.canGoBack) {
                             navigator.goBack()
@@ -99,8 +115,12 @@ private fun mainEntryProvider(navigator: Navigator) = entryProvider {
             onOpenConversation = { conversationId -> navigator.navigate(ChatRoomKey(conversationId)) },
         )
     }
-    entry<CalendarKey> { CalendarScreen() }
-    entry<SettingKey> {
+    entry<CalendarKey> {
+        CalendarScreen(
+            onOpenConversation = { conversationId -> navigator.navigate(ChatRoomKey(conversationId)) },
+        )
+    }
+    entry<SettingKey>(metadata = detailSlideTransition) {
         SettingScreen(
             onBackClick = navigator::goBack,
             onAccountInfoClick = { navigator.navigate(AccountInfoKey) },
@@ -108,19 +128,25 @@ private fun mainEntryProvider(navigator: Navigator) = entryProvider {
             onPrivacyPolicyClick = { navigator.navigate(WebViewKey(GamssWebPage.PrivacyPolicy)) },
         )
     }
-    entry<AccountInfoKey> {
+    entry<CardDeleteKey>(metadata = detailSlideTransition) {
+        CardDeleteScreen(
+            onBackClick = navigator::goBack,
+            onDeleteComplete = navigator::finishCurrentFlow,
+        )
+    }
+    entry<AccountInfoKey>(metadata = detailSlideTransition) {
         AccountInfoScreen(
             onBackClick = navigator::goBack,
             onNicknameChangeClick = { nickname -> navigator.navigate(NicknameChangeKey(nickname)) },
         )
     }
-    entry<NicknameChangeKey> { key ->
+    entry<NicknameChangeKey>(metadata = detailSlideTransition) { key ->
         NicknameChangeScreen(
             currentNickname = key.currentNickname,
             onBackClick = navigator::goBack,
         )
     }
-    entry<WebViewKey> { key ->
+    entry<WebViewKey>(metadata = detailSlideTransition) { key ->
         WebViewScreen(page = key.page, onBackClick = navigator::goBack)
     }
     entry<ChatKey> {
@@ -129,12 +155,40 @@ private fun mainEntryProvider(navigator: Navigator) = entryProvider {
             onMenuClick = { navigator.navigate(SettingKey) },
         )
     }
-    entry<ChatRoomKey> { key ->
+    entry<ChatRoomKey>(metadata = detailSlideTransition) { key ->
         ChatRoomScreen(
             conversationId = key.conversationId,
             onCardClose = navigator::goBack,
         )
     }
+}
+
+/**
+ * 최상위 탭(Home/Calendar/Chat) 간 전환에 쓰는 기본 트랜지션.
+ * 탭은 위계 없는 형제 화면이라 방향성 있는 슬라이드 대신 fade-through를 쓴다.
+ */
+private val tabFadeThroughSpec: AnimatedContentTransitionScope<Scene<NavKey>>.() -> ContentTransform = {
+    fadeIn(tween(220, delayMillis = 90)) togetherWith fadeOut(tween(90))
+}
+
+/**
+ * 탭 내부의 상세 화면(Setting/AccountInfo/NicknameChange/ChatRoom/WebView) push·pop 전용
+ * 트랜지션. 계층 이동이라는 방향감을 주기 위해 좌우 슬라이드(shared axis X)를 쓴다.
+ *
+ * popTransitionSpec과 predictivePopTransitionSpec을 반드시 같이 지정해야 한다 — 인앱 뒤로가기
+ * 아이콘(Navigator.goBack() 직접 호출)은 popTransitionSpec을, 폰의 시스템 뒤로가기(제스처·버튼
+ * 모두 OnBackInvokedCallback 경유)는 predictivePopTransitionSpec을 따로 참조하기 때문에, 하나만
+ * 지정하면 트리거 경로에 따라 모션이 달라져 버린다.
+ */
+private val detailSlideTransition: Map<String, Any> = NavDisplay.transitionSpec {
+    (slideIntoContainer(SlideDirection.Start, tween(300)) + fadeIn(tween(300))) togetherWith
+        (slideOutOfContainer(SlideDirection.Start, tween(300)) + fadeOut(tween(150)))
+} + NavDisplay.popTransitionSpec {
+    (slideIntoContainer(SlideDirection.End, tween(300)) + fadeIn(tween(300))) togetherWith
+        (slideOutOfContainer(SlideDirection.End, tween(300)) + fadeOut(tween(150)))
+} + NavDisplay.predictivePopTransitionSpec { _ ->
+    (slideIntoContainer(SlideDirection.End, tween(300)) + fadeIn(tween(300))) togetherWith
+        (slideOutOfContainer(SlideDirection.End, tween(300)) + fadeOut(tween(150)))
 }
 
 /**

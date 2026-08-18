@@ -15,6 +15,7 @@ import com.gamss.android.domain.conversation.EndConversationUseCase
 import com.gamss.android.domain.conversation.GetMessagesUseCase
 import com.gamss.android.domain.conversation.Message
 import com.gamss.android.domain.conversation.MessageSender
+import com.gamss.android.domain.conversation.PendingConversationReveal
 import com.gamss.android.domain.conversation.SendMessageUseCase
 import com.gamss.android.domain.conversation.SentMessage
 import com.gamss.android.domain.conversation.UpdateConversationTitleUseCase
@@ -29,6 +30,7 @@ import com.gamss.android.domain.summary.SummarizeDiaryUseCase
 import com.gamss.android.domain.summary.UtteranceTokenCounter
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.Flow
+import java.time.LocalDate
 
 internal const val NEW_ROOM_ID = 42L
 
@@ -46,6 +48,7 @@ internal fun conversationSession(repository: ConversationRepository) = Conversat
         tokenCounter = CharLengthTokenCounter,
     ),
     emotionAccumulator = ConversationEmotionAccumulator(FlatClassifier),
+    pendingReveal = PendingConversationReveal(),
 )
 
 /**
@@ -117,11 +120,21 @@ internal class RecordingConversationRepository(
 }
 
 private object NoCardRepository : CardRepository {
+    override suspend fun getCardsByDate(date: LocalDate): AppResult<List<Card>> =
+        AppResult.Success(emptyList())
+
     override suspend fun createCard(
         conversationId: Long,
         character: EmotionCharacter,
         summary: String,
     ): AppResult<Card> = error("홈 테스트에서 쓰지 않는다")
+
+    override suspend fun deleteAllCards(): AppResult<Unit> = error("홈 테스트에서 쓰지 않는다")
+
+    override suspend fun deleteCard(cardId: Long): AppResult<Unit> = error("홈 테스트에서 쓰지 않는다")
+
+    override suspend fun deleteCardsByEmotion(character: EmotionCharacter): AppResult<Unit> =
+        error("홈 테스트에서 쓰지 않는다")
 }
 
 private object PassThroughSummarizer : DiarySummarizer {
