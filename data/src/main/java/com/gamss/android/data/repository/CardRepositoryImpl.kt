@@ -9,10 +9,12 @@ import com.gamss.android.data.remote.emotion.toServerEmotionType
 import com.gamss.android.data.remote.runCatchingApiCall
 import com.gamss.android.data.remote.throwIfFailed
 import com.gamss.android.domain.card.Card
+import com.gamss.android.domain.card.CardEntry
 import com.gamss.android.domain.card.CardNotRetryableException
 import com.gamss.android.domain.card.CardRepository
 import com.gamss.android.domain.emotion.EmotionCharacter
 import java.time.LocalDate
+import java.time.YearMonth
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -25,6 +27,14 @@ internal class CardRepositoryImpl @Inject constructor(
         val response = cardService.getCardsByDate(date.toString())
         response.throwIfFailed()
         checkNotNull(response.data) { "No available card data" }.mapNotNull { it.toDomainOrNull() }
+    }
+
+    // YearMonth.toString() 이 서버가 요구하는 yyyy-MM 그대로다.
+    override suspend fun getCardsByMonth(yearMonth: YearMonth): AppResult<List<CardEntry>> = runCatchingApiCall {
+        val response = cardService.getCardsByMonth(yearMonth.toString())
+        response.throwIfFailed()
+        checkNotNull(response.data) { "No available card data" }
+            .flatMap { it.toDomain() }
     }
 
     override suspend fun createCard(
