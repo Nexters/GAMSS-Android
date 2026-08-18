@@ -4,7 +4,6 @@ import androidx.lifecycle.ViewModel
 import com.gamss.android.core.common.AppResult
 import com.gamss.android.core.common.util.KoreanTimeZone
 import com.gamss.android.domain.card.CardEntry
-import com.gamss.android.domain.card.DeleteCardUseCase
 import com.gamss.android.domain.card.GetCardsByDateUseCase
 import com.gamss.android.domain.card.GetCardsByMonthUseCase
 import com.gamss.android.domain.emotion.EmotionCharacter
@@ -19,7 +18,6 @@ import javax.inject.Inject
 class ArchiveDetailViewModel @Inject constructor(
     private val getCardsByMonth: GetCardsByMonthUseCase,
     private val getCardsByDate: GetCardsByDateUseCase,
-    private val deleteCard: DeleteCardUseCase,
 ) : ViewModel(), ContainerHost<ArchiveDetailState, ArchiveDetailSideEffect> {
 
     override val container = container<ArchiveDetailState, ArchiveDetailSideEffect>(
@@ -51,7 +49,7 @@ class ArchiveDetailViewModel @Inject constructor(
 
     fun confirmClear() = intent {
         reduce { state.copy(isClearDialogVisible = false) }
-        postSideEffect(ArchiveDetailSideEffect.OpenCardDelete)
+        postSideEffect(ArchiveDetailSideEffect.OpenCardShred(cardId = null))
     }
 
     fun selectMonth(yearMonth: YearMonth) = intent {
@@ -93,17 +91,14 @@ class ArchiveDetailViewModel @Inject constructor(
         reduce { state.copy(selectedCard = null) }
     }
 
+    /**
+     * 여기서 지우지 않는다. 파쇄 화면이 삭제까지 끝내고 보관함 목록으로 되돌려 보내므로, 이 화면은
+     * 다시 들어올 때 새로 조회한다 — 남은 종이의 그날 순번이 당겨지는 것도 그때 함께 맞춰진다.
+     */
     fun discardSelectedCard() = intent {
-        val card = state.selectedCard ?: return@intent
-        val emotion = state.emotion ?: return@intent
+        val cardId = state.selectedCard?.id ?: return@intent
         reduce { state.copy(selectedCard = null) }
-
-        when (deleteCard(card.id)) {
-            // 카드를 지우면 같은 날짜 뒤 순번이 한 칸씩 당겨진다. 목록에서 빼는 것으로는 남은 종이의
-            // 순번이 어긋나므로 그 달을 다시 받아 온다.
-            is AppResult.Success -> loadMonth(emotion, state.yearMonth)
-            is AppResult.Failure -> postSideEffect(ArchiveDetailSideEffect.CardDiscardFailed)
-        }
+        postSideEffect(ArchiveDetailSideEffect.OpenCardShred(cardId))
     }
 
     fun viewSelectedConversation() = intent {

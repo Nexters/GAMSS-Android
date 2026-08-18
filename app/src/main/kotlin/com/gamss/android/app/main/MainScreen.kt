@@ -136,7 +136,7 @@ private fun mainEntryProvider(navigator: Navigator) = entryProvider {
             emotion = key.emotion,
             onBackClick = navigator::goBack,
             onOpenConversation = { conversationId -> navigator.navigate(ChatRoomKey(conversationId)) },
-            onNavigateToCardDelete = { navigator.navigate(CardDeleteKey) },
+            onNavigateToCardShred = { cardId -> navigator.navigate(CardDeleteKey(cardId)) },
         )
     }
     entry<SettingKey>(metadata = detailSlideTransition) {
@@ -147,8 +147,9 @@ private fun mainEntryProvider(navigator: Navigator) = entryProvider {
             onPrivacyPolicyClick = { navigator.navigate(WebViewKey(GamssWebPage.PrivacyPolicy)) },
         )
     }
-    entry<CardDeleteKey>(metadata = detailSlideTransition) {
+    entry<CardDeleteKey>(metadata = detailSlideTransition) { key ->
         CardDeleteScreen(
+            cardId = key.cardId,
             onBackClick = navigator::goBack,
             onDeleteComplete = navigator::finishCurrentFlow,
         )

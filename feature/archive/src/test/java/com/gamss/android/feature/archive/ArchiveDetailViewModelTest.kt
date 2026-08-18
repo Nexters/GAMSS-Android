@@ -5,7 +5,6 @@ import com.gamss.android.core.common.util.KoreanTimeZone
 import com.gamss.android.domain.card.Card
 import com.gamss.android.domain.card.CardEntry
 import com.gamss.android.domain.card.CardRepository
-import com.gamss.android.domain.card.DeleteCardUseCase
 import com.gamss.android.domain.card.GetCardsByDateUseCase
 import com.gamss.android.domain.card.GetCardsByMonthUseCase
 import com.gamss.android.domain.emotion.EmotionCharacter
@@ -138,7 +137,7 @@ class ArchiveDetailViewModelTest {
     }
 
     @Test
-    fun `카드를 버리면 삭제하고 그 달을 다시 조회한다`() = runTest {
+    fun `카드를 버리면 직접 지우지 않고 그 카드의 파쇄 화면을 연다`() = runTest {
         val repository = FakeCardRepository(
             monthResult = AppResult.Success(listOf(angerEntry)),
             dateResult = AppResult.Success(listOf(firstCardOfDay)),
@@ -156,11 +155,12 @@ class ArchiveDetailViewModelTest {
 
             containerHost.discardSelectedCard()
             expectState { copy(selectedCard = null) }
+            expectSideEffect(ArchiveDetailSideEffect.OpenCardShred(firstCardOfDay.id))
         }
 
-        // 재조회 결과가 이전과 같은 상태라 emission 이 더 없다. 다시 받아 왔는지는 호출로 확인한다.
-        assertEquals(listOf(firstCardOfDay.id), repository.deletedCardIds)
-        assertEquals(2, repository.requestedMonths.size)
+        // 삭제는 파쇄 화면 몫이라 보관함은 저장소를 건드리지 않는다.
+        assertEquals(emptyList<Long>(), repository.deletedCardIds)
+        assertEquals(1, repository.requestedMonths.size)
     }
 
     @Test
@@ -224,7 +224,7 @@ class ArchiveDetailViewModelTest {
     }
 
     @Test
-    fun `비우기를 확인하면 다이얼로그를 닫고 파쇄 화면을 연다`() = runTest {
+    fun `비우기를 확인하면 다이얼로그를 닫고 전체 파쇄 화면을 연다`() = runTest {
         val viewModel = viewModel(FakeCardRepository(AppResult.Success(listOf(angerEntry))))
 
         viewModel.test(this) {
@@ -238,14 +238,13 @@ class ArchiveDetailViewModelTest {
             // 실제 삭제는 파쇄 화면이 맡으므로 여기서는 카드를 지우지 않는다.
             containerHost.confirmClear()
             expectState { copy(isClearDialogVisible = false) }
-            expectSideEffect(ArchiveDetailSideEffect.OpenCardDelete)
+            expectSideEffect(ArchiveDetailSideEffect.OpenCardShred(cardId = null))
         }
     }
 
     private fun viewModel(repository: FakeCardRepository) = ArchiveDetailViewModel(
         getCardsByMonth = GetCardsByMonthUseCase(repository),
         getCardsByDate = GetCardsByDateUseCase(repository),
-        deleteCard = DeleteCardUseCase(repository),
     )
 
     private companion object {

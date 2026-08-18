@@ -54,27 +54,23 @@ fun ArchiveDetailScreen(
     emotion: EmotionCharacter,
     onBackClick: () -> Unit,
     onOpenConversation: (Long) -> Unit,
-    onNavigateToCardDelete: () -> Unit,
+    onNavigateToCardShred: (Long?) -> Unit,
     viewModel: ArchiveDetailViewModel = hiltViewModel(),
 ) {
     val state by viewModel.collectAsState()
     val context = LocalContext.current
     val shareChooserTitle = stringResource(R.string.archive_card_share_chooser_title)
     val cardLoadFailedMessage = stringResource(R.string.archive_card_load_error)
-    val discardFailedMessage = stringResource(R.string.archive_card_discard_failure)
 
     LaunchedEffect(emotion) { viewModel.load(emotion) }
 
     viewModel.collectSideEffect { sideEffect ->
         when (sideEffect) {
             is ArchiveDetailSideEffect.OpenChatRoom -> onOpenConversation(sideEffect.conversationId)
-            ArchiveDetailSideEffect.OpenCardDelete -> onNavigateToCardDelete()
+            is ArchiveDetailSideEffect.OpenCardShred -> onNavigateToCardShred(sideEffect.cardId)
 
             ArchiveDetailSideEffect.CardLoadFailed ->
                 Toast.makeText(context, cardLoadFailedMessage, Toast.LENGTH_SHORT).show()
-
-            ArchiveDetailSideEffect.CardDiscardFailed ->
-                Toast.makeText(context, discardFailedMessage, Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -251,9 +247,9 @@ private fun ArchiveDetailCards(
         when (cards) {
             ArchiveCards.Loading -> CircularProgressIndicator(color = GamssTheme.colors.gray700)
             ArchiveCards.LoadFailed -> EmptyMessage(textRes = R.string.archive_cards_load_failed)
-            is ArchiveCards.Loaded -> if (cards.entries.isEmpty()) {
-                EmptyMessage(textRes = R.string.archive_cards_empty)
-            } else {
+            // 비어 있으면 아무것도 두지 않는다. 종이가 한 장도 없으면 시뮬레이션이 돌 게 없어
+            // PaperPile 을 그대로 넘길 수는 없으므로 빈 경우는 여기서 걸러 낸다.
+            is ArchiveCards.Loaded -> if (cards.entries.isNotEmpty()) {
                 PaperPile(cards = cards.entries, onPaperClick = onPaperClick)
             }
         }
