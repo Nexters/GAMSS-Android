@@ -74,6 +74,7 @@ import com.gamss.android.feature.chat.component.MessageBubble
 import com.gamss.android.feature.chat.component.MessageInputBar
 import com.gamss.android.feature.chat.component.NewMessageToast
 import com.gamss.android.feature.chat.component.SupportAgencyDialog
+import com.gamss.android.feature.chat.component.toReplyQuote
 import com.gamss.android.feature.chat.util.AnimatedChatMessage
 import com.gamss.android.feature.chat.util.ChatMessageAnimation
 import com.gamss.android.feature.chat.util.ChatScrollState
@@ -362,6 +363,12 @@ private fun ChatMessageList(
     showScrollToBottomButton: Boolean,
     modifier: Modifier = Modifier,
 ) {
+    // 리스트 전체(state.messages)를 각 아이템에 그대로 넘기면, 메시지가 하나 추가될 때마다 리스트
+    // 참조가 바뀌어 이미 떠 있던 다른 모든 말풍선까지 재구성 대상이 된다. 답장 대상 조회를 여기서
+    // 한 번에 끝내고 아이템별로는 결과값(replyQuote)만 넘기면, 안 바뀐 아이템은 재구성을 건너뛸 수
+    // 있다. LazyListScope 빌더 본문은 @Composable이 아니라 여기(바깥)서 remember해야 한다.
+    val messagesById = remember(state.messages) { state.messages.associateBy(Message::id) }
+
     Box(modifier = modifier) {
         LazyColumn(
             state = listState,
@@ -388,6 +395,9 @@ private fun ChatMessageList(
                 }
             }
             items(state.messages, key = { it.id }) { message ->
+                val replyQuote = message.repliesToMessageId
+                    ?.let { targetId -> messagesById[targetId] }
+                    ?.toReplyQuote()
                 AnimatedChatMessage(
                     messageId = message.id,
                     shouldAnimate = animationState.shouldAnimate(message.id),
@@ -395,7 +405,7 @@ private fun ChatMessageList(
                 ) {
                     MessageBubble(
                         message = message,
-                        messages = state.messages,
+                        replyQuote = replyQuote,
                         onCharacterMessageClick = actions.onCharacterMessageClick,
                     )
                 }

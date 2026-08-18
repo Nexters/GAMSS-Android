@@ -22,20 +22,17 @@ import com.gamss.android.domain.emotion.EmotionCharacter
 import com.gamss.android.feature.chat.R
 
 /**
- * @param messages 답장 대상 메시지의 내용을 찾기 위한 전체 목록. [Message.repliesToMessageId] 가
- *  가리키는 메시지가 이 목록에 없으면(예: 아직 로드되지 않은 과거 메시지) 답장 인용 없이 표시한다.
+ * @param replyQuote [message]가 답장이면 그 대상의 인용 정보. 호출부(리스트)가 한 번에 미리
+ *  찾아서 넘긴다 — 이 버블은 전체 메시지 목록을 몰라도 되고, 목록이 커져도(다른 메시지가
+ *  추가돼도) 이 값이 그대로면 재구성을 건너뛸 수 있다.
  */
 @Composable
 fun MessageBubble(
     message: Message,
-    messages: List<Message>,
+    replyQuote: ChatReplyQuote?,
     onCharacterMessageClick: (Message) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val replyQuote = message.repliesToMessageId
-        ?.let { targetId -> messages.find { it.id == targetId } }
-        ?.toReplyQuote()
-
     Box(
         modifier = modifier.fillMaxWidth(),
     ) {
@@ -101,8 +98,9 @@ private fun CharacterAvatarImage(character: EmotionCharacter) {
     )
 }
 
+/** [ChatRoomScreen]의 리스트가 아이템별 [MessageBubble.replyQuote]를 미리 계산할 때도 쓴다. */
 @Composable
-private fun Message.toReplyQuote(): ChatReplyQuote {
+internal fun Message.toReplyQuote(): ChatReplyQuote {
     val label = when (val target = sender) {
         is MessageSender.Character -> stringResource(
             R.string.chat_room_reply_to_character,

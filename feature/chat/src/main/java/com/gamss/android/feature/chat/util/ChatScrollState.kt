@@ -3,6 +3,7 @@ package com.gamss.android.feature.chat.util
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -42,8 +43,9 @@ internal class ChatScrollState(
     // 또 새 메시지로 처리해 토스트를 잠깐 띄웠다 지우는 걸 막는다.
     private var lastAutoScrolledMessageId: Long? = null
 
-    val showScrollToBottomButton: Boolean
-        get() = listState.canScrollForward && newMessageToast == null
+    val showScrollToBottomButton: Boolean by derivedStateOf {
+        listState.canScrollForward && newMessageToast == null
+    }
 
     fun dismissToastAndScrollToBottom(state: ChatRoomState) {
         newMessageToast = null
