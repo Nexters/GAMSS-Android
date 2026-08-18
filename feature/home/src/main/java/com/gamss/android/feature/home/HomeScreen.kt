@@ -23,14 +23,15 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
@@ -38,8 +39,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntRect
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupPositionProvider
+import androidx.compose.ui.window.PopupProperties
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.gamss.android.core.designsystem.component.GamssCharacterPicker
 import com.gamss.android.core.designsystem.component.GamssCharacterPickerItem
@@ -58,6 +64,7 @@ import com.gamss.android.core.designsystem.theme.GamssTheme
 import com.gamss.android.domain.emotion.EmotionCharacter
 import org.orbitmvi.orbit.compose.collectAsState
 import org.orbitmvi.orbit.compose.collectSideEffect
+import kotlin.math.roundToInt
 
 @Composable
 fun HomeScreen(
@@ -159,7 +166,10 @@ private fun HomeInputSection(
     actions: HomeActions,
 ) {
     val pickerItems = remember(state.selectedCharacters) { state.selectedCharacters.toPickerItems() }
-    var inputBarHeightPx by remember { mutableIntStateOf(0) }
+    // 패널 왼쪽 끝을 토글 라벨이 시작하는 지점에 맞춘다. 입력창 안쪽 여백이 바뀌어도 따라가도록
+    // 상수로 두지 않고 실측한다. 입력창은 높이가 100dp/149dp+ 로 달라져 아래 끝도 함께 잰다.
+    var toggleLeftInWindow by remember { mutableFloatStateOf(0f) }
+    var inputBarBottomInWindow by remember { mutableFloatStateOf(0f) }
 
     // 패널은 Popup 으로 띄운다. 흐름에 넣으면 펼칠 때마다 인사말과 입력바가 위로 밀린다.
     Box(modifier = Modifier.fillMaxWidth().padding(horizontal = InputBarHorizontalPadding)) {
@@ -175,30 +185,50 @@ private fun HomeInputSection(
                     label = stringResource(R.string.home_character_picker),
                     expanded = state.isEmotionPickerExpanded,
                     onClick = actions.onEmotionPickerToggle,
+                    modifier = Modifier.onGloballyPositioned {
+                        toggleLeftInWindow = it.boundsInWindow().left
+                    },
                 )
             },
             modifier = Modifier
                 .fillMaxWidth()
-                .onSizeChanged { inputBarHeightPx = it.height },
+                .onGloballyPositioned { inputBarBottomInWindow = it.boundsInWindow().bottom },
         )
 
         if (state.isEmotionPickerExpanded) {
-            val pickerOffset = with(LocalDensity.current) {
-                // 입력창 높이가 100dp/149dp+ 로 달라지므로 겹침 폭만 고정해 실측 높이 기준으로 잡는다.
-                IntOffset(
-                    x = PickerHorizontalInset.roundToPx(),
-                    y = (inputBarHeightPx.toDp() - PickerOverlapHeight).roundToPx(),
+            val overlapPx = with(LocalDensity.current) { PickerOverlapHeight.roundToPx() }
+            val pickerPosition = remember(toggleLeftInWindow, inputBarBottomInWindow, overlapPx) {
+                PickerPositionProvider(
+                    leftInWindow = toggleLeftInWindow,
+                    topInWindow = inputBarBottomInWindow - overlapPx,
                 )
             }
             Popup(
-                alignment = Alignment.TopEnd,
-                offset = pickerOffset,
-                onDismissRequest = actions.onEmotionPickerDismiss,
+                popupPositionProvider = pickerPosition,
+                // 바깥 탭과 뒤로가기는 화면 쪽에서만 처리한다. Popup 에도 맡기면 셰브론을 누를 때
+                // 닫기와 토글이 함께 들어와, 닫힌 상태를 토글이 되짚어 다시 열어 버린다.
+                properties = PopupProperties(
+                    dismissOnBackPress = false,
+                    dismissOnClickOutside = false,
+                ),
             ) {
                 GamssCharacterPicker(items = pickerItems, onToggle = actions.onEmotionToggle)
             }
         }
     }
+}
+
+/** 창 좌표로 직접 놓는다. Popup 의 alignment 는 여백을 포함한 부모 경계에 붙어 기준이 모호하다. */
+private class PickerPositionProvider(
+    private val leftInWindow: Float,
+    private val topInWindow: Float,
+) : PopupPositionProvider {
+    override fun calculatePosition(
+        anchorBounds: IntRect,
+        windowSize: IntSize,
+        layoutDirection: LayoutDirection,
+        popupContentSize: IntSize,
+    ): IntOffset = IntOffset(leftInWindow.roundToInt(), topInWindow.roundToInt())
 }
 
 /**
@@ -294,8 +324,6 @@ private val GreetingToInputGap = 22.dp
 
 // Figma 입력창은 402dp 화면에서 366dp 폭이므로 좌우 여백은 각각 18dp다.
 private val InputBarHorizontalPadding: Dp = 18.dp
-
-private val PickerHorizontalInset = (-61).dp
 
 // 100dp/149dp 두 입력창 높이 모두에서 Figma가 보여 준 9~10dp 겹침 폭.
 private val PickerOverlapHeight = 9.dp
