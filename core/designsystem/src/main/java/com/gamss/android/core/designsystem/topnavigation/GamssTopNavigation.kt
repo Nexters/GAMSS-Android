@@ -4,16 +4,19 @@ import android.content.res.Configuration
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -35,9 +38,31 @@ enum class GamssTopNavigationTitleAlignment {
  */
 enum class GamssTopNavigationIcon(@DrawableRes internal val drawableRes: Int) {
     LeftChevron(R.drawable.ic_left_chevron),
-    RightChevron(R.drawable.ic_right_chevron),
+
+    CreateCard(R.drawable.ic_create_card),
     Menu(R.drawable.ic_menu),
+
+    CheckToken(R.drawable.ic_token_check),
+
+    Search(R.drawable.ic_search)
 }
+
+/**
+ * 오른쪽 끝에 놓이는 아이콘 하나를 나타냅니다. [GamssTopNavigation]의 `rightActions`에 순서대로
+ * 담으면 오른쪽 끝부터 [TopNavigationRightActionSpacing] 간격으로 나열되고, 각각 자기 [onClick]으로
+ * 클릭 이벤트를 받습니다.
+ *
+ * [isLoading]을 true로 두면 같은 자리에 아이콘 대신 로딩 인디케이터를 그리고 클릭을 막습니다.
+ * 서버 왕복이 진행 중이라 이 자리의 동작을 잠시 멈춰야 할 때 씁니다 — 아이콘을 리스트에서
+ * 아예 빼면 자리가 사라져 사용자에게 아무 피드백도 남지 않습니다.
+ */
+@Immutable
+data class GamssTopNavigationIconAction(
+    val icon: GamssTopNavigationIcon,
+    val onClick: () -> Unit,
+    val contentDescription: String? = null,
+    val isLoading: Boolean = false,
+)
 
 sealed interface GamssTopNavigationContent {
     /**
@@ -63,25 +88,23 @@ sealed interface GamssTopNavigationContent {
  * [Color.Transparent]를 전달해 사용할 수 있습니다.
  *
  * [content]로 로고, 왼쪽 정렬 제목, 중앙 정렬 날짜/제목 형태를 선택할 수 있습니다.
- * 오른쪽 아이콘의 글리프는 [rightIcon]으로 바꿀 수 있습니다.
+ * 오른쪽 끝에는 [rightActions]에 담은 아이콘들이 오른쪽부터 순서대로 놓입니다. 각 아이콘은
+ * 서로 다른 글리프와 클릭 이벤트를 가질 수 있습니다.
  */
 @Suppress("LongParameterList")
 @Composable
 fun GamssTopNavigation(
     content: GamssTopNavigationContent,
     modifier: Modifier = Modifier,
-    backgroundColor: Color = if (isSystemInDarkTheme()) {
+    backgroundColor: Color = if (GamssTheme.isDarkTheme) {
         GamssTheme.colors.black
     } else {
         GamssTheme.colors.white
     },
     showLeftIcon: Boolean = false,
-    showRightIcon: Boolean = false,
     leftIconContentDescription: String? = null,
-    rightIconContentDescription: String? = null,
     onLeftIconClick: () -> Unit = {},
-    onRightIconClick: () -> Unit = {},
-    rightIcon: GamssTopNavigationIcon = GamssTopNavigationIcon.RightChevron,
+    rightActions: List<GamssTopNavigationIconAction> = emptyList(),
 ) {
     Box(
         modifier = modifier
@@ -130,15 +153,24 @@ fun GamssTopNavigation(
             content = content,
         )
 
-        TopNavigationIconSlot(
-            modifier = Modifier
-                .padding(end = TopNavigationContentHorizontalPadding)
-                .align(Alignment.CenterEnd),
-            visible = showRightIcon,
-            icon = rightIcon,
-            contentDescription = rightIconContentDescription,
-            onClick = onRightIconClick,
-        )
+        if (rightActions.isNotEmpty()) {
+            Row(
+                modifier = Modifier
+                    .padding(end = TopNavigationContentHorizontalPadding)
+                    .align(Alignment.CenterEnd),
+                horizontalArrangement = Arrangement.spacedBy(TopNavigationRightActionSpacing),
+            ) {
+                rightActions.forEach { action ->
+                    TopNavigationIconSlot(
+                        visible = true,
+                        icon = action.icon,
+                        contentDescription = action.contentDescription,
+                        onClick = action.onClick,
+                        isLoading = action.isLoading,
+                    )
+                }
+            }
+        }
     }
 }
 
@@ -151,18 +183,12 @@ fun GamssTopNavigation(
     title: String,
     modifier: Modifier = Modifier,
     titleAlignment: GamssTopNavigationTitleAlignment = GamssTopNavigationTitleAlignment.Start,
-    backgroundColor: Color = if (isSystemInDarkTheme()) {
-        GamssTheme.colors.black
-    } else {
-        GamssTheme.colors.white
-    },
+    // 다크 테마 시안 나오기 전까지 배경색 고정
+    backgroundColor: Color = GamssTheme.colors.white,
     showLeftIcon: Boolean = false,
-    showRightIcon: Boolean = false,
     leftIconContentDescription: String? = null,
-    rightIconContentDescription: String? = null,
     onLeftIconClick: () -> Unit = {},
-    onRightIconClick: () -> Unit = {},
-    rightIcon: GamssTopNavigationIcon = GamssTopNavigationIcon.RightChevron,
+    rightActions: List<GamssTopNavigationIconAction> = emptyList(),
 ) {
     GamssTopNavigation(
         content = GamssTopNavigationContent.Title(
@@ -172,12 +198,9 @@ fun GamssTopNavigation(
         modifier = modifier,
         backgroundColor = backgroundColor,
         showLeftIcon = showLeftIcon,
-        showRightIcon = showRightIcon,
         leftIconContentDescription = leftIconContentDescription,
-        rightIconContentDescription = rightIconContentDescription,
         onLeftIconClick = onLeftIconClick,
-        onRightIconClick = onRightIconClick,
-        rightIcon = rightIcon,
+        rightActions = rightActions,
     )
 }
 
@@ -192,7 +215,7 @@ private fun TopNavigationContent(
         GamssTopNavigationContent.Logo -> Image(
             modifier = modifier.size(width = LogoWidth, height = LogoHeight),
             painter = painterResource(
-                if (isSystemInDarkTheme()) {
+                if (GamssTheme.isDarkTheme) {
                     R.drawable.ic_logo_dark
                 } else {
                     R.drawable.ic_logo_light
@@ -219,20 +242,29 @@ private fun TopNavigationIconSlot(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     contentDescription: String? = null,
+    isLoading: Boolean = false,
 ) {
     if (visible) {
         Box(
             modifier = modifier
                 .size(IconTouchTargetSize)
-                .noRippleClickableIfNotNull(onClick),
+                .noRippleClickableIfNotNull(onClick.takeUnless { isLoading }),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(
-                modifier = Modifier.size(IconSize),
-                painter = painterResource(icon.drawableRes),
-                contentDescription = contentDescription,
-                tint = GamssTheme.colors.gray900,
-            )
+            if (isLoading) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(IconSize),
+                    color = GamssTheme.colors.gray900,
+                    strokeWidth = IconLoadingStrokeWidth,
+                )
+            } else {
+                Icon(
+                    modifier = Modifier.size(IconSize),
+                    painter = painterResource(icon.drawableRes),
+                    contentDescription = contentDescription,
+                    tint = GamssTheme.colors.gray900,
+                )
+            }
         }
     }
 }
@@ -265,32 +297,52 @@ private fun TopNavigationPreviewContent() {
     Column {
         GamssTopNavigation(
             content = GamssTopNavigationContent.Logo,
-            showRightIcon = true,
+            rightActions = listOf(
+                GamssTopNavigationIconAction(icon = GamssTopNavigationIcon.CreateCard, onClick = {}),
+            ),
         )
         GamssTopNavigation(
             content = GamssTopNavigationContent.Logo,
-            showRightIcon = true,
-            rightIcon = GamssTopNavigationIcon.Menu,
+            rightActions = listOf(
+                GamssTopNavigationIconAction(icon = GamssTopNavigationIcon.Menu, onClick = {}),
+            ),
         )
         GamssTopNavigation(
             title = "YY.MM.DD",
             titleAlignment = GamssTopNavigationTitleAlignment.Center,
             showLeftIcon = true,
-            showRightIcon = true,
+            rightActions = listOf(
+                GamssTopNavigationIconAction(icon = GamssTopNavigationIcon.CreateCard, onClick = {}),
+                GamssTopNavigationIconAction(icon = GamssTopNavigationIcon.Menu, onClick = {}),
+            ),
         )
         GamssTopNavigation(
             title = "Title",
             showLeftIcon = true,
-            showRightIcon = true,
+            rightActions = listOf(
+                GamssTopNavigationIconAction(icon = GamssTopNavigationIcon.CreateCard, onClick = {}),
+            ),
         )
     }
 }
 
-private val TopNavigationHeight = 64.dp
-private val TopNavigationContentHorizontalPadding = 18.dp
+/**
+ * 오른쪽 아이콘 아래에 팝업/툴팁을 띄우는 화면이 있어 공개한다. [GamssTopNavigation] 자체 높이는
+ * 이 값이지만, 컴포넌트 위에 얹히는 safety area 간격([GamssTheme.spacing.spacing075])까지 더해야
+ * 화면에 실제로 차지하는 전체 높이가 나온다.
+ */
+val GamssTopNavigationHeight = 64.dp
+
+/** 오른쪽 아이콘이 화면 끝에서 떨어진 여백. 그 아이콘에 맞춰 팝업 위치를 잡을 때 같이 쓴다. */
+val GamssTopNavigationHorizontalPadding = 18.dp
+
+private val TopNavigationHeight = GamssTopNavigationHeight
+private val TopNavigationContentHorizontalPadding = GamssTopNavigationHorizontalPadding
 private val TopNavigationTitleStartWithIcon = 60.dp
 private val TopNavigationTitleEndPadding = 60.dp
+private val TopNavigationRightActionSpacing = 20.dp
 private val IconTouchTargetSize = 24.dp
 private val IconSize = 24.dp
+private val IconLoadingStrokeWidth = 2.dp
 private val LogoWidth = 79.dp
 private val LogoHeight = 26.dp

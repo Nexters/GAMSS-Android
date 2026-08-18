@@ -5,6 +5,10 @@ import com.gamss.android.domain.auth.AuthRepository
 import com.gamss.android.domain.auth.LoginResult
 import com.gamss.android.domain.auth.SessionState
 import com.gamss.android.domain.model.DailyTokenUsage
+import com.gamss.android.domain.push.DeviceTokenRepository
+import com.gamss.android.domain.push.FakeDeviceTokenRepository
+import com.gamss.android.domain.push.FakePushTokenProvider
+import com.gamss.android.domain.push.UnregisterCurrentDeviceTokenUseCase
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -17,27 +21,66 @@ import org.junit.Test
 class DeleteUserAccountUseCaseTest {
 
     @Test
-    fun `회원 탈퇴 성공 후 로그아웃을 호출한다`() = runBlocking {
+    fun `탈퇴 전에 디바이스 토큰을 먼저 해제하고 탈퇴 후 로그아웃한다`() = runBlocking {
         val callOrder = mutableListOf<String>()
         val userRepository = FakeUserRepository(callOrder = callOrder)
         val authRepository = FakeAuthRepository(callOrder = callOrder)
-        val useCase = DeleteUserAccountUseCase(userRepository, authRepository)
+        val useCase = createUseCase(
+            userRepository = userRepository,
+            authRepository = authRepository,
+            deviceTokenRepository = FakeCallOrderDeviceTokenRepository(callOrder = callOrder),
+        )
 
         val result = useCase()
 
         assertTrue(result is AppResult.Success)
         assertEquals(1, authRepository.logoutCallCount)
-        assertEquals(listOf("deleteUserAccount", "logout"), callOrder)
+        assertEquals(listOf("unregisterToken", "deleteUserAccount", "logout"), callOrder)
+    }
+
+    @Test
+    fun `토큰 해제가 실패해도 탈퇴는 진행한다`() = runBlocking {
+        val authRepository = FakeAuthRepository()
+        val useCase = createUseCase(
+            authRepository = authRepository,
+            deviceTokenRepository = FakeDeviceTokenRepository(
+                unregisterResult = AppResult.Failure(IllegalStateException("unregister failed")),
+            ),
+        )
+
+        val result = useCase()
+
+        assertTrue(result is AppResult.Success)
+        assertEquals(1, authRepository.logoutCallCount)
+    }
+
+    @Test
+    fun `푸시 토큰이 없으면 해제 없이 탈퇴한다`() = runBlocking {
+        val deviceTokenRepository = FakeDeviceTokenRepository()
+        val authRepository = FakeAuthRepository()
+        val useCase = createUseCase(
+            authRepository = authRepository,
+            deviceTokenRepository = deviceTokenRepository,
+            pushToken = null,
+        )
+
+        val result = useCase()
+
+        assertTrue(result is AppResult.Success)
+        assertEquals(0, deviceTokenRepository.unregisterCallCount)
+        assertEquals(1, authRepository.logoutCallCount)
     }
 
     @Test
     fun `회원 탈퇴 실패 시 로그아웃하지 않고 탈퇴 실패를 반환한다`() = runBlocking {
         val failure = IllegalStateException("deleteUserAccount failed")
-        val userRepository = FakeUserRepository(
-            deleteUserAccountResult = AppResult.Failure(failure),
-        )
         val authRepository = FakeAuthRepository()
-        val useCase = DeleteUserAccountUseCase(userRepository, authRepository)
+        val useCase = createUseCase(
+            userRepository = FakeUserRepository(
+                deleteUserAccountResult = AppResult.Failure(failure),
+            ),
+            authRepository = authRepository,
+        )
 
         val result = useCase()
 
@@ -48,11 +91,8 @@ class DeleteUserAccountUseCaseTest {
     @Test
     fun `회원 탈퇴 성공 후 로그아웃 실패해도 탈퇴 성공을 반환한다`() = runBlocking {
         val failure = IllegalStateException("logout failed")
-        val userRepository = FakeUserRepository()
-        val authRepository = FakeAuthRepository(
-            logoutResult = AppResult.Failure(failure),
-        )
-        val useCase = DeleteUserAccountUseCase(userRepository, authRepository)
+        val authRepository = FakeAuthRepository(logoutResult = AppResult.Failure(failure))
+        val useCase = createUseCase(authRepository = authRepository)
 
         val result = useCase()
 
@@ -62,13 +102,40 @@ class DeleteUserAccountUseCaseTest {
 
     @Test(expected = CancellationException::class)
     fun `회원 탈퇴 취소는 실패로 변환하지 않고 전파한다`() = runBlocking {
-        val userRepository = FakeUserRepository(
-            deleteUserAccountFailure = CancellationException(),
+        val useCase = createUseCase(
+            userRepository = FakeUserRepository(
+                deleteUserAccountFailure = CancellationException(),
+            ),
         )
-        val authRepository = FakeAuthRepository()
 
-        DeleteUserAccountUseCase(userRepository, authRepository)()
+        useCase()
         Unit
+    }
+
+    private fun createUseCase(
+        userRepository: UserRepository = FakeUserRepository(),
+        authRepository: AuthRepository = FakeAuthRepository(),
+        deviceTokenRepository: DeviceTokenRepository = FakeDeviceTokenRepository(),
+        pushToken: String? = "token-123",
+    ) = DeleteUserAccountUseCase(
+        userRepository = userRepository,
+        authRepository = authRepository,
+        unregisterCurrentDeviceToken = UnregisterCurrentDeviceTokenUseCase(
+            pushTokenProvider = FakePushTokenProvider(pushToken),
+            deviceTokenRepository = deviceTokenRepository,
+        ),
+    )
+
+    private class FakeCallOrderDeviceTokenRepository(
+        private val callOrder: MutableList<String>,
+    ) : DeviceTokenRepository {
+        override suspend fun registerToken(token: String): AppResult<Unit> =
+            error("Not needed for this test")
+
+        override suspend fun unregisterToken(token: String): AppResult<Unit> {
+            callOrder += "unregisterToken"
+            return AppResult.Success(Unit)
+        }
     }
 
     private class FakeUserRepository(
