@@ -40,6 +40,11 @@ class Navigator(val state: NavigationState) {
         }
     }
 
+    /** 완료된 상세 흐름을 닫고 현재 탭의 첫 화면으로 돌아간다. */
+    fun finishCurrentFlow() {
+        clearSubStack()
+    }
+
     /**
      * 현재 탭의 상세 화면으로 이동한다.
      */

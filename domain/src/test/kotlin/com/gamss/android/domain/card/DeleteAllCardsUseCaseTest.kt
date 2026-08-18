@@ -7,11 +7,10 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.time.LocalDate
 
-class DeleteCardUseCaseTest {
+class DeleteAllCardsUseCaseTest {
 
     private class RecordingRepository : CardRepository {
-        var deletedCardId: Long? = null
-            private set
+        var deleteAllCalled = false
 
         override suspend fun getCardsByDate(date: LocalDate): AppResult<List<Card>> = error("사용하지 않음")
 
@@ -21,24 +20,24 @@ class DeleteCardUseCaseTest {
             summary: String,
         ): AppResult<Card> = error("사용하지 않음")
 
-        override suspend fun deleteAllCards(): AppResult<Unit> = error("사용하지 않음")
-
-        override suspend fun deleteCard(cardId: Long): AppResult<Unit> {
-            deletedCardId = cardId
+        override suspend fun deleteAllCards(): AppResult<Unit> {
+            deleteAllCalled = true
             return AppResult.Success(Unit)
         }
+
+        override suspend fun deleteCard(cardId: Long): AppResult<Unit> = error("사용하지 않음")
 
         override suspend fun deleteCardsByEmotion(character: EmotionCharacter): AppResult<Unit> =
             error("사용하지 않음")
     }
 
     @Test
-    fun `카드 삭제를 리포지토리에 위임한다`() = runBlocking {
+    fun 모든_카드_삭제를_리포지토리에_위임한다() = runBlocking {
         val repository = RecordingRepository()
 
-        val result = DeleteCardUseCase(repository)(1L)
+        val result = DeleteAllCardsUseCase(repository)()
 
-        assertEquals(1L, repository.deletedCardId)
+        assertEquals(true, repository.deleteAllCalled)
         assertEquals(AppResult.Success(Unit), result)
     }
 }

@@ -234,7 +234,12 @@ internal class CountingCardRepository(
             )
     }
 
+    override suspend fun deleteAllCards(): AppResult<Unit> = error("채팅방 테스트에서 쓰지 않는다")
+
     override suspend fun deleteCard(cardId: Long): AppResult<Unit> = error("채팅방 테스트에서 쓰지 않는다")
+
+    override suspend fun deleteCardsByEmotion(character: EmotionCharacter): AppResult<Unit> =
+        error("채팅방 테스트에서 쓰지 않는다")
 }
 
 internal fun message(id: Long, conversationId: Long, sender: MessageSender, content: String) = Message(
