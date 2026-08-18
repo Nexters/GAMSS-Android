@@ -401,7 +401,9 @@ private fun ChatMessageList(
                 }
             }
             if (state.isAwaitingComments) {
-                item { LoadingMessageBubble() }
+                val nextCharacter = (state.pendingComments.firstOrNull()?.sender as? MessageSender.Character)
+                    ?.character
+                item { LoadingMessageBubble(character = nextCharacter) }
             }
         }
 

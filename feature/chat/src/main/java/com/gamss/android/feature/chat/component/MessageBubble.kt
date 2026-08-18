@@ -18,6 +18,7 @@ import com.gamss.android.core.designsystem.component.chat.GamssSentChatBubble
 import com.gamss.android.core.designsystem.modifier.noRippleCombinedClickable
 import com.gamss.android.domain.conversation.Message
 import com.gamss.android.domain.conversation.MessageSender
+import com.gamss.android.domain.emotion.EmotionCharacter
 import com.gamss.android.feature.chat.R
 
 /**
@@ -49,14 +50,7 @@ fun MessageBubble(
             is MessageSender.Character -> GamssReceivedChatBubble(
                 sender = ChatSender(
                     name = sender.character.displayName,
-                    avatar = {
-                        Image(
-                            painter = painterResource(sender.character.avatarIconRes),
-                            contentDescription = null,
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier.fillMaxSize(),
-                        )
-                    },
+                    avatar = { CharacterAvatarImage(sender.character) },
                 ),
                 message = message.content,
                 time = message.createdTime,
@@ -80,9 +74,31 @@ fun MessageBubble(
     }
 }
 
+/**
+ * @param character 다음에 도착할 답장의 발신자. pendingComments의 첫 메시지 등으로 미리 알 때
+ *  넘기면 빈 프로필 대신 그 캐릭터 아바타와 이름을 보여준다.
+ */
 @Composable
-fun LoadingMessageBubble() {
-    GamssLoadingMessageBubble(senderStatus = stringResource(R.string.chat_room_message_writing_label))
+fun LoadingMessageBubble(character: EmotionCharacter? = null) {
+    val senderStatus = if (character != null) {
+        character.displayName
+    } else {
+        stringResource(R.string.chat_room_message_writing_label)
+    }
+    GamssLoadingMessageBubble(
+        senderStatus = senderStatus,
+        avatar = character?.let { { CharacterAvatarImage(it) } },
+    )
+}
+
+@Composable
+private fun CharacterAvatarImage(character: EmotionCharacter) {
+    Image(
+        painter = painterResource(character.avatarIconRes),
+        contentDescription = null,
+        contentScale = ContentScale.Crop,
+        modifier = Modifier.fillMaxSize(),
+    )
 }
 
 @Composable

@@ -165,10 +165,14 @@ fun GamssReceivedChatBubble(
 
 /**
  * 상대가 입력중일때 말풍선. 아바타 + 이름 + 말풍선이 왼쪽에 정렬된다.
+ *
+ * @param avatar 다음에 도착할 답장의 발신자를 이미 알 때(예: pendingComments) 그 캐릭터 아바타를
+ *  넘기면 빈 프로필 대신 표시한다.
  */
 @Composable
 fun GamssLoadingMessageBubble(
-    senderStatus: String
+    senderStatus: String,
+    avatar: (@Composable () -> Unit)? = null,
 ) {
     Row(
         horizontalArrangement = Arrangement.spacedBy(GamssTheme.spacing.spacing100),
@@ -178,7 +182,7 @@ fun GamssLoadingMessageBubble(
             horizontalArrangement = Arrangement.spacedBy(GamssTheme.spacing.spacing100),
             verticalAlignment = Alignment.Top,
         ) {
-            ChatAvatar(avatar = null)
+            ChatAvatar(avatar = avatar)
             Column(verticalArrangement = Arrangement.spacedBy(GamssTheme.spacing.spacing075)) {
                 Text(
                     text = senderStatus,
