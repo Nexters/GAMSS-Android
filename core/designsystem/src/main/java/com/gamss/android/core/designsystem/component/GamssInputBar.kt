@@ -65,6 +65,12 @@ fun GamssInputBar(
     placeholder: String = "",
     trailingContentDescription: String? = null,
     enabled: Boolean = true,
+    /**
+     * 전송 버튼(및 키보드 전송 액션)만 따로 잠글 때 쓴다. 기본은 [enabled]를 그대로 따른다.
+     * 입력칸은 계속 켜둔 채 전송만 잠깐 막고 싶을 때(예: 메시지 전송 중 포커스·키보드는
+     * 유지하되 중복 전송만 막는 경우) [enabled]와 분리해 넘긴다.
+     */
+    sendEnabled: Boolean = enabled,
     /** 후행 아이콘 앞에 놓이는 자리. 홈은 여기에 감정 선택 토글을 단다. */
     trailingAction: @Composable (() -> Unit)? = null,
     /** 이 줄 수까지 늘어나고, 넘는 내용은 입력칸 안에서 스크롤된다. 화면별 글자 상한에 맞춰 조정한다. */
@@ -74,7 +80,7 @@ fun GamssInputBar(
     onReplyClear: () -> Unit = {},
     replyClearContentDescription: String? = null,
 ) {
-    val canSubmit = enabled && value.isNotBlank()
+    val canSubmit = sendEnabled && value.isNotBlank()
     val verticalPadding = if (replyQuote != null) InputBarReplyVerticalPadding else 0.dp
 
     Column(
