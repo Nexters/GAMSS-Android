@@ -260,6 +260,7 @@ private fun ChatRoomContent(
                 endFlow = state.endFlow,
                 input = state.input,
                 isInputEnabled = !state.isLoading && state.endFlow == EndFlow.NotStarted,
+                isSending = state.isSending,
                 replyTarget = state.replyTarget,
                 actions = actions,
             )
@@ -280,13 +281,18 @@ private fun ChatRoomTopBar(
             showLeftIcon = true,
             onLeftIconClick = onBackClick,
             rightActions = listOfNotNull(
-                if (state.useChatEndFeature && !state.endFlow.isBusy && state.canEnd) {
-                    GamssTopNavigationIconAction(
+                when {
+                    !state.useChatEndFeature -> null
+                    state.endFlow.isBusy -> GamssTopNavigationIconAction(
+                        icon = GamssTopNavigationIcon.CreateCard,
+                        onClick = {},
+                        isLoading = true,
+                    )
+                    state.canEnd -> GamssTopNavigationIconAction(
                         icon = GamssTopNavigationIcon.CreateCard,
                         onClick = actions.onEndClick,
                     )
-                } else {
-                    null
+                    else -> null
                 },
                 GamssTopNavigationIconAction(
                     icon = GamssTopNavigationIcon.CheckToken,
@@ -448,6 +454,7 @@ private fun ChatRoomInputSection(
     endFlow: EndFlow,
     input: String,
     isInputEnabled: Boolean,
+    isSending: Boolean,
     replyTarget: ReplyTarget?,
     actions: ChatRoomActions,
 ) {
@@ -467,6 +474,7 @@ private fun ChatRoomInputSection(
     MessageInputBar(
         input = input,
         enabled = isInputEnabled,
+        isSending = isSending,
         replyTarget = replyTarget,
         onInputChange = actions.onInputChange,
         onSendClick = actions.onSendClick,

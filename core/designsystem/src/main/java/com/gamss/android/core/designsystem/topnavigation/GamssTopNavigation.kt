@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -50,12 +51,17 @@ enum class GamssTopNavigationIcon(@DrawableRes internal val drawableRes: Int) {
  * 오른쪽 끝에 놓이는 아이콘 하나를 나타냅니다. [GamssTopNavigation]의 `rightActions`에 순서대로
  * 담으면 오른쪽 끝부터 [TopNavigationRightActionSpacing] 간격으로 나열되고, 각각 자기 [onClick]으로
  * 클릭 이벤트를 받습니다.
+ *
+ * [isLoading]을 true로 두면 같은 자리에 아이콘 대신 로딩 인디케이터를 그리고 클릭을 막습니다.
+ * 서버 왕복이 진행 중이라 이 자리의 동작을 잠시 멈춰야 할 때 씁니다 — 아이콘을 리스트에서
+ * 아예 빼면 자리가 사라져 사용자에게 아무 피드백도 남지 않습니다.
  */
 @Immutable
 data class GamssTopNavigationIconAction(
     val icon: GamssTopNavigationIcon,
     val onClick: () -> Unit,
     val contentDescription: String? = null,
+    val isLoading: Boolean = false,
 )
 
 sealed interface GamssTopNavigationContent {
@@ -160,6 +166,7 @@ fun GamssTopNavigation(
                         icon = action.icon,
                         contentDescription = action.contentDescription,
                         onClick = action.onClick,
+                        isLoading = action.isLoading,
                     )
                 }
             }
@@ -235,20 +242,29 @@ private fun TopNavigationIconSlot(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     contentDescription: String? = null,
+    isLoading: Boolean = false,
 ) {
     if (visible) {
         Box(
             modifier = modifier
                 .size(IconTouchTargetSize)
-                .noRippleClickableIfNotNull(onClick),
+                .noRippleClickableIfNotNull(onClick.takeUnless { isLoading }),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(
-                modifier = Modifier.size(IconSize),
-                painter = painterResource(icon.drawableRes),
-                contentDescription = contentDescription,
-                tint = GamssTheme.colors.gray900,
-            )
+            if (isLoading) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(IconSize),
+                    color = GamssTheme.colors.gray900,
+                    strokeWidth = IconLoadingStrokeWidth,
+                )
+            } else {
+                Icon(
+                    modifier = Modifier.size(IconSize),
+                    painter = painterResource(icon.drawableRes),
+                    contentDescription = contentDescription,
+                    tint = GamssTheme.colors.gray900,
+                )
+            }
         }
     }
 }
@@ -327,5 +343,6 @@ private val TopNavigationTitleEndPadding = 60.dp
 private val TopNavigationRightActionSpacing = 20.dp
 private val IconTouchTargetSize = 24.dp
 private val IconSize = 24.dp
+private val IconLoadingStrokeWidth = 2.dp
 private val LogoWidth = 79.dp
 private val LogoHeight = 26.dp
