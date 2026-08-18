@@ -26,6 +26,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
@@ -245,13 +246,15 @@ private fun ModelDownloadConfirmationEffect(
 ) {
     val activity = LocalActivity.current
     val needsConfirmation by viewModel.needsUserConfirmation.collectAsState()
+    val message = stringResource(R.string.model_download_message)
+    val actionLabel = stringResource(R.string.model_download_action)
 
     LaunchedEffect(needsConfirmation, activity) {
         if (!needsConfirmation || activity == null) return@LaunchedEffect
 
         val result = snackbarHostState.showSnackbar(
-            message = MODEL_DOWNLOAD_MESSAGE,
-            actionLabel = MODEL_DOWNLOAD_ACTION,
+            message = message,
+            actionLabel = actionLabel,
             withDismissAction = true,
         )
         if (result == SnackbarResult.ActionPerformed) {
@@ -263,5 +266,3 @@ private fun ModelDownloadConfirmationEffect(
 private const val NO_BACK_PRESS = 0L
 private const val EXIT_CONFIRM_WINDOW_MS = 2000L
 
-private const val MODEL_DOWNLOAD_MESSAGE = "추가 다운로드가 필요해요"
-private const val MODEL_DOWNLOAD_ACTION = "모바일 데이터로 받기"
