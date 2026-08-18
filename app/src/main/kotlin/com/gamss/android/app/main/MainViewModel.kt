@@ -3,9 +3,13 @@ package com.gamss.android.app.main
 import androidx.lifecycle.ViewModel
 import com.gamss.android.domain.auth.ObserveSessionStateUseCase
 import com.gamss.android.domain.auth.RestoreSessionUseCase
+import com.gamss.android.domain.auth.SessionState
 import com.gamss.android.domain.config.GetRemoteConfigFlagUseCase
 import com.gamss.android.domain.config.ObserveRemoteConfigReadyUseCase
 import com.gamss.android.domain.config.RemoteConfigKey
+import com.gamss.android.domain.push.MarkNotificationPermissionPromptedUseCase
+import com.gamss.android.domain.push.ShouldPromptNotificationPermissionUseCase
+import com.gamss.android.domain.push.SyncDeviceTokenUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
@@ -18,11 +22,15 @@ import javax.inject.Inject
 import kotlin.time.Duration.Companion.seconds
 
 @HiltViewModel
+@Suppress("LongParameterList")
 class MainViewModel @Inject constructor(
     private val restoreSessionUseCase: RestoreSessionUseCase,
     private val observeSessionStateUseCase: ObserveSessionStateUseCase,
     private val observeRemoteConfigReadyUseCase: ObserveRemoteConfigReadyUseCase,
     private val getRemoteConfigFlagUseCase: GetRemoteConfigFlagUseCase,
+    private val syncDeviceTokenUseCase: SyncDeviceTokenUseCase,
+    private val shouldPromptNotificationPermissionUseCase: ShouldPromptNotificationPermissionUseCase,
+    private val markNotificationPermissionPromptedUseCase: MarkNotificationPermissionPromptedUseCase,
 ) : ViewModel(), ContainerHost<MainState, Unit> {
 
     override val container = container<MainState, Unit>(MainState())
@@ -41,7 +49,22 @@ class MainViewModel @Inject constructor(
             sessionState to useCardFeature
         }.collect { (sessionState, useCardFeature) ->
             reduce { state.copy(sessionState = sessionState, useCardFeature = useCardFeature) }
+            syncDeviceTokenIfAuthenticated(sessionState)
         }
+    }
+
+    fun syncDeviceToken() = intent {
+        syncDeviceTokenIfAuthenticated(state.sessionState)
+    }
+
+    suspend fun shouldPromptNotificationPermission(): Boolean = shouldPromptNotificationPermissionUseCase()
+
+    fun markNotificationPermissionPrompted() = intent {
+        markNotificationPermissionPromptedUseCase()
+    }
+
+    private suspend fun syncDeviceTokenIfAuthenticated(sessionState: SessionState) {
+        if (sessionState == SessionState.Authenticated) syncDeviceTokenUseCase()
     }
 
     /**

@@ -21,10 +21,15 @@ class DeleteCardUseCaseTest {
             summary: String,
         ): AppResult<Card> = error("사용하지 않음")
 
+        override suspend fun deleteAllCards(): AppResult<Unit> = error("사용하지 않음")
+
         override suspend fun deleteCard(cardId: Long): AppResult<Unit> {
             deletedCardId = cardId
             return AppResult.Success(Unit)
         }
+
+        override suspend fun deleteCardsByEmotion(character: EmotionCharacter): AppResult<Unit> =
+            error("사용하지 않음")
     }
 
     @Test
