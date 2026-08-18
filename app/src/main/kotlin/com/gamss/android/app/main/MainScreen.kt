@@ -1,5 +1,8 @@
 package com.gamss.android.app.main
 
+import android.os.SystemClock
+import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.LocalActivity
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection
@@ -17,9 +20,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
@@ -72,6 +78,7 @@ fun MainScreen(
     val snackbarHostState = remember { SnackbarHostState() }
 
     ModelDownloadConfirmationEffect(modelDownloadPromptViewModel, snackbarHostState)
+    DoubleBackToExitHandler(enabled = { !navigationState.canGoBack })
 
     // 배경/탭바 에셋이 라이트 전용이라 다크 시안이 나올 때까지 셸은 라이트로 고정한다.
     GamssTheme(darkTheme = false) {
@@ -197,6 +204,39 @@ private val detailSlideTransition: Map<String, Any> = NavDisplay.transitionSpec 
 }
 
 /**
+ * 홈 루트에서만 뒤로가기를 가로채 두 번 연타로 앱을 종료한다. 홈 루트에서는 NavDisplay의
+ * previousEntries가 비어 자체 back handler가 꺼지므로, 이 handler가 시스템 뒤로가기를 대신 받는다.
+ */
+@Composable
+private fun DoubleBackToExitHandler(enabled: () -> Boolean) {
+    val activity = LocalActivity.current
+    val context = LocalContext.current
+    // 같은 인스턴스를 재사용해야 연타 시 토스트가 큐에 쌓이지 않고, 종료 직전 취소할 수 있다.
+    val toast = remember(context) { Toast.makeText(context, EXIT_CONFIRM_MESSAGE, Toast.LENGTH_SHORT) }
+    var lastBackPressedAt by remember { mutableLongStateOf(NO_BACK_PRESS) }
+    val isEnabled = enabled()
+
+    // 다른 화면을 거쳐 홈으로 돌아오면 직전 경고는 무효다. 남겨두면 경고 없이 바로 종료된다.
+    LaunchedEffect(isEnabled) {
+        if (!isEnabled) lastBackPressedAt = NO_BACK_PRESS
+    }
+
+    BackHandler(enabled = isEnabled) {
+        // 벽시계(currentTimeMillis)는 시간 보정으로 뒤로 점프해 창 계산을 깨뜨린다.
+        val now = SystemClock.elapsedRealtime()
+        val withinWindow = lastBackPressedAt != NO_BACK_PRESS && now - lastBackPressedAt <= EXIT_CONFIRM_WINDOW_MS
+        if (withinWindow) {
+            // 취소하지 않으면 앱이 사라진 뒤에도 런처 위에 토스트가 남는다.
+            toast.cancel()
+            activity?.finish()
+        } else {
+            lastBackPressedAt = now
+            toast.show()
+        }
+    }
+}
+
+/**
  * emotion/summary 온디바이스 모델 중 하나라도 셀룰러/크기 확인이 필요해지면 스낵바를 띄운다.
  * 상태 기반이라 한 세션에서 여러 번(예: emotion 이 먼저, summary 가 나중에) 뜰 수 있다 —
  * [needsUserConfirmation] 가 다시 true 가 될 때마다 재노출된다.
@@ -222,6 +262,10 @@ private fun ModelDownloadConfirmationEffect(
         }
     }
 }
+
+private const val NO_BACK_PRESS = 0L
+private const val EXIT_CONFIRM_WINDOW_MS = 2000L
+private const val EXIT_CONFIRM_MESSAGE = "뒤로가기를 한 번 더 누르면 종료돼요"
 
 private const val MODEL_DOWNLOAD_MESSAGE = "추가 다운로드가 필요해요"
 private const val MODEL_DOWNLOAD_ACTION = "모바일 데이터로 받기"
