@@ -5,9 +5,12 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -16,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.gamss.android.core.designsystem.button.GamssButton
@@ -106,7 +110,12 @@ private fun CardDeleteContent(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
-                .padding(GamssTheme.spacing.spacing400),
+                .padding(
+                    start = GamssTheme.spacing.spacing400,
+                    end = GamssTheme.spacing.spacing400,
+                    top = GamssTheme.spacing.spacing400,
+                    bottom = buttonBottomPadding(),
+                ),
             label = stringResource(
                 if (state.isCompleted) R.string.card_delete_complete_button else R.string.card_delete_shred_button,
             ),
@@ -117,12 +126,26 @@ private fun CardDeleteContent(
     }
 }
 
+/**
+ * 제스처 바(24dp)는 디자인 여백 위에 겹쳐도 된다. 3버튼 내비처럼 인셋이 디자인 여백보다 크면 파쇄
+ * 버튼이 내비바에 가리므로, 그때는 인셋 위로 최소 간격만큼 띄운다.
+ *
+ * 이 화면은 하단바가 없는 상세 화면이라 시스템 내비게이션 바를 피해 줄 주체가 따로 없다 —
+ * MainScreen 의 NavDisplay 는 상태바만 처리하고, 내비바는 GamssBottomBar 가 직접 피한다.
+ */
+@Composable
+private fun buttonBottomPadding(): Dp {
+    val systemBarInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+    return GamssTheme.spacing.spacing400.coerceAtLeast(systemBarInset + MinGapAboveSystemBar)
+}
+
 private fun CardDeleteSideEffect.toMessage(context: android.content.Context): String =
     when (this) {
         CardDeleteSideEffect.ShredSuccess -> context.getString(R.string.card_delete_success_message)
         CardDeleteSideEffect.ShredFailure -> context.getString(R.string.card_delete_failure_message)
     }
 
+private val MinGapAboveSystemBar = 8.dp
 private val ShredStatusRowHeight = 90.dp
 private val ShredStripOverlayHeight = 4.dp
 
