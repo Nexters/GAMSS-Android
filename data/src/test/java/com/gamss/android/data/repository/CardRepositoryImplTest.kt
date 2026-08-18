@@ -137,6 +137,7 @@ class CardRepositoryImplTest {
         )
     }
 
+    @Test
     fun `월을 API 형식으로 조회하고 하루치 감정 목록을 카드 한 건씩으로 펼친다`() = runTest {
         coEvery { cardService.getCardsByMonth("2026-08") } returns ApiResponse(
             success = true,
