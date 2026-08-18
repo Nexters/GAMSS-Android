@@ -105,6 +105,7 @@ dependencies {
     implementation(projects.feature.login)
     implementation(projects.feature.onboarding)
     implementation(projects.feature.setting)
+    implementation(projects.feature.carddelete)
     implementation(projects.feature.webview)
 
     implementation(libs.compose.material.icons.core)

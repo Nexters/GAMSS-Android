@@ -40,7 +40,12 @@ class CreateCardUseCaseTest {
             )
         }
 
+        override suspend fun deleteAllCards(): AppResult<Unit> = error("사용하지 않음")
+
         override suspend fun deleteCard(cardId: Long): AppResult<Unit> = error("사용하지 않음")
+
+        override suspend fun deleteCardsByEmotion(character: EmotionCharacter): AppResult<Unit> =
+            error("사용하지 않음")
     }
 
     @Test

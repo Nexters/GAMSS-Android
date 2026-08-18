@@ -66,6 +66,13 @@ internal class CardRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun deleteAllCards(): AppResult<Unit> = runCatchingApiCall {
+        val response = cardService.deleteAllCards()
+        response.throwIfFailed()
+        checkNotNull(response.data?.deletedCount) { "No deleted card count" }
+        Unit
+    }
+
     override suspend fun deleteCard(cardId: Long): AppResult<Unit> {
         val result = runCatchingApiCall {
             cardService.deleteCard(cardId).throwIfFailed()
@@ -80,5 +87,12 @@ internal class CardRepositoryImpl @Inject constructor(
                     result
                 }
         }
+    }
+
+    override suspend fun deleteCardsByEmotion(character: EmotionCharacter): AppResult<Unit> = runCatchingApiCall {
+        val response = cardService.deleteCardsByEmotion(character.toServerEmotionType())
+        response.throwIfFailed()
+        checkNotNull(response.data?.deletedCount) { "No deleted card count" }
+        Unit
     }
 }

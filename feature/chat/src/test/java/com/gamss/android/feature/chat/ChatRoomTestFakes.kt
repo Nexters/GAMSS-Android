@@ -212,10 +212,10 @@ internal class CountingCardRepository(
     var calls = 0
         private set
 
-    override suspend fun getCardsByDate(date: LocalDate): AppResult<List<Card>> =
+    override suspend fun getCardsByMonth(yearMonth: YearMonth): AppResult<List<CardEntry>> =
         error("채팅 테스트에서 쓰지 않는다")
 
-    override suspend fun getCardsByMonth(yearMonth: YearMonth): AppResult<List<CardEntry>> =
+    override suspend fun getCardsByDate(date: LocalDate): AppResult<List<Card>> =
         error("채팅 테스트에서 쓰지 않는다")
 
     override suspend fun createCard(
@@ -239,7 +239,12 @@ internal class CountingCardRepository(
             )
     }
 
+    override suspend fun deleteAllCards(): AppResult<Unit> = error("채팅방 테스트에서 쓰지 않는다")
+
     override suspend fun deleteCard(cardId: Long): AppResult<Unit> = error("채팅방 테스트에서 쓰지 않는다")
+
+    override suspend fun deleteCardsByEmotion(character: EmotionCharacter): AppResult<Unit> =
+        error("채팅방 테스트에서 쓰지 않는다")
 }
 
 internal fun message(id: Long, conversationId: Long, sender: MessageSender, content: String) = Message(

@@ -40,6 +40,8 @@ import com.gamss.android.feature.archive.ArchiveDetailScreen
 import com.gamss.android.feature.archive.ArchiveScreen
 import com.gamss.android.feature.archive.navigation.ArchiveDetailKey
 import com.gamss.android.feature.archive.navigation.ArchiveKey
+import com.gamss.android.feature.carddelete.CardDeleteScreen
+import com.gamss.android.feature.carddelete.navigation.CardDeleteKey
 import com.gamss.android.feature.chat.ChatRoomScreen
 import com.gamss.android.feature.chat.ChattingListScreen
 import com.gamss.android.feature.chat.navigation.ChatKey
@@ -142,6 +144,12 @@ private fun mainEntryProvider(navigator: Navigator) = entryProvider {
             onAccountInfoClick = { navigator.navigate(AccountInfoKey) },
             onServiceTermsClick = { navigator.navigate(WebViewKey(GamssWebPage.ServiceTerms)) },
             onPrivacyPolicyClick = { navigator.navigate(WebViewKey(GamssWebPage.PrivacyPolicy)) },
+        )
+    }
+    entry<CardDeleteKey>(metadata = detailSlideTransition) {
+        CardDeleteScreen(
+            onBackClick = navigator::goBack,
+            onDeleteComplete = navigator::finishCurrentFlow,
         )
     }
     entry<AccountInfoKey>(metadata = detailSlideTransition) {

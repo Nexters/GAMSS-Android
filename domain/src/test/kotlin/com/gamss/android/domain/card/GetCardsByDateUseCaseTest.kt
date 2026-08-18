@@ -55,7 +55,13 @@ class GetCardsByDateUseCaseTest {
             summary: String,
         ): AppResult<Card> = error("날짜 조회 테스트에서 쓰지 않는다")
 
+        override suspend fun deleteAllCards(): AppResult<Unit> =
+            error("날짜 조회 테스트에서 쓰지 않는다")
+
         override suspend fun deleteCard(cardId: Long): AppResult<Unit> =
+            error("날짜 조회 테스트에서 쓰지 않는다")
+
+        override suspend fun deleteCardsByEmotion(character: EmotionCharacter): AppResult<Unit> =
             error("날짜 조회 테스트에서 쓰지 않는다")
     }
 }

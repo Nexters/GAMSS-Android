@@ -8,11 +8,10 @@ import java.time.LocalDate
 @Serializable
 internal data class CardCalendarResponse(
     val date: String,
-    /** 그날 카드들의 대표 감정. 카드 생성순이고 같은 감정이 여러 번 올 수 있다. */
+    /** 카드 생성순이며 같은 감정이 여러 번 올 수 있다. */
     val emotions: List<String> = emptyList(),
 )
 
-/** 하루치 대표 감정 목록을 카드 한 건씩으로 펼친다. 순번 기준은 [CardEntry] 참고. */
 internal fun CardCalendarResponse.toDomain(): List<CardEntry> {
     val createdDate = LocalDate.parse(date)
     return emotions.mapNotNull { it.toEmotionCharacter() }

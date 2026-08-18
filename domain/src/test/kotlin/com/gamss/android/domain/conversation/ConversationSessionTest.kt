@@ -291,10 +291,10 @@ class ConversationSessionTest {
     }
 
     private object NoOpCardRepository : CardRepository {
-        override suspend fun getCardsByDate(date: LocalDate): AppResult<List<Card>> =
+        override suspend fun getCardsByMonth(yearMonth: YearMonth): AppResult<List<CardEntry>> =
             error("대화 세션 테스트에서 쓰지 않는다")
 
-        override suspend fun getCardsByMonth(yearMonth: YearMonth): AppResult<List<CardEntry>> =
+        override suspend fun getCardsByDate(date: LocalDate): AppResult<List<Card>> =
             error("대화 세션 테스트에서 쓰지 않는다")
 
         override suspend fun createCard(
@@ -313,7 +313,12 @@ class ConversationSessionTest {
             ),
         )
 
+        override suspend fun deleteAllCards(): AppResult<Unit> = error("사용하지 않음")
+
         override suspend fun deleteCard(cardId: Long): AppResult<Unit> = error("사용하지 않음")
+
+        override suspend fun deleteCardsByEmotion(character: EmotionCharacter): AppResult<Unit> =
+            error("사용하지 않음")
     }
 
     private class FakeConversationRepository(

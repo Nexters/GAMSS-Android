@@ -8,14 +8,13 @@ import org.junit.Test
 import java.time.LocalDate
 import java.time.YearMonth
 
-class DeleteCardUseCaseTest {
+class DeleteCardsByEmotionUseCaseTest {
 
     private class RecordingRepository : CardRepository {
-        var deletedCardId: Long? = null
-            private set
+        var deletedCharacter: EmotionCharacter? = null
 
         override suspend fun getCardsByMonth(yearMonth: YearMonth): AppResult<List<CardEntry>> =
-            error("카드 삭제 테스트에서 쓰지 않는다")
+            error("감정별 삭제 테스트에서 쓰지 않는다")
 
         override suspend fun getCardsByDate(date: LocalDate): AppResult<List<Card>> = error("사용하지 않음")
 
@@ -27,22 +26,21 @@ class DeleteCardUseCaseTest {
 
         override suspend fun deleteAllCards(): AppResult<Unit> = error("사용하지 않음")
 
-        override suspend fun deleteCard(cardId: Long): AppResult<Unit> {
-            deletedCardId = cardId
+        override suspend fun deleteCard(cardId: Long): AppResult<Unit> = error("사용하지 않음")
+
+        override suspend fun deleteCardsByEmotion(character: EmotionCharacter): AppResult<Unit> {
+            deletedCharacter = character
             return AppResult.Success(Unit)
         }
-
-        override suspend fun deleteCardsByEmotion(character: EmotionCharacter): AppResult<Unit> =
-            error("사용하지 않음")
     }
 
     @Test
-    fun `카드 삭제를 리포지토리에 위임한다`() = runBlocking {
+    fun 감정별_카드_삭제를_리포지토리에_위임한다() = runBlocking {
         val repository = RecordingRepository()
 
-        val result = DeleteCardUseCase(repository)(1L)
+        val result = DeleteCardsByEmotionUseCase(repository)(EmotionCharacter.ANGER)
 
-        assertEquals(1L, repository.deletedCardId)
+        assertEquals(EmotionCharacter.ANGER, repository.deletedCharacter)
         assertEquals(AppResult.Success(Unit), result)
     }
 }
