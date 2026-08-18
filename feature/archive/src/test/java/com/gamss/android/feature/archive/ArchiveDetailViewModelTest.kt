@@ -9,7 +9,9 @@ import com.gamss.android.domain.card.DeleteCardUseCase
 import com.gamss.android.domain.card.GetCardsByDateUseCase
 import com.gamss.android.domain.card.GetCardsByMonthUseCase
 import com.gamss.android.domain.emotion.EmotionCharacter
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -184,6 +186,43 @@ class ArchiveDetailViewModelTest {
         }
     }
 
+    @Test
+    fun `늦게 온 이전 달 응답은 지금 보고 있는 달을 덮지 않는다`() = runTest {
+        val currentMonth = YearMonth.now(KoreanTimeZone)
+        val slowMonth = currentMonth.minusMonths(2)
+        val fastMonth = currentMonth.minusMonths(1)
+        val slowMonthGate = CompletableDeferred<Unit>()
+        val repository = FakeCardRepository(
+            monthResult = AppResult.Success(emptyList()),
+            monthGates = mapOf(slowMonth to slowMonthGate),
+            monthResults = mapOf(
+                slowMonth to AppResult.Success(listOf(staleEntry)),
+                fastMonth to AppResult.Success(listOf(angerEntry)),
+            ),
+        )
+        val viewModel = viewModel(repository)
+        val testScope = this
+
+        viewModel.test(this) {
+            containerHost.load(EmotionCharacter.ANGER)
+            expectState { copy(emotion = EmotionCharacter.ANGER) }
+            expectState { copy(cards = ArchiveCards.Loaded(emptyList())) }
+
+            // 응답이 게이트에 걸려 멈춰 있는 동안 다음 달을 고른다.
+            containerHost.selectMonth(slowMonth)
+            expectState { copy(yearMonth = slowMonth, cards = ArchiveCards.Loading) }
+
+            containerHost.selectMonth(fastMonth)
+            expectState { copy(yearMonth = fastMonth, cards = ArchiveCards.Loading) }
+            expectState { copy(cards = ArchiveCards.Loaded(listOf(angerEntry))) }
+
+            // 뒤늦게 도착한 이전 달 응답이 지금 목록을 덮으면 소비되지 않은 상태가 남는다.
+            slowMonthGate.complete(Unit)
+            testScope.runCurrent()
+            expectNoItems()
+        }
+    }
+
     private fun viewModel(repository: FakeCardRepository) = ArchiveDetailViewModel(
         getCardsByMonth = GetCardsByMonthUseCase(repository),
         getCardsByDate = GetCardsByDateUseCase(repository),
@@ -194,6 +233,7 @@ class ArchiveDetailViewModelTest {
         val DATE: LocalDate = LocalDate.of(2026, 8, 15)
 
         val angerEntry = CardEntry(date = DATE, indexInDate = 0, character = EmotionCharacter.ANGER)
+        val staleEntry = CardEntry(date = DATE.minusMonths(2), indexInDate = 0, character = EmotionCharacter.ANGER)
         val joyEntry = CardEntry(date = DATE, indexInDate = 1, character = EmotionCharacter.JOY)
 
         val firstCardOfDay = card(id = 1L, character = EmotionCharacter.ANGER)
@@ -214,6 +254,10 @@ class ArchiveDetailViewModelTest {
 private class FakeCardRepository(
     private val monthResult: AppResult<List<CardEntry>>,
     private val dateResult: AppResult<List<Card>> = AppResult.Success(emptyList()),
+    /** 여기 담긴 달은 게이트가 열릴 때까지 응답을 붙잡는다. 늦게 도착하는 응답을 만들 때 쓴다. */
+    private val monthGates: Map<YearMonth, CompletableDeferred<Unit>> = emptyMap(),
+    /** 달마다 다른 목록을 줘야 할 때만 채운다. 없는 달은 [monthResult] 로 답한다. */
+    private val monthResults: Map<YearMonth, AppResult<List<CardEntry>>> = emptyMap(),
 ) : CardRepository {
 
     val requestedMonths = mutableListOf<YearMonth>()
@@ -227,7 +271,8 @@ private class FakeCardRepository(
 
     override suspend fun getCardsByMonth(yearMonth: YearMonth): AppResult<List<CardEntry>> {
         requestedMonths += yearMonth
-        return monthResult
+        monthGates[yearMonth]?.await()
+        return monthResults[yearMonth] ?: monthResult
     }
 
     override suspend fun createCard(

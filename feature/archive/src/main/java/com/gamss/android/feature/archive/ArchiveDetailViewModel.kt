@@ -116,6 +116,10 @@ class ArchiveDetailViewModel @Inject constructor(
             is AppResult.Success -> ArchiveCards.Loaded(result.data.filter { it.character == emotion })
             is AppResult.Failure -> ArchiveCards.LoadFailed
         }
-        reduce { state.copy(cards = cards) }
+        // intent 는 서로 병렬로 돈다. 느린 달을 기다리는 사이 다른 달로 옮겼다면, 늦게 온 응답이
+        // 지금 보고 있는 달의 목록을 덮어써 셀렉터와 종이가 어긋난다. 그래서 덮기 직전에 다시 확인한다.
+        reduce {
+            if (state.yearMonth == yearMonth && state.emotion == emotion) state.copy(cards = cards) else state
+        }
     }
 }
