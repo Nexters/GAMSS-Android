@@ -27,31 +27,13 @@ class GetCardsByMonthUseCaseTest {
 
     private class RecordingRepository(
         private val result: AppResult<List<CardEntry>>,
-    ) : CardRepository {
+    ) : FakeCardRepository() {
         var requestedMonth: YearMonth? = null
             private set
-
-        override suspend fun getCardsByDate(date: LocalDate): AppResult<List<Card>> =
-            AppResult.Success(emptyList())
 
         override suspend fun getCardsByMonth(yearMonth: YearMonth): AppResult<List<CardEntry>> {
             requestedMonth = yearMonth
             return result
         }
-
-        override suspend fun createCard(
-            conversationId: Long,
-            character: EmotionCharacter,
-            summary: String,
-        ): AppResult<Card> = error("월별 조회 테스트에서 쓰지 않는다")
-
-        override suspend fun deleteAllCards(): AppResult<Unit> =
-            error("월별 조회 테스트에서 쓰지 않는다")
-
-        override suspend fun deleteCard(cardId: Long): AppResult<Unit> =
-            error("월별 조회 테스트에서 쓰지 않는다")
-
-        override suspend fun deleteCardsByEmotion(character: EmotionCharacter): AppResult<Unit> =
-            error("월별 조회 테스트에서 쓰지 않는다")
     }
 }

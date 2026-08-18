@@ -7,7 +7,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertSame
 import org.junit.Test
 import java.time.LocalDate
-import java.time.YearMonth
 
 class GetCardsByDateUseCaseTest {
 
@@ -37,7 +36,7 @@ class GetCardsByDateUseCaseTest {
 
     private class RecordingRepository(
         private val result: AppResult<List<Card>>,
-    ) : CardRepository {
+    ) : FakeCardRepository() {
         var requestedDate: LocalDate? = null
             private set
 
@@ -45,23 +44,5 @@ class GetCardsByDateUseCaseTest {
             requestedDate = date
             return result
         }
-
-        override suspend fun getCardsByMonth(yearMonth: YearMonth): AppResult<List<CardEntry>> =
-            AppResult.Success(emptyList())
-
-        override suspend fun createCard(
-            conversationId: Long,
-            character: EmotionCharacter,
-            summary: String,
-        ): AppResult<Card> = error("날짜 조회 테스트에서 쓰지 않는다")
-
-        override suspend fun deleteAllCards(): AppResult<Unit> =
-            error("날짜 조회 테스트에서 쓰지 않는다")
-
-        override suspend fun deleteCard(cardId: Long): AppResult<Unit> =
-            error("날짜 조회 테스트에서 쓰지 않는다")
-
-        override suspend fun deleteCardsByEmotion(character: EmotionCharacter): AppResult<Unit> =
-            error("날짜 조회 테스트에서 쓰지 않는다")
     }
 }
