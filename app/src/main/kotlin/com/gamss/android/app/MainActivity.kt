@@ -15,15 +15,14 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // 인자 없는 기본값은 시스템 바 아이콘 색을 기기 다크 모드에 맞춘다. 하지만 셸이 라이트로
-        // 고정돼 있어(MainScreen 참고) 기기가 다크면 흰 배경에 흰 아이콘이 겹친다. 다크 시안이
-        // 나와 셸 고정을 풀 때 이 스타일도 함께 되돌린다.
+        // 시스템 바 아이콘과 테마를 모두 라이트로 고정한다. 둘 중 하나만 고정하면 다크 모드 기기에서
+        // 검은 배경에 검은 아이콘이 겹친다. 다크 시안이 나오면 이 고정과 MainScreen 의 고정을 함께 푼다.
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.light(Color.TRANSPARENT, Color.BLACK),
             navigationBarStyle = SystemBarStyle.light(Color.TRANSPARENT, Color.BLACK),
         )
         setContent {
-            GamssTheme {
+            GamssTheme(darkTheme = false) {
                 GamssRootNavHost()
             }
         }

@@ -13,10 +13,20 @@ fun GamssTheme(
     content: @Composable () -> Unit,
 ) {
     val colors = if (darkTheme) DarkGamssColors else LightGamssColors
+    // 디자인 시스템에 primary 토큰이 없어 Primary 버튼과 같은 gray950 을 쓴다.
+    // CircularProgressIndicator 등 Material 기본값이 이 색을 참조한다.
     val materialColorScheme = if (darkTheme) {
-        darkColorScheme(background = colors.gray025)
+        darkColorScheme(
+            background = colors.gray025,
+            primary = colors.gray950,
+            onPrimary = colors.gray025,
+        )
     } else {
-        lightColorScheme(background = colors.gray025)
+        lightColorScheme(
+            background = colors.gray025,
+            primary = colors.gray950,
+            onPrimary = colors.gray025,
+        )
     }
 
     CompositionLocalProvider(LocalGamssColors provides colors) {

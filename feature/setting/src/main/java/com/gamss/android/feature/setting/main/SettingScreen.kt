@@ -55,8 +55,6 @@ fun SettingScreen(
     ) {
         GamssTopNavigation(
             modifier = Modifier.padding(bottom = GamssTheme.spacing.spacing300),
-            // 기본값은 기기의 다크 모드를 보므로, 라이트로 고정된 앱 테마와 어긋나지 않게 직접 넘긴다.
-            backgroundColor = GamssTheme.colors.background,
             title = stringResource(R.string.setting_title),
             showLeftIcon = true,
             onLeftIconClick = onBackClick,

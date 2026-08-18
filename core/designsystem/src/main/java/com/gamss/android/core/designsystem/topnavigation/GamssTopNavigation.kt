@@ -4,7 +4,6 @@ import android.content.res.Configuration
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -70,11 +69,7 @@ sealed interface GamssTopNavigationContent {
 fun GamssTopNavigation(
     content: GamssTopNavigationContent,
     modifier: Modifier = Modifier,
-    backgroundColor: Color = if (isSystemInDarkTheme()) {
-        GamssTheme.colors.black
-    } else {
-        GamssTheme.colors.white
-    },
+    backgroundColor: Color = GamssTheme.colors.background,
     showLeftIcon: Boolean = false,
     showRightIcon: Boolean = false,
     leftIconContentDescription: String? = null,
@@ -151,11 +146,7 @@ fun GamssTopNavigation(
     title: String,
     modifier: Modifier = Modifier,
     titleAlignment: GamssTopNavigationTitleAlignment = GamssTopNavigationTitleAlignment.Start,
-    backgroundColor: Color = if (isSystemInDarkTheme()) {
-        GamssTheme.colors.black
-    } else {
-        GamssTheme.colors.white
-    },
+    backgroundColor: Color = GamssTheme.colors.background,
     showLeftIcon: Boolean = false,
     showRightIcon: Boolean = false,
     leftIconContentDescription: String? = null,
@@ -192,7 +183,7 @@ private fun TopNavigationContent(
         GamssTopNavigationContent.Logo -> Image(
             modifier = modifier.size(width = LogoWidth, height = LogoHeight),
             painter = painterResource(
-                if (isSystemInDarkTheme()) {
+                if (GamssTheme.colors.isDark) {
                     R.drawable.ic_logo_dark
                 } else {
                     R.drawable.ic_logo_light
