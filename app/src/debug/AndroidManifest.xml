@@ -14,8 +14,9 @@
         <!-- 디버그/검증 전용 화면. adb 로만 실행. -->
         <activity
             android:name=".debug.CardDebugActivity"
-            android:exported="true"
+            android:exported="false"
             android:theme="@style/Theme.GAMSS" />
+
     </application>
 
 </manifest>

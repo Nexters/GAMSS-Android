@@ -1,5 +1,6 @@
 package com.gamss.android.feature.home
 
+import androidx.paging.PagingData
 import com.gamss.android.core.common.AppResult
 import com.gamss.android.domain.card.Card
 import com.gamss.android.domain.card.CardRepository
@@ -14,9 +15,11 @@ import com.gamss.android.domain.conversation.EndConversationUseCase
 import com.gamss.android.domain.conversation.GetMessagesUseCase
 import com.gamss.android.domain.conversation.Message
 import com.gamss.android.domain.conversation.MessageSender
+import com.gamss.android.domain.conversation.PendingConversationReveal
 import com.gamss.android.domain.conversation.SendMessageUseCase
 import com.gamss.android.domain.conversation.SentMessage
 import com.gamss.android.domain.conversation.UpdateConversationTitleUseCase
+import com.gamss.android.domain.conversation.chattingsearch.ChattingRoomSummary
 import com.gamss.android.domain.emotion.ClassificationResult
 import com.gamss.android.domain.emotion.ConversationEmotionAccumulator
 import com.gamss.android.domain.emotion.EmotionCharacter
@@ -26,6 +29,8 @@ import com.gamss.android.domain.summary.DiarySummarizer
 import com.gamss.android.domain.summary.SummarizeDiaryUseCase
 import com.gamss.android.domain.summary.UtteranceTokenCounter
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.flow.Flow
+import java.time.LocalDate
 
 internal const val NEW_ROOM_ID = 42L
 
@@ -43,6 +48,7 @@ internal fun conversationSession(repository: ConversationRepository) = Conversat
         tokenCounter = CharLengthTokenCounter,
     ),
     emotionAccumulator = ConversationEmotionAccumulator(FlatClassifier),
+    pendingReveal = PendingConversationReveal(),
 )
 
 /**
@@ -108,14 +114,27 @@ internal class RecordingConversationRepository(
 
     override suspend fun deleteConversation(conversationId: Long): AppResult<Unit> =
         AppResult.Success(Unit)
+
+    override fun searchChattingRooms(keyword: String): Flow<PagingData<ChattingRoomSummary>> =
+        error("홈 테스트에서 쓰지 않는다")
 }
 
 private object NoCardRepository : CardRepository {
+    override suspend fun getCardsByDate(date: LocalDate): AppResult<List<Card>> =
+        AppResult.Success(emptyList())
+
     override suspend fun createCard(
         conversationId: Long,
         character: EmotionCharacter,
         summary: String,
     ): AppResult<Card> = error("홈 테스트에서 쓰지 않는다")
+
+    override suspend fun deleteAllCards(): AppResult<Unit> = error("홈 테스트에서 쓰지 않는다")
+
+    override suspend fun deleteCard(cardId: Long): AppResult<Unit> = error("홈 테스트에서 쓰지 않는다")
+
+    override suspend fun deleteCardsByEmotion(character: EmotionCharacter): AppResult<Unit> =
+        error("홈 테스트에서 쓰지 않는다")
 }
 
 private object PassThroughSummarizer : DiarySummarizer {

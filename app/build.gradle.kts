@@ -28,10 +28,17 @@ android {
         }
     }
 
-    // 온디바이스 모델(.tflite/.onnx)은 더 이상 base 앱에 번들되지 않는다.
-    // Play Asset Delivery(on-demand) 애셋팩으로 분리되어 필요 시점에만 기기로 내려받힌다.
-    // 애셋팩은 다운로드 후 로컬 파일로 추출되므로(APK zip 엔트리가 아님) noCompress 설정이 필요 없다.
+    // release(Play Console) buildType 은 온디바이스 모델(.tflite/.onnx)을 base 앱에 번들하지 않는다 —
+    // Play Asset Delivery(on-demand) 애셋팩으로 분리되어 필요 시점에만 기기로 내려받힌다(다운로드 후
+    // 로컬 파일로 추출되므로 APK zip 엔트리가 아니라 noCompress 설정이 필요 없다).
     assetPacks += setOf(":models:emotion-pack", ":models:summary-pack")
+
+    // debug/internal buildType 은 위 애셋팩 대신 같은 파일을 assets 로 직접 번들한다(data 모듈의
+    // debug/internal sourceSet 참고) — 이 경우엔 APK zip 엔트리이므로 noCompress 가 필요하다. .onnx 는
+    // 명시하지 않으면 압축돼 mmap(assets.openFd)이 실패한다. .tflite 는 AGP 가 기본으로 비압축 처리한다.
+    androidResources {
+        noCompress += listOf("tflite", "onnx")
+    }
 
     val releaseKeystorePath = providers.environmentVariable("RELEASE_KEYSTORE_PATH").orNull
     val releaseKeystorePassword = providers.environmentVariable("RELEASE_KEYSTORE_PASSWORD").orNull
@@ -71,6 +78,10 @@ android {
                 signingConfig = signingConfigs.getByName("release")
             }
         }
+
+        // Firebase App Distribution 전용 buildType. Play Store 를 거치지 않는 설치 경로라 온디바이스
+        // 모델을 PAD 대신 APK 에 그대로 번들한다 — data/build.gradle.kts 의 `internal` buildType/
+        // sourceSet 참고.
         create("internal") {
             initWith(getByName("release"))
             isDebuggable = true
@@ -82,6 +93,7 @@ android {
 }
 
 dependencies {
+    implementation(project(":feature:onboarding"))
     implementation(projects.domain)
     implementation(projects.data)
     implementation(projects.core.common)
@@ -90,13 +102,17 @@ dependencies {
     implementation(projects.feature.home)
     implementation(projects.feature.chat)
     implementation(projects.feature.calendar)
+    implementation(projects.feature.emotion)
     implementation(projects.feature.login)
+    implementation(projects.feature.onboarding)
     implementation(projects.feature.setting)
+    implementation(projects.feature.carddelete)
     implementation(projects.feature.webview)
 
     implementation(libs.compose.material.icons.core)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
     implementation(libs.androidx.lifecycle.viewmodel.navigation3)
     implementation(libs.androidx.hilt.navigation.compose)
@@ -107,16 +123,21 @@ dependencies {
     implementation(libs.orbit.core)
     implementation(libs.orbit.viewmodel)
     implementation(libs.orbit.compose)
+    implementation(libs.kotlinx.serialization.json)
 
     implementation(libs.kotlinx.coroutines.android)
 
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.crashlytics)
     implementation(libs.firebase.analytics)
+    implementation(libs.firebase.messaging)
+
+    implementation(libs.androidx.core.ktx)
 
     testImplementation(libs.junit)
 
     androidTestImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.androidx.test.rules)
 }

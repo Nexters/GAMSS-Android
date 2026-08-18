@@ -1,10 +1,12 @@
 package com.gamss.android.feature.chat
 
 import com.gamss.android.domain.conversation.Conversation
+import com.gamss.android.domain.conversation.chattingsearch.ChattingRoomSummary
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 import java.time.LocalDateTime
+import java.time.ZoneId
 
 /** 날짜 묶음과 표시 문자열. 고정 시각만 쓰므로 기기 타임존과 로케일에 흔들리지 않는다. */
 class ChattingListDisplayTest {
@@ -89,6 +91,19 @@ class ChattingListDisplayTest {
         ).toConversationGroups().single().rows.single()
 
         assertNull(row.title)
+    }
+
+    @Test
+    fun 검색_결과도_기존_목록과_같은_날짜와_시각으로_변환한다() {
+        val room = ChattingRoomSummary(
+            conversationId = 1L,
+            title = "검색된 대화",
+            createdAt = "2026-07-31T04:20:00+09:00",
+        )
+        val zone = ZoneId.of("Asia/Seoul")
+
+        assertEquals("26.07.31", room.toDateLabel(zone))
+        assertEquals("오전 4:20", room.toConversationRow(zone).timeLabel)
     }
 
     private fun conversationAt(id: Long, createdAt: LocalDateTime?): Conversation =

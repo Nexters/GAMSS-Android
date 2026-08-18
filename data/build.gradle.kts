@@ -38,8 +38,35 @@ android {
         release {
             buildConfigField("String", "BASE_URL", "\"$prodBaseUrl\"")
         }
+        // app 의 `internal` buildType(Firebase App Distribution 배포)과 짝을 맞춘다. app 은 이
+        // buildType 에 matchingFallbacks("release")를 두지만, 그건 internal variant 가 아예 없는
+        // 라이브러리에만 적용된다 — 이 모듈처럼 진짜 internal variant 를 선언하면 그게 우선한다.
+        // BASE_URL 은 release 와 동일(운영 서버 대상 QA 배포).
+        create("internal") {
+            initWith(getByName("release"))
+        }
     }
 
+    // 온디바이스 모델(.tflite/.onnx)은 release(Play Console)에서는 Play Asset Delivery 로 내려받지만,
+    // debug/internal(Play Store 를 거치지 않는 설치 경로)에서는 AssetPackManager 가 동작하지 않아
+    // APK 에 그대로 번들한다. 파일을 복사하지 않고 애셋팩 모듈의 assets 를 그대로 srcDir 로 참조해
+    // 단일 소스를 유지한다 — data/model/LocalAssetsModelSource, di/ModelAssetSourceModule 참고.
+    sourceSets {
+        listOf("debug", "internal").forEach { buildTypeName ->
+            getByName(buildTypeName) {
+                assets.srcDirs(
+                    "../models/emotion-pack/src/main/assets",
+                    "../models/summary-pack/src/main/assets",
+                )
+            }
+        }
+    }
+
+    androidResources {
+        // assets.openFd() + mmap 으로 로드하려면(LocalAssetsModelSource) APK 안에 비압축으로
+        // 들어있어야 한다. release 는 이 assets 를 안 쓰지만(애셋팩으로 분리) 무해하다.
+        noCompress += listOf("tflite", "onnx")
+    }
 }
 
 dependencies {
@@ -59,7 +86,9 @@ dependencies {
     implementation(libs.firebase.auth)
     implementation(libs.firebase.firestore)
     implementation(libs.firebase.config)
+    implementation(libs.firebase.messaging)
     implementation(libs.kotlinx.coroutines.play.services)
+    implementation(libs.androidx.paging.common)
 
     // 온디바이스 감정 분류(KoELECTRA INT8). LiteRT 추론, 토크나이저는 순수 Kotlin.
     implementation(libs.litert) {
@@ -83,5 +112,7 @@ dependencies {
 
     androidTestImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
+    androidTestImplementation("androidx.test:runner:1.6.2")
+
     androidTestImplementation(libs.androidx.test.runner)
 }

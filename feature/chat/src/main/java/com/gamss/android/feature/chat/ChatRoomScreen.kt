@@ -116,7 +116,10 @@ fun ChatRoomScreen(
             onConfirm = viewModel::onEndConfirm,
             onDismiss = viewModel::onEndCancel,
         )
-        is EndFlow.CardReady -> CardBottomSheet(card = endFlow.card, onDismiss = onCardClose)
+        is EndFlow.CardReady -> CardBottomSheet(
+            card = endFlow.card,
+            onDismiss = onCardClose,
+        )
         EndFlow.NotStarted,
         EndFlow.Ending,
         EndFlow.CreatingCard,

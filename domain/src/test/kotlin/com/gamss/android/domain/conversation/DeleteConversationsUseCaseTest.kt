@@ -1,11 +1,14 @@
 package com.gamss.android.domain.conversation
 
+import androidx.paging.PagingData
 import com.gamss.android.core.common.AppResult
 import com.gamss.android.domain.auth.SessionExpiredException
+import com.gamss.android.domain.conversation.chattingsearch.ChattingRoomSummary
 import com.gamss.android.domain.emotion.EmotionCharacter
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
@@ -209,6 +212,9 @@ class DeleteConversationsUseCaseTest {
             throw UnsupportedOperationException()
 
         override suspend fun endConversation(conversationId: Long): AppResult<Unit> =
+            throw UnsupportedOperationException()
+
+        override fun searchChattingRooms(keyword: String): Flow<PagingData<ChattingRoomSummary>> =
             throw UnsupportedOperationException()
 
         private companion object {

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 감정 카드 제목. 서버 텍스트가 아니라 카드 캐릭터로 정해지는 고정 문구다. -->
+    <string name="emotion_card_title_joy">오늘 기~쁘네</string>
+    <string name="emotion_card_title_anger">오늘 화~나네</string>
+    <string name="emotion_card_title_anxiety">오늘 불~안하네</string>
+    <string name="emotion_card_title_sadness">오늘 슬~프네</string>
+    <string name="emotion_card_title_quirky">오늘 엉~뚱하네</string>
+    <string name="emotion_card_title_prickly">오늘 까~칠하네</string>
+</resources>

@@ -1,5 +1,6 @@
 package com.gamss.android.feature.chat
 
+import androidx.paging.PagingData
 import com.gamss.android.core.common.AppResult
 import com.gamss.android.domain.card.Card
 import com.gamss.android.domain.card.CardRepository
@@ -17,9 +18,11 @@ import com.gamss.android.domain.conversation.EndConversationUseCase
 import com.gamss.android.domain.conversation.GetMessagesUseCase
 import com.gamss.android.domain.conversation.Message
 import com.gamss.android.domain.conversation.MessageSender
+import com.gamss.android.domain.conversation.PendingConversationReveal
 import com.gamss.android.domain.conversation.SendMessageUseCase
 import com.gamss.android.domain.conversation.SentMessage
 import com.gamss.android.domain.conversation.UpdateConversationTitleUseCase
+import com.gamss.android.domain.conversation.chattingsearch.ChattingRoomSummary
 import com.gamss.android.domain.emotion.ClassificationResult
 import com.gamss.android.domain.emotion.ConversationEmotionAccumulator
 import com.gamss.android.domain.emotion.EmotionCharacter
@@ -37,6 +40,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emptyFlow
+import java.time.LocalDate
 
 /**
  * 채팅 ViewModel 조립을 한 곳에 둔다. 테스트마다 따로 조립하면 세션 구성이 갈라진다.
@@ -51,14 +55,8 @@ internal fun chatRoomViewModel(
     classifier: EmotionClassifier = FlatClassifier,
     tokenUsageRefreshNotifier: TokenUsageRefreshNotifier = RecordingTokenUsageRefreshNotifier(),
     remoteConfigRepository: RemoteConfigRepository = FakeRemoteConfigRepository(),
-): ChatRoomViewModel = ChatRoomViewModel(
-    tokenUsageRefreshNotifier = tokenUsageRefreshNotifier,
-    detectRiskInText = DetectRiskInTextUseCase(
-        repository = NoRiskLexiconRepository,
-        matcher = RiskTermMatcher(),
-    ),
-    getRemoteConfigFlag = GetRemoteConfigFlagUseCase(remoteConfigRepository),
-    session = ConversationSession(
+    pendingReveal: PendingConversationReveal = PendingConversationReveal(),
+    session: ConversationSession = ConversationSession(
         sendMessage = SendMessageUseCase(conversationRepository),
         getMessages = GetMessagesUseCase(conversationRepository),
         updateConversationTitle = UpdateConversationTitleUseCase(conversationRepository),
@@ -72,7 +70,16 @@ internal fun chatRoomViewModel(
             tokenCounter = CharLengthTokenCounter,
         ),
         emotionAccumulator = ConversationEmotionAccumulator(classifier),
+        pendingReveal = pendingReveal,
     ),
+): ChatRoomViewModel = ChatRoomViewModel(
+    tokenUsageRefreshNotifier = tokenUsageRefreshNotifier,
+    detectRiskInText = DetectRiskInTextUseCase(
+        repository = NoRiskLexiconRepository,
+        matcher = RiskTermMatcher(),
+    ),
+    getRemoteConfigFlag = GetRemoteConfigFlagUseCase(remoteConfigRepository),
+    session = session,
 )
 
 /** 원격 설정 조회 없이 항상 켜진 값을 돌려준다. 값 자체를 검증하는 테스트는 별도로 stub 한다. */
@@ -190,6 +197,9 @@ internal class FakeConversationRepository(
 
     override suspend fun deleteConversation(conversationId: Long): AppResult<Unit> =
         AppResult.Success(Unit)
+
+    override fun searchChattingRooms(keyword: String): Flow<PagingData<ChattingRoomSummary>> =
+        error("채팅방 테스트에서 쓰지 않는다")
 }
 
 /** 호출 횟수를 세고, [gate] 가 있으면 그때까지 응답을 붙든다. */
@@ -200,6 +210,9 @@ internal class CountingCardRepository(
     var calls = 0
         private set
 
+    override suspend fun getCardsByDate(date: LocalDate): AppResult<List<Card>> =
+        AppResult.Success(emptyList())
+
     override suspend fun createCard(
         conversationId: Long,
         character: EmotionCharacter,
@@ -208,8 +221,25 @@ internal class CountingCardRepository(
         calls++
         gate?.await()
         return failure?.let { AppResult.Failure(it) }
-            ?: AppResult.Success(Card(character = character, summary = summary, message = "대사"))
+            ?: AppResult.Success(
+                Card(
+                    id = 1L,
+                    conversationId = conversationId,
+                    character = character,
+                    emotionLabel = character.displayName,
+                    summary = summary,
+                    message = "대사",
+                    date = LocalDate.of(2026, 8, 15),
+                ),
+            )
     }
+
+    override suspend fun deleteAllCards(): AppResult<Unit> = error("채팅방 테스트에서 쓰지 않는다")
+
+    override suspend fun deleteCard(cardId: Long): AppResult<Unit> = error("채팅방 테스트에서 쓰지 않는다")
+
+    override suspend fun deleteCardsByEmotion(character: EmotionCharacter): AppResult<Unit> =
+        error("채팅방 테스트에서 쓰지 않는다")
 }
 
 internal fun message(id: Long, conversationId: Long, sender: MessageSender, content: String) = Message(
