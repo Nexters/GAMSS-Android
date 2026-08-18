@@ -396,7 +396,6 @@ private fun ChatMessageList(
                     MessageBubble(
                         message = message,
                         messages = state.messages,
-                        isReplyTarget = state.replyTarget?.messageId == message.id,
                         onCharacterMessageClick = actions.onCharacterMessageClick,
                     )
                 }
