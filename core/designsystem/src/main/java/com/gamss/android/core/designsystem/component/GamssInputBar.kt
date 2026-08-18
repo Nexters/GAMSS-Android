@@ -24,8 +24,10 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.constrainWidth
@@ -53,7 +55,6 @@ private val ControlsTouchHeight = 48.dp
 private val SendButtonTouchSize = 48.dp
 private val ControlsTouchOverhang = (ControlsTouchHeight - ControlsRowHeight) / 2
 private const val INPUT_MAX_LINES = 6
-private val InputLineHeight = 20.dp
 
 private const val HEIGHT_ANIMATION_DURATION_MS = 350
 
@@ -78,6 +79,10 @@ fun GamssInputBar(
     var lineCount by remember { mutableIntStateOf(1) }
     var isExpanded by remember { mutableStateOf(false) }
 
+    // 줄 높이는 sp 라 시스템 글꼴 배율을 따라간다. dp 상수로 굳히면 배율을 올렸을 때 마지막 줄이 잘린다.
+    val textStyle = GamssTheme.typography.body4Medium
+    val lineHeight = with(LocalDensity.current) { textStyle.lineHeight.toDp() }
+
     val baseHeight = if (isExpanded) ExpandedInputBarHeight else CollapsedInputBarHeight
     // 포커스로 기준 높이가 바뀔 때만 애니메이션한다. 줄이 늘어난 만큼은 곧바로 반영해야
     // 방금 친 줄이 애니메이션이 끝날 때까지 잘려 보이지 않는다.
@@ -89,7 +94,7 @@ fun GamssInputBar(
     val textAreaHeight =
         animatedBaseHeight - InputBarTopPadding - InputBarBottomPadding - ControlsRowHeight
     val barHeight =
-        animatedBaseHeight + (InputLineHeight * lineCount - textAreaHeight).coerceAtLeast(0.dp)
+        animatedBaseHeight + (lineHeight * lineCount - textAreaHeight).coerceAtLeast(0.dp)
 
     Layout(
         modifier = modifier
@@ -103,6 +108,7 @@ fun GamssInputBar(
                 onValueChange = onValueChange,
                 enabled = enabled,
                 placeholder = placeholder,
+                textStyle = textStyle,
                 canSubmit = canSubmit,
                 onSubmit = onSend,
                 onFocusChanged = { isExpanded = it },
@@ -148,13 +154,14 @@ private fun InputTextField(
     onValueChange: (String) -> Unit,
     enabled: Boolean,
     placeholder: String,
+    textStyle: TextStyle,
     canSubmit: Boolean,
     onSubmit: () -> Unit,
     onFocusChanged: (Boolean) -> Unit,
     onLineCountChanged: (Int) -> Unit,
 ) {
     // 입력바 SVG는 라이트 배경이므로 시스템 다크 모드와 무관하게 전경을 검정으로 고정한다.
-    val textStyle = GamssTheme.typography.body4Medium.copy(color = GamssTheme.colors.black)
+    val filledStyle = textStyle.copy(color = GamssTheme.colors.black)
     BasicTextField(
         value = value,
         onValueChange = onValueChange,
@@ -164,7 +171,7 @@ private fun InputTextField(
         minLines = 1,
         maxLines = INPUT_MAX_LINES,
         onTextLayout = { onLineCountChanged(it.lineCount.coerceIn(1, INPUT_MAX_LINES)) },
-        textStyle = textStyle,
+        textStyle = filledStyle,
         cursorBrush = SolidColor(GamssTheme.colors.black),
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
         keyboardActions = KeyboardActions(onSend = { if (canSubmit) onSubmit() }),
@@ -177,7 +184,7 @@ private fun InputTextField(
                 if (value.isEmpty()) {
                     GamssText(
                         text = placeholder,
-                        style = GamssTheme.typography.body4Medium,
+                        style = textStyle,
                         color = GamssTheme.colors.gray500,
                     )
                 }
