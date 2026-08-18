@@ -93,7 +93,6 @@ android {
 }
 
 dependencies {
-    implementation(project(":feature:onboarding"))
     implementation(projects.domain)
     implementation(projects.data)
     implementation(projects.core.common)
@@ -101,7 +100,7 @@ dependencies {
     implementation(projects.core.designsystem)
     implementation(projects.feature.home)
     implementation(projects.feature.chat)
-    implementation(projects.feature.calendar)
+    implementation(projects.feature.archive)
     implementation(projects.feature.emotion)
     implementation(projects.feature.login)
     implementation(projects.feature.onboarding)

@@ -15,6 +15,12 @@ class CreateCardUseCaseTest {
         var sentSummary: String? = null
             private set
 
+        override suspend fun getCardsByDate(date: LocalDate): AppResult<List<Card>> =
+            error("카드 생성 테스트에서 쓰지 않는다")
+
+        override suspend fun getCardsByMonth(yearMonth: YearMonth): AppResult<List<CardEntry>> =
+            error("카드 생성 테스트에서 쓰지 않는다")
+
         override suspend fun createCard(
             conversationId: Long,
             character: EmotionCharacter,
@@ -33,12 +39,6 @@ class CreateCardUseCaseTest {
                 ),
             )
         }
-
-        override suspend fun getCardsByMonth(yearMonth: YearMonth): AppResult<List<CardEntry>> =
-            error("카드 생성 테스트에서 쓰지 않는다")
-
-        override suspend fun getCardsByDate(date: LocalDate): AppResult<List<Card>> =
-            AppResult.Success(emptyList())
 
         override suspend fun deleteAllCards(): AppResult<Unit> = error("사용하지 않음")
 

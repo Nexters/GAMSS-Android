@@ -295,7 +295,7 @@ class ConversationSessionTest {
             error("대화 세션 테스트에서 쓰지 않는다")
 
         override suspend fun getCardsByDate(date: LocalDate): AppResult<List<Card>> =
-            AppResult.Success(emptyList())
+            error("대화 세션 테스트에서 쓰지 않는다")
 
         override suspend fun createCard(
             conversationId: Long,
