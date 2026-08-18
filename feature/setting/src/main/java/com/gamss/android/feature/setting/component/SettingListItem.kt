@@ -4,7 +4,6 @@ import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.CircleShape
@@ -37,22 +36,25 @@ fun SettingListItem(
             .padding(contentPadding),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(
-            // 제목이 길어도 배지가 밀려 잘리지 않도록, 남는 폭만 제목이 가져간다.
-            modifier = Modifier.weight(1f, fill = false),
-            text = title,
-            style = GamssTheme.typography.body3Medium,
-            color = contentColor,
-        )
-
-        if (badge != null) {
-            BadgeChip(
-                modifier = Modifier.padding(start = GamssTheme.spacing.spacing050),
-                badge = badge,
+        Row(
+            modifier = Modifier.weight(1f),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                // 제목이 길어도 배지가 밀려 잘리지 않도록, 남는 폭만 제목이 가져간다.
+                modifier = Modifier.weight(1f, fill = false),
+                text = title,
+                style = GamssTheme.typography.body3Medium,
+                color = contentColor,
             )
-        }
 
-        Spacer(modifier = Modifier.weight(1f))
+            if (badge != null) {
+                BadgeChip(
+                    modifier = Modifier.padding(start = GamssTheme.spacing.spacing050),
+                    badge = badge,
+                )
+            }
+        }
 
         if (additionalInfo != null) {
             Text(
