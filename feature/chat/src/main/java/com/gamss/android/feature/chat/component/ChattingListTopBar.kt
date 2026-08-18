@@ -37,11 +37,16 @@ internal fun ChattingListTopBar(
             showLeftIcon = isSelectionMode,
             onLeftIconClick = onSelectionCancel,
             leftIconContentDescription = stringResource(R.string.chatting_list_selection_cancel),
-            rightActions = listOf(
-                GamssTopNavigationIconAction(
-                    icon = GamssTopNavigationIcon.Search,
-                    onClick = onSearchClick
-                ),
+            rightActions = listOfNotNull(
+                // 선택 모드에서는 검색으로 들어갈 수 없다
+                if (!isSelectionMode) {
+                    GamssTopNavigationIconAction(
+                        icon = GamssTopNavigationIcon.Search,
+                        onClick = onSearchClick,
+                    )
+                } else {
+                    null
+                },
                 GamssTopNavigationIconAction(
                     icon = GamssTopNavigationIcon.Menu,
                     onClick = onMenuClick,
