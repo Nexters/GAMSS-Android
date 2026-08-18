@@ -96,8 +96,7 @@ fun HomeScreen(
         )
     }
 
-    // Popup 은 별도 창이라 뒤로가기를 받지 못한다. 화면 쪽에서 직접 닫아 준다.
-    // BackHandler 는 dispatcher 소유자를 요구해 프리뷰에서 터지므로 HomeContent 밖에 둔다.
+    // Popup 은 별도 창이라 뒤로가기를 못 받는다. BackHandler 는 프리뷰에서 터지므로 HomeContent 밖에 둔다.
     BackHandler(enabled = state.isEmotionPickerExpanded, onBack = actions.onEmotionPickerDismiss)
 
     HomeContent(state = state, actions = actions, modifier = modifier)
@@ -166,8 +165,6 @@ private fun HomeInputSection(
     actions: HomeActions,
 ) {
     val pickerItems = remember(state.selectedCharacters) { state.selectedCharacters.toPickerItems() }
-    // 패널 왼쪽 끝을 토글 라벨이 시작하는 지점에 맞춘다. 입력창 안쪽 여백이 바뀌어도 따라가도록
-    // 상수로 두지 않고 실측한다. 입력창은 높이가 100dp/149dp+ 로 달라져 아래 끝도 함께 잰다.
     var toggleLeftInWindow by remember { mutableFloatStateOf(0f) }
     var inputBarBottomInWindow by remember { mutableFloatStateOf(0f) }
 
@@ -188,6 +185,8 @@ private fun HomeInputSection(
                     modifier = Modifier.onGloballyPositioned {
                         toggleLeftInWindow = it.boundsInWindow().left
                     },
+                    // 입력바 아트가 라이트 전용이라 다크에서도 전경을 검정으로 둔다.
+                    contentColor = GamssTheme.colors.black,
                 )
             },
             modifier = Modifier
@@ -231,10 +230,6 @@ private class PickerPositionProvider(
     ): IntOffset = IntOffset(leftInWindow.roundToInt(), topInWindow.roundToInt())
 }
 
-/**
- * 입력창 바깥을 누르면 포커스를 내려놓아야 collapsed 로 돌아가고 키보드도 닫힌다. 캐릭터 패널은
- * 포커스와 무관한 별도 창이라 [onDismiss] 로 같이 닫는다.
- */
 @Composable
 private fun Modifier.dismissOnTapOutside(onDismiss: () -> Unit): Modifier {
     val focusManager = LocalFocusManager.current
