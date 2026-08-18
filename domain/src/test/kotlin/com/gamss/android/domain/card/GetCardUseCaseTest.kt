@@ -6,34 +6,28 @@ import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertSame
 import org.junit.Test
+import java.time.LocalDate
 
 class GetCardUseCaseTest {
 
-    private class RecordingRepository : CardRepository {
+    private class RecordingRepository : FakeCardRepository() {
         var requestedCardId: Long? = null
             private set
 
         val card = Card(
+            id = 7L,
+            conversationId = 1L,
             character = EmotionCharacter.ANGER,
+            emotionLabel = "분노",
             summary = "요약",
             message = "대사",
-            id = 7L,
+            date = LocalDate.of(2026, 7, 23),
         )
-
-        override suspend fun createCard(
-            conversationId: Long,
-            character: EmotionCharacter,
-            summary: String,
-        ): AppResult<Card> =
-            AppResult.Failure(UnsupportedOperationException("not used"))
 
         override suspend fun getCard(cardId: Long): AppResult<Card> {
             requestedCardId = cardId
             return AppResult.Success(card)
         }
-
-        override suspend fun clearCachedCards(): AppResult<Unit> =
-            AppResult.Failure(UnsupportedOperationException("not used"))
     }
 
     @Test

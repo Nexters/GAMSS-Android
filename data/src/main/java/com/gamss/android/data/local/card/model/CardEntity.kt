@@ -7,6 +7,7 @@ import androidx.room3.PrimaryKey
 import com.gamss.android.data.remote.emotion.toEmotionCharacter
 import com.gamss.android.domain.card.Card
 import com.gamss.android.domain.emotion.EmotionCharacter
+import java.time.LocalDate
 
 @Entity(
     tableName = "cards",
@@ -44,12 +45,11 @@ internal val CardEntity.imageCharacter: EmotionCharacter
 
 internal fun CardEntity.toDomain(): Card =
     Card(
-        character = imageCharacter,
-        summary = summary,
-        message = message,
         id = id,
         conversationId = conversationId,
-        emotion = emotion,
+        character = imageCharacter,
         emotionLabel = emotionLabel,
-        date = date,
+        summary = summary,
+        message = message,
+        date = LocalDate.parse(date),
     )

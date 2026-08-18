@@ -1,5 +1,6 @@
 package com.gamss.android.data.remote.card.model.response
 
+import com.gamss.android.data.local.card.model.CardEntity
 import com.gamss.android.data.remote.emotion.toEmotionCharacter
 import com.gamss.android.domain.card.Card
 import com.gamss.android.domain.emotion.EmotionCharacter
@@ -51,7 +52,20 @@ internal fun CardResponse.toDomainOrNull(): Card? = emotion.toEmotionCharacter()
     }
 }
 
-private fun String.toLocalDateOrNull(): LocalDate? = try {
+/** 서버 응답을 그대로 캐시 저장 형태로 옮긴다. 파싱 실패 값도 다음 조회 때 재해석할 수 있게 원문 그대로 둔다. */
+internal fun CardResponse.toEntity(): CardEntity =
+    CardEntity(
+        id = id,
+        conversationId = conversationId,
+        emotion = emotion,
+        emotionLabel = emotionLabel,
+        summary = summary,
+        message = message,
+        date = date,
+    )
+
+/** 날짜별·월별 응답이 같은 기준으로 날짜를 버려야 CardEntry.indexInDate 가 두 응답에서 같은 카드를 가리킨다. */
+internal fun String.toLocalDateOrNull(): LocalDate? = try {
     LocalDate.parse(this)
 } catch (_: DateTimeParseException) {
     null

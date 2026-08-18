@@ -16,6 +16,7 @@ import com.gamss.android.core.designsystem.theme.GamssTheme
 import com.gamss.android.core.designsystem.topnavigation.GamssTopNavigation
 import com.gamss.android.core.designsystem.topnavigation.GamssTopNavigationContent
 import com.gamss.android.core.designsystem.topnavigation.GamssTopNavigationIcon
+import com.gamss.android.core.designsystem.topnavigation.GamssTopNavigationIconAction
 import com.gamss.android.feature.chat.R
 
 /**
@@ -40,14 +41,16 @@ internal fun ChattingListTopBar(
             } else {
                 GamssTopNavigationContent.Logo
             },
-            backgroundColor = GamssTheme.colors.background,
             showLeftIcon = isSelectionMode,
-            showRightIcon = true,
             leftIconContentDescription = stringResource(R.string.chatting_list_selection_cancel),
-            rightIconContentDescription = stringResource(R.string.chatting_list_menu_content_description),
             onLeftIconClick = onSelectionCancel,
-            onRightIconClick = onMenuClick,
-            rightIcon = GamssTopNavigationIcon.Menu,
+            rightActions = listOf(
+                GamssTopNavigationIconAction(
+                    icon = GamssTopNavigationIcon.Menu,
+                    onClick = onMenuClick,
+                    contentDescription = stringResource(R.string.chatting_list_menu_content_description),
+                ),
+            ),
         )
 
         if (!isSelectionMode) {

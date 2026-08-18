@@ -1,30 +1,58 @@
 package com.gamss.android.data.repository
 
 import com.gamss.android.core.common.AppResult
+import com.gamss.android.data.local.card.CardLocalDataSource
+import com.gamss.android.data.local.card.model.toDomain
 import com.gamss.android.data.remote.card.CardService
 import com.gamss.android.data.remote.card.model.request.CreateCardRequest
 import com.gamss.android.data.remote.card.model.response.toDomain
 import com.gamss.android.data.remote.card.model.response.toDomainOrNull
+import com.gamss.android.data.remote.card.model.response.toEntity
 import com.gamss.android.data.remote.emotion.toServerEmotionType
 import com.gamss.android.data.remote.runCatchingApiCall
 import com.gamss.android.data.remote.throwIfFailed
 import com.gamss.android.domain.card.Card
+import com.gamss.android.domain.card.CardEntry
 import com.gamss.android.domain.card.CardNotRetryableException
 import com.gamss.android.domain.card.CardRepository
 import com.gamss.android.domain.emotion.EmotionCharacter
 import java.time.LocalDate
+import java.time.YearMonth
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 internal class CardRepositoryImpl @Inject constructor(
     private val cardService: CardService,
+    private val cardLocalDataSource: CardLocalDataSource,
 ) : CardRepository {
 
     override suspend fun getCardsByDate(date: LocalDate): AppResult<List<Card>> = runCatchingApiCall {
         val response = cardService.getCardsByDate(date.toString())
         response.throwIfFailed()
         checkNotNull(response.data) { "No available card data" }.mapNotNull { it.toDomainOrNull() }
+    }
+
+    // YearMonth.toString() 이 서버가 요구하는 yyyy-MM 그대로다.
+    override suspend fun getCardsByMonth(yearMonth: YearMonth): AppResult<List<CardEntry>> = runCatchingApiCall {
+        val response = cardService.getCardsByMonth(yearMonth.toString())
+        response.throwIfFailed()
+        checkNotNull(response.data) { "No available card data" }
+            .flatMap { it.toDomain() }
+    }
+
+    /** 캐시에 있으면 캐시를 그대로 쓰고, 없을 때만 서버를 호출해 다음 조회를 위해 캐시에 남긴다. */
+    override suspend fun getCard(cardId: Long): AppResult<Card> {
+        cardLocalDataSource.findById(cardId)?.let { cached ->
+            return AppResult.Success(cached.toDomain())
+        }
+        return runCatchingApiCall {
+            val response = cardService.getCard(cardId)
+            response.throwIfFailed()
+            val data = checkNotNull(response.data) { "No available card data" }
+            cardLocalDataSource.upsert(data.toEntity())
+            checkNotNull(data.toDomainOrNull()) { "No available card data" }
+        }
     }
 
     override suspend fun createCard(

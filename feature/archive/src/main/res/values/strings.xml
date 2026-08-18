@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="archive_logo_description">감쓰</string>
+    <string name="archive_grid_title">다시 보고 싶은 쓰레기통을 열어보세요</string>
+    <string name="archive_setting_description">설정</string>
+    <string name="archive_open_description">%1$s 쓰레기통 열기</string>
+
+    <string name="archive_back_description">뒤로 가기</string>
+    <string name="archive_paper_description">%1$d월 %2$d일 카드</string>
+    <string name="archive_cards_empty">아직 남겨둔 이야기가 없어요.</string>
+    <string name="archive_cards_load_failed">이야기를 불러오지 못했어요.</string>
+
+    <string name="archive_clear">비우기</string>
+    <string name="archive_clear_dialog_title">대화 전체 비우기</string>
+    <string name="archive_clear_dialog_description">모든 대화 기록이 삭제돼요. 삭제한 내용은 다시 복구할 수 없어요.</string>
+    <string name="archive_clear_dialog_cancel">취소</string>
+
+    <string name="archive_select_month_description">월 선택</string>
+    <string name="archive_month_picker_close">월 선택 닫기</string>
+    <string name="archive_month_picker_confirm">선택하기</string>
+    <string name="archive_picker_year">%1$d년</string>
+    <string name="archive_picker_month">%1$d월</string>
+
+    <string name="archive_card_close_description">카드 닫기</string>
+    <string name="archive_card_discard">기록 버리기</string>
+    <string name="archive_card_view_conversation">대화보기</string>
+    <string name="archive_card_share">공유하기</string>
+    <string name="archive_card_share_chooser_title">카드 공유하기</string>
+    <string name="archive_card_load_error">카드를 불러오지 못했어요.</string>
+    <string name="archive_card_discard_failure">기록을 버리지 못했어요. 다시 시도해주세요</string>
+</resources>

@@ -6,5 +6,5 @@ package com.gamss.android.domain.user
  */
 object NicknamePolicy {
     const val MIN_LENGTH = 2
-    const val MAX_LENGTH = 20
+    const val MAX_LENGTH = 10
 }
