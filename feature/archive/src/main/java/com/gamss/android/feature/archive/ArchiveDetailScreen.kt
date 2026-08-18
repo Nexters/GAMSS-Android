@@ -54,6 +54,7 @@ fun ArchiveDetailScreen(
     emotion: EmotionCharacter,
     onBackClick: () -> Unit,
     onOpenConversation: (Long) -> Unit,
+    onNavigateToCardDelete: () -> Unit,
     viewModel: ArchiveDetailViewModel = hiltViewModel(),
 ) {
     val state by viewModel.collectAsState()
@@ -67,6 +68,8 @@ fun ArchiveDetailScreen(
     viewModel.collectSideEffect { sideEffect ->
         when (sideEffect) {
             is ArchiveDetailSideEffect.OpenChatRoom -> onOpenConversation(sideEffect.conversationId)
+            ArchiveDetailSideEffect.OpenCardDelete -> onNavigateToCardDelete()
+
             ArchiveDetailSideEffect.CardLoadFailed ->
                 Toast.makeText(context, cardLoadFailedMessage, Toast.LENGTH_SHORT).show()
 
@@ -88,8 +91,7 @@ fun ArchiveDetailScreen(
         state = state,
         onMonthSelect = viewModel::selectMonth,
         onMonthPickerDismiss = viewModel::dismissMonthPicker,
-        // 무엇을 비울지(감정별·달별·전체) 정해지기 전이라 확인도 닫기만 한다.
-        onClearConfirm = viewModel::dismissClearDialog,
+        onClearConfirm = viewModel::confirmClear,
         onClearDismiss = viewModel::dismissClearDialog,
         onCardDismiss = viewModel::dismissCard,
         onCardDiscard = viewModel::discardSelectedCard,
@@ -175,7 +177,7 @@ private fun shareCard(context: Context, card: Card, chooserTitle: String) {
     context.startActivity(Intent.createChooser(sendIntent, chooserTitle))
 }
 
-/** 되돌릴 수 없는 삭제라 확인을 한 번 받는다. 무엇을 지울지는 [onConfirm] 을 넘기는 쪽이 정한다. */
+/** 되돌릴 수 없는 삭제라 파쇄 화면으로 넘기기 전에 확인을 한 번 받는다. */
 @Composable
 private fun ClearConfirmDialog(
     onConfirm: () -> Unit,

@@ -223,6 +223,25 @@ class ArchiveDetailViewModelTest {
         }
     }
 
+    @Test
+    fun `비우기를 확인하면 다이얼로그를 닫고 파쇄 화면을 연다`() = runTest {
+        val viewModel = viewModel(FakeCardRepository(AppResult.Success(listOf(angerEntry))))
+
+        viewModel.test(this) {
+            containerHost.load(EmotionCharacter.ANGER)
+            expectState { copy(emotion = EmotionCharacter.ANGER) }
+            expectState { copy(cards = ArchiveCards.Loaded(listOf(angerEntry))) }
+
+            containerHost.showClearDialog()
+            expectState { copy(isClearDialogVisible = true) }
+
+            // 실제 삭제는 파쇄 화면이 맡으므로 여기서는 카드를 지우지 않는다.
+            containerHost.confirmClear()
+            expectState { copy(isClearDialogVisible = false) }
+            expectSideEffect(ArchiveDetailSideEffect.OpenCardDelete)
+        }
+    }
+
     private fun viewModel(repository: FakeCardRepository) = ArchiveDetailViewModel(
         getCardsByMonth = GetCardsByMonthUseCase(repository),
         getCardsByDate = GetCardsByDateUseCase(repository),
