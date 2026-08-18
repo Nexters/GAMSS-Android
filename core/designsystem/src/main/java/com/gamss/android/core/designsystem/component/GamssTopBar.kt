@@ -17,7 +17,12 @@ import com.gamss.android.core.designsystem.R
 
 private val TopBarHeight = 62.dp
 
-/** 가운데 슬롯이 없다. 타이틀이 필요한 화면은 [leading] 안에서 직접 배치한다. */
+/**
+ * 가운데 슬롯이 없다. 타이틀이 필요한 화면은 [leading] 안에서 직접 배치한다.
+ *
+ * 상태바 회피는 이 컴포넌트를 호출하는 화면들을 감싸는 MainScreen의 NavDisplay에서
+ * 한 번에 처리한다(화면마다 따로 처리하면 빠뜨리기 쉽다).
+ */
 @Composable
 fun GamssTopBar(
     modifier: Modifier = Modifier,

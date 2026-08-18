@@ -5,6 +5,7 @@ import com.gamss.android.core.common.network.ApiException
 import com.gamss.android.data.remote.card.CardService
 import com.gamss.android.data.remote.card.model.response.CardCalendarResponse
 import com.gamss.android.data.remote.card.model.response.CardDeleteResponse
+import com.gamss.android.data.remote.card.model.response.CardResponse
 import com.gamss.android.data.remote.model.response.ApiError
 import com.gamss.android.data.remote.model.response.ApiResponse
 import com.gamss.android.domain.auth.SessionExpiredException
@@ -24,6 +25,60 @@ class CardRepositoryImplTest {
 
     private val cardService: CardService = mockk()
     private val repository = CardRepositoryImpl(cardService)
+
+    @Test
+    fun `날짜를 API 형식으로 조회하고 카드 감정을 캐릭터로 매핑한다`() = runTest {
+        val date = LocalDate.of(2026, 8, 15)
+        coEvery { cardService.getCardsByDate("2026-08-15") } returns ApiResponse(
+            success = true,
+            data = listOf(cardResponse(emotion = "ANGER")),
+        )
+
+        val result = repository.getCardsByDate(date)
+
+        assertTrue(result is AppResult.Success)
+        assertEquals(EmotionCharacter.ANGER, (result as AppResult.Success).data.single().character)
+        coVerify(exactly = 1) { cardService.getCardsByDate("2026-08-15") }
+    }
+
+    @Test
+    fun `알 수 없는 감정 카드는 제외하고 유효한 카드는 남긴다`() = runTest {
+        coEvery { cardService.getCardsByDate(any()) } returns ApiResponse(
+            success = true,
+            data = listOf(
+                cardResponse(emotion = "UNKNOWN"),
+                cardResponse(emotion = "GRUMPY"),
+            ),
+        )
+
+        val result = repository.getCardsByDate(DATE)
+
+        assertEquals(
+            listOf(EmotionCharacter.PRICKLY),
+            (result as AppResult.Success).data.map { it.character },
+        )
+    }
+
+    @Test
+    fun `성공 응답이어도 실패 envelope는 실패로 전한다`() = runTest {
+        coEvery { cardService.getCardsByDate(any()) } returns ApiResponse(
+            success = false,
+            error = ApiError(code = "EXPIRED_TOKEN", message = "만료"),
+        )
+
+        val result = repository.getCardsByDate(DATE)
+
+        assertTrue((result as AppResult.Failure).throwable is SessionExpiredException)
+    }
+
+    @Test
+    fun `카드 데이터가 없으면 실패로 전한다`() = runTest {
+        coEvery { cardService.getCardsByDate(any()) } returns ApiResponse(success = true)
+
+        val result = repository.getCardsByDate(DATE)
+
+        assertTrue((result as AppResult.Failure).throwable is IllegalStateException)
+    }
 
     @Test
     fun `모든 카드 삭제 요청을 전달한다`() = runTest {
@@ -193,6 +248,20 @@ class CardRepositoryImplTest {
         assertEquals(
             listOf(CardEntry(LocalDate.of(2026, 8, 15), 0, EmotionCharacter.ANGER)),
             (result as AppResult.Success).data,
+        )
+    }
+
+    private companion object {
+        val DATE: LocalDate = LocalDate.of(2026, 8, 15)
+
+        fun cardResponse(emotion: String) = CardResponse(
+            id = 1L,
+            conversationId = 10L,
+            emotion = emotion,
+            emotionLabel = "분노",
+            summary = "회의가 길어졌다",
+            message = "오늘 많이 힘들었겠다",
+            date = "2026-08-15",
         )
     }
 }

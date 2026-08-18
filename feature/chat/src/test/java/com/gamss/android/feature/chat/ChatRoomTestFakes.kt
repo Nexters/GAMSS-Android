@@ -216,7 +216,7 @@ internal class CountingCardRepository(
         error("채팅 테스트에서 쓰지 않는다")
 
     override suspend fun getCardsByDate(date: LocalDate): AppResult<List<Card>> =
-        AppResult.Success(emptyList())
+        error("채팅 테스트에서 쓰지 않는다")
 
     override suspend fun createCard(
         conversationId: Long,

@@ -8,7 +8,9 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -31,12 +33,11 @@ import com.gamss.android.app.navigation.keys
 import com.gamss.android.app.navigation.rememberNavigationState
 import com.gamss.android.app.navigation.toEntries
 import com.gamss.android.app.navigation.topLevelDestinations
-import com.gamss.android.app.navigation.visibleIn
 import com.gamss.android.core.designsystem.component.GamssBottomBar
 import com.gamss.android.core.designsystem.component.GamssPaperBackground
 import com.gamss.android.core.designsystem.theme.GamssTheme
-import com.gamss.android.feature.calendar.CalendarScreen
-import com.gamss.android.feature.calendar.navigation.CalendarKey
+import com.gamss.android.feature.archive.ArchiveScreen
+import com.gamss.android.feature.archive.navigation.ArchiveKey
 import com.gamss.android.feature.carddelete.CardDeleteScreen
 import com.gamss.android.feature.carddelete.navigation.CardDeleteKey
 import com.gamss.android.feature.chat.ChatRoomScreen
@@ -57,11 +58,9 @@ import com.gamss.android.feature.webview.navigation.WebViewKey
 
 @Composable
 fun MainScreen(
-    useCardFeature: Boolean,
     modelDownloadPromptViewModel: ModelDownloadPromptViewModel = hiltViewModel(),
 ) {
     val destinations = remember { topLevelDestinations() }
-    val visibleDestinations = remember(destinations, useCardFeature) { destinations.visibleIn(useCardFeature) }
     val navigationState = rememberNavigationState(
         startKey = HomeKey,
         topLevelKeys = remember(destinations) { destinations.keys() },
@@ -79,10 +78,13 @@ fun MainScreen(
             Scaffold(
                 containerColor = Color.Transparent,
                 snackbarHost = { SnackbarHost(snackbarHostState) },
+                // GamssBottomBar 가 navigationBarsPadding()으로 시스템 내비게이션 바를 직접 피하므로,
+                // Scaffold 기본 인셋까지 함께 적용하면 이중으로 여백이 생긴다.
+                contentWindowInsets = WindowInsets(0),
                 bottomBar = {
                     if (navigationState.currentKey == navigationState.currentTopLevelKey) {
                         GamssBottomBar(
-                            items = visibleDestinations.bottomBarItems(),
+                            items = destinations.bottomBarItems(),
                             selectedValue = navigationState.currentTopLevelKey,
                             onItemClick = navigator::navigate,
                         )
@@ -90,9 +92,14 @@ fun MainScreen(
                 },
             ) { innerPadding ->
                 NavDisplay(
-                    modifier = Modifier.padding(innerPadding),
+                    // 화면마다 각자 상태바를 피하게 두면 빠뜨리기 쉬우니, 탭 전환 화면들을 모두
+                    // 감싸는 이 지점에서 한 번에 처리한다. 배경은 GamssPaperBackground 가 Scaffold
+                    // 바깥에서 이미 상태바 뒤까지 이어지므로, 여기서는 콘텐츠만 아래로 민다.
+                    modifier = Modifier
+                        .padding(innerPadding)
+                        .statusBarsPadding(),
                     entries = navigationState.toEntries(entryProvider = entries),
-                    // 최상위 탭(Home/Calendar/Chat) 전환 기본값. 탭은 위계 없는 형제 화면이라
+                    // 최상위 탭(홈/보관함/대화) 전환 기본값. 탭은 위계 없는 형제 화면이라
                     // 방향성 있는 슬라이드 대신 fade-through를 쓴다. 상세 화면은 아래 entry의
                     // metadata(detailTransition)가 이 기본값을 덮어쓴다.
                     transitionSpec = tabFadeThroughSpec,
@@ -115,9 +122,9 @@ private fun mainEntryProvider(navigator: Navigator) = entryProvider {
             onOpenConversation = { conversationId -> navigator.navigate(ChatRoomKey(conversationId)) },
         )
     }
-    entry<CalendarKey> {
-        CalendarScreen(
-            onOpenConversation = { conversationId -> navigator.navigate(ChatRoomKey(conversationId)) },
+    entry<ArchiveKey> {
+        ArchiveScreen(
+            onNavigateToSetting = { navigator.navigate(SettingKey) },
         )
     }
     entry<SettingKey>(metadata = detailSlideTransition) {
@@ -164,7 +171,7 @@ private fun mainEntryProvider(navigator: Navigator) = entryProvider {
 }
 
 /**
- * 최상위 탭(Home/Calendar/Chat) 간 전환에 쓰는 기본 트랜지션.
+ * 최상위 탭(홈/보관함/대화) 간 전환에 쓰는 기본 트랜지션.
  * 탭은 위계 없는 형제 화면이라 방향성 있는 슬라이드 대신 fade-through를 쓴다.
  */
 private val tabFadeThroughSpec: AnimatedContentTransitionScope<Scene<NavKey>>.() -> ContentTransform = {
