@@ -26,7 +26,6 @@ import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import com.gamss.android.core.designsystem.R as DesignSystemR
 
-/** 보고 있는 달을 보여주고, 누르면 [YearMonthPickerSheet]를 여는 박스. */
 @Composable
 internal fun MonthSelector(
     yearMonth: YearMonth,

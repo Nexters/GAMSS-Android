@@ -34,7 +34,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.isActive
 import kotlin.random.Random
 
-/** 카드 한 장씩을 종이로 위에서 쏟아, 물리 시뮬레이션으로 바닥에 쌓는다. */
 @Composable
 internal fun PaperPile(
     cards: List<CardEntry>,
@@ -102,7 +101,6 @@ private fun List<CardEntry>.spawnStates(boundsWidthPx: Float, radiusPx: Float): 
         )
     }
 
-/** 매 프레임 물리를 갱신해 [uiStates]에 반영하고, 다 쌓이면 멈춘다. */
 private suspend fun CoroutineScope.runPaperFall(
     uiStates: List<PaperUiState>,
     boundsWidthPx: Float,

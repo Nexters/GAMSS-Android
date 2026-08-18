@@ -28,12 +28,7 @@ import com.gamss.android.domain.card.Card
 import com.gamss.android.feature.archive.R
 import java.time.format.DateTimeFormatter
 
-/**
- * 캘린더에서 카드를 탭했을 때 뜨는 상세 팝업.
- *
- * Figma의 Dim + Card 오버레이 구조를 그대로 옮긴다. 배경 dim 은 [Dialog] 창이 기본으로
- * 그려 주므로 여기서 따로 그리지 않는다.
- */
+/** 배경 dim 은 [Dialog] 창이 기본으로 그려 주므로 여기서 따로 그리지 않는다. */
 @Composable
 internal fun CardDetailDialog(
     card: Card,
@@ -70,8 +65,6 @@ internal fun CardDetailDialog(
 }
 
 /**
- * 카드 우상단 닫기 버튼.
- *
  * 카드가 액션 슬롯을 Figma 값(우상단 28dp)에 맞춰 두므로 아이콘은 슬롯 좌상단에 딱 붙어야 한다.
  * 그런데 터치 영역을 아이콘보다 크게 잡으면 그 차이만큼 아이콘이 안쪽으로 밀리므로,
  * [CloseButtonCenteringInset] 만큼 되돌려 아이콘을 시안 위치로 보낸다.

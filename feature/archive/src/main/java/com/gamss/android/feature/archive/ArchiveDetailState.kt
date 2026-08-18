@@ -13,7 +13,6 @@ data class ArchiveDetailState(
     val loadFailed: Boolean = false,
     val isMonthPickerVisible: Boolean = false,
     val isClearDialogVisible: Boolean = false,
-    /** 종이를 눌러 날짜별 조회로 받아 온 카드. 상세 팝업이 이 값으로 뜬다. */
     val selectedCard: Card? = null,
     val isCardLoading: Boolean = false,
 )
