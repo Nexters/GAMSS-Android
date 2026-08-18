@@ -25,6 +25,7 @@ import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.scene.Scene
 import androidx.navigation3.ui.NavDisplay
+import androidx.navigationevent.NavigationEvent
 import com.gamss.android.app.navigation.Navigator
 import com.gamss.android.app.navigation.bottomBarItems
 import com.gamss.android.app.navigation.keys
@@ -95,8 +96,10 @@ fun MainScreen(
                     // 최상위 탭(Home/Calendar/Chat) 전환 기본값. 탭은 위계 없는 형제 화면이라
                     // 방향성 있는 슬라이드 대신 fade-through를 쓴다. 상세 화면은 아래 entry의
                     // metadata(detailTransition)가 이 기본값을 덮어쓴다.
+                    // 탭 entry에는 metadata가 없어 세 spec을 모두 지정한다. 빠뜨리면 그 경로만 scaleOut이 된다.
                     transitionSpec = tabFadeThroughSpec,
                     popTransitionSpec = tabFadeThroughSpec,
+                    predictivePopTransitionSpec = { tabFadeThroughSpec(this) },
                     onBack = {
                         if (navigationState.canGoBack) {
                             navigator.goBack()
@@ -175,10 +178,10 @@ private val tabFadeThroughSpec: AnimatedContentTransitionScope<Scene<NavKey>>.()
  * 탭 내부의 상세 화면(Setting/AccountInfo/NicknameChange/ChatRoom/WebView) push·pop 전용
  * 트랜지션. 계층 이동이라는 방향감을 주기 위해 좌우 슬라이드(shared axis X)를 쓴다.
  *
- * popTransitionSpec과 predictivePopTransitionSpec을 반드시 같이 지정해야 한다 — 인앱 뒤로가기
- * 아이콘(Navigator.goBack() 직접 호출)은 popTransitionSpec을, 폰의 시스템 뒤로가기(제스처·버튼
- * 모두 OnBackInvokedCallback 경유)는 predictivePopTransitionSpec을 따로 참조하기 때문에, 하나만
- * 지정하면 트리거 경로에 따라 모션이 달라져 버린다.
+ * popTransitionSpec과 predictivePopTransitionSpec을 반드시 같이 지정해야 한다. 진행 중인 제스처
+ * 뒤로가기만 predictivePopTransitionSpec을 타고, 인앱 뒤로가기 아이콘(Navigator.goBack() 직접
+ * 호출)과 3버튼 뒤로가기는 popTransitionSpec을 타기 때문에, 하나만 지정하면 트리거 경로에 따라
+ * 모션이 달라져 버린다.
  */
 private val detailSlideTransition: Map<String, Any> = NavDisplay.transitionSpec {
     (slideIntoContainer(SlideDirection.Start, tween(300)) + fadeIn(tween(300))) togetherWith
@@ -186,9 +189,11 @@ private val detailSlideTransition: Map<String, Any> = NavDisplay.transitionSpec 
 } + NavDisplay.popTransitionSpec {
     (slideIntoContainer(SlideDirection.End, tween(300)) + fadeIn(tween(300))) togetherWith
         (slideOutOfContainer(SlideDirection.End, tween(300)) + fadeOut(tween(150)))
-} + NavDisplay.predictivePopTransitionSpec { _ ->
-    (slideIntoContainer(SlideDirection.End, tween(300)) + fadeIn(tween(300))) togetherWith
-        (slideOutOfContainer(SlideDirection.End, tween(300)) + fadeOut(tween(150)))
+} + NavDisplay.predictivePopTransitionSpec { swipeEdge ->
+    // 제스처를 시작한 엣지 쪽으로 화면이 빠져야 손가락 방향과 모션이 어긋나지 않는다.
+    val towards = if (swipeEdge == NavigationEvent.EDGE_RIGHT) SlideDirection.Start else SlideDirection.End
+    (slideIntoContainer(towards, tween(300)) + fadeIn(tween(300))) togetherWith
+        (slideOutOfContainer(towards, tween(300)) + fadeOut(tween(150)))
 }
 
 /**

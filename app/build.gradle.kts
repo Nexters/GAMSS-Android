@@ -118,6 +118,7 @@ dependencies {
 
     implementation(libs.navigation3.runtime)
     implementation(libs.navigation3.ui)
+    implementation(libs.androidx.navigationevent)
 
     implementation(libs.orbit.core)
     implementation(libs.orbit.viewmodel)
