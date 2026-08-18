@@ -7,7 +7,6 @@ import com.gamss.android.data.auth.AUTHORIZATION_HEADER
 import com.gamss.android.data.auth.TokenAuthenticator
 import com.gamss.android.data.auth.TokenInterceptor
 import com.gamss.android.data.remote.auth.AuthService
-import com.gamss.android.data.remote.card.CardService
 import com.gamss.android.data.remote.gamssJson
 import com.gamss.android.data.remote.push.DeviceTokenService
 import com.gamss.android.data.remote.user.UserService
@@ -122,11 +121,6 @@ internal object NetworkModule {
     @Singleton
     fun provideDeviceTokenService(retrofit: Retrofit): DeviceTokenService =
         retrofit.create(DeviceTokenService::class.java)
-
-    @Provides
-    @Singleton
-    fun provideCardService(retrofit: Retrofit): CardService =
-        retrofit.create(CardService::class.java)
 
     private fun String.redactTokenValues(): String =
         TOKEN_JSON_PATTERN.replace(this) { matchResult ->
