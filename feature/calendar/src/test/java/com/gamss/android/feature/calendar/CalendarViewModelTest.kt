@@ -2,6 +2,7 @@ package com.gamss.android.feature.calendar
 
 import com.gamss.android.core.common.AppResult
 import com.gamss.android.domain.card.Card
+import com.gamss.android.domain.card.CardEntry
 import com.gamss.android.domain.card.CardRepository
 import com.gamss.android.domain.card.DeleteCardUseCase
 import com.gamss.android.domain.card.GetCardsByDateUseCase
@@ -15,6 +16,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.orbitmvi.orbit.test.test
 import java.time.LocalDate
+import java.time.YearMonth
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class CalendarViewModelTest {
@@ -149,6 +151,9 @@ class CalendarViewModelTest {
         var deletedCardId: Long? = null
             private set
 
+        override suspend fun getCardsByMonth(yearMonth: YearMonth): AppResult<List<CardEntry>> =
+            error("캘린더 테스트에서 쓰지 않는다")
+
         override suspend fun getCardsByDate(date: LocalDate): AppResult<List<Card>> {
             requestedDate = date
             requestCount++
@@ -185,6 +190,9 @@ class CalendarViewModelTest {
         val cancelledDates = mutableListOf<LocalDate>()
         private val firstRequestStarted = CompletableDeferred<Unit>()
         private val secondRequestStarted = CompletableDeferred<Unit>()
+
+        override suspend fun getCardsByMonth(yearMonth: YearMonth): AppResult<List<CardEntry>> =
+            error("캘린더 테스트에서 쓰지 않는다")
 
         override suspend fun getCardsByDate(date: LocalDate): AppResult<List<Card>> {
             requestedDates += date

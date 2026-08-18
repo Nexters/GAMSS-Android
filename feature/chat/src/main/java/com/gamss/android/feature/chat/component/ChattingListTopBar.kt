@@ -50,6 +50,7 @@ internal fun ChattingListTopBar(
                 GamssTopNavigationIconAction(
                     icon = GamssTopNavigationIcon.Menu,
                     onClick = onMenuClick,
+                    contentDescription = stringResource(R.string.chatting_list_menu_content_description),
                 ),
             ),
         )
