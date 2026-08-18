@@ -120,6 +120,21 @@ class HomeViewModelTest {
     }
 
     @Test
+    fun `감정 목록 닫기는 여러 번 들어와도 다시 열리지 않는다`() = runTest {
+        viewModel().test(this) {
+            containerHost.onEmotionPickerToggle()
+            expectState { copy(isEmotionPickerExpanded = true) }
+
+            // 바깥 탭과 Popup dismiss 가 함께 들어오는 경우다.
+            containerHost.onEmotionPickerDismiss()
+            expectState { copy(isEmotionPickerExpanded = false) }
+
+            containerHost.onEmotionPickerDismiss()
+            expectNoItems()
+        }
+    }
+
+    @Test
     fun `보내면 감정 목록이 닫힌다`() = runTest {
         viewModel().test(this) {
             containerHost.onEmotionPickerToggle()

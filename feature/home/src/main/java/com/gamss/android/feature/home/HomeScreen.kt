@@ -1,6 +1,7 @@
 package com.gamss.android.feature.home
 
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -9,11 +10,16 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.exclude
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
@@ -78,9 +84,14 @@ fun HomeScreen(
             onInputChange = viewModel::onInputChange,
             onSubmit = viewModel::onSubmit,
             onEmotionPickerToggle = viewModel::onEmotionPickerToggle,
+            onEmotionPickerDismiss = viewModel::onEmotionPickerDismiss,
             onEmotionToggle = viewModel::onEmotionToggle,
         )
     }
+
+    // Popup 은 별도 창이라 뒤로가기를 받지 못한다. 화면 쪽에서 직접 닫아 준다.
+    // BackHandler 는 dispatcher 소유자를 요구해 프리뷰에서 터지므로 HomeContent 밖에 둔다.
+    BackHandler(enabled = state.isEmotionPickerExpanded, onBack = actions.onEmotionPickerDismiss)
 
     HomeContent(state = state, actions = actions, modifier = modifier)
 }
@@ -91,6 +102,7 @@ private data class HomeActions(
     val onInputChange: (String) -> Unit,
     val onSubmit: () -> Unit,
     val onEmotionPickerToggle: () -> Unit,
+    val onEmotionPickerDismiss: () -> Unit,
     val onEmotionToggle: (EmotionCharacter) -> Unit,
 )
 
@@ -100,7 +112,13 @@ private fun HomeContent(
     actions: HomeActions,
     modifier: Modifier = Modifier,
 ) {
-    Box(modifier = modifier.fillMaxSize().dismissKeyboardOnTapOutside()) {
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            // 상위 Scaffold 가 내비게이션 바를 이미 소비했다. 남은 키보드 높이만 피한다.
+            .windowInsetsPadding(WindowInsets.ime.exclude(WindowInsets.navigationBars))
+            .dismissOnTapOutside(actions.onEmotionPickerDismiss),
+    ) {
         HomeDecorations()
 
         Column(modifier = Modifier.fillMaxSize()) {
@@ -175,7 +193,7 @@ private fun HomeInputSection(
             Popup(
                 alignment = Alignment.TopEnd,
                 offset = pickerOffset,
-                onDismissRequest = actions.onEmotionPickerToggle,
+                onDismissRequest = actions.onEmotionPickerDismiss,
             ) {
                 GamssCharacterPicker(items = pickerItems, onToggle = actions.onEmotionToggle)
             }
@@ -183,12 +201,20 @@ private fun HomeInputSection(
     }
 }
 
-/** 입력창 바깥을 누르면 포커스를 내려놓아야 collapsed 로 돌아가고 키보드도 닫힌다. */
+/**
+ * 입력창 바깥을 누르면 포커스를 내려놓아야 collapsed 로 돌아가고 키보드도 닫힌다. 캐릭터 패널은
+ * 포커스와 무관한 별도 창이라 [onDismiss] 로 같이 닫는다.
+ */
 @Composable
-private fun Modifier.dismissKeyboardOnTapOutside(): Modifier {
+private fun Modifier.dismissOnTapOutside(onDismiss: () -> Unit): Modifier {
     val focusManager = LocalFocusManager.current
     // clickable 을 쓰면 레이블 없는 클릭 노드가 화면 전체 크기로 시맨틱 트리에 들어간다.
-    return pointerInput(Unit) { detectTapGestures { focusManager.clearFocus() } }
+    return pointerInput(onDismiss) {
+        detectTapGestures {
+            focusManager.clearFocus()
+            onDismiss()
+        }
+    }
 }
 
 private fun Set<EmotionCharacter>.toPickerItems(): List<GamssCharacterPickerItem<EmotionCharacter>> =
@@ -311,5 +337,6 @@ private fun previewActions() = HomeActions(
     onInputChange = {},
     onSubmit = {},
     onEmotionPickerToggle = {},
+    onEmotionPickerDismiss = {},
     onEmotionToggle = {},
 )
