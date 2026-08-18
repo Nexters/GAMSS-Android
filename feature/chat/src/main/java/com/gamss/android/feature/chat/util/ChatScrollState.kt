@@ -21,8 +21,10 @@ import kotlinx.coroutines.launch
  * - 최초 진입(과거 메시지 로딩 완료) 시 한 번 바닥으로 점프한다.
  * - 내가 메시지를 보내면(전송 완료 시점) 항상 바닥까지 스크롤한다. 사용자의 명시적 행동이라
  *   상대 메시지 도착 시와 달리 자동 스크롤을 유지한다.
- * - 상대 메시지는 자동 스크롤하지 않는다. 도착 시점에 화면에 보이지 않으면 [newMessageToast]를
- *   채워 안내하고, 그 메시지가 화면에 들어오면(사용자가 스크롤해서 직접 봤으면) 지운다.
+ * - 상대 메시지가 도착했을 때, 도착 직전에 이미 바닥을 보고 있었다면(=직전 마지막 메시지가
+ *   화면에 보이고 있었다면) 그대로 따라가며 바닥까지 자동 스크롤한다. 이미 위로 스크롤해
+ *   과거를 보고 있었다면 자동 스크롤하지 않고 [newMessageToast]를 채워 안내하며, 그 메시지가
+ *   화면에 들어오면(사용자가 스크롤해서 직접 봤으면) 지운다.
  */
 internal class ChatScrollState(
     private val listState: LazyListState,
@@ -80,12 +82,21 @@ internal class ChatScrollState(
         if (!hasScrolledToInitialBottom) return
         val latest = state.messages.lastOrNull()
         if (latest == null || latest.id == lastSeenMessageId) return
+
+        // 새 메시지가 추가돼도 그 이전 메시지들의 화면상 위치는 바뀌지 않는다 — 그래서 이 메시지가
+        // 새 메시지를 반영한 레이아웃 이후에 확인해도, "직전 마지막 메시지가 보이고 있었는지"는
+        // 곧 "도착 직전에 바닥을 보고 있었는지"와 같은 뜻이다.
+        val wasAtBottom = lastSeenMessageId?.let(::isMessageVisible) ?: true
         lastSeenMessageId = latest.id
 
-        // 내 전송으로 이미 자동 스크롤된 메시지거나 내가 보낸 메시지면 토스트 대상이 아니다 —
-        // 기존 토스트가 있다면 건드리지 않고 그대로 둔다.
+        // 내 전송으로 이미 자동 스크롤된 메시지거나 내가 보낸 메시지면 토스트/자동 스크롤 대상이
+        // 아니다 — 기존 토스트가 있다면 건드리지 않고 그대로 둔다.
         val isToastCandidate = latest.id != lastAutoScrolledMessageId && latest.sender != MessageSender.User
-        if (isToastCandidate) {
+        if (isToastCandidate && wasAtBottom) {
+            // 이미 바닥을 보고 있었다면 새 메시지를 놓치지 않도록 그대로 따라 내려간다.
+            newMessageToast = null
+            scrollToBottom(state)
+        } else if (isToastCandidate) {
             // 도착한 시점에 이미 화면에 보이는 메시지라면(뷰포트에 여유가 있어 스크롤 없이도
             // 보이는 경우) 안내할 필요가 없다.
             newMessageToast = if (isMessageVisible(latest.id)) null else latest
