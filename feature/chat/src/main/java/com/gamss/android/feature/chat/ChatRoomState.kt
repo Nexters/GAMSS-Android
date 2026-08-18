@@ -25,7 +25,10 @@ data class ChatRoomState(
     val canSend: Boolean
         get() = input.isNotBlank() && !isSending && !isLoading && endFlow == EndFlow.NotStarted
 
-    val isAwaitingComments: Boolean get() = isSending || pendingComments.isNotEmpty()
+    // isSending(내 전송이 서버 왕복 중)은 여기 포함하지 않는다 — "입력중" 버블은 상대가 답장을
+    // 준비 중일 때만 보여야 하고, 내 메시지 전송 중이라는 것과는 다른 신호다. 전송 중 UI 피드백은
+    // 입력창의 전송 버튼 비활성화(MessageInputBar의 isSending)로 이미 충분하다.
+    val isAwaitingComments: Boolean get() = pendingComments.isNotEmpty()
 
     /** 보낸 메시지가 있어야 카드를 만들 감정과 요약이 나온다. 종료 단계와 무관한 조건이다. */
     val endPreconditionsMet: Boolean
