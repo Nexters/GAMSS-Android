@@ -38,6 +38,9 @@ object GamssTheme {
     val radius: GamssRadius
         get() = GamssRadius
 
+    val touchTarget: GamssTouchTarget
+        get() = GamssTouchTarget
+
     val sticker: GamssStickerColors
         get() = GamssStickerColors
 }

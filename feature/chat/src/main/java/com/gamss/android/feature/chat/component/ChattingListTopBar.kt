@@ -13,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.gamss.android.core.designsystem.theme.GamssTheme
+import com.gamss.android.core.designsystem.theme.GamssTouchTarget
 import com.gamss.android.core.designsystem.topnavigation.GamssTopNavigation
 import com.gamss.android.core.designsystem.topnavigation.GamssTopNavigationContent
 import com.gamss.android.core.designsystem.topnavigation.GamssTopNavigationIcon
@@ -57,7 +58,7 @@ internal fun ChattingListTopBar(
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
                     .offset(x = (-42).dp, y = 3.dp)
-                    .size(48.dp),
+                    .size(GamssTouchTarget.minimum),
             ) {
                 Icon(
                     imageVector = Icons.Default.Search,
