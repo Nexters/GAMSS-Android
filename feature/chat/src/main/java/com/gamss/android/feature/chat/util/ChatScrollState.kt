@@ -21,8 +21,8 @@ import kotlinx.coroutines.launch
  * - 최초 진입(과거 메시지 로딩 완료) 시 한 번 바닥으로 점프한다.
  * - 내가 메시지를 보내면(전송 완료 시점) 항상 바닥까지 스크롤한다. 사용자의 명시적 행동이라
  *   상대 메시지 도착 시와 달리 자동 스크롤을 유지한다.
- * - 상대 메시지는 자동 스크롤하지 않는다. 바닥이 아닌 상태에서 도착하면 [newMessageToast]를
- *   채워 화면에서 안내하고, 이미 바닥이면 무시한다.
+ * - 상대 메시지는 자동 스크롤하지 않는다. 도착 시점에 화면에 보이지 않으면 [newMessageToast]를
+ *   채워 안내하고, 그 메시지가 화면에 들어오면(사용자가 스크롤해서 직접 봤으면) 지운다.
  */
 internal class ChatScrollState(
     private val listState: LazyListState,
@@ -86,13 +86,24 @@ internal class ChatScrollState(
         // 기존 토스트가 있다면 건드리지 않고 그대로 둔다.
         val isToastCandidate = latest.id != lastAutoScrolledMessageId && latest.sender != MessageSender.User
         if (isToastCandidate) {
-            newMessageToast = if (listState.canScrollForward) latest else null
+            // 도착한 시점에 이미 화면에 보이는 메시지라면(뷰포트에 여유가 있어 스크롤 없이도
+            // 보이는 경우) 안내할 필요가 없다.
+            newMessageToast = if (isMessageVisible(latest.id)) null else latest
         }
     }
 
-    fun clearToastIfAtBottom() {
-        if (!listState.canScrollForward) newMessageToast = null
+    /**
+     * 화면에 보이는 아이템 목록이 바뀔 때마다(=스크롤할 때마다) 호출된다. 지금 토스트가
+     * 가리키는 메시지가 화면에 들어왔으면 지운다. 리스트 맨 끝까지 스크롤하지 않아도, 그
+     * 메시지 하나만 보이면 충분하다.
+     */
+    fun clearToastIfMessageVisible() {
+        val toastMessageId = newMessageToast?.id ?: return
+        if (isMessageVisible(toastMessageId)) newMessageToast = null
     }
+
+    private fun isMessageVisible(messageId: Long): Boolean =
+        listState.layoutInfo.visibleItemsInfo.any { it.key == messageId }
 }
 
 /** 가장 최근에 보이던 마지막 아이템의 인덱스. 코멘트 생성 표시(로딩)까지 바닥에 포함시킨다. */
@@ -123,8 +134,14 @@ internal fun rememberChatScrollState(
         scrollState.handleNewMessage(state)
     }
 
-    LaunchedEffect(listState) {
-        snapshotFlow { listState.canScrollForward }.collect { scrollState.clearToastIfAtBottom() }
+    // scrollState 를 key 에 반드시 포함해야 한다 — 홈에서 새로 보낸 첫 메시지처럼 conversationId 가
+    // 나중에(전송 성공 시점에) 채워지는 대화는 remember(conversationId) 로 새 ChatScrollState 인스턴스가
+    // 만들어지는데, listState 는 그대로라 key 에 scrollState 가 없으면 이 effect 는 재시작되지 않고
+    // 이미 못 쓰게 된 옛 인스턴스의 클로저를 계속 붙든 채 실행된다 — 실제로 화면에 쓰이는(새)
+    // 인스턴스의 newMessageToast 는 영영 지워지지 않는다.
+    LaunchedEffect(scrollState, listState) {
+        snapshotFlow { listState.layoutInfo.visibleItemsInfo.map { it.key } }
+            .collect { scrollState.clearToastIfMessageVisible() }
     }
 
     return scrollState
