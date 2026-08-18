@@ -38,6 +38,8 @@ fun SettingListItem(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
+            // 제목이 길어도 배지가 밀려 잘리지 않도록, 남는 폭만 제목이 가져간다.
+            modifier = Modifier.weight(1f, fill = false),
             text = title,
             style = GamssTheme.typography.body3Medium,
             color = contentColor,

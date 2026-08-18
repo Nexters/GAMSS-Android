@@ -121,8 +121,11 @@ private fun Context.openNotificationSettings() {
                 .putExtra(Settings.EXTRA_APP_PACKAGE, packageName),
         )
     } catch (_: ActivityNotFoundException) {
-        // 앱별 알림 설정 화면이 없는 기기를 위해 앱 정보 화면으로 대체한다.
-        startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, "package:$packageName".toUri()))
+        // 앱별 알림 설정 화면이 없는 기기를 위해 앱 정보 화면으로 대체한다. 둘 다 없는 기기도 있어
+        // 폴백 실패는 무시한다. 설정 진입 실패로 앱이 죽어서는 안 된다.
+        runCatching {
+            startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, "package:$packageName".toUri()))
+        }
     }
 }
 
