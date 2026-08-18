@@ -217,6 +217,24 @@ class CardRepositoryImplTest {
 
     /** 날짜별 조회도 알 수 없는 감정을 버리므로, 순번은 버린 뒤를 기준으로 세야 두 응답이 맞물린다. */
     @Test
+    fun `날짜를 못 읽는 날은 그 날만 버리고 나머지 달은 살린다`() = runTest {
+        coEvery { cardService.getCardsByMonth(any()) } returns ApiResponse(
+            success = true,
+            data = listOf(
+                CardCalendarResponse(date = "2026-08-99", emotions = listOf("ANGER")),
+                CardCalendarResponse(date = "2026-08-16", emotions = listOf("JOY")),
+            ),
+        )
+
+        val result = repository.getCardsByMonth(YearMonth.of(2026, 8))
+
+        assertEquals(
+            listOf(CardEntry(LocalDate.of(2026, 8, 16), 0, EmotionCharacter.JOY)),
+            (result as AppResult.Success).data,
+        )
+    }
+
+    @Test
     fun `알 수 없는 감정을 버린 뒤를 기준으로 그날 순번을 센다`() = runTest {
         coEvery { cardService.getCardsByMonth(any()) } returns ApiResponse(
             success = true,
