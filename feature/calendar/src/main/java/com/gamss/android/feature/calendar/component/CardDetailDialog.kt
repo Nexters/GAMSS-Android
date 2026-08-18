@@ -1,6 +1,7 @@
 package com.gamss.android.feature.calendar.component
 
 import android.content.res.Configuration
+import android.widget.Toast
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -10,8 +11,15 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.window.Dialog
@@ -20,8 +28,13 @@ import com.gamss.android.core.designsystem.card.GamssEmotionCard
 import com.gamss.android.core.designsystem.card.GamssEmotionCardCharacter
 import com.gamss.android.core.designsystem.theme.GamssTheme
 import com.gamss.android.core.ui.card.toGamssEmotionCardCharacter
+import com.gamss.android.core.ui.share.captureToGraphicsLayer
+import com.gamss.android.core.ui.share.rememberCaptureGraphicsLayer
+import com.gamss.android.core.ui.share.shareBitmapToInstagramStory
+import com.gamss.android.core.ui.share.toAndroidBitmap
 import com.gamss.android.domain.card.Card
 import com.gamss.android.feature.calendar.R
+import kotlinx.coroutines.launch
 import java.time.format.DateTimeFormatter
 
 /**
@@ -36,8 +49,16 @@ internal fun CardDetailDialog(
     onDismiss: () -> Unit,
     onDiscardClick: () -> Unit,
     onViewConversationClick: () -> Unit,
-    onShareClick: () -> Unit,
 ) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val graphicsLayer = rememberCaptureGraphicsLayer()
+    val shareUnavailableMessage = stringResource(R.string.calendar_card_share_unavailable)
+
+    // 공유 이미지에는 누를 수 없는 버튼과 닫기 아이콘을 남기지 않는다. 캡처하는 한 프레임 동안만
+    // 감춰야 하므로 상태로 두고, 그림이 갱신된 뒤에 GraphicsLayer 를 읽는다.
+    var isCapturing by remember { mutableStateOf(false) }
+
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false),
@@ -58,8 +79,22 @@ internal fun CardDetailDialog(
                 shareActionLabel = stringResource(R.string.calendar_card_share),
                 onPrimaryActionClick = onDiscardClick,
                 onSecondaryActionClick = onViewConversationClick,
-                onShareClick = onShareClick,
-                topEndAction = { CardCloseButton(onClick = onDismiss) },
+                onShareClick = {
+                    scope.launch {
+                        isCapturing = true
+                        // 상태 변경이 재구성과 그리기를 거쳐 레이어에 반영될 때까지 기다린다.
+                        withFrameNanos {}
+                        withFrameNanos {}
+                        val bitmap = graphicsLayer.toAndroidBitmap()
+                        isCapturing = false
+                        if (!context.shareBitmapToInstagramStory(bitmap)) {
+                            Toast.makeText(context, shareUnavailableMessage, Toast.LENGTH_LONG).show()
+                        }
+                    }
+                },
+                modifier = Modifier.captureToGraphicsLayer(graphicsLayer),
+                showActions = !isCapturing,
+                topEndAction = { if (!isCapturing) CardCloseButton(onClick = onDismiss) },
             )
         }
     }

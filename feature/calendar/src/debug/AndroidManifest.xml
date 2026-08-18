@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <application>
+
+        <!--
+            카드 공유(인스타그램 스토리) 검증 전용 화면. adb 로만 실행한다.
+            실기기는 exported=false 인 액티비티의 adb 실행을 막으므로 true 로 둔다.
+            debug 소스셋에만 있어 릴리스 빌드에는 병합되지 않는다.
+        -->
+        <activity
+            android:name=".debug.CardShareDebugActivity"
+            android:exported="true"
+            android:theme="@style/Theme.GAMSS" />
+
+    </application>
+
+</manifest>

@@ -129,6 +129,9 @@ private fun GamssImageCardEmotionDarkPreview() {
  *
  * 카드의 고정 구조와 감정별 캐릭터 선택은 이 컴포넌트가 맡고, 문구와 사용자 동작만 호출부가 제공한다.
  * 따라서 화면마다 [GamssImageCard]의 간격과 텍스트 스타일을 다시 조합할 필요가 없다.
+ *
+ * [showActions] 를 `false` 로 두면 하단 버튼과 공유 행을 그리지 않는다. 카드를 이미지로 내보낼 때
+ * 눌릴 수 없는 버튼이 그림에 남지 않게 하려는 용도다.
  */
 @Composable
 @Suppress("LongParameterList")
@@ -145,6 +148,7 @@ fun GamssEmotionCard(
     onShareClick: () -> Unit,
     modifier: Modifier = Modifier,
     shape: Shape = RectangleShape,
+    showActions: Boolean = true,
     topEndAction: @Composable BoxScope.() -> Unit = {},
 ) {
     GamssImageCard(
@@ -171,42 +175,44 @@ fun GamssEmotionCard(
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
-            Spacer(modifier = Modifier.height(GamssTheme.spacing.spacing800))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(GamssTheme.spacing.spacing100),
-            ) {
-                CardOutlinedButton(
-                    text = primaryActionLabel,
-                    onClick = onPrimaryActionClick,
-                    modifier = Modifier.weight(1f),
-                )
-                CardOutlinedButton(
-                    text = secondaryActionLabel,
-                    onClick = onSecondaryActionClick,
-                    modifier = Modifier.weight(1f),
-                )
-            }
-            Spacer(modifier = Modifier.height(GamssTheme.spacing.spacing200))
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .noRippleClickableIfNotNull(onShareClick),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = shareActionLabel,
-                    style = GamssTheme.typography.body5Medium,
-                    color = GamssTheme.colors.gray600,
-                )
-                Spacer(modifier = Modifier.width(GamssTheme.spacing.spacing025))
-                Icon(
-                    painter = painterResource(GamssIcons.RightChevron),
-                    contentDescription = null,
-                    tint = GamssTheme.colors.gray600,
-                    modifier = Modifier.size(GamssTheme.spacing.spacing300),
-                )
+            if (showActions) {
+                Spacer(modifier = Modifier.height(GamssTheme.spacing.spacing800))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(GamssTheme.spacing.spacing100),
+                ) {
+                    CardOutlinedButton(
+                        text = primaryActionLabel,
+                        onClick = onPrimaryActionClick,
+                        modifier = Modifier.weight(1f),
+                    )
+                    CardOutlinedButton(
+                        text = secondaryActionLabel,
+                        onClick = onSecondaryActionClick,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+                Spacer(modifier = Modifier.height(GamssTheme.spacing.spacing200))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .noRippleClickableIfNotNull(onShareClick),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = shareActionLabel,
+                        style = GamssTheme.typography.body5Medium,
+                        color = GamssTheme.colors.gray600,
+                    )
+                    Spacer(modifier = Modifier.width(GamssTheme.spacing.spacing025))
+                    Icon(
+                        painter = painterResource(GamssIcons.RightChevron),
+                        contentDescription = null,
+                        tint = GamssTheme.colors.gray600,
+                        modifier = Modifier.size(GamssTheme.spacing.spacing300),
+                    )
+                }
             }
         }
     }

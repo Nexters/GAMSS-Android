@@ -14,6 +14,6 @@
     <string name="calendar_card_discard">기록 버리기</string>
     <string name="calendar_card_view_conversation">대화보기</string>
     <string name="calendar_card_share">공유하기</string>
-    <string name="calendar_card_share_chooser_title">카드 공유하기</string>
+    <string name="calendar_card_share_unavailable">인스타그램이 설치되어 있지 않아요</string>
     <string name="calendar_card_discard_failure">기록을 버리지 못했어요. 다시 시도해주세요</string>
 </resources>

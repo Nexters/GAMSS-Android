@@ -1,7 +1,5 @@
 package com.gamss.android.feature.calendar
 
-import android.content.Context
-import android.content.Intent
 import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -53,7 +51,6 @@ fun CalendarScreen(
 ) {
     val state by viewModel.collectAsState()
     val context = LocalContext.current
-    val shareChooserTitle = stringResource(R.string.calendar_card_share_chooser_title)
     val discardFailureMessage = stringResource(R.string.calendar_card_discard_failure)
 
     viewModel.collectSideEffect { sideEffect ->
@@ -104,18 +101,8 @@ fun CalendarScreen(
             onDismiss = viewModel::dismissCardDetail,
             onDiscardClick = viewModel::discardSelectedCard,
             onViewConversationClick = viewModel::viewSelectedConversation,
-            onShareClick = { shareCard(context, card, shareChooserTitle) },
         )
     }
-}
-
-private fun shareCard(context: Context, card: Card, chooserTitle: String) {
-    val shareText = "${card.summary}\n\n${card.message}"
-    val sendIntent = Intent(Intent.ACTION_SEND).apply {
-        type = "text/plain"
-        putExtra(Intent.EXTRA_TEXT, shareText)
-    }
-    context.startActivity(Intent.createChooser(sendIntent, chooserTitle))
 }
 
 @Composable
