@@ -305,9 +305,9 @@ private fun BoxScope.HomeDecorations() {
     )
 }
 
-// 헤더 아래(111) ~ 인사말(281), 입력바 아래(418) ~ 탭바 위(769) 간격 비율을 그대로 옮긴 값.
+// Figma 3483:16376 기준. 헤더 아래(111) ~ 인사말(281), 입력창 아래(479) ~ 탭바 위(776).
 private const val GREETING_TOP_WEIGHT = 170f
-private const val GREETING_BOTTOM_WEIGHT = 351f
+private const val GREETING_BOTTOM_WEIGHT = 297f
 
 private val HeaderStartPadding = 20.dp
 
@@ -320,7 +320,7 @@ private val GreetingToInputGap = 22.dp
 // Figma 입력창은 402dp 화면에서 366dp 폭이므로 좌우 여백은 각각 18dp다.
 private val InputBarHorizontalPadding: Dp = 18.dp
 
-// 100dp/149dp 두 입력창 높이 모두에서 Figma가 보여 준 9~10dp 겹침 폭.
+// 112dp/150dp 두 입력창 높이 모두에서 Figma가 보여 준 9~10dp 겹침 폭.
 private val PickerOverlapHeight = 9.dp
 
 @Preview(name = "Home - Light", showBackground = true, widthDp = 402, heightDp = 720)
