@@ -1,5 +1,6 @@
 package com.gamss.android.core.designsystem.component
 
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
@@ -26,8 +27,11 @@ private val BackgroundCorner = 4.dp
 private val NineSliceCells = (0..2).flatMap { col -> (0..2).map { row -> col to row } } - (1 to 1)
 
 @Composable
-fun Modifier.gamssSketchyBox(background: Color = GamssTheme.colors.white): Modifier {
-    val art = painterResource(R.drawable.bg_input_box)
+fun Modifier.gamssSketchyBox(
+    @DrawableRes artRes: Int = R.drawable.bg_input_box,
+    background: Color = GamssTheme.colors.white,
+): Modifier {
+    val art = painterResource(artRes)
     return this
         .background(background, RoundedCornerShape(BackgroundCorner))
         .drawBehind { drawNineSlice(art) }

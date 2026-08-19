@@ -28,13 +28,14 @@ import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.constrainHeight
 import androidx.compose.ui.unit.constrainWidth
 import androidx.compose.ui.unit.dp
+import com.gamss.android.core.designsystem.R
 import com.gamss.android.core.designsystem.modifier.noRippleClickable
 import com.gamss.android.core.designsystem.theme.GamssTheme
 import com.gamss.android.core.designsystem.theme.GamssTouchTarget
 
 // Figma default 4001:8200, focus 3489:4923.
-private val CollapsedInputBarHeight = 100.dp
-private val ExpandedInputBarHeight = 149.dp
+private val CollapsedInputBarHeight = 112.dp
+private val ExpandedInputBarHeight = 150.dp
 private val InputBarTopPadding = 16.dp
 private val InputBarBottomPadding = 16.dp
 private val ControlsRowHeight = 32.dp
@@ -72,7 +73,10 @@ fun GamssInputBar(
     )
 
     Layout(
-        modifier = modifier.gamssSketchyBox(),
+        // 두 상태의 손그림이 별개로 그려져 있어 아트도 함께 갈아 끼운다.
+        modifier = modifier.gamssSketchyBox(
+            artRes = if (isExpanded) R.drawable.bg_input_box_focus else R.drawable.bg_input_box,
+        ),
         content = {
             InputTextField(
                 value = value,
