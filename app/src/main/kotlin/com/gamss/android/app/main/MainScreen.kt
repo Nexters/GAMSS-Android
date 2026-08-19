@@ -205,8 +205,7 @@ private val tabFadeThroughSpec: AnimatedContentTransitionScope<Scene<NavKey>>.()
  * 탭 내부의 상세 화면(Setting/AccountInfo/NicknameChange/ChatRoom/WebView) push·pop 전용
  * 트랜지션. 계층 이동이라는 방향감을 주기 위해 좌우 슬라이드(shared axis X)를 쓴다.
  *
- * 진행 중인 제스처 뒤로가기만 predictivePopTransitionSpec을 타고 나머지 트리거는
- * popTransitionSpec을 타므로, 셋 다 지정하지 않으면 트리거 경로에 따라 모션이 갈린다.
+ * 트리거 경로마다 참조하는 spec이 달라서, 셋 다 지정하지 않으면 모션이 갈립니다.
  */
 private val detailSlideTransition: Map<String, Any> = NavDisplay.transitionSpec {
     (slideIntoContainer(SlideDirection.Start, tween(300)) + fadeIn(tween(300))) togetherWith
@@ -215,14 +214,13 @@ private val detailSlideTransition: Map<String, Any> = NavDisplay.transitionSpec 
     (slideIntoContainer(SlideDirection.End, tween(300)) + fadeIn(tween(300))) togetherWith
         (slideOutOfContainer(SlideDirection.End, tween(300)) + fadeOut(tween(150)))
 } + NavDisplay.predictivePopTransitionSpec { swipeEdge ->
-    // 제스처를 시작한 엣지 쪽으로 빠져야 손가락 방향과 맞는다.
     val towards = if (swipeEdge == NavigationEvent.EDGE_RIGHT) SlideDirection.Start else SlideDirection.End
     (slideIntoContainer(towards, tween(300)) + fadeIn(tween(300))) togetherWith
         (slideOutOfContainer(towards, tween(300)) + fadeOut(tween(150)))
 }
 
 /**
- * 홈 루트에서는 NavDisplay의 previousEntries가 비어 자체 back handler가 꺼지므로 이 handler가 받는다.
+ * 홈 루트에서는 NavDisplay의 previousEntries가 비어 자체 back handler가 꺼지므로 이 handler가 받습니다.
  */
 @Composable
 private fun DoubleBackToExitHandler(enabled: () -> Boolean) {
@@ -234,7 +232,7 @@ private fun DoubleBackToExitHandler(enabled: () -> Boolean) {
     var lastBackPressedAt by remember { mutableLongStateOf(NO_BACK_PRESS) }
     val isEnabled = enabled()
 
-    // 다른 화면을 거쳐 돌아오면 직전 경고는 무효다. 남겨두면 경고 없이 종료된다.
+    // 다른 화면을 거쳐 돌아오면 직전 경고는 무효입니다. 남겨두면 경고 없이 종료됩니다.
     LaunchedEffect(isEnabled) {
         if (!isEnabled) lastBackPressedAt = NO_BACK_PRESS
     }
@@ -243,7 +241,7 @@ private fun DoubleBackToExitHandler(enabled: () -> Boolean) {
         val now = SystemClock.elapsedRealtime()
         val withinWindow = lastBackPressedAt != NO_BACK_PRESS && now - lastBackPressedAt <= EXIT_CONFIRM_WINDOW_MS
         if (withinWindow) {
-            // 취소하지 않으면 앱이 사라진 뒤에도 런처 위에 남는다.
+            // 취소하지 않으면 앱이 사라진 뒤에도 런처 위에 남습니다.
             toast.cancel()
             activity?.finish()
         } else {
