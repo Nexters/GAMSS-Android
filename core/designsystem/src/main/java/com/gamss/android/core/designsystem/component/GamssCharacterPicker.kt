@@ -17,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
+import com.gamss.android.core.designsystem.R
 import com.gamss.android.core.designsystem.theme.GamssTheme
 
 // Figma 노드 3331:3950 의 auto layout 값. 패널 211x94(hug), 패딩 20, 3x2 그리드, 간격 18.
@@ -41,7 +42,8 @@ fun <T> GamssCharacterPicker(
 ) {
     Column(
         modifier = modifier
-            .gamssSketchyBox()
+            // 입력창과 같은 손그림 프레임을 쓴다.
+            .gamssSketchyBox(R.drawable.bg_expanding_input_box)
             .padding(PickerPadding),
         verticalArrangement = Arrangement.spacedBy(PickerGap),
     ) {

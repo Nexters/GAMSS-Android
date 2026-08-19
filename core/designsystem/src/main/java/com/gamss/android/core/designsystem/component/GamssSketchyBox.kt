@@ -16,7 +16,6 @@ import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
-import com.gamss.android.core.designsystem.R
 import com.gamss.android.core.designsystem.theme.GamssTheme
 
 private val ArtCorner = 12.dp
@@ -26,9 +25,16 @@ private val BackgroundCorner = 4.dp
 
 private val NineSliceCells = (0..2).flatMap { col -> (0..2).map { row -> col to row } } - (1 to 1)
 
+/**
+ * 손그림 테두리 아트를 9-slice 로 깐다. 모서리는 원본 크기로 두고 직선 구간만 늘려,
+ * 어떤 크기에서도 선 굵기가 변하지 않는다.
+ *
+ * 아트는 호출부가 명시한다. 기본값을 두면 다른 기능이 같은 drawable 을 손볼 때
+ * 무엇이 함께 바뀌는지 드러나지 않는다. 흰 배경은 여기서 칠하므로 아트에는 없어야 한다.
+ */
 @Composable
 fun Modifier.gamssSketchyBox(
-    @DrawableRes artRes: Int = R.drawable.bg_input_box,
+    @DrawableRes artRes: Int,
     background: Color = GamssTheme.colors.white,
 ): Modifier {
     val art = painterResource(artRes)

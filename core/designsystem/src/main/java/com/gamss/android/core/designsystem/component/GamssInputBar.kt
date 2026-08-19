@@ -1,65 +1,69 @@
 package com.gamss.android.core.designsystem.component
 
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.tween
+import android.content.res.Configuration
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.unit.Constraints
-import androidx.compose.ui.unit.constrainHeight
-import androidx.compose.ui.unit.constrainWidth
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.gamss.android.core.designsystem.R
-import com.gamss.android.core.designsystem.modifier.noRippleClickable
+import com.gamss.android.core.designsystem.component.chat.ChatReplyQuote
 import com.gamss.android.core.designsystem.theme.GamssTheme
-import com.gamss.android.core.designsystem.theme.GamssTouchTarget
 
-// Figma default 4001:8200, focus 3489:4923.
-private val CollapsedInputBarHeight = 112.dp
-private val ExpandedInputBarHeight = 150.dp
-private val InputBarTopPadding = 16.dp
-private val InputBarBottomPadding = 16.dp
-private val ControlsRowHeight = 32.dp
+/** 입력바 아래에 무언가를 띄우는 화면이 있어 공개한다. */
+val GamssInputBarHeight = 53.dp
 
-private val InputBarHorizontalPadding = 20.dp
+private val InputBarHeight = GamssInputBarHeight
+private val InputBarBorderWidth = 1.5.dp
+private val InputBarStartPadding = 16.dp
 
+/** 전송 버튼은 배경까지 담긴 32x32 에셋이라 tint 하지 않고 그대로 그린다. */
 private val SendButtonSize = 32.dp
 
-private val ControlsTouchOverhang = (GamssTouchTarget.minimum - ControlsRowHeight) / 2
+private val SendButtonTouchSize = 48.dp
+private val InputBarEndPadding = 8.dp
+
+// 답장 미리보기가 있을 때만 쓰는 세로 여백/간격. 없을 때는 기존처럼 최소 높이 + 가운데 정렬로 채운다.
+private val InputBarReplyVerticalPadding = 14.dp
+private val InputBarReplyGap = 14.dp
+
+private val ReplyClearIconSize = 20.dp
+private val ReplyClearTouchSize = 32.dp
 
 // 140자 상한을 이 폭에서 담으려면 6줄이면 넉넉하다. 넘치면 입력칸 안에서 스크롤된다.
 private const val INPUT_MAX_LINES = 6
 
-private const val HEIGHT_ANIMATION_DURATION_MS = 350
-
-/** Row/Column 을 갈아 끼우면 BasicTextField 가 다시 만들어져 포커스를 잡자마자 키보드가 닫힌다. */
+@Suppress("LongParameterList")
 @Composable
 fun GamssInputBar(
     value: String,
     onValueChange: (String) -> Unit,
-    onSend: () -> Unit,
+    onTrailingClick: () -> Unit,
     modifier: Modifier = Modifier,
     placeholder: String = "",
-    sendContentDescription: String? = null,
+    trailingContentDescription: String? = null,
     enabled: Boolean = true,
     /**
      * 전송 버튼(및 키보드 전송 액션)만 따로 잠글 때 쓴다. 기본은 [enabled]를 그대로 따른다.
@@ -67,149 +71,200 @@ fun GamssInputBar(
      * 유지하되 중복 전송만 막는 경우) [enabled]와 분리해 넘긴다.
      */
     sendEnabled: Boolean = enabled,
-    beforeSendSlot: @Composable (() -> Unit)? = null,
+    /** 후행 아이콘 앞에 놓이는 자리. 홈은 여기에 감정 선택 토글을 단다. */
+    trailingAction: @Composable (() -> Unit)? = null,
     /** 이 줄 수까지 늘어나고, 넘는 내용은 입력칸 안에서 스크롤된다. 화면별 글자 상한에 맞춰 조정한다. */
     maxLines: Int = INPUT_MAX_LINES,
+    /** 답장 대상 미리보기. null 이 아니면 입력칸 위에 같은 테두리 안에서 보여준다. */
+    replyQuote: ChatReplyQuote? = null,
+    onReplyClear: () -> Unit = {},
+    replyClearContentDescription: String? = null,
 ) {
     val canSubmit = sendEnabled && value.isNotBlank()
-    var isExpanded by remember { mutableStateOf(false) }
+    val verticalPadding = if (replyQuote != null) InputBarReplyVerticalPadding else 0.dp
 
-    val baseHeight = if (isExpanded) ExpandedInputBarHeight else CollapsedInputBarHeight
-    // 포커스로 바뀌는 기준 높이만 애니메이션한다. 늘어난 줄까지 태우면 방금 친 줄이 끝날 때까지 잘려 보인다.
-    val animatedBaseHeight by animateDpAsState(
-        targetValue = baseHeight,
-        animationSpec = tween(durationMillis = HEIGHT_ANIMATION_DURATION_MS),
-        label = "GamssInputBarHeight",
-    )
-
-    Layout(
-        // 두 상태의 손그림이 별개로 그려져 있어 아트도 함께 갈아 끼운다.
-        modifier = modifier.gamssSketchyBox(
-            artRes = if (isExpanded) R.drawable.bg_input_box_focus else R.drawable.bg_input_box,
-        ),
-        content = {
-            InputTextField(
+    Column(
+        modifier = modifier
+            .background(GamssTheme.colors.white, RectangleShape)
+            .border(InputBarBorderWidth, GamssTheme.colors.black, RectangleShape)
+            .padding(start = InputBarStartPadding, top = verticalPadding, bottom = verticalPadding),
+    ) {
+        if (replyQuote != null) {
+            ReplyPreviewRow(
+                replyQuote = replyQuote,
+                onClear = onReplyClear,
+                clearContentDescription = replyClearContentDescription,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(end = InputBarStartPadding, bottom = InputBarReplyGap),
+            )
+        }
+        Row(
+            modifier = Modifier
+                // 140자를 채우면 여러 줄이 된다. 한 줄일 때의 높이를 최소치로만 잡고 아래로 늘어나게 둔다.
+                .heightIn(min = InputBarHeight)
+                .padding(end = InputBarEndPadding),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            BasicTextField(
                 value = value,
                 onValueChange = onValueChange,
+                modifier = Modifier.weight(1f),
                 enabled = enabled,
-                placeholder = placeholder,
-                canSubmit = canSubmit,
-                onSubmit = onSend,
-                onFocusChanged = { isExpanded = it },
+                // 한 줄로 묶으면 140자 상한에 걸려도 가로로 스크롤만 되어 잘린 게 보이지 않는다.
+                // 상한을 안 걸면 남은 세로 공간을 전부 채워 버리므로 줄 수로 묶는다.
+                singleLine = false,
+                minLines = 1,
                 maxLines = maxLines,
+                textStyle = GamssTheme.typography.body4Medium.copy(color = GamssTheme.colors.gray900),
+                cursorBrush = SolidColor(GamssTheme.colors.gray900),
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
+                keyboardActions = KeyboardActions(onSend = { if (canSubmit) onTrailingClick() }),
+                decorationBox = { innerTextField ->
+                    // 자리표시자와 입력칸을 겹쳐 놓아야 한다. 컨테이너 없이 나란히 두면 입력칸이 밀려난다.
+                    Box(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentAlignment = Alignment.CenterStart,
+                    ) {
+                        if (value.isEmpty()) {
+                            GamssText(
+                                text = placeholder,
+                                style = GamssTheme.typography.body4Medium,
+                                color = GamssTheme.colors.gray500,
+                            )
+                        }
+                        innerTextField()
+                    }
+                },
             )
-            ControlsRow(
-                canSubmit = canSubmit,
-                sendContentDescription = sendContentDescription,
-                onSend = onSend,
-                beforeSendSlot = beforeSendSlot,
-            )
-        },
-    ) { measurables, constraints ->
-        val (textFieldMeasurable, controlsMeasurable) = measurables
-        val sidePad = InputBarHorizontalPadding.roundToPx()
-        // 폭이 열려 있는 부모(가로 스크롤 등) 아래에서는 maxWidth 가 Infinity 라 그대로 쓰면 터진다.
-        val barWidth = constraints.constrainWidth(
-            if (constraints.hasBoundedWidth) constraints.maxWidth else constraints.minWidth,
-        )
-        val availableWidth = (barWidth - sidePad * 2).coerceAtLeast(0)
-        val topPad = InputBarTopPadding.roundToPx()
-        val bottomPad = InputBarBottomPadding.roundToPx()
-        val controlsHeight = ControlsRowHeight.roundToPx()
-
-        // 기준 높이는 텍스트 자리의 최소값으로만 쓴다. 줄이 넘치면 텍스트가 재는 만큼 바가 자란다.
-        val minTextHeight =
-            (animatedBaseHeight.roundToPx() - topPad - bottomPad - controlsHeight).coerceAtLeast(0)
-        val text = textFieldMeasurable.measure(
-            Constraints(minWidth = availableWidth, maxWidth = availableWidth, minHeight = minTextHeight),
-        )
-        val overhang = ControlsTouchOverhang.roundToPx()
-        val controls = controlsMeasurable.measure(
-            Constraints.fixed(availableWidth + overhang, GamssTouchTarget.minimum.roundToPx()),
-        )
-
-        val barHeight = constraints.constrainHeight(topPad + text.height + controlsHeight + bottomPad)
-
-        layout(barWidth, barHeight) {
-            text.place(sidePad, topPad)
-            controls.place(sidePad, barHeight - bottomPad - controlsHeight - overhang)
+            trailingAction?.invoke()
+            Box(
+                modifier = Modifier
+                    .size(SendButtonTouchSize)
+                    .clickable(enabled = canSubmit, role = Role.Button, onClick = onTrailingClick),
+                contentAlignment = Alignment.Center,
+            ) {
+                Image(
+                    painter = painterResource(if (canSubmit) GamssIcons.SendButtonOn else GamssIcons.SendButtonOff),
+                    contentDescription = trailingContentDescription,
+                    modifier = Modifier.size(SendButtonSize),
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun InputTextField(
-    value: String,
-    onValueChange: (String) -> Unit,
-    enabled: Boolean,
-    placeholder: String,
-    canSubmit: Boolean,
-    onSubmit: () -> Unit,
-    onFocusChanged: (Boolean) -> Unit,
-    maxLines: Int,
+private fun ReplyPreviewRow(
+    replyQuote: ChatReplyQuote,
+    onClear: () -> Unit,
+    modifier: Modifier = Modifier,
+    clearContentDescription: String? = null,
 ) {
-    val textStyle = GamssTheme.typography.body4Medium
-    BasicTextField(
-        value = value,
-        onValueChange = onValueChange,
-        modifier = Modifier.onFocusChanged { onFocusChanged(it.isFocused) },
-        enabled = enabled,
-        singleLine = false,
-        minLines = 1,
-        maxLines = maxLines,
-        // 입력바 SVG는 라이트 배경이므로 시스템 다크 모드와 무관하게 전경을 검정으로 고정한다.
-        textStyle = textStyle.copy(color = GamssTheme.colors.black),
-        cursorBrush = SolidColor(GamssTheme.colors.black),
-        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
-        keyboardActions = KeyboardActions(onSend = { if (canSubmit) onSubmit() }),
-        decorationBox = { innerTextField ->
-            Box(
-                modifier = Modifier.fillMaxWidth(),
-                contentAlignment = Alignment.TopStart,
-            ) {
-                if (value.isEmpty()) {
-                    GamssText(
-                        text = placeholder,
-                        style = textStyle,
-                        color = GamssTheme.colors.gray500,
-                    )
-                }
-                innerTextField()
-            }
-        },
-    )
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(GamssTheme.spacing.spacing025),
+        ) {
+            GamssText(
+                text = replyQuote.senderLabel,
+                style = GamssTheme.typography.subtitle4,
+                color = GamssTheme.colors.gray900,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            GamssText(
+                text = replyQuote.message,
+                style = GamssTheme.typography.body5Medium,
+                color = GamssTheme.colors.gray900,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        Box(
+            modifier = Modifier
+                .size(ReplyClearTouchSize)
+                .clickable(role = Role.Button, onClick = onClear),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                painter = painterResource(R.drawable.ic_close),
+                contentDescription = clearContentDescription,
+                modifier = Modifier.size(ReplyClearIconSize),
+                tint = GamssTheme.colors.gray300,
+            )
+        }
+    }
 }
 
+@Preview(name = "Light", showBackground = true, widthDp = 402)
+@Suppress("UnusedPrivateMember")
 @Composable
-private fun ControlsRow(
-    canSubmit: Boolean,
-    sendContentDescription: String?,
-    onSend: () -> Unit,
-    beforeSendSlot: @Composable (() -> Unit)?,
-) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        beforeSendSlot?.invoke()
-        Spacer(modifier = Modifier.weight(1f))
-        SendButton(canSubmit = canSubmit, contentDescription = sendContentDescription, onClick = onSend)
+private fun GamssInputBarLightPreview() {
+    GamssTheme(darkTheme = false) {
+        GamssInputBarPreviewContent()
+    }
+}
+
+@Preview(
+    name = "Dark",
+    showBackground = true,
+    backgroundColor = 0xFF000000,
+    uiMode = Configuration.UI_MODE_NIGHT_YES,
+    widthDp = 402,
+)
+@Suppress("UnusedPrivateMember")
+@Composable
+private fun GamssInputBarDarkPreview() {
+    GamssTheme(darkTheme = true) {
+        GamssInputBarPreviewContent()
     }
 }
 
 @Composable
-private fun SendButton(
-    canSubmit: Boolean,
-    contentDescription: String?,
-    onClick: () -> Unit,
-) {
-    Box(
-        modifier = Modifier
-            .size(GamssTouchTarget.minimum)
-            .noRippleClickable(enabled = canSubmit, role = Role.Button, onClick = onClick),
-        contentAlignment = Alignment.Center,
+private fun GamssInputBarPreviewContent() {
+    Column(
+        modifier = Modifier.padding(GamssTheme.spacing.spacing400),
+        verticalArrangement = Arrangement.spacedBy(GamssTheme.spacing.spacing400),
     ) {
-        Image(
-            painter = painterResource(if (canSubmit) GamssIcons.SendButtonOn else GamssIcons.SendButtonOff),
-            contentDescription = contentDescription,
-            modifier = Modifier.size(SendButtonSize),
+        // 빈 상태 — 자리표시자가 보인다.
+        GamssInputBar(
+            value = "",
+            onValueChange = {},
+            onTrailingClick = {},
+            placeholder = "무슨 이야기를 버려볼까요?",
+            modifier = Modifier.fillMaxWidth(),
+        )
+        // 채워진 상태 — 전송 버튼이 활성화된다.
+        GamssInputBar(
+            value = "오늘 발표가 너무 떨려요",
+            onValueChange = {},
+            onTrailingClick = {},
+            modifier = Modifier.fillMaxWidth(),
+        )
+        // 비활성 상태 — 입력도, 전송도 막힌다.
+        GamssInputBar(
+            value = "",
+            onValueChange = {},
+            onTrailingClick = {},
+            placeholder = "지금은 입력할 수 없어요",
+            enabled = false,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        // 답장 상태 — 입력칸 위에 답장 미리보기가 같은 테두리 안에서 보인다.
+        GamssInputBar(
+            value = "",
+            onValueChange = {},
+            onTrailingClick = {},
+            placeholder = "메세지 입력",
+            replyQuote = ChatReplyQuote(senderLabel = "불안이에게 답장", message = "안녕"),
+            onReplyClear = {},
+            replyClearContentDescription = "답장 취소",
+            modifier = Modifier.fillMaxWidth(),
         )
     }
 }

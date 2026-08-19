@@ -44,9 +44,9 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.gamss.android.core.designsystem.component.GamssCharacterPicker
 import com.gamss.android.core.designsystem.component.GamssCharacterPickerItem
 import com.gamss.android.core.designsystem.component.GamssDisclosureToggle
+import com.gamss.android.core.designsystem.component.GamssExpandingInputBar
 import com.gamss.android.core.designsystem.component.GamssIconButton
 import com.gamss.android.core.designsystem.component.GamssIcons
-import com.gamss.android.core.designsystem.component.GamssInputBar
 import com.gamss.android.core.designsystem.component.GamssLogo
 import com.gamss.android.core.designsystem.component.GamssMarkerHighlight
 import com.gamss.android.core.designsystem.component.GamssPaperSlip
@@ -217,7 +217,7 @@ private fun HomeInputSection(
     onToggleLeftChange: (Float) -> Unit,
     onInputBarBottomChange: (Float) -> Unit,
 ) {
-    GamssInputBar(
+    GamssExpandingInputBar(
         value = state.input,
         onValueChange = actions.onInputChange,
         onSend = actions.onSubmit,

@@ -12,11 +12,12 @@ import com.gamss.android.domain.config.RemoteConfigKey
 import com.gamss.android.domain.config.RemoteConfigRepository
 import com.gamss.android.domain.conversation.CommentGenerationStatus
 import com.gamss.android.domain.conversation.Conversation
+import com.gamss.android.domain.conversation.ConversationDetail
 import com.gamss.android.domain.conversation.ConversationRepository
 import com.gamss.android.domain.conversation.ConversationSession
 import com.gamss.android.domain.conversation.ConversationSummaryStore
 import com.gamss.android.domain.conversation.EndConversationUseCase
-import com.gamss.android.domain.conversation.GetMessagesUseCase
+import com.gamss.android.domain.conversation.GetConversationUseCase
 import com.gamss.android.domain.conversation.Message
 import com.gamss.android.domain.conversation.MessageSender
 import com.gamss.android.domain.conversation.PendingConversationReveal
@@ -29,6 +30,7 @@ import com.gamss.android.domain.emotion.ConversationEmotionAccumulator
 import com.gamss.android.domain.emotion.EmotionCharacter
 import com.gamss.android.domain.emotion.EmotionClassifier
 import com.gamss.android.domain.emotion.EmotionLabel
+import com.gamss.android.domain.model.DailyTokenUsage
 import com.gamss.android.domain.repository.TokenUsageRefreshNotifier
 import com.gamss.android.domain.safety.DetectRiskInTextUseCase
 import com.gamss.android.domain.safety.RiskLexicon
@@ -37,6 +39,9 @@ import com.gamss.android.domain.safety.RiskTermMatcher
 import com.gamss.android.domain.summary.DiarySummarizer
 import com.gamss.android.domain.summary.SummarizeDiaryUseCase
 import com.gamss.android.domain.summary.UtteranceTokenCounter
+import com.gamss.android.domain.usecase.GetDailyTokenUsageUseCase
+import com.gamss.android.domain.user.UserProfile
+import com.gamss.android.domain.user.UserRepository
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -58,9 +63,18 @@ internal fun chatRoomViewModel(
     tokenUsageRefreshNotifier: TokenUsageRefreshNotifier = RecordingTokenUsageRefreshNotifier(),
     remoteConfigRepository: RemoteConfigRepository = FakeRemoteConfigRepository(),
     pendingReveal: PendingConversationReveal = PendingConversationReveal(),
-    session: ConversationSession = ConversationSession(
+    userRepository: UserRepository = FakeUserRepository(),
+): ChatRoomViewModel = ChatRoomViewModel(
+    tokenUsageRefreshNotifier = tokenUsageRefreshNotifier,
+    detectRiskInText = DetectRiskInTextUseCase(
+        repository = NoRiskLexiconRepository,
+        matcher = RiskTermMatcher(),
+    ),
+    getRemoteConfigFlag = GetRemoteConfigFlagUseCase(remoteConfigRepository),
+    getDailyTokenUsageUseCase = GetDailyTokenUsageUseCase(userRepository),
+    session = ConversationSession(
         sendMessage = SendMessageUseCase(conversationRepository),
-        getMessages = GetMessagesUseCase(conversationRepository),
+        getConversation = GetConversationUseCase(conversationRepository),
         updateConversationTitle = UpdateConversationTitleUseCase(conversationRepository),
         endConversation = EndConversationUseCase(conversationRepository),
         createConversationCard = CreateConversationCardUseCase(
@@ -74,14 +88,6 @@ internal fun chatRoomViewModel(
         emotionAccumulator = ConversationEmotionAccumulator(classifier),
         pendingReveal = pendingReveal,
     ),
-): ChatRoomViewModel = ChatRoomViewModel(
-    tokenUsageRefreshNotifier = tokenUsageRefreshNotifier,
-    detectRiskInText = DetectRiskInTextUseCase(
-        repository = NoRiskLexiconRepository,
-        matcher = RiskTermMatcher(),
-    ),
-    getRemoteConfigFlag = GetRemoteConfigFlagUseCase(remoteConfigRepository),
-    session = session,
 )
 
 /** 원격 설정 조회 없이 항상 켜진 값을 돌려준다. 값 자체를 검증하는 테스트는 별도로 stub 한다. */
@@ -106,6 +112,22 @@ private object NoRiskLexiconRepository : RiskLexiconRepository {
     )
 
     override suspend fun refresh() = Unit
+}
+
+/** 토큰 사용량 조회만 있으면 되는 테스트용 스텁. 채팅 흐름은 닉네임/계정 API 를 쓰지 않는다. */
+internal class FakeUserRepository(
+    private val usage: DailyTokenUsage = DailyTokenUsage(usedTokens = 0, dailyLimit = 100, exceeded = false),
+) : UserRepository {
+    override suspend fun updateNickname(nickname: String): AppResult<UserProfile> =
+        error("Not needed for this test")
+
+    override suspend fun deleteUserAccount(): AppResult<Unit> =
+        error("Not needed for this test")
+
+    override suspend fun getUserInfo(): AppResult<UserProfile> =
+        error("Not needed for this test")
+
+    override suspend fun getDailyTokenUsage(): AppResult<DailyTokenUsage> = AppResult.Success(usage)
 }
 
 /** 갱신 요청 횟수만 센다. 홈 쪽 수신은 feature:home 테스트가 본다. */
@@ -143,6 +165,7 @@ internal class FakeConversationRepository(
     private val commentCount: Int = 0,
     private val failing: Boolean = false,
     private val endFailing: Boolean = false,
+    private val restoredConversation: Conversation = Conversation(id = ROOM_ID, title = null),
 ) : ConversationRepository {
     private var sentCount = 0
 
@@ -183,8 +206,13 @@ internal class FakeConversationRepository(
         )
     }
 
-    override suspend fun getMessages(conversationId: Long): AppResult<List<Message>> =
-        AppResult.Success(emptyList())
+    override suspend fun getConversation(conversationId: Long): AppResult<ConversationDetail> =
+        AppResult.Success(
+            ConversationDetail(
+                conversation = restoredConversation,
+                messages = emptyList(),
+            ),
+        )
 
     override suspend fun getOngoingConversations(): AppResult<List<Conversation>> =
         AppResult.Success(emptyList())
