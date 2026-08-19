@@ -5,7 +5,6 @@ import com.gamss.android.data.local.card.CardLocalDataSource
 import com.gamss.android.data.local.card.model.toDomain
 import com.gamss.android.data.remote.card.CardService
 import com.gamss.android.data.remote.card.model.request.CreateCardRequest
-import com.gamss.android.data.remote.card.model.response.CardResponse
 import com.gamss.android.data.remote.card.model.response.toDomain
 import com.gamss.android.data.remote.card.model.response.toDomainOrNull
 import com.gamss.android.data.remote.card.model.response.toEntity

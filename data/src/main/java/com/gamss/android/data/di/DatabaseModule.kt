@@ -3,8 +3,8 @@ package com.gamss.android.data.di
 import android.content.Context
 import androidx.room3.Room
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
-import com.gamss.android.data.local.card.GamssDatabase
 import com.gamss.android.data.local.card.CardDao
+import com.gamss.android.data.local.card.GamssDatabase
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
