@@ -38,16 +38,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -61,6 +61,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.gamss.android.core.common.util.formatConversationDate
 import com.gamss.android.core.designsystem.component.GamssIcons
 import com.gamss.android.core.designsystem.component.GamssTokenUsageTooltip
+import com.gamss.android.core.designsystem.modifier.addFocusCleaner
 import com.gamss.android.core.designsystem.modifier.gamssShadow
 import com.gamss.android.core.designsystem.snackbar.GamssSnackBar
 import com.gamss.android.core.designsystem.theme.GamssTheme
@@ -263,6 +264,7 @@ private fun ChatRoomContent(
     onBackClick: () -> Unit,
 ) {
     val listState = rememberLazyListState()
+    val focusManager = LocalFocusManager.current
     val messageAnimationState = rememberChatMessageAnimationState(
         conversationId = state.conversationId,
         isLoading = state.isLoading,
@@ -293,7 +295,7 @@ private fun ChatRoomContent(
     }
 
     Scaffold(
-        modifier = modifier,
+        modifier = modifier.addFocusCleaner(focusManager),
         topBar = { ChatRoomTopBar(state = state, actions = actions, onBackClick = onBackClick) },
         snackbarHost = {
             SnackbarHost(snackbarHostState) { data ->
