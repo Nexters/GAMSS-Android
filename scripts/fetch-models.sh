@@ -6,7 +6,8 @@
 # 레포의 LFS 대역폭 예산이 소진되므로(CI 1회 542MB, CD 1회 542MB) 이 경로를 씁니다. Release 자산
 # 다운로드는 LFS 할당량과 무관합니다.
 #
-# 모델을 교체할 때는 LFS 와 아래 태그의 Release 를 함께 갱신해야 합니다.
+# 모델을 교체할 때는 LFS 와 아래 태그의 Release 를 함께 갱신해야 합니다. 한쪽만 갱신하면 이
+# 스크립트가 LFS 포인터의 OID 와 받은 파일의 sha256 이 다른 것을 보고 실패합니다.
 #
 # 사용법:
 #   ./scripts/fetch-models.sh              # 기본 태그(models-v1)
@@ -17,9 +18,7 @@
 set -euo pipefail
 
 TAG="${MODELS_RELEASE_TAG:-models-v1}"
-
-# 포인터(약 130바이트)가 남아 있으면 빌드는 통과하고 런타임에만 실패해 발견이 늦습니다.
-MIN_BYTES=1000000
+REPO="Nexters/GAMSS-Android"
 
 if ! command -v gh >/dev/null 2>&1; then
   echo "gh CLI 가 필요합니다. https://cli.github.com 참고" >&2
@@ -27,25 +26,57 @@ if ! command -v gh >/dev/null 2>&1; then
 fi
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$REPO_ROOT"
+
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 
-echo "온디바이스 모델을 받습니다 (release: $TAG)"
-gh release download "$TAG" --repo Nexters/GAMSS-Android --dir "$TMP" --clobber
+sha256_of() {
+  if command -v sha256sum >/dev/null 2>&1; then
+    sha256sum "$1" | cut -d' ' -f1
+  else
+    shasum -a 256 "$1" | cut -d' ' -f1
+  fi
+}
+
+echo "온디바이스 모델을 받습니다 (repo: $REPO, release: $TAG)"
+gh release download "$TAG" --repo "$REPO" --dir "$TMP" --clobber
+
+# LFS 포인터가 기대하는 OID 목록. 여기에 없는 경로면 추적 설정이 바뀐 것이므로 그것도 실패로 본다.
+LFS_OIDS="$(git lfs ls-files -l)"
 
 install_model() {
-  local asset="$1" dest="$REPO_ROOT/$2" size
-  [ -f "$TMP/$asset" ] || { echo "Release 자산에 $asset 이 없습니다" >&2; exit 1; }
+  local asset="$1" path="$2" expected actual
 
-  mkdir -p "$(dirname "$dest")"
-  cp "$TMP/$asset" "$dest"
+  [ -f "$TMP/$asset" ] || {
+    echo "실패: Release($TAG) 자산에 $asset 이 없습니다" >&2
+    exit 1
+  }
 
-  size=$(wc -c < "$dest" | tr -d ' ')
-  if [ "$size" -lt "$MIN_BYTES" ]; then
-    echo "$2 가 실제 모델이 아닙니다 (${size} bytes)" >&2
+  expected="$(printf '%s\n' "$LFS_OIDS" | awk -v p="$path" '$3 == p { print $1 }')"
+  [ -n "$expected" ] || {
+    echo "실패: $path 가 LFS 추적 대상이 아닙니다. .gitattributes 를 확인하세요" >&2
+    exit 1
+  }
+
+  mkdir -p "$(dirname "$path")"
+  cp "$TMP/$asset" "$path"
+  actual="$(sha256_of "$path")"
+
+  # LFS 와 Release 중 한쪽만 갱신되면 여기서 걸립니다. 그대로 두면 옛 모델로 빌드된 APK 가
+  # 조용히 배포되고, 기능은 런타임에야 실패합니다.
+  if [ "$expected" != "$actual" ]; then
+    cat >&2 <<EOF
+실패: $path 가 LFS 포인터와 다릅니다.
+  LFS 기대값 : $expected
+  Release 실제: $actual
+모델을 교체했다면 LFS 와 Release($TAG) 를 함께 갱신해야 합니다.
+새 태그로 올렸다면 MODELS_RELEASE_TAG 로 지정하세요.
+EOF
     exit 1
   fi
-  printf '  %s (%s MB)\n' "$2" "$((size / 1048576))"
+
+  printf '  %s (%s MB, oid 일치)\n' "$path" "$(( $(wc -c < "$path") / 1048576 ))"
 }
 
 install_model emotion_int8.tflite      models/emotion-pack/src/main/assets/models/emotion_int8.tflite
