@@ -76,6 +76,13 @@ object GamssChatBubbleDefaults {
      * 고정 너비 대신 이 여백을 기준으로 말풍선의 최대 너비를 역산한다.
      */
     val OppositeWallGap: Dp = 84.dp
+
+    /**
+     * 카드 안 대화([com.gamss.android.core.designsystem.card.GamssChattingCard])의 벽 여백.
+     * 대화 영역이 270 뿐이라 채팅방과 같은 여백을 남기면 말풍선이 지나치게 좁아진다.
+     * Figma Card_Chatting 가이드(3264:7548)의 "maximum: chat 프레임 기준 67px" 기준이다.
+     */
+    val CardOppositeWallGap: Dp = 67.dp
 }
 
 private val AvatarSize = 26.dp
@@ -92,6 +99,8 @@ private val LoadingBubbleVerticalPadding = 2.dp
 
 /**
  * 내가 보낸 채팅 메시지 말풍선. 시간이 왼쪽, 말풍선이 오른쪽에 정렬된다.
+ *
+ * @param oppositeWallGap 말풍선이 최대로 늘어났을 때 왼쪽 벽까지 남길 여백.
  */
 @Composable
 fun GamssSentChatBubble(
@@ -99,9 +108,10 @@ fun GamssSentChatBubble(
     time: String?,
     modifier: Modifier = Modifier,
     replyQuote: ChatReplyQuote? = null,
+    oppositeWallGap: Dp = GamssChatBubbleDefaults.OppositeWallGap,
 ) {
     BoxWithConstraints(modifier = modifier) {
-        val bubbleMaxWidth = (maxWidth - GamssChatBubbleDefaults.OppositeWallGap).coerceAtLeast(0.dp)
+        val bubbleMaxWidth = (maxWidth - oppositeWallGap).coerceAtLeast(0.dp)
         Row(
             horizontalArrangement = Arrangement.spacedBy(GamssTheme.spacing.spacing100),
             verticalAlignment = Alignment.Bottom,
@@ -121,6 +131,8 @@ fun GamssSentChatBubble(
 
 /**
  * 상대가 보낸 채팅 메시지 말풍선. 아바타 + 이름 + 말풍선이 왼쪽, 시간이 오른쪽에 정렬된다.
+ *
+ * @param oppositeWallGap 말풍선이 최대로 늘어났을 때 오른쪽 벽까지 남길 여백.
  */
 @Composable
 fun GamssReceivedChatBubble(
@@ -129,9 +141,10 @@ fun GamssReceivedChatBubble(
     time: String?,
     modifier: Modifier = Modifier,
     replyQuote: ChatReplyQuote? = null,
+    oppositeWallGap: Dp = GamssChatBubbleDefaults.OppositeWallGap,
 ) {
     BoxWithConstraints(modifier = modifier) {
-        val reservedWidth = GamssChatBubbleDefaults.OppositeWallGap + AvatarSize + GamssTheme.spacing.spacing100
+        val reservedWidth = oppositeWallGap + AvatarSize + GamssTheme.spacing.spacing100
         val bubbleMaxWidth = (maxWidth - reservedWidth).coerceAtLeast(0.dp)
         Row(
             horizontalArrangement = Arrangement.spacedBy(GamssTheme.spacing.spacing100),

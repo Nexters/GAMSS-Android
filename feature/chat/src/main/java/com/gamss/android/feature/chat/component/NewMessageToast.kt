@@ -26,6 +26,7 @@ import com.gamss.android.core.designsystem.component.GamssText
 import com.gamss.android.core.designsystem.modifier.gamssShadow
 import com.gamss.android.core.designsystem.modifier.noRippleCombinedClickable
 import com.gamss.android.core.designsystem.theme.GamssTheme
+import com.gamss.android.core.ui.chat.avatarIconRes
 import com.gamss.android.domain.conversation.Message
 import com.gamss.android.domain.conversation.MessageSender
 import com.gamss.android.domain.emotion.EmotionCharacter

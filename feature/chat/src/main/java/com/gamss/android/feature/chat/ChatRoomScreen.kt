@@ -64,17 +64,17 @@ import com.gamss.android.core.designsystem.topnavigation.GamssTopNavigationHoriz
 import com.gamss.android.core.designsystem.topnavigation.GamssTopNavigationIcon
 import com.gamss.android.core.designsystem.topnavigation.GamssTopNavigationIconAction
 import com.gamss.android.core.designsystem.topnavigation.GamssTopNavigationTitleAlignment
+import com.gamss.android.core.ui.chat.ChatMessageBubble
+import com.gamss.android.core.ui.chat.toReplyQuote
 import com.gamss.android.domain.card.Card
 import com.gamss.android.domain.conversation.Message
 import com.gamss.android.domain.conversation.MessageSender
 import com.gamss.android.domain.emotion.EmotionCharacter
 import com.gamss.android.feature.chat.component.EndConversationDialog
 import com.gamss.android.feature.chat.component.LoadingMessageBubble
-import com.gamss.android.feature.chat.component.MessageBubble
 import com.gamss.android.feature.chat.component.MessageInputBar
 import com.gamss.android.feature.chat.component.NewMessageToast
 import com.gamss.android.feature.chat.component.SupportAgencyDialog
-import com.gamss.android.feature.chat.component.toReplyQuote
 import com.gamss.android.feature.chat.util.AnimatedChatMessage
 import com.gamss.android.feature.chat.util.ChatMessageAnimation
 import com.gamss.android.feature.chat.util.ChatScrollState
@@ -406,7 +406,7 @@ private fun ChatMessageList(
                     shouldAnimate = animationState.shouldAnimate(message.id),
                     listState = listState,
                 ) {
-                    MessageBubble(
+                    ChatMessageBubble(
                         message = message,
                         replyQuote = replyQuote,
                         onCharacterMessageClick = actions.onCharacterMessageClick,
