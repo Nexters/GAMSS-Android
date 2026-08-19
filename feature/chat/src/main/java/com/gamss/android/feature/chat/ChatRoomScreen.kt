@@ -3,7 +3,6 @@ package com.gamss.android.feature.chat
 import android.content.res.Configuration
 import android.widget.Toast
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,17 +14,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
@@ -40,12 +36,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntOffset
@@ -54,9 +47,8 @@ import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.gamss.android.core.common.util.formatConversationDate
-import com.gamss.android.core.designsystem.component.GamssIcons
+import com.gamss.android.core.designsystem.component.GamssScrollToBottomButton
 import com.gamss.android.core.designsystem.component.GamssTokenUsageTooltip
-import com.gamss.android.core.designsystem.modifier.gamssShadow
 import com.gamss.android.core.designsystem.theme.GamssTheme
 import com.gamss.android.core.designsystem.topnavigation.GamssTopNavigation
 import com.gamss.android.core.designsystem.topnavigation.GamssTopNavigationHeight
@@ -283,7 +275,6 @@ private fun ChatRoomTopBar(
             onLeftIconClick = onBackClick,
             rightActions = listOfNotNull(
                 when {
-                    !state.useChatEndFeature -> null
                     state.endFlow.isBusy -> GamssTopNavigationIconAction(
                         icon = GamssTopNavigationIcon.CreateCard,
                         onClick = {},
@@ -431,36 +422,14 @@ private fun ChatMessageList(
         }
 
         if (showScrollToBottomButton) {
-            ScrollToBottomButton(
+            GamssScrollToBottomButton(
                 onClick = { scrollState.scrollToBottom(state) },
+                contentDescription = stringResource(R.string.chat_room_scroll_to_bottom),
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
                     .padding(end = 18.dp, bottom = 12.dp),
             )
         }
-    }
-}
-
-@Composable
-private fun ScrollToBottomButton(
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Box(
-        modifier = modifier
-            .size(36.dp)
-            .gamssShadow(shape = CircleShape)
-            .clip(CircleShape)
-            .background(GamssTheme.colors.gray700, CircleShape)
-            .clickable(role = Role.Button, onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(
-            painter = painterResource(GamssIcons.ScrollDown),
-            contentDescription = stringResource(R.string.chat_room_scroll_to_bottom),
-            modifier = Modifier.size(24.dp),
-            tint = GamssTheme.colors.gray025,
-        )
     }
 }
 
@@ -553,7 +522,6 @@ private fun ChatRoomPreviewContent() {
         conversationId = 1,
         messages = messages,
         input = "",
-        useChatEndFeature = true,
         replyTarget = ReplyTarget(
             messageId = 1,
             characterName = "기쁨",
