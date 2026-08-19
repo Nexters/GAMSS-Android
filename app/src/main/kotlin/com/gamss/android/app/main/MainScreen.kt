@@ -35,7 +35,6 @@ import com.gamss.android.app.navigation.toEntries
 import com.gamss.android.app.navigation.topLevelDestinations
 import com.gamss.android.core.designsystem.component.GamssBottomBar
 import com.gamss.android.core.designsystem.component.GamssPaperBackground
-import com.gamss.android.core.designsystem.theme.GamssTheme
 import com.gamss.android.feature.archive.ArchiveDetailScreen
 import com.gamss.android.feature.archive.ArchiveScreen
 import com.gamss.android.feature.archive.navigation.ArchiveDetailKey
@@ -73,46 +72,43 @@ fun MainScreen(
 
     ModelDownloadConfirmationEffect(modelDownloadPromptViewModel, snackbarHostState)
 
-    // 배경/탭바 에셋이 라이트 전용이라 다크 시안이 나올 때까지 셸은 라이트로 고정한다.
-    GamssTheme(darkTheme = false) {
-        // 종이 보드가 상태바와 탭바 뒤까지 이어져야 해서 Scaffold 바깥에 깐다.
-        GamssPaperBackground {
-            Scaffold(
-                containerColor = Color.Transparent,
-                snackbarHost = { SnackbarHost(snackbarHostState) },
-                // GamssBottomBar 가 navigationBarsPadding()으로 시스템 내비게이션 바를 직접 피하므로,
-                // Scaffold 기본 인셋까지 함께 적용하면 이중으로 여백이 생긴다.
-                contentWindowInsets = WindowInsets(0),
-                bottomBar = {
-                    if (navigationState.currentKey == navigationState.currentTopLevelKey) {
-                        GamssBottomBar(
-                            items = destinations.bottomBarItems(),
-                            selectedValue = navigationState.currentTopLevelKey,
-                            onItemClick = navigator::navigate,
-                        )
+    // 종이 보드가 상태바와 탭바 뒤까지 이어져야 해서 Scaffold 바깥에 깐다.
+    GamssPaperBackground {
+        Scaffold(
+            containerColor = Color.Transparent,
+            snackbarHost = { SnackbarHost(snackbarHostState) },
+            // GamssBottomBar 가 navigationBarsPadding()으로 시스템 내비게이션 바를 직접 피하므로,
+            // Scaffold 기본 인셋까지 함께 적용하면 이중으로 여백이 생긴다.
+            contentWindowInsets = WindowInsets(0),
+            bottomBar = {
+                if (navigationState.currentKey == navigationState.currentTopLevelKey) {
+                    GamssBottomBar(
+                        items = destinations.bottomBarItems(),
+                        selectedValue = navigationState.currentTopLevelKey,
+                        onItemClick = navigator::navigate,
+                    )
+                }
+            },
+        ) { innerPadding ->
+            NavDisplay(
+                // 화면마다 각자 상태바를 피하게 두면 빠뜨리기 쉬우니, 탭 전환 화면들을 모두
+                // 감싸는 이 지점에서 한 번에 처리한다. 배경은 GamssPaperBackground 가 Scaffold
+                // 바깥에서 이미 상태바 뒤까지 이어지므로, 여기서는 콘텐츠만 아래로 민다.
+                modifier = Modifier
+                    .padding(innerPadding)
+                    .statusBarsPadding(),
+                entries = navigationState.toEntries(entryProvider = entries),
+                // 최상위 탭(홈/보관함/대화) 전환 기본값. 탭은 위계 없는 형제 화면이라
+                // 방향성 있는 슬라이드 대신 fade-through를 쓴다. 상세 화면은 아래 entry의
+                // metadata(detailTransition)가 이 기본값을 덮어쓴다.
+                transitionSpec = tabFadeThroughSpec,
+                popTransitionSpec = tabFadeThroughSpec,
+                onBack = {
+                    if (navigationState.canGoBack) {
+                        navigator.goBack()
                     }
                 },
-            ) { innerPadding ->
-                NavDisplay(
-                    // 화면마다 각자 상태바를 피하게 두면 빠뜨리기 쉬우니, 탭 전환 화면들을 모두
-                    // 감싸는 이 지점에서 한 번에 처리한다. 배경은 GamssPaperBackground 가 Scaffold
-                    // 바깥에서 이미 상태바 뒤까지 이어지므로, 여기서는 콘텐츠만 아래로 민다.
-                    modifier = Modifier
-                        .padding(innerPadding)
-                        .statusBarsPadding(),
-                    entries = navigationState.toEntries(entryProvider = entries),
-                    // 최상위 탭(홈/보관함/대화) 전환 기본값. 탭은 위계 없는 형제 화면이라
-                    // 방향성 있는 슬라이드 대신 fade-through를 쓴다. 상세 화면은 아래 entry의
-                    // metadata(detailTransition)가 이 기본값을 덮어쓴다.
-                    transitionSpec = tabFadeThroughSpec,
-                    popTransitionSpec = tabFadeThroughSpec,
-                    onBack = {
-                        if (navigationState.canGoBack) {
-                            navigator.goBack()
-                        }
-                    },
-                )
-            }
+            )
         }
     }
 }
