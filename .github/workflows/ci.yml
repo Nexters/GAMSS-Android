@@ -38,8 +38,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          # 모델(.tflite)/네이티브(.so)가 필요한 build 잡에서만 LFS 다운로드 (대역폭 절약)
-          lfs: ${{ matrix.name == 'build' || matrix.name == 'build-debug' }}
+          lfs: false
+
+      # 모델(.tflite/.onnx)이 필요한 build 잡만 받습니다. 레포에는 LFS 로도 들어 있지만, CI/CD 가 매
+      # 실행마다 LFS 에서 받으면 레포의 대역폭 예산이 소진되므로 Release 자산에서 받습니다.
+      # 모델을 교체할 때는 LFS 와 Release 를 함께 갱신해야 합니다(scripts/fetch-models.sh 참고).
+      - name: Download on-device models
+        if: ${{ matrix.name == 'build' || matrix.name == 'build-debug' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: ./scripts/fetch-models.sh
 
       - name: Set up JDK 17
         uses: actions/setup-java@v5
