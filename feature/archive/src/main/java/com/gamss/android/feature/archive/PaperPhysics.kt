@@ -21,6 +21,10 @@ internal class PaperBody(
     var velY: Float = 0f
     var angle: Float = startAngle
     var angularVelocity: Float = startAngularVelocity
+
+    /** 직전 step 을 시작할 때의 자리. 얼마나 움직였는지로 멈춤을 판단하는 데 쓴다. */
+    var prevX: Float = startX
+    var prevY: Float = startY
 }
 
 /**
@@ -36,17 +40,28 @@ internal class PaperPhysicsWorld(
     private val boundsHeight: Float,
 ) {
     fun step(dt: Float) {
+        bodies.forEach {
+            it.prevX = it.x
+            it.prevY = it.y
+        }
         bodies.forEach { it.integrate(dt) }
         bodies.forEach(::resolveBounds)
         // 한 번만 풀면 여러 장이 겹친 자리에서 서로를 밀어내다 만다. 같은 계산을 몇 번 반복해 수렴시킨다.
         repeat(COLLISION_ITERATIONS) { resolveAllPairs() }
     }
 
-    /** 가장 활발한 종이가 얼마나 움직이는지. 낙하가 끝났는지 판단하는 쪽이 이 값을 본다. */
-    fun maxActivity(): Float = bodies.maxOf { body ->
-        val linear = sqrt(body.velX * body.velX + body.velY * body.velY)
-        val angular = abs(body.angularVelocity) * ANGULAR_ACTIVITY_WEIGHT
-        linear + angular
+    /**
+     * 직전 step 에서 어느 종이도 눈에 띄게 자리를 옮기지 않았는지. 낙하가 끝났는지 판단하는
+     * 쪽이 이 값을 본다.
+     *
+     * 속도로 재면 안 된다. 바닥에 놓인 종이도 매 step 중력만큼 속도를 얻었다가 [RESTITUTION]
+     * 만큼만 되튕겨 흘려보내므로, 다 쌓인 뒤에도 속도는 0 근처로 내려가지 않는다. 실제로 자리가
+     * 바뀌었는지를 봐야 멈춘 것을 알 수 있다.
+     */
+    fun isAtRest(): Boolean = bodies.all { body ->
+        val dx = body.x - body.prevX
+        val dy = body.y - body.prevY
+        dx * dx + dy * dy < REST_DISPLACEMENT_SQUARED
     }
 
     /** 좌우 벽과 바닥에 부딪히면 되튕기고, 스치는 방향으로 살짝 돌려 준다. */
@@ -171,6 +186,10 @@ private fun applySlidingSpin(a: PaperBody, b: PaperBody, tangentSpeed: Float) {
 // 아래 상수는 대부분 실기기(갤럭시 S23)로 직접 눈으로 보면서 맞춘 경험적 튜닝값이다.
 // 단위는 px/s, px/s², rad/s 등 시뮬레이션 내부 단위 기준이며, 다른 값으로 바꾸면 반드시
 // 실기기에서 낙하 애니메이션을 재확인해야 한다.
+/** 한 step 에 이만큼도 못 움직이면 멈춘 것으로 본다. 60fps 기준 초당 30px 이라 눈에는 정지다. */
+private const val REST_DISPLACEMENT = 0.5f
+private const val REST_DISPLACEMENT_SQUARED = REST_DISPLACEMENT * REST_DISPLACEMENT
+
 private const val GRAVITY = 2600f
 private const val LINEAR_DAMPING = 0.995f
 private const val ANGULAR_DAMPING = 0.9f
@@ -184,7 +203,6 @@ private const val WALL_SPIN_TRANSFER = 0.0001f
 private const val FLOOR_SPIN_TRANSFER = 0.0002f
 private const val MAX_ANGULAR_VELOCITY = 0.8f
 private const val MIN_SEPARATION_DISTANCE = 1e-4f
-private const val ANGULAR_ACTIVITY_WEIGHT = 40f
 private const val ANGULAR_SLEEP_THRESHOLD = 0.05f
 private const val RESTING_TANGENT_SPEED = 8f
 private const val POSITION_SLOP = 0.5f

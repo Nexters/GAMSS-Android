@@ -82,19 +82,20 @@ import com.gamss.android.feature.chat.util.rememberChatScrollState
 import kotlinx.coroutines.delay
 import org.orbitmvi.orbit.compose.collectAsState
 import org.orbitmvi.orbit.compose.collectSideEffect
+import java.time.LocalDate
 
 /**
  * 두 콜백 모두 이 화면을 실제로 벗어나야 한다. 머무르면 카드 단계가 그대로라 접기 연출이 다시 열린다.
  *
  * @param onCardDiscard 접은 카드를 통에 버린 뒤 호출한다. 버린 카드가 쌓인 보관함 칸으로 보내려면
- *  어느 감정 칸인지 알아야 하므로 함께 넘긴다.
+ *  어느 감정 칸인지, 그중 어느 날 카드인지 알아야 하므로 함께 넘긴다.
  * @param onCardSkip 연출을 건너뛴 뒤 호출한다. 카드는 이미 기록에 남아 결과는 같지만, 버리는
  *  동작을 하지 않았으니 보관함까지 데려가지 않는다.
  */
 @Composable
 fun ChatRoomScreen(
     conversationId: Long,
-    onCardDiscard: (EmotionCharacter) -> Unit,
+    onCardDiscard: (EmotionCharacter, LocalDate) -> Unit,
     onCardSkip: () -> Unit,
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -152,7 +153,7 @@ fun ChatRoomScreen(
             foldStage = endFlow.foldStage,
             onFoldTap = viewModel::onCardFoldTap,
             onSkip = onCardSkip,
-            onDiscard = { onCardDiscard(endFlow.card.character) },
+            onDiscard = { onCardDiscard(endFlow.card.character, endFlow.card.date) },
         )
 
         EndFlow.NotStarted,

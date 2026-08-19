@@ -52,6 +52,7 @@ import com.gamss.android.core.designsystem.R as DesignSystemR
 @Composable
 fun ArchiveDetailScreen(
     emotion: EmotionCharacter,
+    droppedCardDate: LocalDate?,
     onBackClick: () -> Unit,
     onOpenConversation: (Long) -> Unit,
     onNavigateToCardDelete: () -> Unit,
@@ -81,6 +82,7 @@ fun ArchiveDetailScreen(
     ArchiveDetailFrame(
         emotion = emotion,
         state = state,
+        droppedCardDate = droppedCardDate,
         onBackClick = onBackClick,
         onPaperClick = viewModel::selectCard,
         onMonthClick = viewModel::showMonthPicker,
@@ -105,6 +107,7 @@ fun ArchiveDetailScreen(
 private fun ArchiveDetailFrame(
     emotion: EmotionCharacter,
     state: ArchiveDetailState,
+    droppedCardDate: LocalDate?,
     onBackClick: () -> Unit,
     onPaperClick: (CardEntry) -> Unit,
     onMonthClick: () -> Unit,
@@ -121,7 +124,11 @@ private fun ArchiveDetailFrame(
         },
     ) { innerPadding ->
         Box(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
-            ArchiveDetailCards(cards = state.cards, onPaperClick = onPaperClick)
+            ArchiveDetailCards(
+                cards = state.cards,
+                droppedCardDate = droppedCardDate,
+                onPaperClick = onPaperClick,
+            )
             // 종이가 쌓일 자리보다 나중에 둔다. 카드가 많아 더미가 위로 넘치면 종이가 셀렉터를
             // 가리고 탭까지 먹어 달을 못 바꾸게 된다.
             MonthSelector(
@@ -245,6 +252,7 @@ private fun ArchiveDetailTopBar(
 @Composable
 private fun ArchiveDetailCards(
     cards: ArchiveCards,
+    droppedCardDate: LocalDate?,
     onPaperClick: (CardEntry) -> Unit,
 ) {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -254,7 +262,11 @@ private fun ArchiveDetailCards(
             is ArchiveCards.Loaded -> if (cards.entries.isEmpty()) {
                 EmptyMessage(textRes = R.string.archive_cards_empty)
             } else {
-                PaperPile(cards = cards.entries, onPaperClick = onPaperClick)
+                PaperPile(
+                    cards = cards.entries,
+                    droppedCardDate = droppedCardDate,
+                    onPaperClick = onPaperClick,
+                )
             }
         }
     }
@@ -287,6 +299,7 @@ private fun ArchiveDetailPaperPilePreview() {
                 yearMonth = YearMonth.of(2026, 7),
                 cards = ArchiveCards.Loaded(List(24) { index -> PreviewCard.copy(indexInDate = index) }),
             ),
+            droppedCardDate = null,
             onBackClick = {},
             onPaperClick = {},
             onMonthClick = {},

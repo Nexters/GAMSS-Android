@@ -22,11 +22,18 @@ import com.gamss.android.feature.archive.PaperFall
 import com.gamss.android.feature.archive.R
 import com.gamss.android.feature.archive.designScale
 import com.gamss.android.feature.archive.designWidth
+import java.time.LocalDate
 
-/** 위에서 쏟아져 바닥에 쌓이는 종이 더미. 어디에 어떻게 놓이는지는 [PaperFall] 이 정한다. */
+/**
+ * 위에서 쏟아져 바닥에 쌓이는 종이 더미. 어디에 어떻게 놓이는지는 [PaperFall] 이 정한다.
+ *
+ * @param droppedCardDate 방금 버려서 이 화면으로 넘어온 카드의 날짜. 그 한 장만 떨어지고 나머지는
+ *  이미 쌓인 채로 시작한다. null 이면 전부 쏟는다.
+ */
 @Composable
 internal fun PaperPile(
     cards: List<CardEntry>,
+    droppedCardDate: LocalDate?,
     onPaperClick: (CardEntry) -> Unit,
 ) {
     BoxWithConstraints(
@@ -45,8 +52,14 @@ internal fun PaperPile(
         val pileOffsetX = with(density) { ((maxWidth - designWidth(scale)) / 2).toPx() }
 
         // 키에 화면 크기를 넣지 않는다. 회전 등으로 크기만 바뀌었을 때 이미 쌓인 종이가 다시 쏟아진다.
-        val fall = remember(cards) {
-            PaperFall(cards.size, boundsWidthPx, boundsHeightPx, radiusPx)
+        val fall = remember(cards, droppedCardDate) {
+            PaperFall(
+                count = cards.size,
+                boundsWidthPx = boundsWidthPx,
+                boundsHeightPx = boundsHeightPx,
+                radiusPx = radiusPx,
+                droppingIndex = cards.droppedIndex(droppedCardDate),
+            )
         }
 
         LaunchedEffect(fall) { fall.run() }
@@ -73,6 +86,21 @@ internal fun PaperPile(
             )
         }
     }
+}
+
+/**
+ * 방금 버린 카드가 목록에서 몇 번째인지. 월별 응답에 카드 식별자가 없어 날짜와 그날 순번으로 찾고,
+ * 같은 날 여러 장이면 순번이 가장 큰 마지막 장이 방금 버린 것이다.
+ *
+ * 못 찾으면 null 이라 전부 쏟는 원래 연출로 돌아간다. 달을 바꿔 그 날짜가 목록에서 사라졌을 때가
+ * 그렇다.
+ */
+private fun List<CardEntry>.droppedIndex(date: LocalDate?): Int? {
+    if (date == null) return null
+    return withIndex()
+        .filter { (_, entry) -> entry.date == date }
+        .maxByOrNull { (_, entry) -> entry.indexInDate }
+        ?.index
 }
 
 /** 종이는 네모지만 충돌은 원으로 근사한다. 모서리까지 덮으려 반지름을 조금 키운다. */

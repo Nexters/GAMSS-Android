@@ -65,6 +65,7 @@ import com.gamss.android.feature.setting.nicknamechange.NicknameChangeScreen
 import com.gamss.android.feature.webview.GamssWebPage
 import com.gamss.android.feature.webview.WebViewScreen
 import com.gamss.android.feature.webview.navigation.WebViewKey
+import java.time.LocalDate
 
 @Composable
 fun MainScreen(
@@ -141,6 +142,7 @@ private fun mainEntryProvider(navigator: Navigator) = entryProvider {
     entry<ArchiveDetailKey>(metadata = detailSlideTransition) { key ->
         ArchiveDetailScreen(
             emotion = key.emotion,
+            droppedCardDate = key.droppedCardEpochDay?.let(LocalDate::ofEpochDay),
             onBackClick = navigator::goBack,
             onOpenConversation = { conversationId -> navigator.navigate(ChatRoomKey(conversationId)) },
             onNavigateToCardDelete = { navigator.navigate(CardDeleteKey) },
@@ -184,13 +186,11 @@ private fun mainEntryProvider(navigator: Navigator) = entryProvider {
     entry<ChatRoomKey>(metadata = detailSlideTransition) { key ->
         ChatRoomScreen(
             conversationId = key.conversationId,
-            // 버린 카드가 어디로 갔는지 바로 보여 준다. 끝난 대화방은 먼저 대화 탭에서 비운다 —
-            // 남겨 두면 보관함에서 뒤로 나올 때 다시 들어가고, 카드 단계가 그대로라 접기 연출이
-            // 또 열린다. 탭을 옮긴 뒤에는 currentSubStack 이 보관함 쪽이라 순서를 바꿀 수 없다.
-            onCardDiscard = { emotion ->
-                navigator.finishCurrentFlow()
-                navigator.navigate(ArchiveKey)
-                navigator.navigate(ArchiveDetailKey(emotion))
+            // 버린 카드가 어디로 갔는지 바로 보여 준다. 끝난 대화방을 남기면 뒤로 나왔을 때
+            // 다시 들어가고, 카드 단계가 그대로라 접기 연출이 또 열린다. 비우는 순서는
+            // Navigator 가 안다.
+            onCardDiscard = { emotion, date ->
+                navigator.openInTab(ArchiveKey, ArchiveDetailKey(emotion, date.toEpochDay()))
             },
             onCardSkip = navigator::goBack,
             onBackClick = navigator::goBack,

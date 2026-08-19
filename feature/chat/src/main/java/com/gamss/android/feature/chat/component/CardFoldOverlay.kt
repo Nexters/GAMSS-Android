@@ -1,7 +1,8 @@
 package com.gamss.android.feature.chat.component
 
-import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animate
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
@@ -19,13 +20,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableFloatState
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -40,13 +42,15 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.lerp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.gamss.android.core.designsystem.card.GamssCardDashedDivider
 import com.gamss.android.core.designsystem.card.GamssEmotionCardContent
 import com.gamss.android.core.designsystem.card.GamssImageCard
 import com.gamss.android.core.designsystem.component.GamssIcons
@@ -56,17 +60,23 @@ import com.gamss.android.core.ui.card.cardTitleRes
 import com.gamss.android.core.ui.card.toGamssEmotionCardCharacter
 import com.gamss.android.domain.card.Card
 import com.gamss.android.domain.emotion.EmotionCharacter
+import com.gamss.android.feature.chat.CARD_FOLD_ARROW_DELAY_MS
 import com.gamss.android.feature.chat.CARD_FOLD_BIN_ASPECT_RATIO
+import com.gamss.android.feature.chat.CARD_FOLD_BIN_DELAY_MS
 import com.gamss.android.feature.chat.CARD_FOLD_BIN_SINK_FRACTION
 import com.gamss.android.feature.chat.CARD_FOLD_DISCARD_HOLD_MS
+import com.gamss.android.feature.chat.CARD_FOLD_DISCARD_SINK_MS
 import com.gamss.android.feature.chat.CARD_FOLD_DISCARD_THRESHOLD
-import com.gamss.android.feature.chat.CARD_FOLD_STEP_DURATION_MS
+import com.gamss.android.feature.chat.CARD_FOLD_GUIDE_DELAY_MS
+import com.gamss.android.feature.chat.CARD_FOLD_HINT_FADE_MS
 import com.gamss.android.feature.chat.CardFoldArrowBinGap
 import com.gamss.android.feature.chat.CardFoldArrowSize
 import com.gamss.android.feature.chat.CardFoldDesignWidth
+import com.gamss.android.feature.chat.CardFoldDividerToQuestionGap
 import com.gamss.android.feature.chat.CardFoldGuideGap
+import com.gamss.android.feature.chat.CardFoldQuestionToTapGuideGap
 import com.gamss.android.feature.chat.CardFoldStage
-import com.gamss.android.feature.chat.CardFoldTapGuideBottomInset
+import com.gamss.android.feature.chat.CardFoldSummaryToDividerGap
 import com.gamss.android.feature.chat.CardFoldTapGuideSize
 import com.gamss.android.feature.chat.R
 import com.gamss.android.feature.chat.paperSize
@@ -74,7 +84,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
-import kotlin.math.abs
 import com.gamss.android.core.designsystem.R as DesignSystemR
 
 /**
@@ -101,6 +110,10 @@ internal fun CardFoldOverlay(
             usePlatformDefaultWidth = false,
             dismissOnBackPress = false,
             dismissOnClickOutside = false,
+            // 통은 화면 맨 아래에 붙어야 한다. 기본값이면 창이 시스템 바를 피해서 그려져
+            // 내비게이션 바 자리만큼 통이 떠 보인다. 시안의 874 프레임도 상태바와 홈
+            // 인디케이터를 포함한 높이다.
+            decorFitsSystemWindows = false,
         ),
     ) {
         CardFoldContent(
@@ -121,44 +134,32 @@ private fun CardFoldContent(
     onSkip: () -> Unit,
     onDiscard: () -> Unit,
 ) {
-    // 단계를 실수로 표현해 두 단계 사이를 오갈 수 있게 한다. 크기와 겹침 정도를 이 값 하나로 뽑는다.
-    val foldProgress = remember { Animatable(foldStage.ordinal.toFloat()) }
-    LaunchedEffect(foldStage) {
-        foldProgress.animateTo(
-            foldStage.ordinal.toFloat(),
-            tween(CARD_FOLD_STEP_DURATION_MS, easing = FastOutSlowInEasing),
-        )
-    }
-
-    val dragOffset = remember { Animatable(0f) }
-    // draggable 의 델타 콜백은 suspend 가 아니라 여기서 코루틴을 열어 snapTo 를 부른다.
-    val dragScope = rememberCoroutineScope()
-    var isDiscarding by remember { mutableStateOf(false) }
-
-    val canFold = foldStage.next != null && !isDiscarding
-    val canDrag = foldStage.next == null && !isDiscarding
+    val dragOffset = remember { mutableFloatStateOf(0f) }
+    // 다 접혔는지가 접기와 끌기를 가른다. 더 접을 게 없으면 이제 통으로 내리는 단계다.
+    val folded = foldStage.next == null
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         // 시안은 402dp 폭 기준이다. 좁은 기기에서 종이와 힌트를 폭 비율만큼 함께 줄여 좌우 여백
         // 비율을 지킨다. 통은 폭을 채우고 높이를 비율로 뽑으므로 이미 같은 비율로 줄어든다.
         val designScale = (maxWidth / CardFoldDesignWidth).coerceAtMost(1f)
-        val paperSize = lerpPaperSize(foldProgress.value) * designScale
+        val paperSize = foldStage.paperSize * designScale
 
         // 통은 창 아래에 붙고 종이는 창 중심에 붙으므로 내려갈 거리가 이 창의 크기에서 바로 나온다.
         // 화면 높이 상수로 되짚지 않아 인셋이나 폰트 배율이 바뀌어도 어긋나지 않는다.
         val binHeight = maxWidth / CARD_FOLD_BIN_ASPECT_RATIO
-        val paperRestBottom = (maxHeight + paperSize.height) / 2
-        val sinkTarget = maxHeight - binHeight * (1f - CARD_FOLD_BIN_SINK_FRACTION)
-        val dragDistancePx = with(LocalDensity.current) {
-            (sinkTarget - paperRestBottom).coerceAtLeast(0.dp).toPx()
-        }
+        val travel = with(LocalDensity.current) { discardTravel(maxHeight, binHeight, paperSize.height) }
 
-        // 진행률은 graphicsLayer 안에서만 불러 쓴다. 컴포지션 본문에서 dragOffset.value 를 읽으면
-        // 끄는 동안 매 프레임 카드까지 다시 그려진다.
-        val dragFraction = { if (dragDistancePx > 0f) (dragOffset.value / dragDistancePx).coerceIn(0f, 1f) else 0f }
-        // 통과 화살표, 버리기 안내는 마지막 접힘과 함께 배어 나온다. 끌기 시작하면 다시 사라진다.
-        val discardProgress = (foldProgress.value - CardFoldStage.FoldedOnce.ordinal).coerceIn(0f, 1f)
-        val hintAlpha = { discardProgress * (1f - dragFraction()) }
+        // 진행률은 graphicsLayer 안에서만 불러 쓴다. 컴포지션 본문에서 읽으면 끄는 동안 매
+        // 프레임 카드까지 다시 그려진다.
+        val dragFraction = {
+            val distance = travel.dragDistancePx
+            if (distance > 0f) (dragOffset.floatValue / distance).coerceIn(0f, 1f) else 0f
+        }
+        // 접힘 자체는 툭 바뀌지만, 다 접힌 뒤에는 통 → 안내 → 화살표가 하나씩 배어 나온다. 셋 다
+        // 버리는 동안에도 남아야 하므로, 끌 수 있는지가 아니라 단계로 판단한다.
+        val binProgress = fadeInAfter(folded, CARD_FOLD_BIN_DELAY_MS, label = "cardFoldBin")
+        val guideProgress = fadeInAfter(folded, CARD_FOLD_GUIDE_DELAY_MS, label = "cardFoldGuide")
+        val arrowProgress = fadeInAfter(folded, CARD_FOLD_ARROW_DELAY_MS, label = "cardFoldArrow")
 
         // 종이는 화면 중심에 고정한다. Figma 에서 세 단계가 모두 같은 중심선에 놓인다.
         Box(
@@ -167,46 +168,30 @@ private fun CardFoldContent(
                 .size(paperSize),
         ) {
             DiscardGuide(
-                alpha = hintAlpha,
+                // 안내와 화살표는 힌트라 끌기 시작하면 사라진다. 통은 남는다.
+                alpha = { guideProgress.value * (1f - dragFraction()) },
                 gap = CardFoldGuideGap * designScale,
                 modifier = Modifier.align(Alignment.TopCenter),
             )
-            FoldingPaper(
-                card = card,
-                paperSize = paperSize,
-                designScale = designScale,
-                foldProgress = foldProgress.value,
-                foldStage = foldStage,
-                onSkip = onSkip,
+            Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .graphicsLayer { translationY = dragOffset.value }
-                    .noRippleClickableIfNotNull(onFoldTap.takeIf { canFold })
-                    .draggable(
-                        state = rememberDraggableState { delta ->
-                            dragScope.launch { dragOffset.updateBounded(delta, dragDistancePx) }
-                        },
-                        orientation = Orientation.Vertical,
-                        enabled = canDrag,
-                        onDragStopped = {
-                            // 가라앉는 동안 다시 잡히지 않게, 애니메이션 전에 잠근다.
-                            val discarding = dragOffset.reachedBin(dragDistancePx)
-                            isDiscarding = discarding
-                            if (discarding) {
-                                dragOffset.animateTo(dragDistancePx, DiscardSinkSpec)
-                                delay(CARD_FOLD_DISCARD_HOLD_MS)
-                                onDiscard()
-                            } else {
-                                dragOffset.animateTo(0f, spring())
-                            }
-                        },
+                    .graphicsLayer { translationY = dragOffset.floatValue }
+                    .noRippleClickableIfNotNull(onFoldTap.takeIf { !folded })
+                    .discardDraggable(
+                        offset = dragOffset,
+                        travel = travel,
+                        enabled = folded,
+                        onDiscard = onDiscard,
                     ),
-            )
+            ) {
+                StagePaper(stage = foldStage, card = card, onSkip = onSkip)
+            }
         }
 
         // 종이보다 앞에 그린다. Figma 도 화살표를 종이 위에 얹고, 위쪽이 투명해 종이를 가리지 않는다.
         DiscardArrow(
-            alpha = hintAlpha,
+            alpha = { arrowProgress.value * (1f - dragFraction()) },
             size = CardFoldArrowSize * designScale,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
@@ -215,98 +200,77 @@ private fun CardFoldContent(
 
         // 종이보다 뒤에 그리면 통 앞면에 가려 파묻히는 모습이 안 나온다.
         DiscardBin(
-            alpha = { discardProgress },
+            alpha = { binProgress.value },
             modifier = Modifier.align(Alignment.BottomCenter),
         )
     }
 }
 
-/**
- * 세 단계 그림을 겹쳐 두고 [foldProgress] 에 가까운 것만 보여 준다. 각 그림은 자기 원본 크기로
- * 배치한 뒤 [paperSize] 까지 눌러서, 카드가 접히며 찌그러지는 모습이 그대로 나온다. 접히는
- * 기준선은 가운데다.
- *
- * 원본 크기는 requiredSize 로 준다. size 로 주면 부모의 최대 크기에 먼저 잘려, 단계 사이에서
- * 레이아웃과 scale 이 이중으로 줄어든다.
- */
 @Composable
-private fun FoldingPaper(
-    card: Card,
-    paperSize: DpSize,
-    designScale: Float,
-    foldProgress: Float,
-    foldStage: CardFoldStage,
-    onSkip: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Box(modifier = modifier, contentAlignment = Alignment.Center) {
-        CardFoldStage.entries.forEach { stage ->
-            val alpha = (1f - abs(foldProgress - stage.ordinal)).coerceIn(0f, 1f)
-            if (alpha == 0f) return@forEach
+private fun StagePaper(stage: CardFoldStage, card: Card, onSkip: () -> Unit) {
+    when (stage) {
+        CardFoldStage.Unfolded -> UnfoldedPaper(card = card, onSkip = onSkip)
 
-            val natural = stage.paperSize * designScale
-            Box(
-                modifier = Modifier
-                    .requiredSize(natural)
-                    .graphicsLayer {
-                        this.alpha = alpha
-                        scaleX = paperSize.width / natural.width
-                        scaleY = paperSize.height / natural.height
-                    },
-            ) {
-                StagePaper(
-                    stage = stage,
-                    card = card,
-                    // 흐려지는 중인 카드의 닫기 버튼까지 눌리지 않게, 지금 단계일 때만 연다.
-                    onSkip = onSkip.takeIf { stage == foldStage },
-                )
-            }
-        }
+        CardFoldStage.FoldedOnce -> FoldedPaperImage(DesignSystemR.drawable.img_paper_folded_once)
+        CardFoldStage.FoldedTwice -> FoldedPaperImage(DesignSystemR.drawable.img_paper_folded_twice)
     }
 }
 
+/** 아직 안 접힌 카드. 본문 아래로 점선과 안내 문구, 접으라는 손글씨가 이어 붙는다. */
 @Composable
-private fun StagePaper(stage: CardFoldStage, card: Card, onSkip: (() -> Unit)?) {
-    when (stage) {
-        CardFoldStage.Unfolded -> Box(modifier = Modifier.fillMaxSize()) {
-            GamssImageCard(
-                date = card.date.format(CardFoldDateFormatter),
-                topEndAction = { FoldSkipButton(onClick = onSkip) },
-            ) {
-                GamssEmotionCardContent(
-                    character = card.character.toGamssEmotionCardCharacter(),
-                    showDivider = true,
-                ) {
-                    Text(
-                        text = stringResource(card.character.cardTitleRes()),
-                        modifier = Modifier.fillMaxWidth(),
-                        style = GamssTheme.typography.title2,
-                        color = GamssTheme.colors.gray950,
-                        textAlign = TextAlign.Center,
-                    )
-                    Spacer(modifier = Modifier.height(GamssTheme.spacing.spacing200))
-                    Text(
-                        text = card.summary,
-                        modifier = Modifier.fillMaxWidth(),
-                        style = GamssTheme.typography.body4Regular,
-                        color = GamssTheme.colors.gray800,
-                        textAlign = TextAlign.Center,
-                    )
-                }
-            }
-            // Figma 는 접기 안내를 손글씨 그림으로 준다. 카드 아래쪽에 겹쳐 놓는다.
+private fun UnfoldedPaper(card: Card, onSkip: () -> Unit) {
+    GamssImageCard(
+        date = card.date.format(CardFoldDateFormatter),
+        topEndAction = { FoldSkipButton(onClick = onSkip) },
+    ) {
+        GamssEmotionCardContent(
+            character = card.character.toGamssEmotionCardCharacter(),
+            showDivider = true,
+        ) {
+            Text(
+                text = stringResource(card.character.cardTitleRes()),
+                modifier = Modifier.fillMaxWidth(),
+                style = GamssTheme.typography.title2,
+                color = GamssTheme.colors.gray950,
+                textAlign = TextAlign.Center,
+            )
+            Spacer(modifier = Modifier.height(GamssTheme.spacing.spacing200))
+            Text(
+                text = card.summary,
+                modifier = Modifier.fillMaxWidth(),
+                style = GamssTheme.typography.body4Regular,
+                color = GamssTheme.colors.gray800,
+                textAlign = TextAlign.Center,
+                // GamssEmotionCard 와 같은 상한을 건다. 카드 높이가 비율로 고정인데 본문
+                // 아래로 점선과 안내가 더 쌓이므로, 안 걸면 긴 요약이 그것들을 카드 밖으로
+                // 밀어낸다.
+                maxLines = SUMMARY_MAX_LINES,
+                overflow = TextOverflow.Ellipsis,
+            )
+            // 본문 아래로 점선을 한 번 더 긋고, 그 아래에 버릴지 묻는 문구와 접으라는
+            // 손글씨를 둔다. 카드 밑에 겹쳐 놓지 않고 흐름에 넣어야 본문 길이가 달라져도
+            // 시안의 간격이 유지된다.
+            Spacer(modifier = Modifier.height(CardFoldSummaryToDividerGap))
+            GamssCardDashedDivider()
+            Spacer(modifier = Modifier.height(CardFoldDividerToQuestionGap))
+            Text(
+                text = stringResource(R.string.chat_room_card_fold_discard_question),
+                modifier = Modifier.fillMaxWidth(),
+                // 시안은 Pretendard Light 12/20 이지만 타이포 토큰에 Light 가 없어 가장 가까운
+                // 12sp Regular 을 쓴다.
+                style = GamssTheme.typography.body5Regular,
+                color = GamssTheme.colors.gray800,
+                textAlign = TextAlign.Center,
+            )
+            Spacer(modifier = Modifier.height(CardFoldQuestionToTapGuideGap))
             Image(
                 painter = painterResource(DesignSystemR.drawable.img_paper_fold_guide),
                 contentDescription = stringResource(R.string.chat_room_card_fold_guide),
                 modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = CardFoldTapGuideBottomInset)
+                    .align(Alignment.CenterHorizontally)
                     .size(CardFoldTapGuideSize),
             )
         }
-
-        CardFoldStage.FoldedOnce -> FoldedPaperImage(DesignSystemR.drawable.img_paper_folded_once)
-        CardFoldStage.FoldedTwice -> FoldedPaperImage(DesignSystemR.drawable.img_paper_folded_twice)
     }
 }
 
@@ -329,9 +293,7 @@ private fun FoldedPaperImage(resId: Int) {
  * [SkipButtonCenteringInset] 만큼 되돌려 아이콘을 시안 위치로 보낸다.
  */
 @Composable
-private fun FoldSkipButton(onClick: (() -> Unit)?) {
-    if (onClick == null) return
-
+private fun FoldSkipButton(onClick: () -> Unit) {
     Box(
         modifier = Modifier
             .offset(x = SkipButtonCenteringInset, y = -SkipButtonCenteringInset)
@@ -400,24 +362,93 @@ private fun Modifier.anchorAbove(gap: Dp) = layout { measurable, constraints ->
     }
 }
 
-/** 앞 단계 크기에서 다음 단계 크기로 선형 보간한다. */
-private fun lerpPaperSize(foldProgress: Float): DpSize {
-    val stages = CardFoldStage.entries
-    val from = stages[foldProgress.toInt().coerceIn(0, stages.lastIndex)]
-    val to = stages[(foldProgress.toInt() + 1).coerceIn(0, stages.lastIndex)]
-    return lerp(from.paperSize, to.paperSize, foldProgress - foldProgress.toInt())
+/**
+ * 통까지 끌어내리는 제스처. 절반 넘게 내려놓으면 손을 떼도 통 뒤로 완전히 넣은 뒤 [onDiscard] 를
+ * 부르고, 못 미치면 제자리로 돌아온다.
+ *
+ * 끄는 동안은 [offset] 을 직접 바꾼다. Animatable 을 두고 델타마다 코루틴을 열어 snapTo 를 부르면,
+ * 손을 뗀 뒤 시작한 가라앉기 애니메이션을 뒤늦게 도착한 snapTo 가 Animatable 의 MutatorMutex 로
+ * 취소한다(같은 우선순위는 나중 것이 이긴다). 그러면 [onDiscardStart] 만 불린 채 [onDiscard] 가
+ * 영영 안 불려, 나갈 길이 없는 화면이 남는다.
+ *
+ * 가라앉기도 제스처 콜백이 아니라 컴포지션 스코프에서 돌린다. 버리기가 확정된 뒤의 연출은
+ * 제스처보다 오래 살아야 한다.
+ */
+@Composable
+private fun Modifier.discardDraggable(
+    offset: MutableFloatState,
+    travel: DiscardTravel,
+    enabled: Boolean,
+    onDiscard: () -> Unit,
+): Modifier {
+    val discardScope = rememberCoroutineScope()
+    // 가라앉는 동안 다시 잡히지 않게 잠근다. 잠금을 밖으로 올리면 이 모디파이어를 다시 열어 줄
+    // 콜백까지 화면이 들고 있어야 한다.
+    var discarding by remember { mutableStateOf(false) }
+    return draggable(
+        // 통 방향으로만 움직이고 통을 지나 더 내려가지는 않는다.
+        state = rememberDraggableState { delta ->
+            offset.floatValue = (offset.floatValue + delta).coerceIn(0f, travel.dragDistancePx)
+        },
+        orientation = Orientation.Vertical,
+        enabled = enabled && !discarding,
+        onDragStopped = {
+            if (reachedBin(offset.floatValue, travel.dragDistancePx)) {
+                discarding = true
+                discardScope.launch {
+                    animate(
+                        initialValue = offset.floatValue,
+                        targetValue = travel.swallowDistancePx,
+                        animationSpec = DiscardSinkSpec,
+                    ) { value, _ -> offset.floatValue = value }
+                    delay(CARD_FOLD_DISCARD_HOLD_MS)
+                    onDiscard()
+                }
+            } else {
+                animate(offset.floatValue, 0f, animationSpec = spring()) { value, _ ->
+                    offset.floatValue = value
+                }
+            }
+        },
+    )
 }
 
-/** 통 방향으로만 움직이고 통을 지나 더 내려가지는 않는다. */
-private suspend fun Animatable<Float, *>.updateBounded(delta: Float, maxOffset: Float) {
-    snapTo((value + delta).coerceIn(0f, maxOffset))
+/**
+ * 종이가 통까지 움직일 거리.
+ *
+ * @property dragDistancePx 손으로 끌 수 있는 끝. 종이 아래끝이 입구에 닿는 지점이다. 더 끌리게
+ *  두면 종이가 통 뒤로 숨어 어디까지 왔는지 안 보인다.
+ * @property swallowDistancePx 손을 뗀 뒤 가라앉는 끝. 종이 위끝까지 입구 아래로 넣어 통 뒤로
+ *  완전히 감춘다.
+ */
+private data class DiscardTravel(val dragDistancePx: Float, val swallowDistancePx: Float)
+
+/** 통은 창 아래에, 종이는 창 중심에 붙으므로 두 거리가 창 크기에서 바로 나온다. */
+private fun Density.discardTravel(windowHeight: Dp, binHeight: Dp, paperHeight: Dp): DiscardTravel {
+    val sinkTarget = windowHeight - binHeight * (1f - CARD_FOLD_BIN_SINK_FRACTION)
+    return DiscardTravel(
+        dragDistancePx = (sinkTarget - (windowHeight + paperHeight) / 2).coerceAtLeast(0.dp).toPx(),
+        swallowDistancePx = (sinkTarget - (windowHeight - paperHeight) / 2).coerceAtLeast(0.dp).toPx(),
+    )
 }
+
+/** 마지막으로 접은 뒤 [delayMillis] 만큼 쉬었다 배어 나온다. */
+@Composable
+private fun fadeInAfter(visible: Boolean, delayMillis: Int, label: String): State<Float> =
+    animateFloatAsState(
+        targetValue = if (visible) 1f else 0f,
+        animationSpec = tween(CARD_FOLD_HINT_FADE_MS, delayMillis = delayMillis),
+        label = label,
+    )
 
 /** 손을 뗀 자리가 통에 넣기로 볼 만큼 내려왔는지. */
-private fun Animatable<Float, *>.reachedBin(dragDistancePx: Float): Boolean =
-    dragDistancePx > 0f && value >= dragDistancePx * CARD_FOLD_DISCARD_THRESHOLD
+private fun reachedBin(dragOffsetPx: Float, dragDistancePx: Float): Boolean =
+    dragDistancePx > 0f && dragOffsetPx >= dragDistancePx * CARD_FOLD_DISCARD_THRESHOLD
 
-private val DiscardSinkSpec = tween<Float>(CARD_FOLD_STEP_DURATION_MS, easing = FastOutSlowInEasing)
+private val DiscardSinkSpec = tween<Float>(CARD_FOLD_DISCARD_SINK_MS, easing = FastOutSlowInEasing)
+
+/** [com.gamss.android.core.designsystem.card.GamssEmotionCard] 의 본문 상한과 같은 값이다. */
+private const val SUMMARY_MAX_LINES = 3
 
 private val SkipIconSize = 20.dp
 private val SkipButtonTouchSize = 48.dp
