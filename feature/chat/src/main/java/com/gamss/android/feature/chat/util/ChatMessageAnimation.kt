@@ -1,9 +1,9 @@
 package com.gamss.android.feature.chat.util
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.MutableTransitionState
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.lazy.LazyListState
@@ -62,20 +62,18 @@ internal fun AnimatedChatMessage(
     }
     AnimatedVisibility(
         visibleState = visibilityState,
-        // slide 와 fade 를 동일한 스프링 스펙으로 묶어, 두 효과가 서로 다른 타이밍으로 끝나며
-        // 끊겨 보이던 문제를 없애고 하나의 유려한 움직임으로 이어지게 한다.
         enter = slideInVertically(
-            animationSpec = spring(
-                dampingRatio = MESSAGE_ENTER_DAMPING_RATIO,
-                stiffness = MESSAGE_ENTER_STIFFNESS,
+            animationSpec = tween(
+                durationMillis = MESSAGE_ENTER_DURATION_MILLIS,
+                easing = FastOutSlowInEasing,
             ),
             initialOffsetY = { messageHeight ->
                 listState.offsetFromInput(messageId, messageHeight)
             },
         ) + fadeIn(
-            animationSpec = spring(
-                dampingRatio = MESSAGE_ENTER_DAMPING_RATIO,
-                stiffness = MESSAGE_ENTER_STIFFNESS,
+            animationSpec = tween(
+                durationMillis = MESSAGE_ENTER_DURATION_MILLIS,
+                easing = FastOutSlowInEasing,
             ),
         ),
     ) {
@@ -89,5 +87,4 @@ private fun LazyListState.offsetFromInput(messageId: Long, messageHeight: Int): 
     return (layoutInfo.viewportEndOffset - messageItem.offset).coerceAtLeast(messageHeight)
 }
 
-private const val MESSAGE_ENTER_DAMPING_RATIO = Spring.DampingRatioLowBouncy
-private const val MESSAGE_ENTER_STIFFNESS = Spring.StiffnessMediumLow
+private const val MESSAGE_ENTER_DURATION_MILLIS = 260
