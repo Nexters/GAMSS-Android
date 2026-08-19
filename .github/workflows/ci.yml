@@ -38,8 +38,25 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          # 모델(.tflite)/네이티브(.so)가 필요한 build 잡에서만 LFS 다운로드 (대역폭 절약)
-          lfs: ${{ matrix.name == 'build' || matrix.name == 'build-debug' }}
+          lfs: false
+
+      # 모델(.tflite)/네이티브(.so)가 필요한 build 잡만 LFS 를 받습니다. checkout 의 lfs 옵션은 매
+      # 실행마다 같은 파일을 다시 내려받아 LFS 대역폭 예산을 태우므로, 캐시를 거친 git lfs pull 로
+      # 대체합니다. 캐시 키는 LFS 객체의 OID 목록이라 모델이 바뀔 때만 새로 내려받습니다.
+      - name: Create LFS file list
+        if: ${{ matrix.name == 'build' || matrix.name == 'build-debug' }}
+        run: git lfs ls-files -l | cut -d' ' -f1 | sort > .lfs-assets-id
+
+      - name: Restore LFS cache
+        if: ${{ matrix.name == 'build' || matrix.name == 'build-debug' }}
+        uses: actions/cache@v4
+        with:
+          path: .git/lfs
+          key: ${{ runner.os }}-lfs-${{ hashFiles('.lfs-assets-id') }}
+
+      - name: Pull LFS objects
+        if: ${{ matrix.name == 'build' || matrix.name == 'build-debug' }}
+        run: git lfs pull
 
       - name: Set up JDK 17
         uses: actions/setup-java@v5

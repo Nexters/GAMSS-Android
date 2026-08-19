@@ -31,7 +31,22 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          lfs: true
+          lfs: false
+
+      # checkout 의 lfs 옵션은 매 실행마다 같은 모델을 다시 내려받아 LFS 대역폭 예산을 태웁니다.
+      # 캐시를 거친 git lfs pull 로 대체하되, 배포 산출물에는 실제 모델이 들어가야 하므로 이 단계는
+      # 건너뛰지 않습니다.
+      - name: Create LFS file list
+        run: git lfs ls-files -l | cut -d' ' -f1 | sort > .lfs-assets-id
+
+      - name: Restore LFS cache
+        uses: actions/cache@v4
+        with:
+          path: .git/lfs
+          key: ${{ runner.os }}-lfs-${{ hashFiles('.lfs-assets-id') }}
+
+      - name: Pull LFS objects
+        run: git lfs pull
 
       - name: Set up JDK 17
         uses: actions/setup-java@v5
@@ -113,7 +128,22 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          lfs: true
+          lfs: false
+
+      # checkout 의 lfs 옵션은 매 실행마다 같은 모델을 다시 내려받아 LFS 대역폭 예산을 태웁니다.
+      # 캐시를 거친 git lfs pull 로 대체하되, 배포 산출물에는 실제 모델이 들어가야 하므로 이 단계는
+      # 건너뛰지 않습니다.
+      - name: Create LFS file list
+        run: git lfs ls-files -l | cut -d' ' -f1 | sort > .lfs-assets-id
+
+      - name: Restore LFS cache
+        uses: actions/cache@v4
+        with:
+          path: .git/lfs
+          key: ${{ runner.os }}-lfs-${{ hashFiles('.lfs-assets-id') }}
+
+      - name: Pull LFS objects
+        run: git lfs pull
 
       - name: Set up JDK 17
         uses: actions/setup-java@v5
