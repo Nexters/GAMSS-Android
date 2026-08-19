@@ -118,10 +118,14 @@ class ChatRoomViewModel @Inject constructor(
     }
 
     fun onTokenUsageToggle() = intent {
-        if (!state.isTokenUsagePopupExpanded) {
-            refreshTokenUsage()
+        var opened = false
+        var needsFetch = false
+        reduce {
+            opened = !state.isTokenUsagePopupExpanded
+            needsFetch = opened && state.tokenUsagePercent == null
+            state.copy(isTokenUsagePopupExpanded = opened)
         }
-        reduce { state.copy(isTokenUsagePopupExpanded = !state.isTokenUsagePopupExpanded) }
+        if (needsFetch) refreshTokenUsage()
     }
 
     fun onTokenUsageRetry() = intent {
@@ -131,10 +135,12 @@ class ChatRoomViewModel @Inject constructor(
     /**
      * 사용자가 직접 요청한 조회(팝업 열기·재시도)는 실패를 그대로 반영해야 재시도 UI가 뜬다.
      * [onSend]의 백그라운드 갱신처럼 조용히 이전 값을 유지하는 fallback을 여기선 쓰지 않는다.
+     * 팝업이 조회 중임을 알 수 있도록 요청 전후로 isTokenUsageLoading을 함께 반영한다.
      */
     private suspend fun ChatRoomSyntax.refreshTokenUsage() {
+        reduce { state.copy(isTokenUsageLoading = true) }
         val percent = fetchTokenUsagePercent()
-        reduce { state.copy(tokenUsagePercent = percent) }
+        reduce { state.copy(tokenUsagePercent = percent, isTokenUsageLoading = false) }
     }
 
     /**

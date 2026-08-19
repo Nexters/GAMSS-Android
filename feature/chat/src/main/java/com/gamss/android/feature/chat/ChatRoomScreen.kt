@@ -305,6 +305,7 @@ private fun ChatRoomTopBar(
         if (state.isTokenUsagePopupExpanded) {
             TokenUsagePopup(
                 usagePercent = state.tokenUsagePercent,
+                isLoading = state.isTokenUsageLoading,
                 onDismissRequest = actions.onTokenUsageToggle,
                 onRetryClick = actions.onTokenUsageRetry,
             )
@@ -319,6 +320,7 @@ private fun ChatRoomTopBar(
 @Composable
 private fun TokenUsagePopup(
     usagePercent: Int?,
+    isLoading: Boolean,
     onDismissRequest: () -> Unit,
     onRetryClick: () -> Unit,
 ) {
@@ -349,6 +351,7 @@ private fun TokenUsagePopup(
             failMessage = stringResource(R.string.chat_room_check_token_usage_fail),
             retryLabel = stringResource(R.string.chat_room_check_token_usage_button_label),
             onRetryClick = onRetryClick,
+            isLoading = isLoading,
         )
     }
 }
