@@ -39,13 +39,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.unit.IntRect
-import androidx.compose.ui.unit.IntSize
-import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Popup
-import androidx.compose.ui.window.PopupPositionProvider
-import androidx.compose.ui.window.PopupProperties
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.gamss.android.core.designsystem.component.GamssCharacterPicker
 import com.gamss.android.core.designsystem.component.GamssCharacterPickerItem
@@ -96,7 +90,7 @@ fun HomeScreen(
         )
     }
 
-    // Popup 은 별도 창이라 뒤로가기를 못 받는다. BackHandler 는 프리뷰에서 터지므로 HomeContent 밖에 둔다.
+    // BackHandler 는 프리뷰에서 터지므로 HomeContent 밖에 둔다.
     BackHandler(enabled = state.isEmotionPickerExpanded, onBack = actions.onEmotionPickerDismiss)
 
     HomeContent(state = state, actions = actions, modifier = modifier)
@@ -118,12 +112,23 @@ private fun HomeContent(
     actions: HomeActions,
     modifier: Modifier = Modifier,
 ) {
+    // 피커는 흐름 밖에서 입력바 아래에 겹쳐 놓는다. 두 기준점은 창 좌표로 재고 루트 기준으로 환산한다.
+    var rootLeftInWindow by remember { mutableFloatStateOf(0f) }
+    var rootTopInWindow by remember { mutableFloatStateOf(0f) }
+    var toggleLeftInWindow by remember { mutableFloatStateOf(0f) }
+    var inputBarBottomInWindow by remember { mutableFloatStateOf(0f) }
+
     Box(
         modifier = modifier
             .fillMaxSize()
             // 상위 Scaffold 가 내비게이션 바를 이미 소비했다. 남은 키보드 높이만 피한다.
             .windowInsetsPadding(WindowInsets.ime.exclude(WindowInsets.navigationBars))
-            .dismissOnTapOutside(actions.onEmotionPickerDismiss),
+            .dismissOnTapOutside(actions.onEmotionPickerDismiss)
+            .onGloballyPositioned {
+                val bounds = it.boundsInWindow()
+                rootLeftInWindow = bounds.left
+                rootTopInWindow = bounds.top
+            },
     ) {
         HomeDecorations()
 
@@ -152,82 +157,90 @@ private fun HomeContent(
 
             Spacer(modifier = Modifier.height(GreetingToInputGap))
 
-            HomeInputSection(state = state, actions = actions)
+            HomeInputSection(
+                state = state,
+                actions = actions,
+                onToggleLeftChange = { toggleLeftInWindow = it },
+                onInputBarBottomChange = { inputBarBottomInWindow = it },
+            )
 
             Spacer(modifier = Modifier.weight(GREETING_BOTTOM_WEIGHT))
         }
+
+        // 같은 화면 안에 얹어야 탭 전환 페이드에 함께 사라진다. Popup 은 별도 창이라 나가는 화면의
+        // 알파를 받지 않아, 전환이 끝날 때까지 새 탭 위에 불투명하게 남는다.
+        // 흐름이 아니라 루트 Box 의 마지막 자식이므로 인사말과 입력바를 밀지 않는다.
+        if (state.isEmotionPickerExpanded) {
+            EmotionPickerOverlay(
+                selectedCharacters = state.selectedCharacters,
+                onToggle = actions.onEmotionToggle,
+                leftInWindow = toggleLeftInWindow,
+                topInWindow = inputBarBottomInWindow,
+                rootLeftInWindow = rootLeftInWindow,
+                rootTopInWindow = rootTopInWindow,
+            )
+        }
     }
+}
+
+@Composable
+private fun EmotionPickerOverlay(
+    selectedCharacters: Set<EmotionCharacter>,
+    onToggle: (EmotionCharacter) -> Unit,
+    leftInWindow: Float,
+    topInWindow: Float,
+    rootLeftInWindow: Float,
+    rootTopInWindow: Float,
+) {
+    val items = remember(selectedCharacters) { selectedCharacters.toPickerItems() }
+    val overlapPx = with(LocalDensity.current) { PickerOverlapHeight.roundToPx() }
+
+    GamssCharacterPicker(
+        items = items,
+        onToggle = onToggle,
+        modifier = Modifier
+            .offset {
+                IntOffset(
+                    (leftInWindow - rootLeftInWindow).roundToInt(),
+                    (topInWindow - rootTopInWindow).roundToInt() - overlapPx,
+                )
+            }
+            // 패널 여백을 눌렀을 때 바깥 탭으로 새어 나가 닫히지 않게 막는다.
+            .pointerInput(Unit) { detectTapGestures {} },
+    )
 }
 
 @Composable
 private fun HomeInputSection(
     state: HomeState,
     actions: HomeActions,
+    onToggleLeftChange: (Float) -> Unit,
+    onInputBarBottomChange: (Float) -> Unit,
 ) {
-    val pickerItems = remember(state.selectedCharacters) { state.selectedCharacters.toPickerItems() }
-    var toggleLeftInWindow by remember { mutableFloatStateOf(0f) }
-    var inputBarBottomInWindow by remember { mutableFloatStateOf(0f) }
-
-    // 패널은 Popup 으로 띄운다. 흐름에 넣으면 펼칠 때마다 인사말과 입력바가 위로 밀린다.
-    Box(modifier = Modifier.fillMaxWidth().padding(horizontal = InputBarHorizontalPadding)) {
-        GamssInputBar(
-            value = state.input,
-            onValueChange = actions.onInputChange,
-            onSend = actions.onSubmit,
-            placeholder = stringResource(R.string.home_input_placeholder),
-            sendContentDescription = stringResource(R.string.home_input_submit_description),
-            enabled = !state.isSending,
-            beforeSendSlot = {
-                GamssDisclosureToggle(
-                    label = stringResource(R.string.home_character_picker),
-                    expanded = state.isEmotionPickerExpanded,
-                    onClick = actions.onEmotionPickerToggle,
-                    modifier = Modifier.onGloballyPositioned {
-                        toggleLeftInWindow = it.boundsInWindow().left
-                    },
-                    // 입력바 아트가 라이트 전용이라 다크에서도 전경을 검정으로 둔다.
-                    contentColor = GamssTheme.colors.black,
-                )
-            },
-            modifier = Modifier
-                .fillMaxWidth()
-                .onGloballyPositioned { inputBarBottomInWindow = it.boundsInWindow().bottom },
-        )
-
-        if (state.isEmotionPickerExpanded) {
-            val overlapPx = with(LocalDensity.current) { PickerOverlapHeight.roundToPx() }
-            val pickerPosition = remember(toggleLeftInWindow, inputBarBottomInWindow, overlapPx) {
-                PickerPositionProvider(
-                    leftInWindow = toggleLeftInWindow,
-                    topInWindow = inputBarBottomInWindow - overlapPx,
-                )
-            }
-            Popup(
-                popupPositionProvider = pickerPosition,
-                // 바깥 탭과 뒤로가기는 화면 쪽에서만 처리한다. Popup 에도 맡기면 셰브론을 누를 때
-                // 닫기와 토글이 함께 들어와, 닫힌 상태를 토글이 되짚어 다시 열어 버린다.
-                properties = PopupProperties(
-                    dismissOnBackPress = false,
-                    dismissOnClickOutside = false,
-                ),
-            ) {
-                GamssCharacterPicker(items = pickerItems, onToggle = actions.onEmotionToggle)
-            }
-        }
-    }
-}
-
-/** 창 좌표로 직접 놓는다. Popup 의 alignment 는 여백을 포함한 부모 경계에 붙어 기준이 모호하다. */
-private class PickerPositionProvider(
-    private val leftInWindow: Float,
-    private val topInWindow: Float,
-) : PopupPositionProvider {
-    override fun calculatePosition(
-        anchorBounds: IntRect,
-        windowSize: IntSize,
-        layoutDirection: LayoutDirection,
-        popupContentSize: IntSize,
-    ): IntOffset = IntOffset(leftInWindow.roundToInt(), topInWindow.roundToInt())
+    GamssInputBar(
+        value = state.input,
+        onValueChange = actions.onInputChange,
+        onSend = actions.onSubmit,
+        placeholder = stringResource(R.string.home_input_placeholder),
+        sendContentDescription = stringResource(R.string.home_input_submit_description),
+        enabled = !state.isSending,
+        beforeSendSlot = {
+            GamssDisclosureToggle(
+                label = stringResource(R.string.home_character_picker),
+                expanded = state.isEmotionPickerExpanded,
+                onClick = actions.onEmotionPickerToggle,
+                modifier = Modifier.onGloballyPositioned {
+                    onToggleLeftChange(it.boundsInWindow().left)
+                },
+                // 입력바 아트가 라이트 전용이라 다크에서도 전경을 검정으로 둔다.
+                contentColor = GamssTheme.colors.black,
+            )
+        },
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = InputBarHorizontalPadding)
+            .onGloballyPositioned { onInputBarBottomChange(it.boundsInWindow().bottom) },
+    )
 }
 
 @Composable
