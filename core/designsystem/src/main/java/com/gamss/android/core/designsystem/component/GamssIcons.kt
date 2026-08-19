@@ -46,4 +46,7 @@ object GamssIcons {
 
     @DrawableRes
     val ScrollDown: Int = R.drawable.ic_scroll_down
+
+    @DrawableRes
+    val Alert: Int = R.drawable.ic_alert
 }

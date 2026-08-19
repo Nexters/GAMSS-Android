@@ -3,6 +3,7 @@ package com.gamss.android.core.designsystem.snackbar
 import android.content.res.Configuration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -34,7 +35,7 @@ private val SnackBarIconSize = 20.dp
 fun GamssSnackBar(
     message: String,
     modifier: Modifier = Modifier,
-    icon: Painter? = null,
+    snackBarIcon: (@Composable () -> Unit)? = null,
 ) {
     Row(
         modifier = modifier
@@ -48,13 +49,13 @@ fun GamssSnackBar(
         horizontalArrangement = Arrangement.spacedBy(GamssTheme.spacing.spacing100),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        if (icon != null) {
-            Icon(
-                painter = icon,
-                contentDescription = null,
-                tint = GamssTheme.colors.gray025,
+        if (snackBarIcon != null) {
+            Box(
                 modifier = Modifier.size(SnackBarIconSize),
-            )
+                contentAlignment = Alignment.Center,
+            ) {
+                snackBarIcon()
+            }
         }
         Text(
             text = message,
@@ -97,7 +98,13 @@ private fun GamssSnackBarPreviewContent() {
         // 아이콘이 있는 스낵바.
         GamssSnackBar(
             message = "이것은 아이콘이 있는 스낵바입니다.\n스낵바는 한 줄로 사용하기를 권장합니다.",
-            icon = painterResource(GamssIcons.CheckCircleOn),
+            snackBarIcon = {
+                Icon(
+                    painter = painterResource(GamssIcons.Alert),
+                    contentDescription = null,
+                    tint = GamssTheme.colors.yellow,
+                )
+            },
         )
         // 아이콘이 없는 스낵바.
         GamssSnackBar(

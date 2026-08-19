@@ -52,9 +52,20 @@ class ChatRoomViewModel @Inject constructor(
         started = true
         loadChatEndFeatureFlag()
         loadMessages(conversationId)
+        observeTokenUsageAlerts()
         // 결과를 기다리지 않는다 — 채팅방에 들어온 시점부터 온디바이스 모델 다운로드를 미리
         // 걸어둬 첫 메시지/카드 생성 시점엔 이미 받아져 있을 확률을 높이는 순수 최적화용 호출이다.
         viewModelScope.launch { session.prefetchOnDeviceModels() }
+    }
+
+    /**
+     * 10% 미만 남음/전부 소진 알림은 [tokenUsageRefreshNotifier]가 전역으로 한 번만 흘려보낸다 —
+     * 여러 채팅방을 오가도(대화방을 나갔다 들어와도) 중복으로 뜨지 않는다.
+     */
+    private fun observeTokenUsageAlerts() = intent {
+        tokenUsageRefreshNotifier.alerts.collect { alert ->
+            postSideEffect(ChatRoomSideEffect.ShowTokenUsageAlert(alert))
+        }
     }
 
     private fun loadChatEndFeatureFlag() = intent {
@@ -344,10 +355,11 @@ class ChatRoomViewModel @Inject constructor(
         }
     }
 
+    // LIMIT_EXCEEDED는 토큰이 이미 소진됐을 때 나는 신호라, 아래에서 requestRefresh()가 트리거하는
+    // tokenUsageRefreshNotifier의 EXHAUSTED 알림(GamssSnackBar)이 대신 안내한다 — 토스트를 따로 띄우지 않는다.
     private fun CommentGenerationStatus.toUserMessage(): String? = when (this) {
-        CommentGenerationStatus.DONE -> null
+        CommentGenerationStatus.DONE, CommentGenerationStatus.LIMIT_EXCEEDED -> null
         CommentGenerationStatus.FAILED -> "답장을 받지 못했어요. 잠시 후 다시 보내볼까요?"
-        CommentGenerationStatus.LIMIT_EXCEEDED -> "오늘은 대화를 많이 했어요. 내일 다시 이야기해요."
     }
 
     private data class PendingSend(
