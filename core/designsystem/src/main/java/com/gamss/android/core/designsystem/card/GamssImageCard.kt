@@ -40,6 +40,7 @@ import androidx.compose.ui.unit.sp
 import com.gamss.android.core.designsystem.R
 import com.gamss.android.core.designsystem.component.GamssIcons
 import com.gamss.android.core.designsystem.component.chat.ChatSender
+import com.gamss.android.core.designsystem.component.chat.GamssChatBubbleDefaults
 import com.gamss.android.core.designsystem.component.chat.GamssReceivedChatBubble
 import com.gamss.android.core.designsystem.component.chat.GamssSentChatBubble
 import com.gamss.android.core.designsystem.modifier.noRippleClickableIfNotNull
@@ -273,7 +274,9 @@ private fun GamssCardDashedDivider(modifier: Modifier = Modifier) {
 /**
  * 이미지 카드 안에 대화 로그를 배치하는 카드 퍼사드.
  *
- * 대화 내용 자체는 화면마다 달라 [content] 슬롯으로 남기고, 카드의 상단 여백과 셸만 고정한다.
+ * 대화 내용 자체는 화면마다 달라 [content] 슬롯으로 남기고, 카드의 여백과 셸만 고정한다.
+ * [content] 는 날짜 아래 남은 높이를 모두 받는다. 카드가 고정 크기라 대화가 길어졌을 때 어디까지
+ * 보여 줄지는 카드가 정해야 하고, 호출부는 그 안에서 스크롤만 붙이면 된다.
  */
 @Composable
 fun GamssChattingCard(
@@ -289,8 +292,13 @@ fun GamssChattingCard(
         shape = shape,
         topEndAction = topEndAction,
     ) {
-        Spacer(modifier = Modifier.height(GamssTheme.spacing.spacing300))
-        content()
+        Spacer(modifier = Modifier.height(DateToChattingGap))
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .padding(bottom = GamssTheme.spacing.spacing700),
+            content = content,
+        )
     }
 }
 
@@ -378,21 +386,24 @@ private fun ChattingCardPreviewContent() {
         date = "26.08.03",
         topEndAction = { CloseIconPlaceholder() },
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(GamssTheme.spacing.spacing150)) {
+        Column(verticalArrangement = Arrangement.spacedBy(GamssTheme.spacing.spacing300)) {
             GamssSentChatBubble(
                 message = "안녕하세요ㅁㅇㄹㅁㅇㄹㅁㅇㄹ",
                 time = "오후 1:37",
                 modifier = Modifier.align(Alignment.End),
+                oppositeWallGap = GamssChatBubbleDefaults.CardOppositeWallGap,
             )
             GamssReceivedChatBubble(
                 sender = ChatSender(name = "기쁨이"),
                 message = "안녕! 오늘도 행복한 하루~!",
                 time = "오후 1:38",
+                oppositeWallGap = GamssChatBubbleDefaults.CardOppositeWallGap,
             )
             GamssReceivedChatBubble(
                 sender = ChatSender(name = "슬픔이"),
                 message = "안녕! 오늘도 행복한 하루~!",
                 time = "오후 1:38",
+                oppositeWallGap = GamssChatBubbleDefaults.CardOppositeWallGap,
             )
         }
     }
@@ -403,6 +414,9 @@ private val CardHeight = 528.dp
 private val CardAspectRatio = CardWidth.value / CardHeight.value
 
 private val DateToCharacterGap = 18.dp
+
+/** Figma Card_Chatting 가이드(3264:7548)의 Date - chat 간격. */
+private val DateToChattingGap = 24.dp
 private val CharacterImageHeight = 156.dp
 private val CharacterToTitleGap = 42.dp
 

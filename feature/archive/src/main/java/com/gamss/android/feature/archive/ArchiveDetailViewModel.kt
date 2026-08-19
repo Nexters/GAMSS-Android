@@ -7,6 +7,7 @@ import com.gamss.android.domain.card.CardEntry
 import com.gamss.android.domain.card.DeleteCardUseCase
 import com.gamss.android.domain.card.GetCardsByDateUseCase
 import com.gamss.android.domain.card.GetCardsByMonthUseCase
+import com.gamss.android.domain.conversation.GetConversationUseCase
 import com.gamss.android.domain.emotion.EmotionCharacter
 import dagger.hilt.android.lifecycle.HiltViewModel
 import org.orbitmvi.orbit.ContainerHost
@@ -20,6 +21,7 @@ class ArchiveDetailViewModel @Inject constructor(
     private val getCardsByMonth: GetCardsByMonthUseCase,
     private val getCardsByDate: GetCardsByDateUseCase,
     private val deleteCard: DeleteCardUseCase,
+    private val getConversation: GetConversationUseCase,
 ) : ViewModel(), ContainerHost<ArchiveDetailState, ArchiveDetailSideEffect> {
 
     override val container = container<ArchiveDetailState, ArchiveDetailSideEffect>(
@@ -106,10 +108,40 @@ class ArchiveDetailViewModel @Inject constructor(
         }
     }
 
+    /**
+     * 대화보기는 채팅방으로 나가지 않는다. 이미 종료된 대화라 이어 쓸 수 없어, 같은 자리에서 카드를
+     * 뒤집어 그 대화 기록만 보여 준다.
+     */
     fun viewSelectedConversation() = intent {
-        val conversationId = state.selectedCard?.conversationId ?: return@intent
-        reduce { state.copy(selectedCard = null) }
-        postSideEffect(ArchiveDetailSideEffect.OpenChatRoom(conversationId))
+        val card = state.selectedCard ?: return@intent
+        if (state.isConversationLoading) return@intent
+
+        reduce { state.copy(isConversationLoading = true) }
+        val messages = when (val result = getConversation(card.conversationId)) {
+            is AppResult.Success -> result.data.messages
+            is AppResult.Failure -> null
+        }
+
+        if (messages == null) {
+            // 감정 카드를 그대로 띄워 둔다. 카드가 사라지면 다시 종이를 눌러야 재시도할 수 있다.
+            reduce { state.copy(isConversationLoading = false) }
+            postSideEffect(ArchiveDetailSideEffect.ConversationLoadFailed)
+            return@intent
+        }
+
+        reduce {
+            state.copy(
+                isConversationLoading = false,
+                selectedCard = null,
+                conversationCard = ConversationCard(card = card, messages = messages),
+            )
+        }
+    }
+
+    /** 카드를 뒤집어 놓은 상태라, 닫으면 종이 더미가 아니라 원래 보던 감정 카드로 돌아온다. */
+    fun dismissConversationCard() = intent {
+        val card = state.conversationCard?.card ?: return@intent
+        reduce { state.copy(conversationCard = null, selectedCard = card) }
     }
 
     /** 월별 응답은 모든 감정을 섞어 주므로 이 화면이 보고 있는 감정만 남긴다. */

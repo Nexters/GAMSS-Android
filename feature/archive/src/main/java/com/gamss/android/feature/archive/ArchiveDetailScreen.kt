@@ -36,6 +36,7 @@ import com.gamss.android.domain.card.Card
 import com.gamss.android.domain.card.CardEntry
 import com.gamss.android.domain.emotion.EmotionCharacter
 import com.gamss.android.feature.archive.component.CardDetailDialog
+import com.gamss.android.feature.archive.component.ConversationCardDialog
 import com.gamss.android.feature.archive.component.MonthSelector
 import com.gamss.android.feature.archive.component.PaperPile
 import com.gamss.android.feature.archive.component.YearMonthPickerSheet
@@ -53,7 +54,6 @@ import com.gamss.android.core.designsystem.R as DesignSystemR
 fun ArchiveDetailScreen(
     emotion: EmotionCharacter,
     onBackClick: () -> Unit,
-    onOpenConversation: (Long) -> Unit,
     onNavigateToCardDelete: () -> Unit,
     viewModel: ArchiveDetailViewModel = hiltViewModel(),
 ) {
@@ -62,12 +62,12 @@ fun ArchiveDetailScreen(
     val shareChooserTitle = stringResource(R.string.archive_card_share_chooser_title)
     val cardLoadFailedMessage = stringResource(R.string.archive_card_load_error)
     val discardFailedMessage = stringResource(R.string.archive_card_discard_failure)
+    val conversationLoadFailedMessage = stringResource(R.string.archive_conversation_load_error)
 
     LaunchedEffect(emotion) { viewModel.load(emotion) }
 
     viewModel.collectSideEffect { sideEffect ->
         when (sideEffect) {
-            is ArchiveDetailSideEffect.OpenChatRoom -> onOpenConversation(sideEffect.conversationId)
             ArchiveDetailSideEffect.OpenCardDelete -> onNavigateToCardDelete()
 
             ArchiveDetailSideEffect.CardLoadFailed ->
@@ -75,6 +75,9 @@ fun ArchiveDetailScreen(
 
             ArchiveDetailSideEffect.CardDiscardFailed ->
                 Toast.makeText(context, discardFailedMessage, Toast.LENGTH_SHORT).show()
+
+            ArchiveDetailSideEffect.ConversationLoadFailed ->
+                Toast.makeText(context, conversationLoadFailedMessage, Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -97,6 +100,7 @@ fun ArchiveDetailScreen(
         onCardDiscard = viewModel::discardSelectedCard,
         onCardConversationClick = viewModel::viewSelectedConversation,
         onCardShare = { card -> shareCard(context, card, shareChooserTitle) },
+        onConversationCardDismiss = viewModel::dismissConversationCard,
     )
 }
 
@@ -133,7 +137,7 @@ private fun ArchiveDetailFrame(
     }
 }
 
-/** 셋 다 아무것도 안 뜬 상태가 기본이라, 프레임과 떼어 여기서만 켜고 끈다. */
+/** 넷 다 아무것도 안 뜬 상태가 기본이라, 프레임과 떼어 여기서만 켜고 끈다. */
 @Composable
 private fun ArchiveDetailOverlays(
     state: ArchiveDetailState,
@@ -145,6 +149,7 @@ private fun ArchiveDetailOverlays(
     onCardDiscard: () -> Unit,
     onCardConversationClick: () -> Unit,
     onCardShare: (Card) -> Unit,
+    onConversationCardDismiss: () -> Unit,
 ) {
     if (state.isMonthPickerVisible) {
         YearMonthPickerSheet(
@@ -165,6 +170,15 @@ private fun ArchiveDetailOverlays(
             onDiscardClick = onCardDiscard,
             onViewConversationClick = onCardConversationClick,
             onShareClick = { onCardShare(card) },
+        )
+    }
+
+    // 감정 카드와 같은 자리에 뜨지만 둘이 함께 뜨는 일은 없다. 대화보기가 감정 카드를 내리고 이 카드를
+    // 올리며, 닫으면 다시 감정 카드로 돌아온다.
+    state.conversationCard?.let { conversationCard ->
+        ConversationCardDialog(
+            conversationCard = conversationCard,
+            onDismiss = onConversationCardDismiss,
         )
     }
 }

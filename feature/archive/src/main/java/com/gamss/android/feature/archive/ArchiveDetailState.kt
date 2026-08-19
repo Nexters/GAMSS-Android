@@ -2,6 +2,7 @@ package com.gamss.android.feature.archive
 
 import com.gamss.android.domain.card.Card
 import com.gamss.android.domain.card.CardEntry
+import com.gamss.android.domain.conversation.Message
 import com.gamss.android.domain.emotion.EmotionCharacter
 import java.time.YearMonth
 
@@ -13,6 +14,8 @@ data class ArchiveDetailState(
     val isClearDialogVisible: Boolean = false,
     val selectedCard: Card? = null,
     val isCardLoading: Boolean = false,
+    val conversationCard: ConversationCard? = null,
+    val isConversationLoading: Boolean = false,
 )
 
 /** 종이 더미 자리가 가질 수 있는 상태. 셋이 겹칠 수 없어 플래그 조합 대신 하나로 든다. */
@@ -21,3 +24,14 @@ sealed interface ArchiveCards {
     data object LoadFailed : ArchiveCards
     data class Loaded(val entries: List<CardEntry>) : ArchiveCards
 }
+
+/**
+ * 대화보기로 뒤집은 카드. 감정 카드와 같은 자리에 대화 기록만 담아 뜬다.
+ *
+ * 대화를 열어 준 [card] 를 그대로 들고 있어야, 닫을 때 종이 더미가 아니라 원래 보던 감정 카드로
+ * 되돌릴 수 있다.
+ */
+data class ConversationCard(
+    val card: Card,
+    val messages: List<Message>,
+)
