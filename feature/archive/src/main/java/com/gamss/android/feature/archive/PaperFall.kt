@@ -7,6 +7,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 import kotlin.random.Random
@@ -77,10 +79,15 @@ internal class PaperFall(
     }
 }
 
-/** 프레임을 기다리지 않고 잠잠해질 때까지 굴린다. 이미 쌓인 더미의 자리를 구하는 용도다. */
-private fun PaperPhysicsWorld.settle() {
+/**
+ * 프레임을 기다리지 않고 잠잠해질 때까지 굴린다. 이미 쌓인 더미의 자리를 구하는 용도다.
+ *
+ * 중간에 취소를 확인한다. 화면을 벗어난 뒤에도 남은 step 을 다 도는 일이 없어야 한다.
+ */
+private suspend fun PaperPhysicsWorld.settle() {
     var settledSteps = 0
     repeat(PHYSICS_SETTLE_MAX_STEPS) {
+        currentCoroutineContext().ensureActive()
         step(PHYSICS_FIXED_DT)
         settledSteps = if (isAtRest()) settledSteps + 1 else 0
         if (settledSteps >= PHYSICS_SETTLE_FRAMES) return

@@ -39,7 +39,11 @@ internal class PaperPhysicsWorld(
     private val boundsWidth: Float,
     private val boundsHeight: Float,
 ) {
+    /** 직전 [step] 의 간격. 옮긴 거리를 속도로 되돌리는 데 쓴다. */
+    private var lastStepDt = 0f
+
     fun step(dt: Float) {
+        lastStepDt = dt
         bodies.forEach {
             it.prevX = it.x
             it.prevY = it.y
@@ -51,17 +55,24 @@ internal class PaperPhysicsWorld(
     }
 
     /**
-     * 직전 step 에서 어느 종이도 눈에 띄게 자리를 옮기지 않았는지. 낙하가 끝났는지 판단하는
-     * 쪽이 이 값을 본다.
+     * 직전 step 에서 어느 종이도 눈에 띄게 움직이지 않았는지. 낙하가 끝났는지 판단하는 쪽이 이
+     * 값을 본다.
      *
-     * 속도로 재면 안 된다. 바닥에 놓인 종이도 매 step 중력만큼 속도를 얻었다가 [RESTITUTION]
-     * 만큼만 되튕겨 흘려보내므로, 다 쌓인 뒤에도 속도는 0 근처로 내려가지 않는다. 실제로 자리가
-     * 바뀌었는지를 봐야 멈춘 것을 알 수 있다.
+     * 몸체의 속도로 재면 안 된다. 바닥에 놓인 종이도 매 step 중력만큼 속도를 얻었다가
+     * [RESTITUTION] 만큼만 되튕겨 흘려보내므로, 다 쌓인 뒤에도 속도는 0 근처로 내려가지 않는다.
+     * 실제로 자리가 바뀌었는지를 봐야 멈춘 것을 알 수 있다.
+     *
+     * 옮긴 거리를 그대로 보지 않고 step 간격으로 나눈다. 프레임 간격은 기기 주사율에 따라 달라서,
+     * 거리로 재면 120Hz 기기에서 아직 미끄러지는 중인 종이가 멈춘 것으로 잡힌다.
      */
-    fun isAtRest(): Boolean = bodies.all { body ->
-        val dx = body.x - body.prevX
-        val dy = body.y - body.prevY
-        dx * dx + dy * dy < REST_DISPLACEMENT_SQUARED
+    fun isAtRest(): Boolean {
+        val maxMove = REST_SPEED * lastStepDt
+        val maxMoveSquared = maxMove * maxMove
+        return bodies.all { body ->
+            val dx = body.x - body.prevX
+            val dy = body.y - body.prevY
+            dx * dx + dy * dy < maxMoveSquared
+        }
     }
 
     /** 좌우 벽과 바닥에 부딪히면 되튕기고, 스치는 방향으로 살짝 돌려 준다. */
@@ -186,9 +197,8 @@ private fun applySlidingSpin(a: PaperBody, b: PaperBody, tangentSpeed: Float) {
 // 아래 상수는 대부분 실기기(갤럭시 S23)로 직접 눈으로 보면서 맞춘 경험적 튜닝값이다.
 // 단위는 px/s, px/s², rad/s 등 시뮬레이션 내부 단위 기준이며, 다른 값으로 바꾸면 반드시
 // 실기기에서 낙하 애니메이션을 재확인해야 한다.
-/** 한 step 에 이만큼도 못 움직이면 멈춘 것으로 본다. 60fps 기준 초당 30px 이라 눈에는 정지다. */
-private const val REST_DISPLACEMENT = 0.5f
-private const val REST_DISPLACEMENT_SQUARED = REST_DISPLACEMENT * REST_DISPLACEMENT
+/** 이보다 느리게 움직이면 멈춘 것으로 본다. 종이 지름의 3분의 1도 1초에 못 가는 속도다. */
+private const val REST_SPEED = 30f
 
 private const val GRAVITY = 2600f
 private const val LINEAR_DAMPING = 0.995f

@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableFloatState
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
@@ -138,6 +139,17 @@ private fun CardFoldContent(
     // 다 접혔는지가 접기와 끌기를 가른다. 더 접을 게 없으면 이제 통으로 내리는 단계다.
     val folded = foldStage.next == null
 
+    // 통이 뜨기 전에는 못 끌게 막는다. 다 접자마자 그대로 내려 버리면 종이가 빈 자리로 가라앉고,
+    // 어디에 버린 건지 못 본 채 화면이 넘어간다.
+    var binShown by remember { mutableStateOf(false) }
+    LaunchedEffect(folded) {
+        binShown = false
+        if (folded) {
+            delay(CARD_FOLD_BIN_DELAY_MS.toLong())
+            binShown = true
+        }
+    }
+
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         // 시안은 402dp 폭 기준이다. 좁은 기기에서 종이와 힌트를 폭 비율만큼 함께 줄여 좌우 여백
         // 비율을 지킨다. 통은 폭을 채우고 높이를 비율로 뽑으므로 이미 같은 비율로 줄어든다.
@@ -181,7 +193,7 @@ private fun CardFoldContent(
                     .discardDraggable(
                         offset = dragOffset,
                         travel = travel,
-                        enabled = folded,
+                        enabled = binShown,
                         onDiscard = onDiscard,
                     ),
             ) {
@@ -237,13 +249,15 @@ private fun UnfoldedPaper(card: Card, onSkip: () -> Unit) {
             Spacer(modifier = Modifier.height(GamssTheme.spacing.spacing200))
             Text(
                 text = card.summary,
-                modifier = Modifier.fillMaxWidth(),
+                // 남는 자리만 차지하고 모자라면 줄인다. 카드 높이는 폭에 비례해 줄어드는데 안쪽
+                // 여백과 캐릭터 그림은 절대 dp 라, 좁은 기기에서 세 줄을 다 쓰면 아래 점선과
+                // 안내가 카드 밖으로 밀려 잘린다. 밀리는 쪽이 아니라 요약이 양보해야 한다.
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f, fill = false),
                 style = GamssTheme.typography.body4Regular,
                 color = GamssTheme.colors.gray800,
                 textAlign = TextAlign.Center,
-                // GamssEmotionCard 와 같은 상한을 건다. 카드 높이가 비율로 고정인데 본문
-                // 아래로 점선과 안내가 더 쌓이므로, 안 걸면 긴 요약이 그것들을 카드 밖으로
-                // 밀어낸다.
                 maxLines = SUMMARY_MAX_LINES,
                 overflow = TextOverflow.Ellipsis,
             )
