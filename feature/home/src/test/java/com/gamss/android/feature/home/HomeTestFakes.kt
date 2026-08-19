@@ -128,8 +128,6 @@ private object NoCardRepository : CardRepository {
     override suspend fun getCardsByDate(date: LocalDate): AppResult<List<Card>> =
         error("홈 테스트에서 쓰지 않는다")
 
-    override suspend fun getCard(cardId: Long): AppResult<Card> = error("홈 테스트에서 쓰지 않는다")
-
     override suspend fun createCard(
         conversationId: Long,
         character: EmotionCharacter,
@@ -142,6 +140,8 @@ private object NoCardRepository : CardRepository {
 
     override suspend fun deleteCardsByEmotion(character: EmotionCharacter): AppResult<Unit> =
         error("홈 테스트에서 쓰지 않는다")
+
+    override suspend fun clearCache(): Unit = error("홈 테스트에서 쓰지 않는다")
 }
 
 private object PassThroughSummarizer : DiarySummarizer {

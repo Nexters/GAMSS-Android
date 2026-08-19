@@ -294,9 +294,6 @@ private class FakeCardRepository(
         return monthResults[yearMonth] ?: monthResult
     }
 
-    override suspend fun getCard(cardId: Long): AppResult<Card> =
-        error("보관함 테스트에서 쓰지 않는다")
-
     override suspend fun createCard(
         conversationId: Long,
         character: EmotionCharacter,
@@ -313,4 +310,6 @@ private class FakeCardRepository(
 
     override suspend fun deleteCardsByEmotion(character: EmotionCharacter): AppResult<Unit> =
         error("보관함 테스트에서 쓰지 않는다")
+
+    override suspend fun clearCache(): Unit = error("보관함 테스트에서 쓰지 않는다")
 }

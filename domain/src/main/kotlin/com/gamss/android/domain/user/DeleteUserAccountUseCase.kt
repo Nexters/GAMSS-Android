@@ -2,6 +2,7 @@ package com.gamss.android.domain.user
 
 import com.gamss.android.core.common.AppResult
 import com.gamss.android.domain.auth.AuthRepository
+import com.gamss.android.domain.card.ClearCardCacheUseCase
 import com.gamss.android.domain.push.UnregisterCurrentDeviceTokenUseCase
 import com.gamss.android.domain.usecase.NoParamUseCase
 import javax.inject.Inject
@@ -10,6 +11,7 @@ class DeleteUserAccountUseCase @Inject constructor(
     private val userRepository: UserRepository,
     private val authRepository: AuthRepository,
     private val unregisterCurrentDeviceToken: UnregisterCurrentDeviceTokenUseCase,
+    private val clearCardCache: ClearCardCacheUseCase,
 ) : NoParamUseCase<AppResult<Unit>> {
 
     /**
@@ -23,6 +25,8 @@ class DeleteUserAccountUseCase @Inject constructor(
         val deleteResult = userRepository.deleteUserAccount()
         if (deleteResult is AppResult.Failure) return deleteResult
         authRepository.logout()
+        // 탈퇴가 성공한 뒤에만 비운다. 실패로 일찍 반환된 경우 계정도 캐시도 그대로 둬야 한다.
+        clearCardCache()
         return AppResult.Success(Unit)
     }
 }

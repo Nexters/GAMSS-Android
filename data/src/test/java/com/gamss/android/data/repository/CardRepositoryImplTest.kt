@@ -331,6 +331,15 @@ class CardRepositoryImplTest {
         )
     }
 
+    @Test
+    fun `캐시를 비울 때 서버에는 아무 요청도 보내지 않는다`() = runTest {
+        coEvery { cardLocalDataSource.deleteAll() } returns Unit
+
+        repository.clearCache()
+
+        coVerify(exactly = 1) { cardLocalDataSource.deleteAll() }
+    }
+
     private fun cardEntity(id: Long, indexInDate: Int) = CardEntity(
         id = id,
         conversationId = id,
