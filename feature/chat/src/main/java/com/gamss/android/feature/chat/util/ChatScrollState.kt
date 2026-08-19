@@ -46,6 +46,12 @@ internal class ChatScrollState(
     // handleSendingChanged 가 true→false 전환만 골라내는 데 쓰는 직전 값.
     private var wasSending = false
 
+    // 전송이 시작된 시점(isSending false→true)의 마지막 메시지 id. 전송이 끝났을 때(true→false)
+    // 이 값과 비교해 성공 여부를 판단한다 — 실패(네트워크 오류, 위험 감지 차단 등)하면 메시지가 추가되지
+    // 않아 id가 그대로다. 이 비교 없이 isSending 전환만 보면, 위로 스크롤해 과거를 보는 중에 전송이
+    // 실패해도 newMessageToast가 지워지고 바닥으로 점프해버린다.
+    private var lastMessageIdBeforeSend: Long? = null
+
     val showScrollToBottomButton: Boolean by derivedStateOf {
         listState.canScrollForward && newMessageToast == null
     }
@@ -73,16 +79,19 @@ internal class ChatScrollState(
     /** [state]의 isSending 값이 바뀔 때마다 호출한다. true→false 전환일 때만 전송 완료 처리를 한다. */
     suspend fun handleSendingChanged(state: ChatRoomState) {
         val isSending = state.isSending
-        if (wasSending && !isSending) {
-            handleSendConcluded(state)
+        if (!wasSending && isSending) {
+            lastMessageIdBeforeSend = state.messages.lastOrNull()?.id
+        } else if (wasSending && !isSending) {
+            val succeeded = state.messages.lastOrNull()?.id != lastMessageIdBeforeSend
+            handleSendConcluded(state, succeeded)
         }
         wasSending = isSending
     }
 
     // 스크롤(애니메이션이라 시간이 걸림)보다 커서 갱신이 먼저 반영돼야, 그 사이 handleNewMessage
     // 가 같은 메시지를 놓치고 토스트를 잠깐 띄우는 경합을 막을 수 있다.
-    private suspend fun handleSendConcluded(state: ChatRoomState) {
-        if (!hasScrolledToInitialBottom) return
+    private suspend fun handleSendConcluded(state: ChatRoomState, succeeded: Boolean) {
+        if (!succeeded || !hasScrolledToInitialBottom) return
         lastAutoScrolledMessageId = state.messages.lastOrNull()?.id
         newMessageToast = null
         val index = state.lastItemIndex
