@@ -22,7 +22,7 @@ internal fun ChattingListTopBar(
     isSelectionMode: Boolean,
     onSelectionCancel: () -> Unit,
     onSearchClick: () -> Unit,
-    onMenuClick: () -> Unit,
+    onSettingClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Box(modifier = modifier) {
@@ -46,8 +46,8 @@ internal fun ChattingListTopBar(
                     null
                 },
                 GamssTopNavigationIconAction(
-                    icon = GamssTopNavigationIcon.Menu,
-                    onClick = onMenuClick,
+                    icon = GamssTopNavigationIcon.Setting,
+                    onClick = onSettingClick,
                     contentDescription = stringResource(R.string.chatting_list_menu_content_description),
                 ),
             ),
