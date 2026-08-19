@@ -1,5 +1,8 @@
 package com.gamss.android.app.main
 
+import android.os.SystemClock
+import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.LocalActivity
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection
@@ -19,14 +22,20 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.scene.Scene
 import androidx.navigation3.ui.NavDisplay
+import androidx.navigationevent.NavigationEvent
+import com.gamss.android.app.R
 import com.gamss.android.app.navigation.Navigator
 import com.gamss.android.app.navigation.bottomBarItems
 import com.gamss.android.app.navigation.keys
@@ -71,6 +80,7 @@ fun MainScreen(
     val snackbarHostState = remember { SnackbarHostState() }
 
     ModelDownloadConfirmationEffect(modelDownloadPromptViewModel, snackbarHostState)
+    DoubleBackToExitHandler(enabled = { !navigationState.canGoBack })
 
     // 종이 보드가 상태바와 탭바 뒤까지 이어져야 해서 Scaffold 바깥에 깐다.
     GamssPaperBackground {
@@ -103,6 +113,7 @@ fun MainScreen(
                 // metadata(detailTransition)가 이 기본값을 덮어쓴다.
                 transitionSpec = tabFadeThroughSpec,
                 popTransitionSpec = tabFadeThroughSpec,
+                predictivePopTransitionSpec = { tabFadeThroughSpec(this) },
                 onBack = {
                     if (navigationState.canGoBack) {
                         navigator.goBack()
@@ -174,6 +185,7 @@ private fun mainEntryProvider(navigator: Navigator) = entryProvider {
         ChatRoomScreen(
             conversationId = key.conversationId,
             onCardClose = navigator::goBack,
+            onBackClick = navigator::goBack,
         )
     }
 }
@@ -190,10 +202,7 @@ private val tabFadeThroughSpec: AnimatedContentTransitionScope<Scene<NavKey>>.()
  * 탭 내부의 상세 화면(Setting/AccountInfo/NicknameChange/ChatRoom/WebView) push·pop 전용
  * 트랜지션. 계층 이동이라는 방향감을 주기 위해 좌우 슬라이드(shared axis X)를 쓴다.
  *
- * popTransitionSpec과 predictivePopTransitionSpec을 반드시 같이 지정해야 한다 — 인앱 뒤로가기
- * 아이콘(Navigator.goBack() 직접 호출)은 popTransitionSpec을, 폰의 시스템 뒤로가기(제스처·버튼
- * 모두 OnBackInvokedCallback 경유)는 predictivePopTransitionSpec을 따로 참조하기 때문에, 하나만
- * 지정하면 트리거 경로에 따라 모션이 달라져 버린다.
+ * 트리거 경로마다 참조하는 spec이 달라서, 셋 다 지정하지 않으면 모션이 갈립니다.
  */
 private val detailSlideTransition: Map<String, Any> = NavDisplay.transitionSpec {
     (slideIntoContainer(SlideDirection.Start, tween(300)) + fadeIn(tween(300))) togetherWith
@@ -201,9 +210,42 @@ private val detailSlideTransition: Map<String, Any> = NavDisplay.transitionSpec 
 } + NavDisplay.popTransitionSpec {
     (slideIntoContainer(SlideDirection.End, tween(300)) + fadeIn(tween(300))) togetherWith
         (slideOutOfContainer(SlideDirection.End, tween(300)) + fadeOut(tween(150)))
-} + NavDisplay.predictivePopTransitionSpec { _ ->
-    (slideIntoContainer(SlideDirection.End, tween(300)) + fadeIn(tween(300))) togetherWith
-        (slideOutOfContainer(SlideDirection.End, tween(300)) + fadeOut(tween(150)))
+} + NavDisplay.predictivePopTransitionSpec { swipeEdge ->
+    val towards = if (swipeEdge == NavigationEvent.EDGE_RIGHT) SlideDirection.Start else SlideDirection.End
+    (slideIntoContainer(towards, tween(300)) + fadeIn(tween(300))) togetherWith
+        (slideOutOfContainer(towards, tween(300)) + fadeOut(tween(150)))
+}
+
+/**
+ * 홈 루트에서는 NavDisplay의 previousEntries가 비어 자체 back handler가 꺼지므로 이 handler가 받습니다.
+ */
+@Composable
+private fun DoubleBackToExitHandler(enabled: () -> Boolean) {
+    val activity = LocalActivity.current
+    val context = LocalContext.current
+    val toast = remember(context) {
+        Toast.makeText(context, R.string.back_press_exit_confirm, Toast.LENGTH_SHORT)
+    }
+    var lastBackPressedAt by remember { mutableLongStateOf(NO_BACK_PRESS) }
+    val isEnabled = enabled()
+
+    // 다른 화면을 거쳐 돌아오면 직전 경고는 무효입니다. 남겨두면 경고 없이 종료됩니다.
+    LaunchedEffect(isEnabled) {
+        if (!isEnabled) lastBackPressedAt = NO_BACK_PRESS
+    }
+
+    BackHandler(enabled = isEnabled) {
+        val now = SystemClock.elapsedRealtime()
+        val withinWindow = lastBackPressedAt != NO_BACK_PRESS && now - lastBackPressedAt <= EXIT_CONFIRM_WINDOW_MS
+        if (withinWindow) {
+            // 취소하지 않으면 앱이 사라진 뒤에도 런처 위에 남습니다.
+            toast.cancel()
+            activity?.finish()
+        } else {
+            lastBackPressedAt = now
+            toast.show()
+        }
+    }
 }
 
 /**
@@ -218,13 +260,15 @@ private fun ModelDownloadConfirmationEffect(
 ) {
     val activity = LocalActivity.current
     val needsConfirmation by viewModel.needsUserConfirmation.collectAsState()
+    val message = stringResource(R.string.model_download_message)
+    val actionLabel = stringResource(R.string.model_download_action)
 
     LaunchedEffect(needsConfirmation, activity) {
         if (!needsConfirmation || activity == null) return@LaunchedEffect
 
         val result = snackbarHostState.showSnackbar(
-            message = MODEL_DOWNLOAD_MESSAGE,
-            actionLabel = MODEL_DOWNLOAD_ACTION,
+            message = message,
+            actionLabel = actionLabel,
             withDismissAction = true,
         )
         if (result == SnackbarResult.ActionPerformed) {
@@ -233,5 +277,5 @@ private fun ModelDownloadConfirmationEffect(
     }
 }
 
-private const val MODEL_DOWNLOAD_MESSAGE = "추가 다운로드가 필요해요"
-private const val MODEL_DOWNLOAD_ACTION = "모바일 데이터로 받기"
+private const val NO_BACK_PRESS = 0L
+private const val EXIT_CONFIRM_WINDOW_MS = 2000L

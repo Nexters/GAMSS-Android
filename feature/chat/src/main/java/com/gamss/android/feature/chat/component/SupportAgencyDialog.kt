@@ -37,11 +37,12 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.gamss.android.core.designsystem.button.GamssButton
 import com.gamss.android.core.designsystem.theme.GamssTheme
 import com.gamss.android.domain.safety.SupportAgency
 import com.gamss.android.feature.chat.R
 
-private val DialogShape = RoundedCornerShape(28.dp)
+private val DialogShape = RoundedCornerShape(16.dp)
 private val SupportPanelShape = RoundedCornerShape(20.dp)
 private val ActionShape = RoundedCornerShape(12.dp)
 
@@ -50,7 +51,6 @@ internal fun SupportAgencyDialog(
     agencies: List<SupportAgency>,
     onCallClick: (SupportAgency) -> Unit,
     onEmergencyCallClick: () -> Unit,
-    onConfirm: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     Dialog(
@@ -60,7 +60,7 @@ internal fun SupportAgencyDialog(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = GamssTheme.spacing.spacing300),
+                .padding(horizontal = GamssTheme.spacing.spacing550),
             contentAlignment = Alignment.Center,
         ) {
             Surface(
@@ -68,12 +68,12 @@ internal fun SupportAgencyDialog(
                     .fillMaxWidth()
                     .widthIn(max = 520.dp),
                 shape = DialogShape,
-                color = GamssTheme.colors.gray025,
+                color = GamssTheme.colors.white,
             ) {
                 Column(
                     modifier = Modifier
                         .verticalScroll(rememberScrollState())
-                        .padding(GamssTheme.spacing.spacing500),
+                        .padding(GamssTheme.spacing.spacing400),
                     verticalArrangement = Arrangement.spacedBy(GamssTheme.spacing.spacing500),
                 ) {
                     DialogHeader()
@@ -82,7 +82,11 @@ internal fun SupportAgencyDialog(
                         onCallClick = onCallClick,
                         onEmergencyCallClick = onEmergencyCallClick,
                     )
-                    DialogActions(onDismiss = onDismiss, onConfirm = onConfirm)
+                    GamssButton(
+                        modifier = Modifier.fillMaxWidth(),
+                        label = stringResource(R.string.safety_agency_close_button_label),
+                        onClick = onDismiss,
+                    )
                 }
             }
         }
@@ -216,60 +220,13 @@ private fun AdditionalInfo() {
             painter = painterResource(R.drawable.ic_info),
             contentDescription = null,
             tint = GamssTheme.colors.gray300,
-            modifier = Modifier.size(20.dp),
+            modifier = Modifier.size(18.dp),
         )
         Text(
             text = stringResource(R.string.chat_room_risk_dialog_additional_info),
-            style = GamssTheme.typography.body5Regular,
+            style = GamssTheme.typography.body6Medium,
             color = GamssTheme.colors.gray500,
         )
-    }
-}
-
-@Composable
-private fun DialogActions(
-    onDismiss: () -> Unit,
-    onConfirm: () -> Unit,
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(GamssTheme.spacing.spacing100),
-    ) {
-        DialogActionButton(
-            label = stringResource(R.string.chat_room_end_dialog_dismiss_button_label),
-            containerColor = GamssTheme.colors.gray100,
-            contentColor = GamssTheme.colors.gray600,
-            onClick = onDismiss,
-            modifier = Modifier.weight(1f),
-        )
-        DialogActionButton(
-            label = stringResource(R.string.chat_room_risk_dialog_confirm_button_label),
-            containerColor = GamssTheme.colors.gray950,
-            contentColor = GamssTheme.colors.gray025,
-            onClick = onConfirm,
-            modifier = Modifier.weight(1f),
-        )
-    }
-}
-
-@Composable
-private fun DialogActionButton(
-    label: String,
-    containerColor: Color,
-    contentColor: Color,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Box(
-        modifier = modifier
-            .height(56.dp)
-            .clip(ActionShape)
-            .background(containerColor)
-            .clickable(onClick = onClick)
-            .semantics { role = Role.Button },
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(text = label, style = GamssTheme.typography.subtitle3, color = contentColor)
     }
 }
 
@@ -296,7 +253,6 @@ private fun SupportAgencyDialogPreview() {
             ),
             onCallClick = {},
             onEmergencyCallClick = {},
-            onConfirm = {},
             onDismiss = {},
         )
     }

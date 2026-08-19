@@ -3,8 +3,8 @@ package com.gamss.android.domain.chattingsearch
 import androidx.paging.PagingData
 import com.gamss.android.core.common.AppResult
 import com.gamss.android.domain.conversation.Conversation
+import com.gamss.android.domain.conversation.ConversationDetail
 import com.gamss.android.domain.conversation.ConversationRepository
-import com.gamss.android.domain.conversation.Message
 import com.gamss.android.domain.conversation.SentMessage
 import com.gamss.android.domain.conversation.chattingsearch.ChattingRoomSearchException
 import com.gamss.android.domain.conversation.chattingsearch.ChattingRoomSummary
@@ -76,7 +76,7 @@ class SearchChattingRoomsUseCaseTest {
             excludeCharacters: Set<EmotionCharacter>,
         ): AppResult<SentMessage> = unused()
 
-        override suspend fun getMessages(conversationId: Long): AppResult<List<Message>> = unused()
+        override suspend fun getConversation(conversationId: Long): AppResult<ConversationDetail> = unused()
 
         override suspend fun updateTitle(conversationId: Long, title: String): AppResult<Unit> = unused()
 

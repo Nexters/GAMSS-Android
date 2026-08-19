@@ -4,10 +4,10 @@ import com.gamss.android.core.common.AppResult
 import com.gamss.android.domain.usecase.UseCase
 import javax.inject.Inject
 
-class GetMessagesUseCase @Inject constructor(
+class GetConversationUseCase @Inject constructor(
     private val conversationRepository: ConversationRepository,
-) : UseCase<Long, AppResult<List<Message>>> {
+) : UseCase<Long, AppResult<ConversationDetail>> {
 
-    override suspend fun invoke(params: Long): AppResult<List<Message>> =
-        conversationRepository.getMessages(params)
+    override suspend fun invoke(params: Long): AppResult<ConversationDetail> =
+        conversationRepository.getConversation(params)
 }

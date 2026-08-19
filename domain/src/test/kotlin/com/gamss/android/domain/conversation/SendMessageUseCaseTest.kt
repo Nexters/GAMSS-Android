@@ -60,8 +60,13 @@ class SendMessageUseCaseTest {
         override suspend fun getOngoingConversations(): AppResult<List<Conversation>> =
             AppResult.Success(emptyList())
 
-        override suspend fun getMessages(conversationId: Long): AppResult<List<Message>> =
-            AppResult.Success(emptyList())
+        override suspend fun getConversation(conversationId: Long): AppResult<ConversationDetail> =
+            AppResult.Success(
+                ConversationDetail(
+                    conversation = Conversation(id = conversationId, title = null),
+                    messages = emptyList(),
+                ),
+            )
 
         override suspend fun updateTitle(conversationId: Long, title: String): AppResult<Unit> =
             AppResult.Success(Unit)

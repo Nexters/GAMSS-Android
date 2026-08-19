@@ -17,7 +17,7 @@ import javax.inject.Inject
 @Suppress("LongParameterList")
 class ConversationSession @Inject constructor(
     private val sendMessage: SendMessageUseCase,
-    private val getMessages: GetMessagesUseCase,
+    private val getConversation: GetConversationUseCase,
     private val updateConversationTitle: UpdateConversationTitleUseCase,
     private val endConversation: EndConversationUseCase,
     private val createConversationCard: CreateConversationCardUseCase,
@@ -30,12 +30,12 @@ class ConversationSession @Inject constructor(
 
     private var pendingTitle: PendingTitle? = null
 
-    suspend fun restore(conversationId: Long): AppResult<List<Message>> {
+    suspend fun restore(conversationId: Long): AppResult<ConversationDetail> {
         clearPendingTitle()
-        val result = getMessages(conversationId)
+        val result = getConversation(conversationId)
         when (result) {
             is AppResult.Success -> {
-                val utterances = result.data.userUtterances()
+                val utterances = result.data.messages.userUtterances()
                 summaryStore.restore(utterances)
                 emotionAccumulator.restore(utterances)
             }
@@ -83,12 +83,12 @@ class ConversationSession @Inject constructor(
     }
 
     /** 홈 쪽 인스턴스에서만 채워진 요약·감정 상태를, [restore] 와 같은 방식으로 이 인스턴스에도 시드해 둔다. */
-    suspend fun consumePendingReveal(conversationId: Long): SentMessage? {
-        val sent = pendingReveal.consume(conversationId) ?: return null
-        val utterances = listOf(sent.message).userUtterances()
+    suspend fun consumePendingReveal(conversationId: Long): PendingReveal? {
+        val pending = pendingReveal.consume(conversationId) ?: return null
+        val utterances = listOf(pending.sent.message).userUtterances()
         summaryStore.restore(utterances)
         emotionAccumulator.restore(utterances)
-        return sent
+        return pending
     }
 
     suspend fun finishSend() = coroutineScope {
