@@ -51,7 +51,8 @@ internal fun CardResponse.toDomainOrNull(): Card? = emotion.toEmotionCharacter()
     }
 }
 
-private fun String.toLocalDateOrNull(): LocalDate? = try {
+/** 날짜별·월별 응답이 같은 기준으로 날짜를 버려야 CardEntry.indexInDate 가 두 응답에서 같은 카드를 가리킨다. */
+internal fun String.toLocalDateOrNull(): LocalDate? = try {
     LocalDate.parse(this)
 } catch (_: DateTimeParseException) {
     null

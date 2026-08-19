@@ -73,10 +73,10 @@ fun AccountInfoScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(GamssTheme.colors.gray025),
+            .background(GamssTheme.colors.background),
     ) {
         GamssTopNavigation(
-            modifier = Modifier.padding(bottom = GamssTheme.spacing.spacing150),
+            modifier = Modifier.padding(bottom = GamssTheme.spacing.spacing300),
             title = stringResource(R.string.setting_list_user_account),
             showLeftIcon = true,
             onLeftIconClick = onBackClick,

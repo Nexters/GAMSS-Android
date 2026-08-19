@@ -1,7 +1,11 @@
 package com.gamss.android.app
 
 import android.app.Application
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.os.Build
 import android.util.Log
+import androidx.core.content.getSystemService
 import com.gamss.android.domain.config.InitializeRemoteConfigUseCase
 import com.gamss.android.domain.safety.RefreshRiskLexiconUseCase
 import dagger.hilt.android.HiltAndroidApp
@@ -32,7 +36,18 @@ class GamssApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        createNotificationChannel()
         applicationScope.launch { refreshRiskLexicon() }
         applicationScope.launch { initializeRemoteConfig() }
+    }
+
+    private fun createNotificationChannel() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
+        val channel = NotificationChannel(
+            getString(R.string.default_notification_channel_id),
+            getString(R.string.default_notification_channel_name),
+            NotificationManager.IMPORTANCE_DEFAULT,
+        )
+        getSystemService<NotificationManager>()?.createNotificationChannel(channel)
     }
 }

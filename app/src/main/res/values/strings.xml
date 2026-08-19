@@ -10,4 +10,7 @@
 
     <string name="model_download_message">추가 다운로드가 필요해요</string>
     <string name="model_download_action">모바일 데이터로 받기</string>
+
+    <string name="default_notification_channel_id" translatable="false">push_default</string>
+    <string name="default_notification_channel_name">알림</string>
 </resources>

@@ -14,10 +14,14 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.LifecycleStartEffect
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
@@ -38,6 +42,11 @@ fun GamssRootNavHost(
 ) {
     val state by mainViewModel.collectAsState()
 
+    LifecycleStartEffect(Unit) {
+        mainViewModel.syncDeviceToken()
+        onStopOrDispose { }
+    }
+
     when (state.sessionState) {
         SessionState.Loading -> {
             Box(
@@ -50,7 +59,9 @@ fun GamssRootNavHost(
 
         else -> RootNavDisplay(
             sessionState = state.sessionState,
-            useCardFeature = state.useCardFeature,
+            shouldPromptNotificationPermission = mainViewModel::shouldPromptNotificationPermission,
+            onNotificationPermissionPrompted = mainViewModel::markNotificationPermissionPrompted,
+            onNotificationPermissionResult = mainViewModel::syncDeviceToken,
         )
     }
 }
@@ -58,14 +69,31 @@ fun GamssRootNavHost(
 @Composable
 private fun RootNavDisplay(
     sessionState: SessionState,
-    useCardFeature: Boolean,
+    shouldPromptNotificationPermission: suspend () -> Boolean,
+    onNotificationPermissionPrompted: () -> Unit,
+    onNotificationPermissionResult: () -> Unit,
 ) {
     val initialKey = if (sessionState == SessionState.Authenticated) MainKey else LoginKey
     val backStack = rememberNavBackStack(initialKey)
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission(),
-        onResult = {},
+        onResult = { onNotificationPermissionResult() },
     )
+
+    // 저장된 안내 이력은 비동기로 반영되므로, 온보딩에서 메인으로 넘어가는 동안에는 이 상태로 중복 요청을 막는다.
+    var promptedInSession by remember { mutableStateOf(false) }
+
+    fun markNotificationPermissionPrompted() {
+        promptedInSession = true
+        onNotificationPermissionPrompted()
+    }
+
+    fun requestNotificationPermission() {
+        markNotificationPermissionPrompted()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
 
     fun replaceRoot(destination: NavKey) {
         if (backStack.lastOrNull() != destination) {
@@ -95,15 +123,23 @@ private fun RootNavDisplay(
                 }
                 entry<OnboardingKey> {
                     OnboardingScreen(
-                        onComplete = { replaceRoot(MainKey) },
-                        onNotificationPermissionRequest = {
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                            }
+                        onComplete = {
+                            // 권한 안내는 동의/거절 모두 온보딩에서 끝난다. 거절도 결정으로 남겨 메인에서 다시 묻지 않는다.
+                            markNotificationPermissionPrompted()
+                            replaceRoot(MainKey)
                         },
+                        onNotificationPermissionRequest = { requestNotificationPermission() },
                     )
                 }
-                entry<MainKey> { MainScreen(useCardFeature = useCardFeature) }
+                entry<MainKey> {
+                    // 온보딩을 거치지 않고 들어오는 기존 사용자에게만 한 번 요청한다.
+                    LaunchedEffect(Unit) {
+                        if (!promptedInSession && shouldPromptNotificationPermission()) {
+                            requestNotificationPermission()
+                        }
+                    }
+                    MainScreen()
+                }
             },
         ),
 

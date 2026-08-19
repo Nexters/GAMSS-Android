@@ -203,7 +203,6 @@ private fun OnboardingTopBar(
     Box(modifier = modifier.fillMaxWidth()) {
         GamssTopNavigation(
             content = GamssTopNavigationContent.None,
-            backgroundColor = GamssTheme.colors.background,
             showLeftIcon = showBack,
             leftIconContentDescription = stringResource(R.string.onboarding_back_description),
             onLeftIconClick = onBackClick,
