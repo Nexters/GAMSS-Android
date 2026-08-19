@@ -34,6 +34,9 @@ internal data class CardEntity(
     val message: String,
     @ColumnInfo(name = "date")
     val date: String,
+    /** 캐시에서 그 날짜의 카드를 복원할 때 CardEntry.indexInDate 와 같은 기준으로 순서를 매기기 위한 값. */
+    @ColumnInfo(name = "index_in_date")
+    val indexInDate: Int,
 )
 
 /**
