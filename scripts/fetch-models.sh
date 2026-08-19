@@ -31,6 +31,35 @@ cd "$REPO_ROOT"
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 
+# tflite 는 FlatBuffer 라 오프셋 4 에 "TFL3" 식별자가, onnx 는 protobuf 라 ir_version 필드(0x08)와
+# producer_name 에 "onnx" 문자열이 들어갑니다. 해시 비교로는 양쪽에 똑같이 엉뚱한 파일이 올라간
+# 경우를 못 걸러내므로, 최소한 모델 형식인지는 확인합니다.
+assert_model_format() {
+  local file="$1" label="$2" kind="${2##*.}"
+  case "$kind" in
+    tflite)
+      if [ "$(dd if="$file" bs=1 skip=4 count=4 2>/dev/null)" != "TFL3" ]; then
+        echo "실패: $label 이 tflite(FlatBuffer) 형식이 아닙니다" >&2
+        exit 1
+      fi
+      ;;
+    onnx)
+      if [ "$(dd if="$file" bs=1 count=1 2>/dev/null | od -An -tx1 | tr -d ' \n')" != "08" ]; then
+        echo "실패: $label 이 onnx(protobuf) 형식이 아닙니다" >&2
+        exit 1
+      fi
+      if ! head -c 64 "$file" | grep -qa onnx; then
+        echo "실패: $label 에서 onnx producer 정보를 찾지 못했습니다" >&2
+        exit 1
+      fi
+      ;;
+    *)
+      echo "실패: $label 은 검증 규칙이 없는 확장자입니다" >&2
+      exit 1
+      ;;
+  esac
+}
+
 sha256_of() {
   if command -v sha256sum >/dev/null 2>&1; then
     sha256sum "$1" | cut -d' ' -f1
@@ -59,9 +88,10 @@ install_model() {
     exit 1
   }
 
-  mkdir -p "$(dirname "$path")"
-  cp "$TMP/$asset" "$path"
-  actual="$(sha256_of "$path")"
+  # 검증은 받은 파일에 대해 먼저 합니다. 배치한 뒤에 검사하면 실패했을 때 작업 트리의 모델이
+  # 망가진 상태로 남습니다.
+  assert_model_format "$TMP/$asset" "$path"
+  actual="$(sha256_of "$TMP/$asset")"
 
   # LFS 와 Release 중 한쪽만 갱신되면 여기서 걸립니다. 그대로 두면 옛 모델로 빌드된 APK 가
   # 조용히 배포되고, 기능은 런타임에야 실패합니다.
@@ -76,7 +106,10 @@ EOF
     exit 1
   fi
 
-  printf '  %s (%s MB, oid 일치)\n' "$path" "$(( $(wc -c < "$path") / 1048576 ))"
+  mkdir -p "$(dirname "$path")"
+  cp "$TMP/$asset" "$path"
+
+  printf '  %s (%s MB, 형식·oid 확인)\n' "$path" "$(( $(wc -c < "$path") / 1048576 ))"
 }
 
 install_model emotion_int8.tflite      models/emotion-pack/src/main/assets/models/emotion_int8.tflite
