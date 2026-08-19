@@ -204,7 +204,51 @@ class ChatRoomEndFlowTest {
         }
     }
 
+    @Test
+    fun 카드를_두_번_누르면_다_접히고_그_뒤로는_안_접힌다() = runTest {
+        chatRoomViewModel().test(this) {
+            containerHost.sendOneMessage()
+            runCurrent()
+            containerHost.endConversation()
+            runCurrent()
+            assertEquals(CardFoldStage.Unfolded, containerHost.foldStage())
+
+            containerHost.onCardFoldTap()
+            runCurrent()
+            assertEquals(CardFoldStage.FoldedOnce, containerHost.foldStage())
+
+            containerHost.onCardFoldTap()
+            runCurrent()
+            assertEquals(CardFoldStage.FoldedTwice, containerHost.foldStage())
+
+            // 다 접힌 뒤로는 눌러도 그대로여야 한다. 다음 단계는 드래그로만 넘어간다.
+            containerHost.onCardFoldTap()
+            runCurrent()
+            assertEquals(CardFoldStage.FoldedTwice, containerHost.foldStage())
+
+            cancelAndIgnoreRemainingItems()
+        }
+    }
+
+    @Test
+    fun 카드가_없는_단계에서_접기를_눌러도_아무_일도_없다() = runTest {
+        chatRoomViewModel().test(this) {
+            containerHost.sendOneMessage()
+            runCurrent()
+            assertEquals(EndFlow.NotStarted, containerHost.endFlow())
+
+            containerHost.onCardFoldTap()
+            runCurrent()
+            assertEquals(EndFlow.NotStarted, containerHost.endFlow())
+
+            cancelAndIgnoreRemainingItems()
+        }
+    }
+
     private fun ChatRoomViewModel.endFlow(): EndFlow = container.stateFlow.value.endFlow
+
+    private fun ChatRoomViewModel.foldStage(): CardFoldStage =
+        (endFlow() as EndFlow.CardReady).foldStage
 
     private fun ChatRoomViewModel.sendOneMessage() {
         onInputChange(INPUT)

@@ -24,10 +24,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -64,10 +62,10 @@ import com.gamss.android.core.designsystem.topnavigation.GamssTopNavigationHoriz
 import com.gamss.android.core.designsystem.topnavigation.GamssTopNavigationIcon
 import com.gamss.android.core.designsystem.topnavigation.GamssTopNavigationIconAction
 import com.gamss.android.core.designsystem.topnavigation.GamssTopNavigationTitleAlignment
-import com.gamss.android.domain.card.Card
 import com.gamss.android.domain.conversation.Message
 import com.gamss.android.domain.conversation.MessageSender
 import com.gamss.android.domain.emotion.EmotionCharacter
+import com.gamss.android.feature.chat.component.CardFoldOverlay
 import com.gamss.android.feature.chat.component.EndConversationDialog
 import com.gamss.android.feature.chat.component.LoadingMessageBubble
 import com.gamss.android.feature.chat.component.MessageBubble
@@ -86,8 +84,8 @@ import org.orbitmvi.orbit.compose.collectAsState
 import org.orbitmvi.orbit.compose.collectSideEffect
 
 /**
- * @param onCardClose 카드 시트를 닫을 때 호출한다. 이 화면을 실제로 벗어나야 한다.
- *  머무르면 카드 단계가 그대로라 시트가 다시 열린다.
+ * @param onCardClose 접은 카드를 통에 버린 뒤 호출한다. 이 화면을 실제로 벗어나야 한다.
+ *  머무르면 카드 단계가 그대로라 접기 연출이 다시 열린다.
  */
 @Composable
 fun ChatRoomScreen(
@@ -144,43 +142,19 @@ fun ChatRoomScreen(
             onDismiss = viewModel::onEndCancel,
         )
 
-        is EndFlow.CardReady -> CardBottomSheet(card = endFlow.card, onDismiss = onCardClose)
+        is EndFlow.CardReady -> CardFoldOverlay(
+            card = endFlow.card,
+            foldStage = endFlow.foldStage,
+            onFoldTap = viewModel::onCardFoldTap,
+            onDiscard = onCardClose,
+        )
+
         EndFlow.NotStarted,
         EndFlow.Ending,
         EndFlow.CreatingCard,
         EndFlow.CardFailedRetryable,
         EndFlow.CardFailedFinal,
         -> Unit
-    }
-}
-
-// 카드생성 bottomsheet
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun CardBottomSheet(
-    card: Card,
-    onDismiss: () -> Unit,
-) {
-    ModalBottomSheet(onDismissRequest = onDismiss) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 24.dp)
-                .padding(bottom = 32.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Text(
-                text = card.character.displayName,
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.primary,
-            )
-            Text(text = card.summary, style = MaterialTheme.typography.titleMedium)
-            Text(
-                text = card.message,
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
     }
 }
 
@@ -283,7 +257,6 @@ private fun ChatRoomTopBar(
             onLeftIconClick = onBackClick,
             rightActions = listOfNotNull(
                 when {
-                    !state.useChatEndFeature -> null
                     state.endFlow.isBusy -> GamssTopNavigationIconAction(
                         icon = GamssTopNavigationIcon.CreateCard,
                         onClick = {},
@@ -550,7 +523,6 @@ private fun ChatRoomPreviewContent() {
         conversationId = 1,
         messages = messages,
         input = "",
-        useChatEndFeature = true,
         replyTarget = ReplyTarget(
             messageId = 1,
             characterName = "기쁨",
