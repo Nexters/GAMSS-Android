@@ -7,14 +7,17 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import com.gamss.android.core.designsystem.card.GamssChattingCard
+import com.gamss.android.core.designsystem.component.GamssScrollToBottomButton
 import com.gamss.android.core.designsystem.component.chat.GamssChatBubbleDefaults
 import com.gamss.android.core.designsystem.theme.GamssTheme
 import com.gamss.android.core.ui.chat.ChatMessageBubble
@@ -24,6 +27,7 @@ import com.gamss.android.domain.conversation.MessageSender
 import com.gamss.android.domain.emotion.EmotionCharacter
 import com.gamss.android.feature.archive.ConversationCard
 import com.gamss.android.feature.archive.R
+import kotlinx.coroutines.launch
 
 /**
  * 감정 카드에서 대화보기로 뒤집은 카드. 종료된 대화라 읽기만 하므로 입력창 없이 기록만 보여 준다.
@@ -66,20 +70,34 @@ private fun ConversationMessages(
     // 답장 대상 조회를 여기서 한 번에 끝내고 아이템별로는 결과값만 넘긴다. 말풍선마다 목록 전체를
     // 뒤지면 메시지가 하나 바뀔 때 떠 있는 말풍선이 전부 재구성 대상이 된다.
     val messagesById = remember(messages) { messages.associateBy(Message::id) }
+    val listState = rememberLazyListState()
+    val scope = rememberCoroutineScope()
 
-    LazyColumn(
-        modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy(GamssTheme.spacing.spacing300),
-    ) {
-        items(messages, key = { it.id }) { message ->
-            val replyQuote = message.repliesToMessageId
-                ?.let { targetId -> messagesById[targetId] }
-                ?.toReplyQuote()
-            ChatMessageBubble(
-                message = message,
-                replyQuote = replyQuote,
-                // 카드 안 대화 영역은 채팅방보다 좁아 말풍선 최대 너비 기준도 카드 값을 쓴다.
-                oppositeWallGap = GamssChatBubbleDefaults.CardOppositeWallGap,
+    Box(modifier = modifier) {
+        LazyColumn(
+            state = listState,
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.spacedBy(GamssTheme.spacing.spacing300),
+        ) {
+            items(messages, key = { it.id }) { message ->
+                val replyQuote = message.repliesToMessageId
+                    ?.let { targetId -> messagesById[targetId] }
+                    ?.toReplyQuote()
+                ChatMessageBubble(
+                    message = message,
+                    replyQuote = replyQuote,
+                    // 카드 안 대화 영역은 채팅방보다 좁아 말풍선 최대 너비 기준도 카드 값을 쓴다.
+                    oppositeWallGap = GamssChatBubbleDefaults.CardOppositeWallGap,
+                )
+            }
+        }
+
+        // 아래로 더 남았을 때만 띄운다. 끝에 닿아 있으면 눌러도 갈 곳이 없다.
+        if (listState.canScrollForward) {
+            GamssScrollToBottomButton(
+                onClick = { scope.launch { listState.animateScrollToItem(messages.lastIndex) } },
+                contentDescription = stringResource(R.string.archive_conversation_scroll_to_bottom),
+                modifier = Modifier.align(Alignment.BottomEnd),
             )
         }
     }
