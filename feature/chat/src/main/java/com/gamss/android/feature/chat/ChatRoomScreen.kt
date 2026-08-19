@@ -272,13 +272,24 @@ private fun ChatRoomContent(
     )
     val chatScrollState = rememberChatScrollState(state = state, listState = listState)
 
-    val imeBottomPx = WindowInsets.ime.getBottom(LocalDensity.current)
-    var previousImeBottomPx by remember { mutableIntStateOf(imeBottomPx) }
-    LaunchedEffect(imeBottomPx) {
-        val delta = imeBottomPx - previousImeBottomPx
-        previousImeBottomPx = imeBottomPx
-        if (delta != 0) {
-            listState.scrollBy(delta.toFloat())
+    // WindowInsets.ime 게터 자체가 @Composable이라 LaunchedEffect(코루틴) 안에서 직접 부를 수
+    // 없다. 여기서 객체 참조만 한 번 얻어두면, 이후 getBottom() 호출은 일반 함수 호출이라 코루틴
+    // 안에서도 매번 최신 값을 읽을 수 있다.
+    val imeInsets = WindowInsets.ime
+    val imeDensity = LocalDensity.current
+    val imeBottomPx = imeInsets.getBottom(imeDensity)
+    // 키보드 인셋은 시스템이 여러 프레임에 걸쳐 애니메이션으로 흘려보낸다. LaunchedEffect(key)로
+    // 매번 새 코루틴을 띄우면, 이전 scrollBy()가 끝나기 전에 다음 인셋 값이 도착해 진행 중이던
+    // scrollBy가 취소되면서 그 구간만큼 보정이 누락된다 — 그러면 이 보정 자체가 안 먹는 것처럼
+    // 보인다. 코루틴 하나를 계속 살려두고 snapshotFlow로 값을 순서대로 받아야 delta가 안 끊긴다.
+    LaunchedEffect(listState, imeInsets, imeDensity) {
+        var previous = imeInsets.getBottom(imeDensity)
+        snapshotFlow { imeInsets.getBottom(imeDensity) }.collect { current ->
+            val delta = current - previous
+            previous = current
+            if (delta != 0) {
+                listState.scrollBy(delta.toFloat())
+            }
         }
     }
 
