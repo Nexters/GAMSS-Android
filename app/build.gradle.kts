@@ -86,14 +86,18 @@ android {
             initWith(getByName("release"))
             isDebuggable = true
             versionNameSuffix = "-internal"
-            signingConfig = signingConfigs.getByName("debug")
+            // CI 러너의 debug 키는 빌드마다 SHA-1 이 달라 구글 로그인 OAuth 클라이언트로 등록할 수 없다.
+            signingConfig = if (hasCompleteReleaseSigningConfig) {
+                signingConfigs.getByName("release")
+            } else {
+                signingConfigs.getByName("debug")
+            }
             matchingFallbacks += listOf("release")
         }
     }
 }
 
 dependencies {
-    implementation(project(":feature:onboarding"))
     implementation(projects.domain)
     implementation(projects.data)
     implementation(projects.core.common)
@@ -101,7 +105,7 @@ dependencies {
     implementation(projects.core.designsystem)
     implementation(projects.feature.home)
     implementation(projects.feature.chat)
-    implementation(projects.feature.calendar)
+    implementation(projects.feature.archive)
     implementation(projects.feature.emotion)
     implementation(projects.feature.login)
     implementation(projects.feature.onboarding)
@@ -119,6 +123,7 @@ dependencies {
 
     implementation(libs.navigation3.runtime)
     implementation(libs.navigation3.ui)
+    implementation(libs.androidx.navigationevent)
 
     implementation(libs.orbit.core)
     implementation(libs.orbit.viewmodel)

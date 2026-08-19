@@ -12,6 +12,7 @@ androidx-lifecycle = "2.9.4"
 lifecycle-viewmodel-navigation3 = "2.10.0"
 compose-bom = "2026.04.01"
 navigation3 = "1.1.0-rc01"
+navigationevent = "1.0.2"
 junit = "4.13.2"
 detekt = "1.23.8"
 kotlinx-serialization = "1.11.0"
@@ -24,7 +25,7 @@ retrofit = "3.0.0"
 okhttp = "5.4.0"
 room = "3.0.0-alpha06"
 coil = "3.5.0"
-calendar = "2.10.0"
+lottie = "6.7.1"
 firebase-bom = "34.15.0"
 firebase-crashlytics-gradle = "3.0.7"
 google-services = "4.4.4"
@@ -46,8 +47,8 @@ paging = "3.4.2"
 [libraries]
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidx-activity" }
 androidx-hilt-navigation-compose = { module = "androidx.hilt:hilt-navigation-compose", version.ref = "androidx-hilt" }
-androidx-lifecycle-runtime-ktx = { module = "androidx.lifecycle:lifecycle-runtime-ktx", version.ref = "androidx-lifecycle" }
 androidx-lifecycle-runtime-compose = { module = "androidx.lifecycle:lifecycle-runtime-compose", version.ref = "androidx-lifecycle" }
+androidx-lifecycle-runtime-ktx = { module = "androidx.lifecycle:lifecycle-runtime-ktx", version.ref = "androidx-lifecycle" }
 androidx-lifecycle-viewmodel-ktx = { module = "androidx.lifecycle:lifecycle-viewmodel-ktx", version.ref = "androidx-lifecycle" }
 androidx-lifecycle-viewmodel-navigation3 = { module = "androidx.lifecycle:lifecycle-viewmodel-navigation3-android", version.ref = "lifecycle-viewmodel-navigation3" }
 
@@ -61,6 +62,7 @@ compose-material-icons-core = { module = "androidx.compose.material:material-ico
 
 navigation3-runtime = { module = "androidx.navigation3:navigation3-runtime", version.ref = "navigation3" }
 navigation3-ui = { module = "androidx.navigation3:navigation3-ui", version.ref = "navigation3" }
+androidx-navigationevent = { module = "androidx.navigationevent:navigationevent", version.ref = "navigationevent" }
 
 hilt-android = { module = "com.google.dagger:hilt-android", version.ref = "hilt" }
 hilt-compiler = { module = "com.google.dagger:hilt-compiler", version.ref = "hilt" }
@@ -99,7 +101,7 @@ coil-bom = { module = "io.coil-kt.coil3:coil-bom", version.ref = "coil" }
 coil-compose = { module = "io.coil-kt.coil3:coil-compose" }
 coil-network-okhttp = { module = "io.coil-kt.coil3:coil-network-okhttp" }
 
-calendar-compose = { module = "com.kizitonwose.calendar:compose", version.ref = "calendar" }
+lottie-compose = { module = "com.airbnb.android:lottie-compose", version.ref = "lottie" }
 
 firebase-bom = { module = "com.google.firebase:firebase-bom", version.ref = "firebase-bom" }
 firebase-analytics = { module = "com.google.firebase:firebase-analytics" }

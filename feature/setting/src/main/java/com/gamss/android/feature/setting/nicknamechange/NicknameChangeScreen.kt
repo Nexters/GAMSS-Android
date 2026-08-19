@@ -1,15 +1,23 @@
 package com.gamss.android.feature.setting.nicknamechange
 
 import android.widget.Toast
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.union
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -50,15 +58,28 @@ fun NicknameChangeScreen(
         }
     }
 
+    var maxLengthExceeded by rememberSaveable { mutableStateOf(false) }
+
     val trimmedInput = state.nicknameInput.trim()
     val canSave = trimmedInput.isNotEmpty() &&
         trimmedInput != state.originalNickname &&
         trimmedInput.length in NicknamePolicy.MIN_LENGTH..NicknamePolicy.MAX_LENGTH
+    val lengthErrorMessage = when {
+        maxLengthExceeded -> stringResource(R.string.nickname_change_input_error_max_length)
+
+        state.nicknameInput.isEmpty() -> null
+
+        trimmedInput.length < NicknamePolicy.MIN_LENGTH ->
+            stringResource(R.string.nickname_change_input_error_min_length)
+
+        else -> null
+    }
 
     Column(
         modifier = modifier
             .fillMaxSize()
-            .imePadding(),
+            .background(GamssTheme.colors.background)
+            .windowInsetsPadding(WindowInsets.ime.union(WindowInsets.navigationBars)),
     ) {
         GamssTopNavigation(
             title = stringResource(R.string.account_info_nickname_change),
@@ -69,14 +90,16 @@ fun NicknameChangeScreen(
         GamssTextField(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(
-                    horizontal = 18.dp,
-                    vertical = GamssTheme.spacing.spacing400,
-                ),
-            label = stringResource(R.string.account_info_nickname_change),
+                .padding(horizontal = ScreenHorizontalPadding)
+                .padding(top = GamssTheme.spacing.spacing300),
+            label = stringResource(R.string.nickname_change_input_label),
+            errorMessage = lengthErrorMessage,
             value = state.nicknameInput,
             onValueChange = { nickname ->
-                if (nickname.length <= NicknamePolicy.MAX_LENGTH) {
+                if (nickname.trim().length > NicknamePolicy.MAX_LENGTH) {
+                    maxLengthExceeded = true
+                } else {
+                    maxLengthExceeded = false
                     viewModel.onNicknameInputChange(nickname)
                 }
             },
@@ -87,7 +110,8 @@ fun NicknameChangeScreen(
         GamssButton(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(18.dp),
+                .padding(horizontal = ScreenHorizontalPadding)
+                .padding(bottom = GamssTheme.spacing.spacing200),
             label = stringResource(R.string.nickname_change_save),
             onClick = viewModel::saveNickname,
             variant = GamssButtonVariant.Primary,
@@ -96,10 +120,12 @@ fun NicknameChangeScreen(
     }
 }
 
+private val ScreenHorizontalPadding = 18.dp
+
 private fun NicknameFailureReason.toMessage(): String =
     when (this) {
         NicknameFailureReason.MISSING -> "닉네임을 입력해주세요"
-        NicknameFailureReason.INVALID_LENGTH -> "닉네임은 2~20자로 입력해주세요"
+        NicknameFailureReason.INVALID_LENGTH -> "닉네임은 2~10자로 입력해주세요"
         NicknameFailureReason.INVALID_NICKNAME -> "사용할 수 없는 닉네임이에요"
         NicknameFailureReason.NETWORK -> "네트워크 연결을 확인해주세요"
         NicknameFailureReason.UNKNOWN -> "닉네임 변경에 실패했어요"

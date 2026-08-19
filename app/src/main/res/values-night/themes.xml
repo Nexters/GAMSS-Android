@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.GAMSS" parent="android:Theme.Material.NoActionBar" />
+    <!-- 셸이 라이트로 고정된 동안에는 첫 프레임 윈도우 배경도 라이트여야 한다. 다크 시안이 나오면 되돌린다. -->
+    <style name="Theme.GAMSS" parent="android:Theme.Material.Light.NoActionBar" />
 </resources>

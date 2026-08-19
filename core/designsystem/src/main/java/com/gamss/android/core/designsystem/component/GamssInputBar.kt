@@ -45,6 +45,8 @@ private val InputBarHorizontalPadding = 20.dp
 private val SendButtonSize = 32.dp
 
 private val ControlsTouchOverhang = (GamssTouchTarget.minimum - ControlsRowHeight) / 2
+
+// 140자 상한을 이 폭에서 담으려면 6줄이면 넉넉하다. 넘치면 입력칸 안에서 스크롤된다.
 private const val INPUT_MAX_LINES = 6
 
 private const val HEIGHT_ANIMATION_DURATION_MS = 350
@@ -59,9 +61,17 @@ fun GamssInputBar(
     placeholder: String = "",
     sendContentDescription: String? = null,
     enabled: Boolean = true,
+    /**
+     * 전송 버튼(및 키보드 전송 액션)만 따로 잠글 때 쓴다. 기본은 [enabled]를 그대로 따른다.
+     * 입력칸은 계속 켜둔 채 전송만 잠깐 막고 싶을 때(예: 메시지 전송 중 포커스·키보드는
+     * 유지하되 중복 전송만 막는 경우) [enabled]와 분리해 넘긴다.
+     */
+    sendEnabled: Boolean = enabled,
     beforeSendSlot: @Composable (() -> Unit)? = null,
+    /** 이 줄 수까지 늘어나고, 넘는 내용은 입력칸 안에서 스크롤된다. 화면별 글자 상한에 맞춰 조정한다. */
+    maxLines: Int = INPUT_MAX_LINES,
 ) {
-    val canSubmit = enabled && value.isNotBlank()
+    val canSubmit = sendEnabled && value.isNotBlank()
     var isExpanded by remember { mutableStateOf(false) }
 
     val baseHeight = if (isExpanded) ExpandedInputBarHeight else CollapsedInputBarHeight
@@ -86,6 +96,7 @@ fun GamssInputBar(
                 canSubmit = canSubmit,
                 onSubmit = onSend,
                 onFocusChanged = { isExpanded = it },
+                maxLines = maxLines,
             )
             ControlsRow(
                 canSubmit = canSubmit,
@@ -135,6 +146,7 @@ private fun InputTextField(
     canSubmit: Boolean,
     onSubmit: () -> Unit,
     onFocusChanged: (Boolean) -> Unit,
+    maxLines: Int,
 ) {
     val textStyle = GamssTheme.typography.body4Medium
     BasicTextField(
@@ -144,7 +156,7 @@ private fun InputTextField(
         enabled = enabled,
         singleLine = false,
         minLines = 1,
-        maxLines = INPUT_MAX_LINES,
+        maxLines = maxLines,
         // 입력바 SVG는 라이트 배경이므로 시스템 다크 모드와 무관하게 전경을 검정으로 고정한다.
         textStyle = textStyle.copy(color = GamssTheme.colors.black),
         cursorBrush = SolidColor(GamssTheme.colors.black),

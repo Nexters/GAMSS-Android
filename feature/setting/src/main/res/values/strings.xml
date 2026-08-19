@@ -2,6 +2,9 @@
 <resources>
     <string name="setting_title">설정</string>
     <string name="setting_list_user_account">계정 정보</string>
+    <string name="setting_list_notification">알림 설정</string>
+    <string name="setting_badge_on">ON</string>
+    <string name="setting_badge_off">OFF</string>
     <string name="setting_list_service_term">서비스 이용약관</string>
     <string name="setting_list_privacy_policy">개인정보 처리방침</string>
     <string name="setting_list_app_version">앱 버전</string>
@@ -16,5 +19,8 @@
     <string name="account_info_delete_user_info_dialog_subtitle">회원 탈퇴 시 지금까지 기록된 카드와 대화 내용은\n영원히 삭제되며 복구되지 않아요.</string>
     <string name="account_info_delete_user_info_dialog_action_button_label">탈퇴하기</string>
     <string name="account_info_delete_user_info_dialog_dismiss_button_label">뒤로가기</string>
+    <string name="nickname_change_input_label">변경할 닉네임을 입력해주세요.</string>
+    <string name="nickname_change_input_error_min_length">닉네임은 2자 이상으로 입력해주세요.</string>
+    <string name="nickname_change_input_error_max_length">닉네임은 10자 이하로 입력해주세요.</string>
     <string name="nickname_change_save">저장하기</string>
 </resources>

@@ -59,6 +59,9 @@ internal val ChromaticDarkPurple = Color(0xFFCC6DFC)
 
 @Immutable
 data class GamssColors(
+    // 기기 다크 모드가 아니라 GamssTheme 이 고른 팔레트를 가리킨다. 셸이 라이트로 고정된 동안
+    // isSystemInDarkTheme() 을 직접 보면 테마와 어긋나므로, 다크 분기는 이 값으로 판단한다.
+    val isDark: Boolean,
     val white: Color,
     val black: Color,
     // Figma 의 Gray/Gray1000. 라이트와 다크가 같은 값이라 gray025~gray950 과 달리 반전하지 않는다.
@@ -88,6 +91,7 @@ data class GamssColors(
 )
 
 val LightGamssColors = GamssColors(
+    isDark = false,
     white = White,
     black = Black,
     gray1000 = Gray1000,
@@ -115,6 +119,7 @@ val LightGamssColors = GamssColors(
 )
 
 val DarkGamssColors = GamssColors(
+    isDark = true,
     white = White,
     black = Black,
     gray1000 = Gray1000,

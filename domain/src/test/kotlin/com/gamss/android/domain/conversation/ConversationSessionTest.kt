@@ -3,9 +3,9 @@ package com.gamss.android.domain.conversation
 import androidx.paging.PagingData
 import com.gamss.android.core.common.AppResult
 import com.gamss.android.domain.card.Card
-import com.gamss.android.domain.card.CardRepository
 import com.gamss.android.domain.card.CreateCardUseCase
 import com.gamss.android.domain.card.CreateConversationCardUseCase
+import com.gamss.android.domain.card.FakeCardRepository
 import com.gamss.android.domain.conversation.chattingsearch.ChattingRoomSummary
 import com.gamss.android.domain.emotion.ClassificationResult
 import com.gamss.android.domain.emotion.ConversationEmotionAccumulator
@@ -288,10 +288,7 @@ class ConversationSessionTest {
         }
     }
 
-    private object NoOpCardRepository : CardRepository {
-        override suspend fun getCardsByDate(date: LocalDate): AppResult<List<Card>> =
-            AppResult.Success(emptyList())
-
+    private object NoOpCardRepository : FakeCardRepository() {
         override suspend fun createCard(
             conversationId: Long,
             character: EmotionCharacter,
@@ -307,13 +304,6 @@ class ConversationSessionTest {
                 date = LocalDate.of(2026, 8, 15),
             ),
         )
-
-        override suspend fun deleteAllCards(): AppResult<Unit> = error("사용하지 않음")
-
-        override suspend fun deleteCard(cardId: Long): AppResult<Unit> = error("사용하지 않음")
-
-        override suspend fun deleteCardsByEmotion(character: EmotionCharacter): AppResult<Unit> =
-            error("사용하지 않음")
     }
 
     private class FakeConversationRepository(
