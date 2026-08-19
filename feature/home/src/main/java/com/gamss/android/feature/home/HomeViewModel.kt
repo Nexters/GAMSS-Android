@@ -46,7 +46,7 @@ class HomeViewModel @Inject constructor(
         reduce { state.copy(isEmotionPickerExpanded = !state.isEmotionPickerExpanded) }
     }
 
-    // 닫기는 토글과 나눠 둔다. 바깥 탭과 Popup 의 dismiss 가 겹쳐 들어와도 다시 열리면 안 된다.
+    // 닫기는 토글과 나눠 둔다. 바깥 탭과 뒤로가기가 겹쳐 들어와도 다시 열리면 안 된다.
     fun onEmotionPickerDismiss() = intent {
         reduce { state.copy(isEmotionPickerExpanded = false) }
     }
