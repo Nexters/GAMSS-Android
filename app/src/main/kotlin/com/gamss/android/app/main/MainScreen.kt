@@ -177,7 +177,15 @@ private fun mainEntryProvider(navigator: Navigator) = entryProvider {
     entry<ChatRoomKey>(metadata = detailSlideTransition) { key ->
         ChatRoomScreen(
             conversationId = key.conversationId,
-            onCardClose = navigator::goBack,
+            // 버린 카드가 어디로 갔는지 바로 보여 준다. 끝난 대화방은 먼저 대화 탭에서 비운다 —
+            // 남겨 두면 보관함에서 뒤로 나올 때 다시 들어가고, 카드 단계가 그대로라 접기 연출이
+            // 또 열린다. 탭을 옮긴 뒤에는 currentSubStack 이 보관함 쪽이라 순서를 바꿀 수 없다.
+            onCardDiscard = { emotion ->
+                navigator.finishCurrentFlow()
+                navigator.navigate(ArchiveKey)
+                navigator.navigate(ArchiveDetailKey(emotion))
+            },
+            onCardSkip = navigator::goBack,
             onBackClick = navigator::goBack,
         )
     }
