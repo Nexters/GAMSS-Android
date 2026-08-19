@@ -282,4 +282,3 @@ private fun ModelDownloadConfirmationEffect(
 
 private const val NO_BACK_PRESS = 0L
 private const val EXIT_CONFIRM_WINDOW_MS = 2000L
-
