@@ -189,6 +189,7 @@ private fun mainEntryProvider(navigator: Navigator) = entryProvider {
         ChatRoomScreen(
             conversationId = key.conversationId,
             onCardClose = navigator::goBack,
+            onBackClick = navigator::goBack,
         )
     }
 }

@@ -10,7 +10,9 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -28,12 +30,15 @@ private val TooltipContentGap = 6.dp
 private val TooltipBorderWidth = 1.dp
 private val ProgressBarHeight = 9.dp
 private val TooltipShadowElevation = 40.dp
+private val LoadingIndicatorSize = 24.dp
+private val LoadingIndicatorStrokeWidth = 2.dp
 
 /**
  * 상단 내비게이션의 토큰 사용량 아이콘을 눌렀을 때 그 아래 뜨는 툴팁.
  *
  * [usagePercent]는 0~100 사이 값을 그대로 받는다 — 계산(도메인 값 유무 판단 등)은 호출부 책임이다.
- * null이면 조회에 실패한 것으로 보고 [failMessage]와 재시도 액션([retryLabel]/[onRetryClick])을 대신 보여준다.
+ * [isLoading]이 true면 조회 중으로 보고 로딩 인디케이터를 대신 보여준다.
+ * 그 외에 null이면 조회에 실패한 것으로 보고 [failMessage]와 재시도 액션([retryLabel]/[onRetryClick])을 대신 보여준다.
  */
 @Composable
 fun GamssTokenUsageTooltip(
@@ -45,6 +50,7 @@ fun GamssTokenUsageTooltip(
     retryLabel: String,
     onRetryClick: () -> Unit,
     modifier: Modifier = Modifier,
+    isLoading: Boolean = false,
 ) {
     Column(
         modifier = modifier
@@ -55,7 +61,23 @@ fun GamssTokenUsageTooltip(
             .padding(TooltipPadding),
         verticalArrangement = Arrangement.spacedBy(TooltipContentGap),
     ) {
-        if (usagePercent != null) {
+        if (isLoading) {
+            Text(
+                text = title,
+                style = GamssTheme.typography.subtitle4,
+                color = GamssTheme.colors.gray900,
+            )
+            Box(
+                modifier = Modifier.fillMaxWidth(),
+                contentAlignment = Alignment.Center,
+            ) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(LoadingIndicatorSize),
+                    color = GamssTheme.colors.gray900,
+                    strokeWidth = LoadingIndicatorStrokeWidth,
+                )
+            }
+        } else if (usagePercent != null) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
