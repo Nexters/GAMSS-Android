@@ -53,11 +53,7 @@ internal fun ChattingListSectionHeader(
                 ),
                 text = stringResource(R.string.chatting_list_delete_action),
                 style = GamssTheme.typography.body5Medium,
-                color = if (deleteActionEnabled) {
-                    GamssTheme.colors.gray500
-                } else {
-                    GamssTheme.colors.gray300
-                },
+                color = GamssTheme.colors.gray500,
             )
         }
     }
