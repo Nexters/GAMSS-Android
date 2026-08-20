@@ -117,25 +117,21 @@ class ArchiveDetailViewModel @Inject constructor(
         if (state.isConversationLoading) return@intent
 
         reduce { state.copy(isConversationLoading = true) }
-        val messages = when (val result = getConversation(card.conversationId)) {
-            is AppResult.Success -> result.data.messages
+        val conversationCard = when (val result = getConversation(card.conversationId)) {
+            is AppResult.Success -> ConversationCard(card = card, messages = result.data.messages)
             is AppResult.Failure -> null
         }
-
-        if (messages == null) {
-            // 감정 카드를 그대로 띄워 둔다. 카드가 사라지면 다시 종이를 눌러야 재시도할 수 있다.
-            reduce { state.copy(isConversationLoading = false) }
-            postSideEffect(ArchiveDetailSideEffect.ConversationLoadFailed)
-            return@intent
-        }
-
+        // 못 불러왔으면 감정 카드를 건드리지 않는다. 기다리는 사이 사용자가 카드를 닫았을 수도 있어
+        // 진입 시점에 잡아 둔 card 로 되살리지 않고 지금 상태를 그대로 둔다.
         reduce {
             state.copy(
                 isConversationLoading = false,
-                selectedCard = null,
-                conversationCard = ConversationCard(card = card, messages = messages),
+                selectedCard = if (conversationCard == null) state.selectedCard else null,
+                conversationCard = conversationCard,
             )
         }
+
+        if (conversationCard == null) postSideEffect(ArchiveDetailSideEffect.ConversationLoadFailed)
     }
 
     /** 카드를 뒤집어 놓은 상태라, 닫으면 종이 더미가 아니라 원래 보던 감정 카드로 돌아온다. */

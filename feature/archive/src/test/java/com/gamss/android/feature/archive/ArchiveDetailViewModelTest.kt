@@ -276,6 +276,42 @@ class ArchiveDetailViewModelTest {
     }
 
     @Test
+    fun `늦게 온 대화 실패 응답은 이미 닫은 감정 카드를 되살리지 않는다`() = runTest {
+        val repository = FakeCardRepository(
+            monthResult = AppResult.Success(listOf(angerEntry)),
+            dateResult = AppResult.Success(listOf(firstCardOfDay)),
+        )
+        val conversationGate = CompletableDeferred<Unit>()
+        val viewModel = viewModel(
+            repository,
+            FakeConversationRepository(AppResult.Failure(IllegalStateException("network")), conversationGate),
+        )
+        val testScope = this
+
+        viewModel.test(this) {
+            containerHost.load(EmotionCharacter.ANGER)
+            expectState { copy(emotion = EmotionCharacter.ANGER) }
+            expectState { copy(cards = ArchiveCards.Loaded(listOf(angerEntry))) }
+
+            containerHost.selectCard(angerEntry)
+            expectState { copy(isCardLoading = true) }
+            expectState { copy(isCardLoading = false, selectedCard = firstCardOfDay) }
+
+            // 대화 응답이 게이트에 걸려 멈춰 있는 동안 감정 카드를 닫는다.
+            containerHost.viewSelectedConversation()
+            expectState { copy(isConversationLoading = true) }
+
+            containerHost.dismissCard()
+            expectState { copy(selectedCard = null) }
+
+            conversationGate.complete(Unit)
+            testScope.runCurrent()
+            expectState { copy(isConversationLoading = false) }
+            expectSideEffect(ArchiveDetailSideEffect.ConversationLoadFailed)
+        }
+    }
+
+    @Test
     fun `늦게 온 이전 달 응답은 지금 보고 있는 달을 덮지 않는다`() = runTest {
         val currentMonth = YearMonth.now(KoreanTimeZone)
         val slowMonth = currentMonth.minusMonths(2)
@@ -428,12 +464,15 @@ private class FakeCardRepository(
 private class FakeConversationRepository(
     private val conversationResult: AppResult<ConversationDetail> =
         AppResult.Failure(IllegalStateException("대화를 준비하지 않았다")),
+    /** 넘기면 게이트가 열릴 때까지 응답을 붙잡는다. 늦게 도착하는 응답을 만들 때 쓴다. */
+    private val gate: CompletableDeferred<Unit>? = null,
 ) : ConversationRepository {
 
     val requestedConversationIds = mutableListOf<Long>()
 
     override suspend fun getConversation(conversationId: Long): AppResult<ConversationDetail> {
         requestedConversationIds += conversationId
+        gate?.await()
         return conversationResult
     }
 
