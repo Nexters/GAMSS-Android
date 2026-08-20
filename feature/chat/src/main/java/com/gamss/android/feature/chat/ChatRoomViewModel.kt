@@ -64,15 +64,15 @@ class ChatRoomViewModel @Inject constructor(
 
     /**
      * [tokenUsageRefreshNotifier]가 전역으로 흘려보내는 알림을 그대로 토스트로 옮긴다. LOW(10%
-     * 미만 남음)는 하루 1회만 오므로 여러 채팅방을 오가도(대화방을 나갔다 들어와도) 중복으로 뜨지
-     * 않지만, EXHAUSTED(전부 소진)는 refresh()가 소진을 확인할 때마다(전송 성공, 채팅방 진입 등)
-     * 매번 온다.
+     * 미만 남음)·EXHAUSTED(전부 소진) 모두 하루 1회만 오므로, 여러 채팅방을 오가거나 같은 방에
+     * 재진입해도 중복으로 뜨지 않는다 — 소진시킨 그 전송 시점에 딱 한 번만 보인다.
      *
      * EXHAUSTED를 여기서만 다루는 이유: [CommentGenerationStatus.LIMIT_EXCEEDED]는 "이미 소진된
      * 상태에서 보냈다"는 신호라, 정작 이번 전송으로 막 소진된 순간(댓글 자체는 정상 생성되고 그
-     * 직후 조회에서 exceeded=true로 확인되는 경우)에는 오지 않는다 — 전송 버튼이 소진 즉시
-     * 잠기는 지금 구조에서는 그 순간을 놓치면 다시 보낼 방법이 없어 토스트가 영영 안 뜬다.
-     * 그래서 실측(exceeded)을 직접 보는 이 스트림을 유일한 소스로 쓴다(아래 [onSend] 참고).
+     * 직후 조회에서 exceeded=true로 확인되는 경우)에는 오지 않는다. 실측(exceeded)을 직접 보는
+     * 이 스트림을 유일한 소스로 쓴다(아래 [onSend] 참고). 이후 다른 채팅방에 들어가 다시
+     * `isTokenExhausted`가 반영되는 건 [observeTokenExhausted]가 맡고, 그건 알림이 아니라
+     * 입력창 잠금용 상태라 몇 번이든 다시 반영돼도 된다.
      */
     private fun observeTokenUsageAlerts() = intent {
         tokenUsageRefreshNotifier.alerts.collect { alert ->

@@ -24,21 +24,19 @@ class TokenUsageRefreshNotifierImplTest {
     private val userRepository: UserRepository = mockk()
 
     @Test
-    fun `소진 상태면 요청할 때마다 EXHAUSTED를 매번 흘려보낸다`() = runTest {
+    fun `소진 상태면 같은 날엔 EXHAUSTED를 한 번만 흘려보낸다`() = runTest {
         coEvery { userRepository.getDailyTokenUsage() } returns
             AppResult.Success(usage(usedTokens = 100, dailyLimit = 100, exceeded = true))
         val notifier = newNotifier()
         val received = collectAlerts(notifier)
 
+        // 소진시킨 전송 직후 1회 + 이후 다른 채팅방 진입 등으로 재조회되는 경우를 흉내낸다.
         repeat(3) {
             notifier.requestRefresh()
             advanceUntilIdle()
         }
 
-        assertEquals(
-            listOf(TokenUsageAlert.EXHAUSTED, TokenUsageAlert.EXHAUSTED, TokenUsageAlert.EXHAUSTED),
-            received,
-        )
+        assertEquals(listOf(TokenUsageAlert.EXHAUSTED), received)
     }
 
     @Test

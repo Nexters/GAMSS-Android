@@ -42,10 +42,12 @@ internal class TokenUsageRefreshNotifierImpl @Inject constructor(
     private val _alerts = MutableSharedFlow<TokenUsageAlert>(extraBufferCapacity = 1)
     override val alerts: Flow<TokenUsageAlert> = _alerts.asSharedFlow()
 
-    // 화면(ViewModel)을 나갔다 들어와도 안 사라지도록, "이미 알렸는지"는 프로세스가 사는 동안
-    // 여기 싱글턴에만 기억한다. LOW는 하루 1회만 알리면 되지만, EXHAUSTED는 전송할 때마다(=
-    // refresh() 호출마다) 소진 상태면 매번 알려야 해서 별도 게이팅 플래그가 없다.
+    // 화면(ViewModel)을 나갔다 들어오거나 다른 채팅방에 진입해도 중복으로 안 뜨도록, "이미
+    // 알렸는지"는 프로세스가 사는 동안 여기 싱글턴에만 기억한다. isExhausted는 이 플래그와
+    // 무관하게 refresh() 때마다 항상 최신화된다 — 알림은 한 번만, 상태 반영(입력창 잠금)은
+    // 매번.
     private var hasAlertedLow = false
+    private var hasAlertedExhausted = false
 
     init {
         applicationScope.launch {
@@ -64,20 +66,24 @@ internal class TokenUsageRefreshNotifierImpl @Inject constructor(
         val percent = calculateTokenUsagePercent(usage.usedTokens, usage.dailyLimit)
 
         // 이전보다 사용량이 줄었거나(서버가 오전 5시에 리셋) 더 이상 소진 상태가 아니라면
-        // 새 하루로 보고 LOW 알림 상태를 초기화한다 — 클라이언트가 리셋 시각을 직접 계산하지 않는다.
+        // 새 하루로 보고 알림 상태를 초기화한다 — 클라이언트가 리셋 시각을 직접 계산하지 않는다.
         val previousPercent = _usagePercent.value
         val isNewDay = (previousPercent != null && percent != null && percent < previousPercent) ||
             (_isExhausted.value && !usage.exceeded)
         if (isNewDay) {
             hasAlertedLow = false
+            hasAlertedExhausted = false
         }
         _isExhausted.value = usage.exceeded
         _usagePercent.value = percent
 
         when {
             // exceeded는 서버가 내려주는 확정값이라 반올림 오차가 있는 percent >= 100 보다 정확하다.
-            // requestRefresh()가 불릴 때마다(채팅방 진입, 전송 성공 등) 소진 상태면 매번 알린다.
-            usage.exceeded -> {
+            // 알림은 하루 1회만 — 소진시킨 그 전송 시점에만 뜨고, 이후 다른 채팅방에 들어가거나
+            // 같은 방에 재진입해 refresh()가 다시 돌아도 다시 뜨지 않는다. isExhausted 자체는
+            // 이 게이팅과 무관하게 위에서 매번 최신화되므로 입력창 잠금은 계속 정확하다.
+            usage.exceeded && !hasAlertedExhausted -> {
+                hasAlertedExhausted = true
                 hasAlertedLow = true
                 _alerts.tryEmit(TokenUsageAlert.EXHAUSTED)
             }
