@@ -14,6 +14,7 @@ import com.gamss.android.domain.auth.AuthRepository
 import com.gamss.android.domain.auth.LoginResult
 import com.gamss.android.domain.auth.SessionExpiredException
 import com.gamss.android.domain.auth.SessionState
+import com.gamss.android.domain.card.CardRepository
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
 import kotlinx.coroutines.CancellationException
@@ -31,6 +32,7 @@ internal class AuthRepositoryImpl @Inject constructor(
     private val authService: AuthService,
     private val firebaseAuth: FirebaseAuth,
     private val authTokenLocalDataSource: AuthTokenLocalDataSource,
+    private val cardRepository: CardRepository,
     @ApplicationScope private val applicationScope: CoroutineScope,
 ) : AuthRepository {
 
@@ -142,10 +144,27 @@ internal class AuthRepositoryImpl @Inject constructor(
             firebaseAuth.signOut()
         }
         if (result is AppResult.Failure) {
-            Log.e(TAG, "세션 정리 실패 (reason=$reason)", result.throwable)
+            runCatching { Log.e(TAG, "세션 정리 실패 (reason=$reason)", result.throwable) }
         }
         _sessionState.value = SessionState.Unauthenticated
+        clearCardCacheSafely(reason)
         return result
+    }
+
+    /**
+     * 이 함수는 [invalidateSession] 을 거쳐 applicationScope.launch 안에서도 호출된다.
+     * 그 스코프엔 예외 핸들러가 없어, 여기서 던지면 앱이 죽는다. 캐시 정리 실패로
+     * 세션 정리 자체를 실패로 되돌릴 이유도 없어 던지지 않고 기록만 한다.
+     */
+    @Suppress("TooGenericExceptionCaught")
+    private suspend fun clearCardCacheSafely(reason: SessionClearReason) {
+        try {
+            cardRepository.clearCache()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Throwable) {
+            runCatching { Log.e(TAG, "카드 캐시 정리 실패 (reason=$reason)", e) }
+        }
     }
 
     private enum class SessionClearReason {
