@@ -24,6 +24,15 @@ internal val GrayLight800 = Color(0xFF474951)
 internal val GrayLight900 = Color(0xFF303136)
 internal val GrayLight950 = Color(0xFF1E1F22)
 
+/**
+ * 카드를 이미지로 내보낼 때 카드 바깥 여백에 깔 색.
+ *
+ * `GamssImageCard` 가 카드 안쪽을 [LightGamssColors] 로 고정하므로 이 색도 테마에 따라 반전하면
+ * 안 된다. `GamssTheme.colors.gray950` 을 쓰면 다크에서 밝은 색으로 뒤집혀 밝은 카드 뒤에
+ * 밝은 배경이 깔린다. 그래서 라이트 톤을 그대로 노출한다.
+ */
+val GamssCardExportBackground: Color = GrayLight950
+
 // Gray - Dark
 internal val GrayDark025 = Color(0xFF1E1F22)
 internal val GrayDark050 = Color(0xFF24262B)
@@ -59,6 +68,9 @@ internal val ChromaticDarkPurple = Color(0xFFCC6DFC)
 
 @Immutable
 data class GamssColors(
+    // 기기 다크 모드가 아니라 GamssTheme 이 고른 팔레트를 가리킨다. 셸이 라이트로 고정된 동안
+    // isSystemInDarkTheme() 을 직접 보면 테마와 어긋나므로, 다크 분기는 이 값으로 판단한다.
+    val isDark: Boolean,
     val white: Color,
     val black: Color,
     // Figma 의 Gray/Gray1000. 라이트와 다크가 같은 값이라 gray025~gray950 과 달리 반전하지 않는다.
@@ -88,6 +100,7 @@ data class GamssColors(
 )
 
 val LightGamssColors = GamssColors(
+    isDark = false,
     white = White,
     black = Black,
     gray1000 = Gray1000,
@@ -115,6 +128,7 @@ val LightGamssColors = GamssColors(
 )
 
 val DarkGamssColors = GamssColors(
+    isDark = true,
     white = White,
     black = Black,
     gray1000 = Gray1000,

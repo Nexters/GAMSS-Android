@@ -27,6 +27,7 @@ import com.gamss.android.core.designsystem.theme.GamssTheme
  * 버튼 너비는 [modifier]를 통해 화면에 맞게 조절할 수 있으며, 콘텐츠 주변에는 디자인 가이드의
  * 최소 여백 16dp가 항상 적용됩니다. [enabled]가 `false`이면 [variant]와 관계없이 비활성 색상이
  * 적용되고 클릭 이벤트도 전달되지 않습니다.
+ * [isProcessing]이 `true`이면 현재 색상은 유지하면서 중복 클릭만 막습니다.
  *
  * 누를 때 ripple을 그리지 않습니다. 디자인에 눌림 표현이 없어, 기본 indication을 두면 색이
  * 겹쳐 보이는 잔상이 생깁니다.
@@ -38,15 +39,17 @@ fun GamssButton(
     modifier: Modifier = Modifier,
     variant: GamssButtonVariant = GamssButtonVariant.Primary,
     enabled: Boolean = true,
+    isProcessing: Boolean = false,
 ) {
     val colors = gamssButtonColors(variant = variant, enabled = enabled)
+    val isClickable = enabled && !isProcessing
 
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(GamssTheme.radius.radius200))
             .background(colors.containerColor)
             .clickable(
-                enabled = enabled,
+                enabled = isClickable,
                 role = Role.Button,
                 indication = null,
                 interactionSource = null,
@@ -84,13 +87,18 @@ private fun gamssButtonColors(
             contentColor = GamssTheme.colors.gray025,
         )
 
+        GamssButtonVariant.PrimaryDark -> GamssButtonColors(
+            containerColor = GamssTheme.colors.gray900,
+            contentColor = GamssTheme.colors.gray025,
+        )
+
         GamssButtonVariant.Secondary -> GamssButtonColors(
             containerColor = GamssTheme.colors.gray100,
             contentColor = GamssTheme.colors.gray600,
         )
 
         GamssButtonVariant.Destructive -> GamssButtonColors(
-            containerColor = GamssTheme.colors.red,
+            containerColor = GamssTheme.colors.apricot,
             contentColor = GamssTheme.colors.white,
         )
     }

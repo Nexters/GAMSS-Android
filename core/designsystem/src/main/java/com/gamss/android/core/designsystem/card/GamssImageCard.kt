@@ -1,6 +1,7 @@
 package com.gamss.android.core.designsystem.card
 
 import android.content.res.Configuration
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -25,6 +26,8 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.layout.ContentScale
@@ -125,30 +128,39 @@ private fun GamssImageCardEmotionDarkPreview() {
 }
 
 /**
+ * 카드 하단의 버튼 두 개와 공유 행에 필요한 문구·동작 묶음.
+ *
+ * 여섯 값이 늘 함께 쓰이고 함께 사라지므로 한 덩어리로 받는다. [GamssEmotionCard] 에 `null` 을
+ * 넘기면 이 영역을 아예 그리지 않아, 누를 수 없는 버튼이 남는 상태를 만들 수 없다.
+ */
+data class GamssEmotionCardActions(
+    val primaryLabel: String,
+    val secondaryLabel: String,
+    val shareLabel: String,
+    val onPrimaryClick: () -> Unit,
+    val onSecondaryClick: () -> Unit,
+    val onShareClick: () -> Unit,
+)
+
+/**
  * 감정 캐릭터와 대화 요약을 보여 주는 이미지 카드 퍼사드.
  *
  * 카드의 고정 구조와 감정별 캐릭터 선택은 이 컴포넌트가 맡고, 문구와 사용자 동작만 호출부가 제공한다.
  * 따라서 화면마다 [GamssImageCard]의 간격과 텍스트 스타일을 다시 조합할 필요가 없다.
  *
- * [showActions] 를 `false` 로 두면 하단 버튼과 공유 행을 그리지 않는다. 카드를 이미지로 내보낼 때
- * 눌릴 수 없는 버튼이 그림에 남지 않게 하려는 용도다.
+ * [actions] 가 `null` 이면 점선과 그 아래 버튼·공유 행을 그리지 않는다. 카드를 이미지로 내보낼 때
+ * 눌릴 수 없는 버튼이 그림에 남지 않게 하려는 용도다. 카드 높이는 [CardAspectRatio] 로 고정이라
+ * 그만큼 아래가 빈 채로 남는다.
  */
 @Composable
-@Suppress("LongParameterList")
 fun GamssEmotionCard(
     date: String,
     character: GamssEmotionCardCharacter,
     title: String,
     description: String,
-    primaryActionLabel: String,
-    secondaryActionLabel: String,
-    shareActionLabel: String,
-    onPrimaryActionClick: () -> Unit,
-    onSecondaryActionClick: () -> Unit,
-    onShareClick: () -> Unit,
+    actions: GamssEmotionCardActions?,
     modifier: Modifier = Modifier,
     shape: Shape = RectangleShape,
-    showActions: Boolean = true,
     topEndAction: @Composable BoxScope.() -> Unit = {},
 ) {
     GamssImageCard(
@@ -157,7 +169,7 @@ fun GamssEmotionCard(
         shape = shape,
         topEndAction = topEndAction,
     ) {
-        GamssEmotionCardContent(character = character) {
+        GamssEmotionCardContent(character = character, showDivider = true) {
             Text(
                 text = title,
                 modifier = Modifier.fillMaxWidth(),
@@ -172,23 +184,26 @@ fun GamssEmotionCard(
                 style = GamssTheme.typography.body4Regular,
                 color = GamssTheme.colors.gray800,
                 textAlign = TextAlign.Center,
-                maxLines = 2,
+                // Figma Description 은 높이 60 / lineHeight 20 으로 3줄까지 담는다.
+                maxLines = DESCRIPTION_MAX_LINES,
                 overflow = TextOverflow.Ellipsis,
             )
-            if (showActions) {
-                Spacer(modifier = Modifier.height(GamssTheme.spacing.spacing800))
+            if (actions != null) {
+                Spacer(modifier = Modifier.height(DividerToContentGap))
+                GamssCardDashedDivider()
+                Spacer(modifier = Modifier.height(DividerToContentGap))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(GamssTheme.spacing.spacing100),
                 ) {
                     CardOutlinedButton(
-                        text = primaryActionLabel,
-                        onClick = onPrimaryActionClick,
+                        text = actions.primaryLabel,
+                        onClick = actions.onPrimaryClick,
                         modifier = Modifier.weight(1f),
                     )
                     CardOutlinedButton(
-                        text = secondaryActionLabel,
-                        onClick = onSecondaryActionClick,
+                        text = actions.secondaryLabel,
+                        onClick = actions.onSecondaryClick,
                         modifier = Modifier.weight(1f),
                     )
                 }
@@ -196,12 +211,12 @@ fun GamssEmotionCard(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .noRippleClickableIfNotNull(onShareClick),
+                        .noRippleClickableIfNotNull(actions.onShareClick),
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        text = shareActionLabel,
+                        text = actions.shareLabel,
                         style = GamssTheme.typography.body5Medium,
                         color = GamssTheme.colors.gray600,
                     )
@@ -218,10 +233,16 @@ fun GamssEmotionCard(
     }
 }
 
-/** 감정 카드의 캐릭터 영역과 그 아래 콘텐츠 간격을 재사용한다. */
+/**
+ * 감정 카드의 캐릭터 영역과 그 아래 콘텐츠 간격을 재사용한다.
+ *
+ * [showDivider] 를 켜면 캐릭터와 콘텐츠 사이에 점선을 넣는다. 카드 목록처럼 점선이 없는
+ * 시안도 같은 캐릭터 영역을 쓰므로 기본값은 꺼짐이다.
+ */
 @Composable
 fun ColumnScope.GamssEmotionCardContent(
     character: GamssEmotionCardCharacter,
+    showDivider: Boolean = false,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     Spacer(modifier = Modifier.height(DateToCharacterGap))
@@ -232,8 +253,36 @@ fun ColumnScope.GamssEmotionCardContent(
     ) {
         GamssEmotionCardCharacterImage(character = character)
     }
-    Spacer(modifier = Modifier.height(CharacterToTitleGap))
+    if (showDivider) {
+        Spacer(modifier = Modifier.height(CharacterToDividerGap))
+        GamssCardDashedDivider()
+        Spacer(modifier = Modifier.height(DividerToContentGap))
+    } else {
+        Spacer(modifier = Modifier.height(CharacterToTitleGap))
+    }
     content()
+}
+
+/** 카드 안을 가로로 끊어 주는 점선. 콘텐츠 열 전체 폭을 쓴다. */
+@Composable
+private fun GamssCardDashedDivider(modifier: Modifier = Modifier) {
+    val color = GamssTheme.colors.gray950
+    Canvas(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(CardDividerThickness),
+    ) {
+        val y = size.height / 2f
+        drawLine(
+            color = color,
+            start = Offset(0f, y),
+            end = Offset(size.width, y),
+            strokeWidth = size.height,
+            pathEffect = PathEffect.dashPathEffect(
+                floatArrayOf(CardDividerDashLength.toPx(), CardDividerDashGap.toPx()),
+            ),
+        )
+    }
 }
 
 /**
@@ -267,12 +316,14 @@ private fun EmotionCardPreviewContent() {
         character = GamssEmotionCardCharacter.ANGER,
         title = "오늘 화~나네",
         description = "설느닛람햄을 긱에자네에 신손 겅투히오의 흐랸비의 수매해으는 하어이",
-        primaryActionLabel = "기록 버리기",
-        secondaryActionLabel = "대화보기",
-        shareActionLabel = "공유하기",
-        onPrimaryActionClick = {},
-        onSecondaryActionClick = {},
-        onShareClick = {},
+        actions = GamssEmotionCardActions(
+            primaryLabel = "기록 버리기",
+            secondaryLabel = "대화보기",
+            shareLabel = "공유하기",
+            onPrimaryClick = {},
+            onSecondaryClick = {},
+            onShareClick = {},
+        ),
         topEndAction = { CloseIconPlaceholder() },
     )
 }
@@ -371,3 +422,12 @@ private val CardAspectRatio = CardWidth.value / CardHeight.value
 private val DateToCharacterGap = 18.dp
 private val CharacterImageHeight = 156.dp
 private val CharacterToTitleGap = 42.dp
+
+// 점선 관련 값은 Figma Card(3557:5286)의 Divider 기준이다. 점선은 콘텐츠 열 전체 폭(270)을
+// 쓰고 위아래 22 씩 띄우며, 캐릭터 이미지와는 16 만 띄운다.
+private val CharacterToDividerGap = 16.dp
+private val DividerToContentGap = 22.dp
+private val CardDividerThickness = 1.3.dp
+private val CardDividerDashLength = 6.dp
+private val CardDividerDashGap = 4.dp
+private const val DESCRIPTION_MAX_LINES = 3

@@ -3,6 +3,7 @@ package com.gamss.android.feature.chat
 import androidx.paging.PagingData
 import com.gamss.android.core.common.AppResult
 import com.gamss.android.domain.card.Card
+import com.gamss.android.domain.card.CardEntry
 import com.gamss.android.domain.card.CardRepository
 import com.gamss.android.domain.card.CreateCardUseCase
 import com.gamss.android.domain.card.CreateConversationCardUseCase
@@ -11,13 +12,15 @@ import com.gamss.android.domain.config.RemoteConfigKey
 import com.gamss.android.domain.config.RemoteConfigRepository
 import com.gamss.android.domain.conversation.CommentGenerationStatus
 import com.gamss.android.domain.conversation.Conversation
+import com.gamss.android.domain.conversation.ConversationDetail
 import com.gamss.android.domain.conversation.ConversationRepository
 import com.gamss.android.domain.conversation.ConversationSession
 import com.gamss.android.domain.conversation.ConversationSummaryStore
 import com.gamss.android.domain.conversation.EndConversationUseCase
-import com.gamss.android.domain.conversation.GetMessagesUseCase
+import com.gamss.android.domain.conversation.GetConversationUseCase
 import com.gamss.android.domain.conversation.Message
 import com.gamss.android.domain.conversation.MessageSender
+import com.gamss.android.domain.conversation.PendingConversationReveal
 import com.gamss.android.domain.conversation.SendMessageUseCase
 import com.gamss.android.domain.conversation.SentMessage
 import com.gamss.android.domain.conversation.UpdateConversationTitleUseCase
@@ -27,6 +30,7 @@ import com.gamss.android.domain.emotion.ConversationEmotionAccumulator
 import com.gamss.android.domain.emotion.EmotionCharacter
 import com.gamss.android.domain.emotion.EmotionClassifier
 import com.gamss.android.domain.emotion.EmotionLabel
+import com.gamss.android.domain.model.DailyTokenUsage
 import com.gamss.android.domain.repository.TokenUsageRefreshNotifier
 import com.gamss.android.domain.safety.DetectRiskInTextUseCase
 import com.gamss.android.domain.safety.RiskLexicon
@@ -35,11 +39,15 @@ import com.gamss.android.domain.safety.RiskTermMatcher
 import com.gamss.android.domain.summary.DiarySummarizer
 import com.gamss.android.domain.summary.SummarizeDiaryUseCase
 import com.gamss.android.domain.summary.UtteranceTokenCounter
+import com.gamss.android.domain.usecase.GetDailyTokenUsageUseCase
+import com.gamss.android.domain.user.UserProfile
+import com.gamss.android.domain.user.UserRepository
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emptyFlow
 import java.time.LocalDate
+import java.time.YearMonth
 
 /**
  * 채팅 ViewModel 조립을 한 곳에 둔다. 테스트마다 따로 조립하면 세션 구성이 갈라진다.
@@ -54,6 +62,8 @@ internal fun chatRoomViewModel(
     classifier: EmotionClassifier = FlatClassifier,
     tokenUsageRefreshNotifier: TokenUsageRefreshNotifier = RecordingTokenUsageRefreshNotifier(),
     remoteConfigRepository: RemoteConfigRepository = FakeRemoteConfigRepository(),
+    pendingReveal: PendingConversationReveal = PendingConversationReveal(),
+    userRepository: UserRepository = FakeUserRepository(),
 ): ChatRoomViewModel = ChatRoomViewModel(
     tokenUsageRefreshNotifier = tokenUsageRefreshNotifier,
     detectRiskInText = DetectRiskInTextUseCase(
@@ -61,9 +71,10 @@ internal fun chatRoomViewModel(
         matcher = RiskTermMatcher(),
     ),
     getRemoteConfigFlag = GetRemoteConfigFlagUseCase(remoteConfigRepository),
+    getDailyTokenUsageUseCase = GetDailyTokenUsageUseCase(userRepository),
     session = ConversationSession(
         sendMessage = SendMessageUseCase(conversationRepository),
-        getMessages = GetMessagesUseCase(conversationRepository),
+        getConversation = GetConversationUseCase(conversationRepository),
         updateConversationTitle = UpdateConversationTitleUseCase(conversationRepository),
         endConversation = EndConversationUseCase(conversationRepository),
         createConversationCard = CreateConversationCardUseCase(
@@ -75,6 +86,7 @@ internal fun chatRoomViewModel(
             tokenCounter = CharLengthTokenCounter,
         ),
         emotionAccumulator = ConversationEmotionAccumulator(classifier),
+        pendingReveal = pendingReveal,
     ),
 )
 
@@ -100,6 +112,22 @@ private object NoRiskLexiconRepository : RiskLexiconRepository {
     )
 
     override suspend fun refresh() = Unit
+}
+
+/** 토큰 사용량 조회만 있으면 되는 테스트용 스텁. 채팅 흐름은 닉네임/계정 API 를 쓰지 않는다. */
+internal class FakeUserRepository(
+    private val usage: DailyTokenUsage = DailyTokenUsage(usedTokens = 0, dailyLimit = 100, exceeded = false),
+) : UserRepository {
+    override suspend fun updateNickname(nickname: String): AppResult<UserProfile> =
+        error("Not needed for this test")
+
+    override suspend fun deleteUserAccount(): AppResult<Unit> =
+        error("Not needed for this test")
+
+    override suspend fun getUserInfo(): AppResult<UserProfile> =
+        error("Not needed for this test")
+
+    override suspend fun getDailyTokenUsage(): AppResult<DailyTokenUsage> = AppResult.Success(usage)
 }
 
 /** 갱신 요청 횟수만 센다. 홈 쪽 수신은 feature:home 테스트가 본다. */
@@ -137,6 +165,7 @@ internal class FakeConversationRepository(
     private val commentCount: Int = 0,
     private val failing: Boolean = false,
     private val endFailing: Boolean = false,
+    private val restoredConversation: Conversation = Conversation(id = ROOM_ID, title = null),
 ) : ConversationRepository {
     private var sentCount = 0
 
@@ -177,8 +206,13 @@ internal class FakeConversationRepository(
         )
     }
 
-    override suspend fun getMessages(conversationId: Long): AppResult<List<Message>> =
-        AppResult.Success(emptyList())
+    override suspend fun getConversation(conversationId: Long): AppResult<ConversationDetail> =
+        AppResult.Success(
+            ConversationDetail(
+                conversation = restoredConversation,
+                messages = emptyList(),
+            ),
+        )
 
     override suspend fun getOngoingConversations(): AppResult<List<Conversation>> =
         AppResult.Success(emptyList())
@@ -206,8 +240,11 @@ internal class CountingCardRepository(
     var calls = 0
         private set
 
+    override suspend fun getCardsByMonth(yearMonth: YearMonth): AppResult<List<CardEntry>> =
+        error("채팅 테스트에서 쓰지 않는다")
+
     override suspend fun getCardsByDate(date: LocalDate): AppResult<List<Card>> =
-        AppResult.Success(emptyList())
+        error("채팅 테스트에서 쓰지 않는다")
 
     override suspend fun createCard(
         conversationId: Long,
@@ -230,7 +267,14 @@ internal class CountingCardRepository(
             )
     }
 
+    override suspend fun deleteAllCards(): AppResult<Unit> = error("채팅방 테스트에서 쓰지 않는다")
+
     override suspend fun deleteCard(cardId: Long): AppResult<Unit> = error("채팅방 테스트에서 쓰지 않는다")
+
+    override suspend fun deleteCardsByEmotion(character: EmotionCharacter): AppResult<Unit> =
+        error("채팅방 테스트에서 쓰지 않는다")
+
+    override suspend fun clearCache(): Unit = error("채팅방 테스트에서 쓰지 않는다")
 }
 
 internal fun message(id: Long, conversationId: Long, sender: MessageSender, content: String) = Message(

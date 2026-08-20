@@ -23,9 +23,7 @@ class LoginViewModel @Inject constructor(
         when (val result = loginUseCase(googleIdToken)) {
             is AppResult.Success -> {
                 reduce { state.copy(isLoading = false) }
-                if (result.data.isFirstLogin) {
-                    // 온보딩 화면이 정의되면 첫 로그인 사용자를 온보딩 플로우로 이동시킨다.
-                }
+                postSideEffect(LoginSideEffect.LoginSucceeded(result.data.isFirstLogin))
             }
 
             is AppResult.Failure -> {

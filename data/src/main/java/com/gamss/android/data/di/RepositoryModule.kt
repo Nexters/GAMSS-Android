@@ -7,13 +7,17 @@ import com.gamss.android.data.local.auth.TinkTokenCipher
 import com.gamss.android.data.local.auth.TokenCipher
 import com.gamss.android.data.local.auth.TokenProvider
 import com.gamss.android.data.local.auth.TokenProviderImpl
+import com.gamss.android.data.local.card.CardLocalDataSource
+import com.gamss.android.data.local.card.RoomCardLocalDataSource
 import com.gamss.android.data.repository.CardRepositoryImpl
 import com.gamss.android.data.repository.ConversationRepositoryImpl
+import com.gamss.android.data.repository.DeviceTokenRepositoryImpl
 import com.gamss.android.data.repository.TokenUsageRefreshNotifierImpl
 import com.gamss.android.data.repository.UserRepositoryImpl
 import com.gamss.android.domain.auth.AuthRepository
 import com.gamss.android.domain.card.CardRepository
 import com.gamss.android.domain.conversation.ConversationRepository
+import com.gamss.android.domain.push.DeviceTokenRepository
 import com.gamss.android.domain.repository.TokenUsageRefreshNotifier
 import com.gamss.android.domain.user.UserRepository
 import dagger.Binds
@@ -55,6 +59,11 @@ internal abstract class RepositoryModule {
     ): CardRepository
 
     @Binds
+    abstract fun bindCardLocalDataSource(
+        roomCardLocalDataSource: RoomCardLocalDataSource,
+    ): CardLocalDataSource
+
+    @Binds
     abstract fun bindTokenUsageRefreshNotifier(
         tokenUsageRefreshNotifierImpl: TokenUsageRefreshNotifierImpl,
     ): TokenUsageRefreshNotifier
@@ -78,6 +87,11 @@ internal abstract class RepositoryModule {
     abstract fun bindUserRepository(
         userRepositoryImpl: UserRepositoryImpl,
     ): UserRepository
+
+    @Binds
+    abstract fun bindDeviceTokenRepository(
+        deviceTokenRepositoryImpl: DeviceTokenRepositoryImpl,
+    ): DeviceTokenRepository
 
     companion object {
         @Provides

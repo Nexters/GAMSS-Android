@@ -1,5 +1,8 @@
 package com.gamss.android.core.designsystem.component.chat
 
+import android.graphics.drawable.Drawable
+import androidx.annotation.DrawableRes
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -17,13 +20,32 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
+import com.airbnb.lottie.compose.LottieAnimation
+import com.airbnb.lottie.compose.LottieCompositionSpec
+import com.airbnb.lottie.compose.LottieConstants
+import com.airbnb.lottie.compose.animateLottieCompositionAsState
+import com.airbnb.lottie.compose.rememberLottieComposition
+import com.gamss.android.core.designsystem.R
 import com.gamss.android.core.designsystem.theme.GamssTheme
+import kotlin.math.roundToInt
 
 /**
  * [GamssSentChatBubble], [GamssReceivedChatBubble] 말풍선 안에 표시할 답장 인용 정보.
@@ -56,7 +78,17 @@ object GamssChatBubbleDefaults {
     val OppositeWallGap: Dp = 84.dp
 }
 
-private val AvatarSize = 24.dp
+private val AvatarSize = 26.dp
+private val AvatarStrokeWidth = 0.5.dp
+
+// 로딩 bubble(54x36) 안에 정확히 맞도록 두 값 다 고정 크기로 지정한다. typing_loading.json
+private val TypingLottieWidth = 46.dp
+private val TypingLottieHeight = 32.dp
+
+// 46x32 Lottie 를 54x36 bubble 안에 정확히 담기 위한 여백. 실제 메시지 bubble 의
+// spacing200/spacing100 패딩과는 다른, 로딩 bubble 전용 값이다.
+private val LoadingBubbleHorizontalPadding = 4.dp
+private val LoadingBubbleVerticalPadding = 2.dp
 
 /**
  * 내가 보낸 채팅 메시지 말풍선. 시간이 왼쪽, 말풍선이 오른쪽에 정렬된다.
@@ -99,8 +131,6 @@ fun GamssReceivedChatBubble(
     replyQuote: ChatReplyQuote? = null,
 ) {
     BoxWithConstraints(modifier = modifier) {
-        // 아바타와 그 옆 간격은 말풍선보다 먼저 고정폭을 차지하므로, 반대쪽 벽 여백을 뺀
-        // 나머지 몫에서 그만큼을 한 번 더 제해야 말풍선 자체의 최대 너비가 나온다.
         val reservedWidth = GamssChatBubbleDefaults.OppositeWallGap + AvatarSize + GamssTheme.spacing.spacing100
         val bubbleMaxWidth = (maxWidth - reservedWidth).coerceAtLeast(0.dp)
         Row(
@@ -133,28 +163,130 @@ fun GamssReceivedChatBubble(
     }
 }
 
+/**
+ * 상대가 입력중일때 말풍선. 아바타 + 이름 + 말풍선이 왼쪽에 정렬된다.
+ *
+ * @param avatar 다음에 도착할 답장의 발신자를 이미 알 때(예: pendingComments) 그 캐릭터 아바타를
+ *  넘기면 빈 프로필 대신 표시한다.
+ */
+@Composable
+fun GamssLoadingMessageBubble(
+    senderStatus: String,
+    avatar: (@Composable () -> Unit)? = null,
+) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(GamssTheme.spacing.spacing100),
+        verticalAlignment = Alignment.Bottom,
+    ) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(GamssTheme.spacing.spacing100),
+            verticalAlignment = Alignment.Top,
+        ) {
+            ChatAvatar(avatar = avatar)
+            Column(verticalArrangement = Arrangement.spacedBy(GamssTheme.spacing.spacing075)) {
+                Text(
+                    text = senderStatus,
+                    style = GamssTheme.typography.body4Medium,
+                    color = GamssTheme.colors.gray800,
+                )
+                ChatBubbleSurface(
+                    isMine = false,
+                    horizontalPadding = LoadingBubbleHorizontalPadding,
+                    verticalPadding = LoadingBubbleVerticalPadding,
+                ) {
+                    TypingLottie()
+                }
+            }
+        }
+    }
+}
+
 @Composable
 private fun ChatBubbleSurface(
     isMine: Boolean,
     modifier: Modifier = Modifier,
+    horizontalPadding: Dp = GamssTheme.spacing.spacing200,
+    verticalPadding: Dp = GamssTheme.spacing.spacing100,
     content: @Composable () -> Unit,
 ) {
-    Column(
-        // 답장 인용문의 구분선(HorizontalDivider)이 본문과 같은 너비로 맞춰지도록
-        // 가장 넓은 자식의 고유 너비에 맞춰 hug 하되, widthIn(max) 로 넘어오는 상한은 그대로 유지한다.
-        modifier = modifier
-            .width(IntrinsicSize.Max)
-            .background(if (isMine) GamssTheme.colors.gray900 else GamssTheme.colors.gray025)
-            .border(width = 1.dp, color = GamssTheme.colors.gray950)
-            .padding(
-                horizontal = GamssTheme.spacing.spacing200,
-                vertical = GamssTheme.spacing.spacing100
-            ),
-        verticalArrangement = Arrangement.spacedBy(GamssTheme.spacing.spacing075),
-        horizontalAlignment = if (isMine) Alignment.End else Alignment.Start,
-    ) {
-        content()
+    // painterResource() 는 9-patch를 지원하지 않아
+    // rememberNinePatchPainter 로 직접 그린다. fill(배경)·stroke(테두리)는 같은 손그림 윤곽에서
+    // 나온 한 쌍이라 어떤 크기로 늘어나도 모서리가 서로 어긋나지 않는다.
+    val bubbleColor = if (isMine) GamssTheme.colors.gray900 else GamssTheme.colors.gray025
+    Box(modifier = modifier.width(IntrinsicSize.Max)) {
+        Image(
+            painter = rememberNinePatchPainter(id = R.drawable.chatmessage_fill, tint = bubbleColor),
+            contentDescription = null,
+            contentScale = ContentScale.FillBounds,
+            modifier = Modifier.matchParentSize(),
+        )
+        Image(
+            painter = rememberNinePatchPainter(id = R.drawable.chatmessage_stroke, tint = GamssTheme.colors.gray950),
+            contentDescription = null,
+            contentScale = ContentScale.FillBounds,
+            modifier = Modifier.matchParentSize(),
+        )
+        Column(
+            // 답장 인용문의 구분선(HorizontalDivider)이 본문과 같은 너비로 맞춰지도록
+            // 가장 넓은 자식의 고유 너비에 맞춰 hug 하되, widthIn(max) 로 넘어오는 상한은 그대로 유지한다.
+            modifier = Modifier.padding(horizontal = horizontalPadding, vertical = verticalPadding),
+            verticalArrangement = Arrangement.spacedBy(GamssTheme.spacing.spacing075),
+            horizontalAlignment = if (isMine) Alignment.End else Alignment.Start,
+        ) {
+            content()
+        }
     }
+}
+
+/**
+ * 9-patch(.9.png) 전용 [Painter]. `painterResource()` 는 NinePatchDrawable을 BitmapDrawable로
+ * 강제 캐스팅해 크래시가 나므로, [Drawable]을 직접 canvas에 그려서 우회한다.
+ *
+ * @param tint 지정하면 SRC_IN 방식으로 색만 덧칠한다(투명 영역·모양은 그대로 유지).
+ */
+@Composable
+private fun rememberNinePatchPainter(@DrawableRes id: Int, tint: Color? = null): Painter {
+    val context = LocalContext.current
+    return remember(context, id, tint) {
+        val drawable = requireNotNull(ContextCompat.getDrawable(context, id)) {
+            "리소스를 찾을 수 없습니다: $id"
+        }.mutate()
+        if (tint != null) {
+            drawable.setTint(tint.toArgb())
+        }
+        NinePatchPainter(drawable)
+    }
+}
+
+private class NinePatchPainter(private val drawable: Drawable) : Painter() {
+    override val intrinsicSize: Size
+        get() = if (drawable.intrinsicWidth >= 0 && drawable.intrinsicHeight >= 0) {
+            Size(drawable.intrinsicWidth.toFloat(), drawable.intrinsicHeight.toFloat())
+        } else {
+            Size.Unspecified
+        }
+
+    override fun DrawScope.onDraw() {
+        drawIntoCanvas { canvas ->
+            drawable.setBounds(0, 0, size.width.roundToInt(), size.height.roundToInt())
+            drawable.draw(canvas.nativeCanvas)
+        }
+    }
+}
+
+/** 말풍선 안에서 무한 반복 재생되는 타이핑 로티. 54x36 로딩 bubble 안에 정확히 맞도록 고정 크기로 그린다. */
+@Composable
+private fun TypingLottie(modifier: Modifier = Modifier) {
+    val composition by rememberLottieComposition(LottieCompositionSpec.RawRes(R.raw.typing_loading))
+    val progress by animateLottieCompositionAsState(
+        composition = composition,
+        iterations = LottieConstants.IterateForever,
+    )
+    LottieAnimation(
+        composition = composition,
+        progress = { progress },
+        modifier = modifier.size(width = TypingLottieWidth, height = TypingLottieHeight),
+    )
 }
 
 @Composable
@@ -202,19 +334,8 @@ private fun ChatAvatar(
         modifier = modifier
             .size(AvatarSize)
             .clip(CircleShape)
-            .then(
-                if (avatar == null) {
-                    Modifier
-                        .background(GamssTheme.colors.gray025)
-                        .border(
-                            width = 1.dp,
-                            color = GamssTheme.colors.gray200,
-                            shape = CircleShape
-                        )
-                } else {
-                    Modifier
-                },
-            ),
+            .background(GamssTheme.colors.gray025)
+            .border(width = AvatarStrokeWidth, color = GamssTheme.colors.gray200, shape = CircleShape),
         contentAlignment = Alignment.Center,
     ) {
         avatar?.invoke()

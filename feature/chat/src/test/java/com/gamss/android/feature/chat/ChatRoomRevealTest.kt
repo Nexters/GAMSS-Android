@@ -29,7 +29,7 @@ class ChatRoomRevealTest {
     }
 
     @Test
-    fun 첫_댓글만_즉시_붙고_나머지는_하나씩_노출된다() = runTest {
+    fun 댓글은_첫_번째부터_하나씩_지연되어_노출된다() = runTest {
         val viewModel = viewModel(commentCount = 3)
 
         viewModel.test(this) {
@@ -40,18 +40,26 @@ class ChatRoomRevealTest {
             skipItems(1) // isSending = true
 
             val afterSend = awaitState()
-            assertEquals(listOf(USER_ID, COMMENT_ID_BASE + 0), afterSend.messages.map { it.id })
-            assertEquals(listOf(COMMENT_ID_BASE + 1, COMMENT_ID_BASE + 2), afterSend.pendingComments.map { it.id })
+            assertEquals(listOf(USER_ID), afterSend.messages.map { it.id })
+            assertEquals(
+                listOf(COMMENT_ID_BASE + 0, COMMENT_ID_BASE + 1, COMMENT_ID_BASE + 2),
+                afterSend.pendingComments.map { it.id },
+            )
             assertTrue(afterSend.isAwaitingComments)
+            skipItems(1) // 전송 성공 뒤 백그라운드로 갱신되는 토큰 사용량 반영
 
             val firstReveal = awaitState()
-            assertEquals(COMMENT_ID_BASE + 1, firstReveal.messages.last().id)
-            assertEquals(1, firstReveal.pendingComments.size)
+            assertEquals(COMMENT_ID_BASE + 0, firstReveal.messages.last().id)
+            assertEquals(2, firstReveal.pendingComments.size)
 
             val secondReveal = awaitState()
-            assertEquals(COMMENT_ID_BASE + 2, secondReveal.messages.last().id)
-            assertTrue(secondReveal.pendingComments.isEmpty())
-            assertFalse(secondReveal.isAwaitingComments)
+            assertEquals(COMMENT_ID_BASE + 1, secondReveal.messages.last().id)
+            assertEquals(1, secondReveal.pendingComments.size)
+
+            val thirdReveal = awaitState()
+            assertEquals(COMMENT_ID_BASE + 2, thirdReveal.messages.last().id)
+            assertTrue(thirdReveal.pendingComments.isEmpty())
+            assertFalse(thirdReveal.isAwaitingComments)
 
             cancelAndIgnoreRemainingItems()
         }
@@ -68,7 +76,8 @@ class ChatRoomRevealTest {
             skipItems(1) // isSending = true
 
             val afterSend = awaitState()
-            assertEquals(3, afterSend.pendingComments.size)
+            assertEquals(4, afterSend.pendingComments.size)
+            skipItems(1) // 전송 성공 뒤 백그라운드로 갱신되는 토큰 사용량 반영
 
             containerHost.onInputChange(INPUT)
             skipItems(1) // input 반영
@@ -83,7 +92,7 @@ class ChatRoomRevealTest {
     }
 
     @Test
-    fun 댓글이_하나면_노출_대기가_없다() = runTest {
+    fun 댓글이_하나여도_지연_후_노출된다() = runTest {
         val viewModel = viewModel(commentCount = 1)
 
         viewModel.test(this) {
@@ -93,8 +102,13 @@ class ChatRoomRevealTest {
             skipItems(1) // isSending = true
 
             val afterSend = awaitState()
-            assertTrue(afterSend.pendingComments.isEmpty())
-            assertEquals(2, afterSend.messages.size)
+            assertEquals(1, afterSend.pendingComments.size)
+            assertEquals(1, afterSend.messages.size)
+            skipItems(1) // 전송 성공 뒤 백그라운드로 갱신되는 토큰 사용량 반영
+
+            val afterReveal = awaitState()
+            assertTrue(afterReveal.pendingComments.isEmpty())
+            assertEquals(2, afterReveal.messages.size)
 
             cancelAndIgnoreRemainingItems()
         }

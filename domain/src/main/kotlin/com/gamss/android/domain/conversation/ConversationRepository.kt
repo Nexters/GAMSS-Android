@@ -22,7 +22,7 @@ interface ConversationRepository {
         excludeCharacters: Set<EmotionCharacter>,
     ): AppResult<SentMessage>
 
-    suspend fun getMessages(conversationId: Long): AppResult<List<Message>>
+    suspend fun getConversation(conversationId: Long): AppResult<ConversationDetail>
 
     suspend fun updateTitle(conversationId: Long, title: String): AppResult<Unit>
 

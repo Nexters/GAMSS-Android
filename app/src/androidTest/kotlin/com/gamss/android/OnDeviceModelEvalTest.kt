@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.gamss.android.data.emotion.AndroidEmotionClassifier
+import com.gamss.android.data.model.LocalAssetsModelSource
 import com.gamss.android.data.summary.AndroidDiarySummarizer
 import kotlinx.coroutines.runBlocking
 import org.json.JSONObject
@@ -13,31 +14,11 @@ import org.junit.runner.RunWith
 import java.util.Locale
 
 /**
- * 온디바이스 감정 분류·원문 요약 검증. 애셋팩 패키지와 일치해야 Play Core 가 로컬 팩을 받아주므로
- * :data 가 아니라 :app 에 둔다. :app 은 abiFilters 가 arm64-v8a 하나라 arm64 기기/AVD 에서만 돈다.
- *
- * ```
- * ./gradlew :app:bundleDebug :app:assembleDebug :app:assembleDebugAndroidTest
- * bundletool build-apks --bundle=app/build/outputs/bundle/debug/app-debug.aab \
- *   --output=/tmp/app.apks --local-testing --connected-device \
- *   --ks=~/.android/debug.keystore --ks-pass=pass:android \
- *   --ks-key-alias=androiddebugkey --key-pass=pass:android
- * unzip -o /tmp/app.apks -d /tmp/apks
- * adb install -r app/build/outputs/apk/debug/app-debug.apk
- * adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
- *
- * # files 디렉터리는 앱이 먼저 만들게 둔다. shell 이 만들면 앱이 못 읽는 기기가 있다.
- * adb shell am instrument -w com.gamss.android.dev.test/androidx.test.runner.AndroidJUnitRunner
- * DIR=/sdcard/Android/data/com.gamss.android.dev/files/local_testing
- * adb shell mkdir -p $DIR
- * adb push /tmp/apks/asset-slices/emotion_pack-master.apk $DIR/
- * adb push /tmp/apks/asset-slices/summary_pack-master.apk $DIR/
- *
- * # connectedAndroidTest 는 재설치하며 위 디렉터리를 지우므로 쓰지 않는다.
- * adb shell am instrument -w -e class com.gamss.android.OnDeviceModelEvalTest \
- *   com.gamss.android.dev.test/androidx.test.runner.AndroidJUnitRunner
- * adb logcat -d -s ONDEVICE_EVAL
- * ```
+ * 온디바이스 감정 분류·원문 요약 검증. :data 가 아니라 :app 에 두는 이유는 예전 애셋팩(PAD) 경로일 때
+ * 애셋팩 패키지가 앱과 일치해야 했기 때문인데, 지금은 [LocalAssetsModelSource]로 debug variant 의
+ * APK 에 번들된 assets(:models:emotion-pack/:models:summary-pack 원본을 data 모듈 debug sourceSet 이
+ * 참조)를 직접 읽으므로 PAD/bundletool 준비가 전혀 필요 없다 — `:app:connectedDebugAndroidTest`
+ * 하나로 바로 돈다. :app 은 abiFilters 가 arm64-v8a 하나라 arm64 기기/AVD 에서만 돈다.
  */
 @RunWith(AndroidJUnit4::class)
 class OnDeviceModelEvalTest {
@@ -56,7 +37,7 @@ class OnDeviceModelEvalTest {
     @Test
     fun summarizeOnDevice(): Unit = runBlocking {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
-        val summarizer = AndroidDiarySummarizer(context)
+        val summarizer = AndroidDiarySummarizer(LocalAssetsModelSource(context))
         Log.i(TAG, "===SUMMARY_START=== total=${diaries.size}")
         diaries.forEachIndexed { index, diary ->
             val started = System.nanoTime()
@@ -81,7 +62,7 @@ class OnDeviceModelEvalTest {
         val labelKo = testSet.getJSONObject("label_ko")
         val koToEn = labelKo.keys().asSequence().associateBy { labelKo.getString(it) }
 
-        val classifier = AndroidEmotionClassifier(instrumentation.targetContext)
+        val classifier = AndroidEmotionClassifier(LocalAssetsModelSource(instrumentation.targetContext))
         val perLabel = HashMap<String, IntArray>() // 라벨 → [정답, 전체]
         var correct = 0
         Log.i(TAG, "===EMOTION_START=== total=${samples.length()}")

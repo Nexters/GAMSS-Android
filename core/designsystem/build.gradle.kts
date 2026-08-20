@@ -6,3 +6,7 @@ plugins {
 android {
     namespace = "com.gamss.android.core.designsystem"
 }
+
+dependencies {
+    implementation(libs.lottie.compose)
+}

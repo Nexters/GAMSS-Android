@@ -17,24 +17,25 @@ import javax.inject.Inject
 @Suppress("LongParameterList")
 class ConversationSession @Inject constructor(
     private val sendMessage: SendMessageUseCase,
-    private val getMessages: GetMessagesUseCase,
+    private val getConversation: GetConversationUseCase,
     private val updateConversationTitle: UpdateConversationTitleUseCase,
     private val endConversation: EndConversationUseCase,
     private val createConversationCard: CreateConversationCardUseCase,
     private val summaryStore: ConversationSummaryStore,
     private val emotionAccumulator: ConversationEmotionAccumulator,
+    private val pendingReveal: PendingConversationReveal,
 ) {
 
     private val titleMutex = Mutex()
 
     private var pendingTitle: PendingTitle? = null
 
-    suspend fun restore(conversationId: Long): AppResult<List<Message>> {
+    suspend fun restore(conversationId: Long): AppResult<ConversationDetail> {
         clearPendingTitle()
-        val result = getMessages(conversationId)
+        val result = getConversation(conversationId)
         when (result) {
             is AppResult.Success -> {
-                val utterances = result.data.userUtterances()
+                val utterances = result.data.messages.userUtterances()
                 summaryStore.restore(utterances)
                 emotionAccumulator.restore(utterances)
             }
@@ -75,9 +76,19 @@ class ConversationSession @Inject constructor(
                         seed = result.data.message.content,
                     ),
                 )
+                pendingReveal.save(result.data)
             }
         }
         return result
+    }
+
+    /** 홈 쪽 인스턴스에서만 채워진 요약·감정 상태를, [restore] 와 같은 방식으로 이 인스턴스에도 시드해 둔다. */
+    suspend fun consumePendingReveal(conversationId: Long): PendingReveal? {
+        val pending = pendingReveal.consume(conversationId) ?: return null
+        val utterances = listOf(pending.sent.message).userUtterances()
+        summaryStore.restore(utterances)
+        emotionAccumulator.restore(utterances)
+        return pending
     }
 
     suspend fun finishSend() = coroutineScope {

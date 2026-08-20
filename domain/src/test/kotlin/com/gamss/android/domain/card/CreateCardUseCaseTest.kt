@@ -10,7 +10,7 @@ import java.time.LocalDate
 
 class CreateCardUseCaseTest {
 
-    private class RecordingRepository : CardRepository {
+    private class RecordingRepository : FakeCardRepository() {
         var sentSummary: String? = null
             private set
 
@@ -32,11 +32,6 @@ class CreateCardUseCaseTest {
                 ),
             )
         }
-
-        override suspend fun getCardsByDate(date: LocalDate): AppResult<List<Card>> =
-            AppResult.Success(emptyList())
-
-        override suspend fun deleteCard(cardId: Long): AppResult<Unit> = error("사용하지 않음")
     }
 
     @Test

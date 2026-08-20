@@ -47,7 +47,7 @@ private fun ConversationMessage.toMessage(sender: MessageSender): Message = Mess
     sender = sender,
     content = content,
     repliesToMessageId = repliesToMessageId,
-    createdTime = formatKoreanTime(createdAt)
+    createdTime = parseConversationCreatedAt(createdAt)?.let(::formatKoreanTime)
 )
 
 private fun ConversationMessage.resolveSender(): MessageSender = when (senderType) {

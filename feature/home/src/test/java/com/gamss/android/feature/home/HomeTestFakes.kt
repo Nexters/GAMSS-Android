@@ -3,18 +3,21 @@ package com.gamss.android.feature.home
 import androidx.paging.PagingData
 import com.gamss.android.core.common.AppResult
 import com.gamss.android.domain.card.Card
+import com.gamss.android.domain.card.CardEntry
 import com.gamss.android.domain.card.CardRepository
 import com.gamss.android.domain.card.CreateCardUseCase
 import com.gamss.android.domain.card.CreateConversationCardUseCase
 import com.gamss.android.domain.conversation.CommentGenerationStatus
 import com.gamss.android.domain.conversation.Conversation
+import com.gamss.android.domain.conversation.ConversationDetail
 import com.gamss.android.domain.conversation.ConversationRepository
 import com.gamss.android.domain.conversation.ConversationSession
 import com.gamss.android.domain.conversation.ConversationSummaryStore
 import com.gamss.android.domain.conversation.EndConversationUseCase
-import com.gamss.android.domain.conversation.GetMessagesUseCase
+import com.gamss.android.domain.conversation.GetConversationUseCase
 import com.gamss.android.domain.conversation.Message
 import com.gamss.android.domain.conversation.MessageSender
+import com.gamss.android.domain.conversation.PendingConversationReveal
 import com.gamss.android.domain.conversation.SendMessageUseCase
 import com.gamss.android.domain.conversation.SentMessage
 import com.gamss.android.domain.conversation.UpdateConversationTitleUseCase
@@ -30,12 +33,13 @@ import com.gamss.android.domain.summary.UtteranceTokenCounter
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.Flow
 import java.time.LocalDate
+import java.time.YearMonth
 
 internal const val NEW_ROOM_ID = 42L
 
 internal fun conversationSession(repository: ConversationRepository) = ConversationSession(
     sendMessage = SendMessageUseCase(repository),
-    getMessages = GetMessagesUseCase(repository),
+    getConversation = GetConversationUseCase(repository),
     updateConversationTitle = UpdateConversationTitleUseCase(repository),
     endConversation = EndConversationUseCase(repository),
     createConversationCard = CreateConversationCardUseCase(
@@ -47,6 +51,7 @@ internal fun conversationSession(repository: ConversationRepository) = Conversat
         tokenCounter = CharLengthTokenCounter,
     ),
     emotionAccumulator = ConversationEmotionAccumulator(FlatClassifier),
+    pendingReveal = PendingConversationReveal(),
 )
 
 /**
@@ -101,8 +106,13 @@ internal class RecordingConversationRepository(
     override suspend fun getOngoingConversations(): AppResult<List<Conversation>> =
         AppResult.Success(emptyList())
 
-    override suspend fun getMessages(conversationId: Long): AppResult<List<Message>> =
-        AppResult.Success(emptyList())
+    override suspend fun getConversation(conversationId: Long): AppResult<ConversationDetail> =
+        AppResult.Success(
+            ConversationDetail(
+                conversation = Conversation(id = conversationId, title = null),
+                messages = emptyList(),
+            ),
+        )
 
     override suspend fun updateTitle(conversationId: Long, title: String): AppResult<Unit> =
         AppResult.Success(Unit)
@@ -118,8 +128,11 @@ internal class RecordingConversationRepository(
 }
 
 private object NoCardRepository : CardRepository {
+    override suspend fun getCardsByMonth(yearMonth: YearMonth): AppResult<List<CardEntry>> =
+        error("홈 테스트에서 쓰지 않는다")
+
     override suspend fun getCardsByDate(date: LocalDate): AppResult<List<Card>> =
-        AppResult.Success(emptyList())
+        error("홈 테스트에서 쓰지 않는다")
 
     override suspend fun createCard(
         conversationId: Long,
@@ -127,7 +140,14 @@ private object NoCardRepository : CardRepository {
         summary: String,
     ): AppResult<Card> = error("홈 테스트에서 쓰지 않는다")
 
+    override suspend fun deleteAllCards(): AppResult<Unit> = error("홈 테스트에서 쓰지 않는다")
+
     override suspend fun deleteCard(cardId: Long): AppResult<Unit> = error("홈 테스트에서 쓰지 않는다")
+
+    override suspend fun deleteCardsByEmotion(character: EmotionCharacter): AppResult<Unit> =
+        error("홈 테스트에서 쓰지 않는다")
+
+    override suspend fun clearCache(): Unit = error("홈 테스트에서 쓰지 않는다")
 }
 
 private object PassThroughSummarizer : DiarySummarizer {

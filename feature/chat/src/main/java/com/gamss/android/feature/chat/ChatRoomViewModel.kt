@@ -15,6 +15,7 @@ import com.gamss.android.domain.conversation.takeWithinMessageLimit
 import com.gamss.android.domain.repository.TokenUsageRefreshNotifier
 import com.gamss.android.domain.safety.DetectRiskInTextUseCase
 import com.gamss.android.domain.safety.RiskLevel
+import com.gamss.android.domain.usecase.GetDailyTokenUsageUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancelAndJoin
@@ -34,6 +35,7 @@ class ChatRoomViewModel @Inject constructor(
     private val tokenUsageRefreshNotifier: TokenUsageRefreshNotifier,
     private val detectRiskInText: DetectRiskInTextUseCase,
     private val getRemoteConfigFlag: GetRemoteConfigFlagUseCase,
+    private val getDailyTokenUsageUseCase: GetDailyTokenUsageUseCase,
 ) : ViewModel(),
     ContainerHost<ChatRoomState, ChatRoomSideEffect> {
 
@@ -62,9 +64,31 @@ class ChatRoomViewModel @Inject constructor(
 
     private fun loadMessages(conversationId: Long) = intent {
         reduce { state.copy(conversationId = conversationId, isLoading = true) }
+
+        val pending = session.consumePendingReveal(conversationId)
+        if (pending != null) {
+            reduce {
+                state.copy(
+                    isLoading = false,
+                    conversationCreatedAt = pending.createdAt,
+                    messages = listOf(pending.sent.message),
+                    pendingComments = pending.sent.comments,
+                )
+            }
+            launchCommentReveal()
+            return@intent
+        }
+
         when (val result = session.restore(conversationId)) {
             is AppResult.Success ->
-                reduce { state.copy(isLoading = false, messages = result.data, pendingComments = emptyList()) }
+                reduce {
+                    state.copy(
+                        isLoading = false,
+                        conversationCreatedAt = result.data.conversation.createdAt,
+                        messages = result.data.messages,
+                        pendingComments = emptyList(),
+                    )
+                }
             is AppResult.Failure -> {
                 reduce { state.copy(isLoading = false) }
                 postSideEffect(ChatRoomSideEffect.ShowToast(LOAD_FAILED))
@@ -80,7 +104,11 @@ class ChatRoomViewModel @Inject constructor(
         val character = (message.sender as? MessageSender.Character)?.character ?: return@intent
         reduce {
             state.copy(
-                replyTarget = ReplyTarget(messageId = message.id, characterName = character.displayName),
+                replyTarget = ReplyTarget(
+                    messageId = message.id,
+                    characterName = character.displayName,
+                    content = message.content,
+                ),
             )
         }
     }
@@ -88,6 +116,57 @@ class ChatRoomViewModel @Inject constructor(
     fun onReplyTargetClear() = intent {
         reduce { state.copy(replyTarget = null) }
     }
+
+    fun onTokenUsageToggle() = intent {
+        var opened = false
+        var needsFetch = false
+        reduce {
+            opened = !state.isTokenUsagePopupExpanded
+            needsFetch = opened && state.tokenUsagePercent == null
+            state.copy(isTokenUsagePopupExpanded = opened)
+        }
+        if (needsFetch) refreshTokenUsage()
+    }
+
+    fun onTokenUsageRetry() = intent {
+        refreshTokenUsage()
+    }
+
+    /**
+     * 사용자가 직접 요청한 조회(팝업 열기·재시도)는 실패를 그대로 반영해야 재시도 UI가 뜬다.
+     * [onSend]의 백그라운드 갱신처럼 조용히 이전 값을 유지하는 fallback을 여기선 쓰지 않는다.
+     * 팝업이 조회 중임을 알 수 있도록 요청 전후로 isTokenUsageLoading을 함께 반영한다.
+     */
+    private suspend fun ChatRoomSyntax.refreshTokenUsage() {
+        reduce { state.copy(isTokenUsageLoading = true) }
+        val percent = fetchTokenUsagePercent()
+        reduce { state.copy(tokenUsagePercent = percent, isTokenUsageLoading = false) }
+    }
+
+    /**
+     * [onSend] 성공 직후의 백그라운드 갱신. 메시지를 반영하는 reduce와 분리된 별도 인텐트로
+     * 띄워, 사용량 조회가 느려도 이미 도착한 메시지 표시가 지연되지 않게 한다. 실패 시엔
+     * 이전 값을 조용히 유지한다.
+     */
+    private fun refreshTokenUsageInBackground() {
+        intent {
+            val usagePercent = fetchTokenUsagePercent()
+            reduce { state.copy(tokenUsagePercent = usagePercent ?: state.tokenUsagePercent) }
+        }
+    }
+
+    /**
+     * 조회 실패는 채팅 자체를 막을 이유가 없어 화면에는 조용히 null 로만 반영한다.
+     */
+    private suspend fun fetchTokenUsagePercent(): Int? =
+        when (val result = getDailyTokenUsageUseCase()) {
+            is AppResult.Success -> {
+                result.data.usagePercent
+            }
+            is AppResult.Failure -> {
+                null
+            }
+        }
 
     fun onSend() = intent {
         flushPendingComments()
@@ -132,20 +211,21 @@ class ChatRoomViewModel @Inject constructor(
         when (result) {
             is AppResult.Success -> {
                 val sent = result.data
+                tokenUsageRefreshNotifier.requestRefresh()
                 reduce {
                     state.copy(
                         isSending = false,
                         conversationId = sent.message.conversationId,
-                        messages = state.messages + sent.message + sent.comments.take(1),
-                        pendingComments = sent.comments.drop(1),
+                        messages = state.messages + sent.message,
+                        pendingComments = sent.comments,
                         input = if (state.input == sending.content) "" else state.input,
                         replyTarget = state.replyTarget.takeIf { it?.messageId != sending.replyToMessageId },
                     )
                 }
                 launchCommentReveal()
                 sent.commentStatus.toUserMessage()?.let { postSideEffect(ChatRoomSideEffect.ShowToast(it)) }
-                tokenUsageRefreshNotifier.requestRefresh()
                 session.finishSend()
+                refreshTokenUsageInBackground()
             }
             is AppResult.Failure -> {
                 reduce { state.copy(isSending = false) }
