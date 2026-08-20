@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -57,7 +58,7 @@ internal fun PaperPile(
         val pileOffsetX = with(density) { ((maxWidth - designWidth(scale)) / 2).toPx() }
 
         // 키에 화면 크기를 넣지 않는다. 크기만 바뀌었을 때 이미 쌓인 종이가 다시 쏟아지면 안 된다.
-        // 바뀐 칸은 updateGeometry 로 흘려 넣는다.
+        // 바뀐 칸은 컴포지션이 확정된 뒤에 흘려 넣는다. 버려질 수 있는 컴포지션에서 쓰면 안 된다.
         val fall = remember(cards, droppedCardDate) {
             PaperFall(
                 count = cards.size,
@@ -65,7 +66,7 @@ internal fun PaperPile(
                 droppingIndex = cards.droppedIndex(droppedCardDate),
             )
         }
-        fall.updateGeometry(geometry)
+        SideEffect { fall.updateGeometry(geometry) }
 
         LaunchedEffect(fall) { fall.run() }
 
