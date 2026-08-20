@@ -65,6 +65,7 @@ internal class AuthRepositoryImpl @Inject constructor(
             LoginResult(isFirstLogin = loginResponse.isFirstLogin)
         }
         if (result is AppResult.Success) {
+            clearCardCacheSafely(SessionClearReason.Login)
             _sessionState.value = SessionState.Authenticated
         }
         return result
@@ -168,6 +169,7 @@ internal class AuthRepositoryImpl @Inject constructor(
     }
 
     private enum class SessionClearReason {
+        Login,
         LoggedOut,
         Expired,
     }
