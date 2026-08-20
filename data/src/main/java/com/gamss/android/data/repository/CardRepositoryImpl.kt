@@ -1,5 +1,6 @@
 package com.gamss.android.data.repository
 
+import android.util.Log
 import com.gamss.android.core.common.AppResult
 import com.gamss.android.data.local.card.CardLocalDataSource
 import com.gamss.android.data.local.card.model.toDomain
@@ -20,6 +21,9 @@ import java.time.LocalDate
 import java.time.YearMonth
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.coroutines.cancellation.CancellationException
+
+private const val TAG = "CardRepositoryImpl"
 
 @Singleton
 internal class CardRepositoryImpl @Inject constructor(
@@ -29,17 +33,37 @@ internal class CardRepositoryImpl @Inject constructor(
 
     /** 그 날짜가 캐시에 있으면 캐시를 그대로 쓰고, 없을 때만 서버를 호출해 다음 조회를 위해 캐시에 남긴다. */
     override suspend fun getCardsByDate(date: LocalDate): AppResult<List<Card>> {
-        cardLocalDataSource.findByDate(date).takeIf { it.isNotEmpty() }?.let { cached ->
-            return AppResult.Success(cached.map { it.toDomain() })
+        val cachedCards = try {
+            cardLocalDataSource
+                .findByDate(date)
+                .map { it.toDomain() }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Throwable) {
+            Log.w(TAG, "카드 캐시 조회에 실패해 서버 조회로 대체합니다. date=$date", e)
+            emptyList()
         }
+
+        cachedCards
+            .takeIf { it.isNotEmpty() }
+            ?.let { return AppResult.Success(it) }
+
         return runCatchingApiCall {
             val response = cardService.getCardsByDate(date.toString())
             response.throwIfFailed()
-            val validCards = checkNotNull(response.data) { "No available card data" }
-                .mapNotNull { raw -> raw.toDomainOrNull()?.let { raw to it } }
+
+            val validCards = checkNotNull(response.data) {
+                "No available card data"
+            }.mapNotNull { raw ->
+                raw.toDomainOrNull()?.let { raw to it }
+            }
+
             cardLocalDataSource.upsertAll(
-                validCards.mapIndexed { index, (raw, _) -> raw.toEntity(indexInDate = index) },
+                validCards.mapIndexed { index, (raw, _) ->
+                    raw.toEntity(indexInDate = index)
+                },
             )
+
             validCards.map { (_, card) -> card }
         }
     }
