@@ -307,9 +307,6 @@ private fun ChatRoomContent(
         isImeInTransition = false
     }
 
-    // Scaffold의 기본 snackbarHost 슬롯은 화면 최하단(네비게이션 바 위)에 붙는다. 입력창은
-    // bottomBar가 아니라 아래 Column의 마지막 자식이라 Scaffold가 그 높이를 모르므로, 여기선
-    // snackbarHost를 쓰지 않고 입력창과 같은 Box 안에서 실측 높이를 기준으로 직접 띄운다.
     Scaffold(
         modifier = modifier.addFocusCleaner(focusManager),
         topBar = { ChatRoomTopBar(state = state, actions = actions, onBackClick = onBackClick) },
