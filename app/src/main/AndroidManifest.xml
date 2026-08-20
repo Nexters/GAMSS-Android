@@ -28,6 +28,7 @@
             <data android:scheme="tel" />
         </intent>
         <package android:name="com.instagram.android" />
+        <package android:name="com.kakao.talk" />
     </queries>
 
     <application

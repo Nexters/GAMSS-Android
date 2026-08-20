@@ -34,11 +34,13 @@ import com.gamss.android.core.designsystem.theme.GamssTheme
 import com.gamss.android.core.designsystem.theme.GamssTouchTarget
 import com.gamss.android.core.ui.card.cardTitleRes
 import com.gamss.android.core.ui.card.toGamssEmotionCardCharacter
+import com.gamss.android.core.ui.share.CardShareLink
 import com.gamss.android.core.ui.share.ComposeCapture
 import com.gamss.android.core.ui.share.StoryShareResult
 import com.gamss.android.core.ui.share.captureTo
 import com.gamss.android.core.ui.share.rememberComposeCapture
 import com.gamss.android.core.ui.share.shareBitmapToInstagramStory
+import com.gamss.android.core.ui.share.shareTextToKakaoTalk
 import com.gamss.android.domain.card.Card
 import com.gamss.android.feature.archive.R
 import kotlinx.coroutines.launch
@@ -57,10 +59,17 @@ internal fun CardDetailDialog(
     val capture = rememberComposeCapture()
     val instagramUnavailableMessage = stringResource(R.string.archive_card_share_instagram_unavailable)
     val imageUnavailableMessage = stringResource(R.string.archive_card_share_image_failed)
+    val kakaoTalkUnavailableMessage = stringResource(R.string.archive_card_share_kakaotalk_unavailable)
+    val kakaoTalkText = stringResource(
+        R.string.archive_card_share_kakaotalk_text,
+        stringResource(card.character.cardTitleRes()),
+        CardShareLink.of(card.id),
+    )
 
     // 공유 이미지에는 누를 수 없는 버튼과 닫기 아이콘을 남기지 않는다. 감추는 동안만 켜 두고,
     // 그 상태가 실제로 그려진 뒤에 캡처한다.
     var isCapturing by remember { mutableStateOf(false) }
+    var isShareSheetVisible by remember { mutableStateOf(false) }
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -88,24 +97,40 @@ internal fun CardDetailDialog(
                         shareLabel = stringResource(R.string.archive_card_share),
                         onPrimaryClick = onDiscardClick,
                         onSecondaryClick = onViewConversationClick,
-                        onShareClick = {
-                            scope.launch {
-                                val failure = shareCardToStory(
-                                    context = context,
-                                    capture = capture,
-                                    instagramUnavailableMessage = instagramUnavailableMessage,
-                                    imageUnavailableMessage = imageUnavailableMessage,
-                                    setCapturing = { isCapturing = it },
-                                )
-                                failure?.let { message ->
-                                    Toast.makeText(context, message, Toast.LENGTH_LONG).show()
-                                }
-                            }
-                        },
+                        onShareClick = { isShareSheetVisible = true },
                     )
                 },
                 modifier = Modifier.captureTo(capture),
                 topEndAction = { if (!isCapturing) CardCloseButton(onClick = onDismiss) },
+            )
+        }
+
+        // 시트는 카드와 다른 창에 뜨므로 캡처한 그림에 섞이지 않는다. 그래도 공유를 시작하면
+        // 먼저 닫아, 인스타그램으로 넘어가는 동안 시트가 남지 않게 한다.
+        if (isShareSheetVisible) {
+            ShareTargetSheet(
+                onKakaoTalkClick = {
+                    isShareSheetVisible = false
+                    if (!context.shareTextToKakaoTalk(kakaoTalkText)) {
+                        Toast.makeText(context, kakaoTalkUnavailableMessage, Toast.LENGTH_LONG).show()
+                    }
+                },
+                onInstagramStoryClick = {
+                    isShareSheetVisible = false
+                    scope.launch {
+                        val failure = shareCardToStory(
+                            context = context,
+                            capture = capture,
+                            instagramUnavailableMessage = instagramUnavailableMessage,
+                            imageUnavailableMessage = imageUnavailableMessage,
+                            setCapturing = { isCapturing = it },
+                        )
+                        failure?.let { message ->
+                            Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                        }
+                    }
+                },
+                onDismiss = { isShareSheetVisible = false },
             )
         }
     }
