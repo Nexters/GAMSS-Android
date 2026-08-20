@@ -140,11 +140,11 @@ private fun mainEntryProvider(navigator: Navigator) = entryProvider {
     // 보관함 상세도 탭 안쪽의 상세 화면이라 다른 상세들과 같은 슬라이드를 쓴다.
     entry<ArchiveDetailKey>(metadata = detailSlideTransition) { key ->
         // 대화방에 들렀다 돌아오면 이 컴포지션이 다시 만들어진다. 그때는 이미 비어 있어야 한다.
-        val droppedCardDate = remember { navigator.consumeDroppedCardDate() }
+        val droppedCardId = remember { navigator.consumeDroppedCardId() }
         val hasShreddedCard = remember { navigator.consumeShreddedCard() }
         ArchiveDetailScreen(
             emotion = key.emotion,
-            droppedCardDate = droppedCardDate,
+            droppedCardId = droppedCardId,
             hasShreddedCard = hasShreddedCard,
             onBackClick = navigator::goBack,
             onNavigateToCardDelete = { cardId -> navigator.navigate(CardDeleteKey(key.emotion, cardId)) },
@@ -196,8 +196,8 @@ private fun mainEntryProvider(navigator: Navigator) = entryProvider {
         ChatRoomScreen(
             conversationId = key.conversationId,
             // 버린 카드가 어디로 갔는지 바로 보여 준다.
-            onCardDiscard = { emotion, date ->
-                navigator.openDroppedCard(ArchiveKey, ArchiveDetailKey(emotion), date)
+            onCardDiscard = { emotion, cardId ->
+                navigator.openDroppedCard(ArchiveKey, ArchiveDetailKey(emotion), cardId)
             },
             onCardSkip = navigator::goBack,
             onBackClick = navigator::goBack,

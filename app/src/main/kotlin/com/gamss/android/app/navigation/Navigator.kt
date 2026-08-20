@@ -1,7 +1,6 @@
 package com.gamss.android.app.navigation
 
 import androidx.navigation3.runtime.NavKey
-import java.time.LocalDate
 
 /**
  * NavigationState를 변경하는 앱 전용 navigator.
@@ -18,9 +17,9 @@ class Navigator(val state: NavigationState) {
      * 때마다 방금 버린 것처럼 또 떨어진다. 프로세스가 죽으면 이 값도 사라지는데, 그때는 낙하를
      * 건너뛰는 쪽이 맞다.
      */
-    private var droppedCardDate: LocalDate? = null
+    private var droppedCardId: Long? = null
 
-    fun consumeDroppedCardDate(): LocalDate? = droppedCardDate.also { droppedCardDate = null }
+    fun consumeDroppedCardId(): Long? = droppedCardId.also { droppedCardId = null }
 
     /**
      * 파쇄 화면이 카드를 지웠다는 일회성 신호. 위 날짜와 같은 이유로 key 에 싣지 않는다.
@@ -81,8 +80,8 @@ class Navigator(val state: NavigationState) {
      * currentSubStack 이 옮겨간 탭을 가리켜 손댈 수 없다. 옮겨간 탭도 root 까지 비우고 [detail]
      * 하나만 올린다. 보관함에 다른 감정 칸이 열려 있었다면 뒤로 나갔을 때 그 칸이 다시 뜬다.
      */
-    fun openDroppedCard(topLevel: NavKey, detail: NavKey, droppedCardDate: LocalDate) {
-        this.droppedCardDate = droppedCardDate
+    fun openDroppedCard(topLevel: NavKey, detail: NavKey, droppedCardId: Long) {
+        this.droppedCardId = droppedCardId
         clearSubStack()
         goToTopLevel(topLevel)
         clearSubStack()
