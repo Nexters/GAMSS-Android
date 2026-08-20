@@ -46,6 +46,7 @@ class ChatRoomRevealTest {
                 afterSend.pendingComments.map { it.id },
             )
             assertTrue(afterSend.isAwaitingComments)
+            skipItems(1) // 전송 성공 뒤 백그라운드로 갱신되는 토큰 사용량 반영
 
             val firstReveal = awaitState()
             assertEquals(COMMENT_ID_BASE + 0, firstReveal.messages.last().id)
@@ -76,6 +77,7 @@ class ChatRoomRevealTest {
 
             val afterSend = awaitState()
             assertEquals(4, afterSend.pendingComments.size)
+            skipItems(1) // 전송 성공 뒤 백그라운드로 갱신되는 토큰 사용량 반영
 
             containerHost.onInputChange(INPUT)
             skipItems(1) // input 반영
@@ -102,6 +104,7 @@ class ChatRoomRevealTest {
             val afterSend = awaitState()
             assertEquals(1, afterSend.pendingComments.size)
             assertEquals(1, afterSend.messages.size)
+            skipItems(1) // 전송 성공 뒤 백그라운드로 갱신되는 토큰 사용량 반영
 
             val afterReveal = awaitState()
             assertTrue(afterReveal.pendingComments.isEmpty())

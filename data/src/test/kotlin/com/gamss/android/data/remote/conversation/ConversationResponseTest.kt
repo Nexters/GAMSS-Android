@@ -1,5 +1,7 @@
 package com.gamss.android.data.remote.conversation
 
+import com.gamss.android.data.remote.conversation.model.response.ConversationDetailResponse
+import com.gamss.android.data.remote.conversation.model.response.ConversationMessage
 import com.gamss.android.data.remote.conversation.model.response.ConversationResponse
 import com.gamss.android.data.remote.conversation.model.response.parseConversationCreatedAt
 import com.gamss.android.data.remote.conversation.model.response.toDomain
@@ -74,5 +76,28 @@ class ConversationResponseTest {
     @Test
     fun 빈_문자열_시각은_null_이다() {
         assertNull(parseConversationCreatedAt(" "))
+    }
+
+    @Test
+    fun 대화_상세는_생성_시각과_메시지를_도메인으로_옮긴다() {
+        val detail = ConversationDetailResponse(
+            conversation = ConversationResponse(
+                id = 37,
+                title = "비 오는 날의 짜증",
+                createdAt = "2026-08-15T17:16:52.320",
+            ),
+            messages = listOf(
+                ConversationMessage(
+                    id = 1,
+                    conversationId = 37,
+                    senderType = ConversationMessage.SENDER_USER,
+                    content = "오늘 억울한 일이 있었어",
+                    createdAt = "2026-08-15T17:16:52.320",
+                ),
+            ),
+        ).toDomain()
+
+        assertEquals(LocalDateTime.of(2026, 8, 15, 17, 16, 52, 320_000_000), detail?.conversation?.createdAt)
+        assertEquals(listOf(1L), detail?.messages?.map { it.id })
     }
 }

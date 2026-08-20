@@ -12,6 +12,7 @@ androidx-lifecycle = "2.9.4"
 lifecycle-viewmodel-navigation3 = "2.10.0"
 compose-bom = "2026.04.01"
 navigation3 = "1.1.0-rc01"
+navigationevent = "1.0.2"
 junit = "4.13.2"
 detekt = "1.23.8"
 kotlinx-serialization = "1.11.0"
@@ -61,6 +62,7 @@ compose-material-icons-core = { module = "androidx.compose.material:material-ico
 
 navigation3-runtime = { module = "androidx.navigation3:navigation3-runtime", version.ref = "navigation3" }
 navigation3-ui = { module = "androidx.navigation3:navigation3-ui", version.ref = "navigation3" }
+androidx-navigationevent = { module = "androidx.navigationevent:navigationevent", version.ref = "navigationevent" }
 
 hilt-android = { module = "com.google.dagger:hilt-android", version.ref = "hilt" }
 hilt-compiler = { module = "com.google.dagger:hilt-compiler", version.ref = "hilt" }

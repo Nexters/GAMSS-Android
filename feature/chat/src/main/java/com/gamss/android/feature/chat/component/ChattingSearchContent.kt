@@ -155,6 +155,7 @@ private fun SearchInput(
                 unfocusedContainerColor = GamssTheme.colors.gray075,
                 focusedIndicatorColor = GamssTheme.colors.gray075,
                 unfocusedIndicatorColor = GamssTheme.colors.gray075,
+                cursorColor = GamssTheme.colors.gray900
             ),
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
             keyboardActions = KeyboardActions(onSearch = { onSearch() }),

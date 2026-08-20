@@ -205,7 +205,7 @@ class DeleteConversationsUseCaseTest {
         override suspend fun getOngoingConversations(): AppResult<List<Conversation>> =
             throw UnsupportedOperationException()
 
-        override suspend fun getMessages(conversationId: Long): AppResult<List<Message>> =
+        override suspend fun getConversation(conversationId: Long): AppResult<ConversationDetail> =
             throw UnsupportedOperationException()
 
         override suspend fun updateTitle(conversationId: Long, title: String): AppResult<Unit> =
