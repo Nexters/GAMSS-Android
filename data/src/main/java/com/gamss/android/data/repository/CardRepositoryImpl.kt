@@ -13,7 +13,6 @@ import com.gamss.android.data.remote.emotion.toServerEmotionType
 import com.gamss.android.data.remote.runCatchingApiCall
 import com.gamss.android.data.remote.throwIfFailed
 import com.gamss.android.domain.card.Card
-import com.gamss.android.domain.card.CardEntry
 import com.gamss.android.domain.card.CardNotRetryableException
 import com.gamss.android.domain.card.CardRepository
 import com.gamss.android.domain.emotion.EmotionCharacter
@@ -63,22 +62,53 @@ internal class CardRepositoryImpl @Inject constructor(
                 raw.toDomainOrNull()?.let { raw to it }
             }
 
-            cardLocalDataSource.upsertAll(
-                validCards.mapIndexed { index, (raw, _) ->
-                    raw.toEntity(indexInDate = index)
-                },
-            )
+            cardLocalDataSource.upsertAll(validCards.map { (raw, _) -> raw.toEntity() })
 
             validCards.map { (_, card) -> card }
         }
     }
 
     // YearMonth.toString() 이 서버가 요구하는 yyyy-MM 그대로다.
-    override suspend fun getCardsByMonth(yearMonth: YearMonth): AppResult<List<CardEntry>> = runCatchingApiCall {
-        val response = cardService.getCardsByMonth(yearMonth.toString())
-        response.throwIfFailed()
-        checkNotNull(response.data) { "No available card data" }
-            .flatMap { it.toDomain() }
+    /** 그 감정 칸의 그 달이 캐시에 있으면 캐시를 쓰고, 없거나 캐시 조회에 실패하면 서버에서 받는다. */
+    override suspend fun getCardsByMonthAndEmotion(
+        character: EmotionCharacter,
+        yearMonth: YearMonth,
+    ): AppResult<List<Card>> {
+        val serverEmotion = character.toServerEmotionType()
+        runCatching {
+            cardLocalDataSource
+                .findByEmotionAndMonth(serverEmotion, yearMonth)
+                .map { it.toDomain() }
+        }
+            .onFailure { throwable ->
+                if (throwable is CancellationException) throw throwable
+
+                Log.w(
+                    TAG,
+                    "카드 캐시 조회에 실패해 서버 조회로 대체합니다. emotion=$serverEmotion, yearMonth=$yearMonth",
+                    throwable,
+                )
+            }
+            .getOrNull()
+            ?.takeIf { it.isNotEmpty() }
+            ?.let { return AppResult.Success(it) }
+
+        return runCatchingApiCall {
+            val response = cardService.getCardsByMonthAndEmotion(
+                emotion = serverEmotion,
+                yearMonth = yearMonth.toString(),
+            )
+            response.throwIfFailed()
+
+            val validCards = checkNotNull(response.data) { "No available card data" }
+                .mapNotNull { raw -> raw.toDomainOrNull()?.let { raw to it } }
+
+            cardLocalDataSource.upsertAll(validCards.map { (raw, _) -> raw.toEntity() })
+
+            // 서버는 최신순으로 준다. 보관함 더미는 목록 순서대로 위에 얹으며 쌓으므로, 뒤집어
+            // 오래된 순으로 돌려줘야 최근 카드가 맨 위에 온다.
+            validCards.map { (_, card) -> card }.reversed()
+        }
     }
 
     override suspend fun createCard(
@@ -122,9 +152,8 @@ internal class CardRepositoryImpl @Inject constructor(
     }
 
     /**
-     * 카드를 지우면 같은 날짜 뒤 카드들의 indexInDate 가 한 칸씩 당겨져 캐시에 남은 순번이 서버와 어긋난다.
-     * 어느 카드가 영향받는지 이 메서드는 날짜를 모르므로, 지운 카드만 골라내는 대신 캐시 전체를 비워
-     * 다음 조회 때 다시 채우게 한다.
+     * 지운 카드가 어느 감정 칸·어느 달에 있었는지 이 메서드는 모른다. 그 칸만 골라 비우는 대신
+     * 캐시 전체를 비워 다음 조회 때 다시 채우게 한다.
      */
     override suspend fun deleteCard(cardId: Long): AppResult<Unit> {
         val result = runCatchingApiCall {

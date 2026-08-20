@@ -2,11 +2,11 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "9cfd76bd48d1b7540b588561b3258716",
+    "identityHash": "ed660b41190bf72caaaa9ce9e9647cd2",
     "entities": [
       {
         "tableName": "cards",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER NOT NULL, `conversation_id` INTEGER NOT NULL, `emotion` TEXT NOT NULL, `emotion_label` TEXT NOT NULL, `summary` TEXT NOT NULL, `message` TEXT NOT NULL, `date` TEXT NOT NULL, `index_in_date` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER NOT NULL, `conversation_id` INTEGER NOT NULL, `emotion` TEXT NOT NULL, `emotion_label` TEXT NOT NULL, `summary` TEXT NOT NULL, `message` TEXT NOT NULL, `date` TEXT NOT NULL, PRIMARY KEY(`id`))",
         "fields": [
           {
             "fieldPath": "id",
@@ -49,12 +49,6 @@
             "columnName": "date",
             "affinity": "TEXT",
             "notNull": true
-          },
-          {
-            "fieldPath": "indexInDate",
-            "columnName": "index_in_date",
-            "affinity": "INTEGER",
-            "notNull": true
           }
         ],
         "primaryKey": {
@@ -78,7 +72,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '9cfd76bd48d1b7540b588561b3258716')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'ed660b41190bf72caaaa9ce9e9647cd2')"
     ]
   }
 }
