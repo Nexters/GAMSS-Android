@@ -31,21 +31,26 @@ internal class CardRepositoryImpl @Inject constructor(
     private val cardLocalDataSource: CardLocalDataSource,
 ) : CardRepository {
 
-    /** 그 날짜가 캐시에 있으면 캐시를 그대로 쓰고, 없을 때만 서버를 호출해 다음 조회를 위해 캐시에 남긴다. */
+    /** 그 날짜가 캐시에 있으면 캐시를 그대로 쓰고, 없거나 캐시 조회에 실패하면 서버에서 다시 가져온다. */
     override suspend fun getCardsByDate(date: LocalDate): AppResult<List<Card>> {
-        val cachedCards = try {
+        runCatching {
             cardLocalDataSource
                 .findByDate(date)
                 .map { it.toDomain() }
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Throwable) {
-            Log.w(TAG, "카드 캐시 조회에 실패해 서버 조회로 대체합니다. date=$date", e)
-            emptyList()
         }
+            .onFailure { throwable ->
+                if (throwable is CancellationException) {
+                    throw throwable
+                }
 
-        cachedCards
-            .takeIf { it.isNotEmpty() }
+                Log.w(
+                    TAG,
+                    "카드 캐시 조회에 실패해 서버 조회로 대체합니다. date=$date",
+                    throwable,
+                )
+            }
+            .getOrNull()
+            ?.takeIf { it.isNotEmpty() }
             ?.let { return AppResult.Success(it) }
 
         return runCatchingApiCall {
@@ -141,12 +146,13 @@ internal class CardRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun deleteCardsByEmotion(character: EmotionCharacter): AppResult<Unit> = runCatchingApiCall {
-        val response = cardService.deleteCardsByEmotion(character.toServerEmotionType())
-        response.throwIfFailed()
-        checkNotNull(response.data?.deletedCount) { "No deleted card count" }
-        cardLocalDataSource.deleteAll()
-    }
+    override suspend fun deleteCardsByEmotion(character: EmotionCharacter): AppResult<Unit> =
+        runCatchingApiCall {
+            val response = cardService.deleteCardsByEmotion(character.toServerEmotionType())
+            response.throwIfFailed()
+            checkNotNull(response.data?.deletedCount) { "No deleted card count" }
+            cardLocalDataSource.deleteAll()
+        }
 
     override suspend fun clearCache() {
         cardLocalDataSource.deleteAll()
