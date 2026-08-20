@@ -11,7 +11,6 @@ val KoreanTimeZone: ZoneId = ZoneId.of("Asia/Seoul")
 
 private const val KOREAN_TIME_PATTERN = "a h:mm"
 
-/** 대화방 목록과 카드가 함께 쓰는 짧은 날짜. */
 private const val SHORT_DATE_PATTERN = "yy.MM.dd"
 
 // 존을 덮지 않는다. 이미 벽시계로 변환된 값을 그대로 찍는 용도다.
@@ -33,5 +32,5 @@ fun formatKoreanTime(dateTime: LocalDateTime): String = KoreanWallClockFormatter
 /** 대화방 생성 시각을 `yy.MM.dd` 형식의 날짜로 표시한다. */
 fun formatConversationDate(dateTime: LocalDateTime): String = ShortDateFormatter.format(dateTime)
 
-/** 카드에 찍히는 날짜를 `yy.MM.dd` 형식으로 표시한다. 접기 연출과 보관함 상세가 같은 값을 쓴다. */
+/** 카드에 찍히는 날짜를 `yy.MM.dd` 형식으로 표시한다. */
 fun formatCardDate(date: LocalDate): String = ShortDateFormatter.format(date)

@@ -39,8 +39,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
- * 접기 연출이 창 크기에서 뽑아내는 치수들.
- *
  * 통은 창 아래에 붙고 종이는 창 중심에 붙으므로, 내려갈 거리가 화면 높이 상수가 아니라 이 창의
  * 크기에서 바로 나온다. 그래서 인셋이나 폰트 배율이 바뀌어도 어긋나지 않는다.
  */
@@ -134,7 +132,7 @@ internal class CardFoldDragState(private val scope: CoroutineScope) {
         offset.floatValue = (offset.floatValue + delta).coerceIn(0f, travel.dragDistancePx)
     }
 
-    /** 끌어내린 정도. 0 이면 제자리, 1 이면 종이 아래끝이 통 입구에 닿았다. */
+    /** 1 이면 종이 아래끝이 통 입구에 닿았다. */
     fun dragFraction(): Float {
         val distance = travel.dragDistancePx
         return if (distance > 0f) (offset.floatValue / distance).coerceIn(0f, 1f) else 0f
@@ -175,7 +173,6 @@ internal class CardFoldDragState(private val scope: CoroutineScope) {
         }
     }
 
-    /** 손을 뗀 자리가 통에 넣기로 볼 만큼 내려왔는지. */
     private fun reachedBin(): Boolean {
         val distance = travel.dragDistancePx
         return distance > 0f && offset.floatValue >= distance * CARD_FOLD_DISCARD_THRESHOLD
@@ -206,7 +203,7 @@ internal fun rememberCardFoldDragState(
  */
 internal data class DiscardTravel(val dragDistancePx: Float, val swallowDistancePx: Float) {
     companion object {
-        /** 아직 창 크기를 못 잰 상태. 이때는 끌어도 움직이지 않는다. */
+        /** 아직 창 크기를 못 잰 상태. 끌어도 움직이지 않는다. */
         val None = DiscardTravel(dragDistancePx = 0f, swallowDistancePx = 0f)
     }
 }
@@ -221,11 +218,8 @@ private fun Density.discardTravel(windowHeight: Dp, binHeight: Dp, paperHeight: 
 }
 
 /**
- * 통이 다 보인 뒤에야 끌 수 있게 연다.
- *
- * 힌트 진행률을 컴포지션에서 읽지 않고 같은 박자를 다시 잰다. 진행률을 여기서 읽으면 통이 배어
- * 나오는 400ms 동안 매 프레임 카드까지 다시 그려진다. 대신 시점은 [CARD_FOLD_BIN_SHOWN_MS] 한
- * 곳에서만 나온다.
+ * 힌트 진행률을 컴포지션에서 읽지 않고 [CARD_FOLD_BIN_SHOWN_MS] 로 다시 잰다. 진행률을 여기서
+ * 읽으면 통이 배어 나오는 동안 매 프레임 카드까지 다시 그려진다.
  */
 @Composable
 internal fun rememberBinReady(folded: Boolean): Boolean {

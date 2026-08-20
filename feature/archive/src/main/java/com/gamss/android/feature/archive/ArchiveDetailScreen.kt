@@ -64,8 +64,6 @@ fun ArchiveDetailScreen(
     val cardLoadFailedMessage = stringResource(R.string.archive_card_load_error)
     val discardFailedMessage = stringResource(R.string.archive_card_discard_failure)
 
-    // 방금 버려서 들어온 경우에만 값이 있다. 이미 보던 칸이어도 다시 받아야 방금 만든 카드가
-    // 목록에 들어온다.
     LaunchedEffect(emotion) {
         viewModel.load(emotion, force = droppedCardDate != null)
     }

@@ -57,7 +57,7 @@ internal fun PaperPile(
         val pileOffsetX = with(density) { ((maxWidth - designWidth(scale)) / 2).toPx() }
 
         // 키에 화면 크기를 넣지 않는다. 크기만 바뀌었을 때 이미 쌓인 종이가 다시 쏟아지면 안 된다.
-        // 대신 바뀐 칸을 아래에서 흘려 넣어, 도는 중이면 새 바닥과 벽을 따르게 한다.
+        // 바뀐 칸은 updateGeometry 로 흘려 넣는다.
         val fall = remember(cards, droppedCardDate) {
             PaperFall(
                 count = cards.size,

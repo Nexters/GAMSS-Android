@@ -40,7 +40,7 @@ internal class PaperPhysicsWorld(
     private val bodies: List<PaperBody>,
     geometry: PaperGeometry,
 ) {
-    /** 굴러다닐 칸. 화면 크기가 바뀌면 도는 중에도 갈아 끼운다. */
+    /** 도는 중에도 갈아 끼울 수 있다. [PaperFall] 이 프레임마다 넣어 준다. */
     var geometry: PaperGeometry = geometry
 
     /** 직전 [step] 의 간격. 옮긴 거리를 속도로 되돌리는 데 쓴다. */

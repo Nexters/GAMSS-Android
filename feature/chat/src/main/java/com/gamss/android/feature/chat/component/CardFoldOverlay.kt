@@ -315,7 +315,7 @@ private fun DiscardBin(alpha: () -> Float, modifier: Modifier = Modifier) {
     )
 }
 
-/** 연출에 쓰는 그림은 모두 장식이라 대체 텍스트를 두지 않는다. 크기는 부르는 쪽이 정한다. */
+/** 연출에 쓰는 그림은 모두 장식이라 대체 텍스트를 두지 않는다. */
 @Composable
 private fun FoldImage(
     @DrawableRes resId: Int,
@@ -342,7 +342,6 @@ private fun Modifier.anchorAbove(gap: Dp) = layout { measurable, constraints ->
     }
 }
 
-/** 통까지 끌어내리는 제스처. 확정 뒤의 연출과 잠금은 [CardFoldDragState] 가 맡는다. */
 private fun Modifier.discardDraggable(state: CardFoldDragState, enabled: Boolean) = draggable(
     state = state.draggableState,
     orientation = Orientation.Vertical,
@@ -352,7 +351,6 @@ private fun Modifier.discardDraggable(state: CardFoldDragState, enabled: Boolean
 
 private val Opaque: () -> Float = { 1f }
 
-/** 시안 프레임(402×874)을 그대로 재는 미리보기 틀. */
 @Preview(showBackground = true, widthDp = 402, heightDp = 874)
 private annotation class CardFoldFramePreview
 

@@ -11,7 +11,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 import kotlin.random.Random
 
-/** 종이가 굴러다닐 수 있는 칸과 종이 한 장의 충돌 반지름. 화면 크기가 바뀌면 함께 바뀐다. */
+/** 종이가 굴러다닐 수 있는 칸과 종이 한 장의 충돌 반지름. */
 internal data class PaperGeometry(
     val boundsWidthPx: Float,
     val boundsHeightPx: Float,
@@ -141,7 +141,6 @@ private fun PaperUiState.follow(body: PaperBody) {
     rotationDegrees = body.angle.toDegrees()
 }
 
-/** `-range` 부터 `+range` 까지 고르게. 어느 쪽으로 치우치는지가 없어야 흩뿌린 모습이 자연스럽다. */
 private fun Random.symmetric(range: Float): Float = (nextFloat() - 0.5f) * 2f * range
 
 /** 첫 프레임은 기준이 없어 한 프레임치로 두고, 프레임이 밀렸을 때는 위로 잘라 시뮬레이션이 튀지 않게 한다. */
@@ -152,5 +151,4 @@ private fun Long.deltaSeconds(previousNanos: Long): Float =
         ((this - previousNanos) / NANOS_PER_SECOND).coerceIn(0f, PAPER_MAX_DT)
     }
 
-/** 프레임 시각은 나노초로 들어온다. 시뮬레이션은 초 단위라 여기서 한 번 바꾼다. */
 private const val NANOS_PER_SECOND = 1_000_000_000f

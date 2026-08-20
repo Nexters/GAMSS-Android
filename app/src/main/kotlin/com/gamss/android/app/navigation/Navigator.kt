@@ -17,15 +17,12 @@ import java.time.LocalDate
 class Navigator(val state: NavigationState) {
 
     /**
-     * 방금 버려서 보관함으로 보낸 카드의 날짜. 받아 가는 쪽이 한 번 읽고 비운다.
-     *
      * key 에 실어 보내지 않는다. key 는 화면의 정체성이라 인자가 남으면 그 화면에 다시 들어올
-     * 때마다 방금 버린 것처럼 또 떨어진다. 프로세스가 죽었다 살아나면 이 값도 사라지는데,
-     * 그때는 낙하 연출을 건너뛰는 쪽이 맞다.
+     * 때마다 방금 버린 것처럼 또 떨어진다. 프로세스가 죽으면 이 값도 사라지는데, 그때는 낙하를
+     * 건너뛰는 쪽이 맞다.
      */
     private var droppedCardDate: LocalDate? by mutableStateOf(null)
 
-    /** 낙하 신호를 받아 가고 비운다. 두 번째 부르면 null 이다. */
     fun consumeDroppedCardDate(): LocalDate? = droppedCardDate.also { droppedCardDate = null }
 
     /**
@@ -56,12 +53,7 @@ class Navigator(val state: NavigationState) {
         }
     }
 
-    /**
-     * 완료된 상세 흐름을 닫고 현재 탭의 첫 화면으로 돌아간다.
-     *
-     * [clearSubStack] 과 하는 일은 같지만 이름을 따로 둔다. 부르는 쪽이 아는 것은 "이 흐름이
-     * 끝났다" 이지 stack 을 어떻게 손대는지가 아니다.
-     */
+    /** 완료된 상세 흐름을 닫고 현재 탭의 첫 화면으로 돌아간다. */
     fun finishCurrentFlow() {
         clearSubStack()
     }
@@ -72,8 +64,6 @@ class Navigator(val state: NavigationState) {
      * 순서가 정해져 있다. 현재 탭을 먼저 비워야 끝난 대화방이 남지 않는데, 탭을 옮긴 뒤에는
      * currentSubStack 이 옮겨간 탭을 가리켜 손댈 수 없다. 옮겨간 탭도 root 까지 비우고 [detail]
      * 하나만 올린다. 보관함에 다른 감정 칸이 열려 있었다면 뒤로 나갔을 때 그 칸이 다시 뜬다.
-     *
-     * 날짜는 [detail] 에 싣지 않고 따로 둔다 — [consumeDroppedCardDate] 참고.
      */
     fun openDroppedCard(topLevel: NavKey, detail: NavKey, droppedCardDate: LocalDate) {
         this.droppedCardDate = droppedCardDate

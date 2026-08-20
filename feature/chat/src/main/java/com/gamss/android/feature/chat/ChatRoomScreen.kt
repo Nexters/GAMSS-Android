@@ -151,11 +151,7 @@ fun ChatRoomScreen(
     )
 }
 
-/**
- * 대화 종료 단계마다 위에 얹히는 창. 카드가 어느 보관함 칸으로 가는지도 여기서 뽑아낸다.
- *
- * 화면 본문과 떼어 두어야 연출 단계가 늘어도 [ChatRoomScreen] 이 길어지지 않는다.
- */
+/** 대화 종료 단계마다 위에 얹히는 창. 카드가 어느 보관함 칸으로 가는지도 여기서 뽑아낸다. */
 @Composable
 private fun ChatRoomEndFlowHost(
     endFlow: EndFlow,

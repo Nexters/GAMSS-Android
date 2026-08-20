@@ -21,10 +21,8 @@ internal const val CARD_FOLD_HINT_FADE_MS = 400
 internal const val CARD_FOLD_BIN_DELAY_MS = 800
 
 /**
- * 통이 다 보이는 시점. 여기서부터 종이를 끌 수 있다.
- *
- * 배어 나오기 시작하는 [CARD_FOLD_BIN_DELAY_MS] 가 아니라 다 나온 뒤여야 한다. 통이 아직 흐릴
- * 때 열어 두면 그대로 내려 버려, 어디에 버린 건지 못 본 채 화면이 넘어간다.
+ * 여기서부터 종이를 끌 수 있다. 배어 나오기 시작하는 [CARD_FOLD_BIN_DELAY_MS] 가 아니라 다
+ * 나온 뒤여야 한다. 통이 흐릴 때 열어 두면 어디에 버린 건지 못 본 채 화면이 넘어간다.
  */
 internal const val CARD_FOLD_BIN_SHOWN_MS = CARD_FOLD_BIN_DELAY_MS + CARD_FOLD_HINT_FADE_MS
 
@@ -103,11 +101,10 @@ internal val CardFoldArrowSize = DpSize(108.dp, 218.dp)
  */
 internal val CardFoldArrowBinGap = 8.dp
 
-/** 손을 뗀 종이가 통 뒤로 가라앉는 동안의 곡선. */
 internal val CardFoldSinkSpec: AnimationSpec<Float> =
     tween(CARD_FOLD_DISCARD_SINK_MS, easing = FastOutSlowInEasing)
 
-/** 통에 못 미친 채 손을 뗐을 때 제자리로 돌아오는 곡선. 튕기면 버리다 만 것처럼 보인다. */
+/** 튕기면 버리다 만 것처럼 보여 감쇠를 걸어 둔다. */
 internal val CardFoldReturnSpec: AnimationSpec<Float> =
     spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMedium)
 
@@ -115,8 +112,6 @@ internal val CardFoldReturnSpec: AnimationSpec<Float> =
 internal const val CARD_FOLD_SUMMARY_MAX_LINES = 3
 
 /**
- * 연출을 건너뛰는 우상단 닫기 버튼의 치수.
- *
  * 카드가 액션 슬롯을 Figma 값(우상단 28dp)에 맞춰 두므로 아이콘은 슬롯 좌상단에 딱 붙어야 한다.
  * 그런데 터치 영역을 아이콘보다 크게 잡으면 그 차이만큼 아이콘이 안쪽으로 밀리므로,
  * [CardFoldSkipCenteringInset] 만큼 되돌려 아이콘을 시안 위치로 보낸다.

@@ -139,8 +139,7 @@ private fun mainEntryProvider(navigator: Navigator) = entryProvider {
     }
     // 보관함 상세도 탭 안쪽의 상세 화면이라 다른 상세들과 같은 슬라이드를 쓴다.
     entry<ArchiveDetailKey>(metadata = detailSlideTransition) { key ->
-        // 낙하 신호는 한 번만 쓴다. 이 화면에 들어올 때 받아 가고 navigator 에서는 지운다.
-        // 상세에서 대화방에 들렀다 돌아오면 이 컴포지션이 다시 만들어지지만 이미 비어 있다.
+        // 대화방에 들렀다 돌아오면 이 컴포지션이 다시 만들어진다. 그때는 이미 비어 있어야 한다.
         val droppedCardDate = remember { navigator.consumeDroppedCardDate() }
         ArchiveDetailScreen(
             emotion = key.emotion,
