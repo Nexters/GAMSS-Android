@@ -28,6 +28,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.paging.compose.collectAsLazyPagingItems
 import com.gamss.android.core.designsystem.button.GamssButton
 import com.gamss.android.core.designsystem.button.GamssButtonVariant
+import com.gamss.android.core.designsystem.modifier.dismissOnTapOutside
 import com.gamss.android.core.designsystem.theme.GamssTheme
 import com.gamss.android.feature.chat.component.ChattingListTopBar
 import com.gamss.android.feature.chat.component.ChattingSearchContent
@@ -98,7 +99,9 @@ fun ChattingListScreen(
                     modifier = Modifier.fillMaxSize(),
                 )
             },
-            modifier = Modifier.weight(1f),
+            modifier = Modifier
+                .weight(1f)
+                .dismissOnTapOutside(),
         )
 
         if (state.isSelectionMode) {

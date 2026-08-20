@@ -2,7 +2,11 @@ package com.gamss.android.core.designsystem.modifier
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.semantics.Role
 
 /** 기본 indication 을 두면 손그림 배경 위에 회색 사각형이 덧그려집니다. */
@@ -57,3 +61,18 @@ fun Modifier.noRippleCombinedClickable(
             interactionSource = null,
         )
     }
+
+// 외부를 클릭할때 포커스를 제거함
+@Composable
+fun Modifier.dismissOnTapOutside(onDismiss: (() -> Unit)? = null): Modifier {
+    val focusManager = LocalFocusManager.current
+    // clickable 을 쓰면 레이블 없는 클릭 노드가 화면 전체 크기로 시맨틱 트리에 들어간다.
+    return pointerInput(onDismiss) {
+        detectTapGestures {
+            focusManager.clearFocus()
+            if(onDismiss != null) {
+                onDismiss()
+            }
+        }
+    }
+}
