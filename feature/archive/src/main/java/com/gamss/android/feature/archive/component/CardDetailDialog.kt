@@ -19,6 +19,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.gamss.android.core.common.util.formatCardDate
 import com.gamss.android.core.designsystem.card.GamssEmotionCard
 import com.gamss.android.core.designsystem.card.GamssEmotionCardCharacter
 import com.gamss.android.core.designsystem.theme.GamssTheme
@@ -26,7 +27,6 @@ import com.gamss.android.core.ui.card.cardTitleRes
 import com.gamss.android.core.ui.card.toGamssEmotionCardCharacter
 import com.gamss.android.domain.card.Card
 import com.gamss.android.feature.archive.R
-import java.time.format.DateTimeFormatter
 
 /** 배경 dim 은 [Dialog] 창이 기본으로 그려 주므로 여기서 따로 그리지 않는다. */
 @Composable
@@ -48,7 +48,7 @@ internal fun CardDetailDialog(
             contentAlignment = Alignment.Center,
         ) {
             GamssEmotionCard(
-                date = card.date.format(CardDetailDateFormatter),
+                date = formatCardDate(card.date),
                 character = card.character.toGamssEmotionCardCharacter(),
                 title = stringResource(card.character.cardTitleRes()),
                 description = card.summary,
@@ -94,8 +94,6 @@ private fun CardCloseButton(onClick: () -> Unit) {
 private val CloseIconSize = 20.dp
 private val CloseButtonTouchSize = 48.dp
 private val CloseButtonCenteringInset = (CloseButtonTouchSize - CloseIconSize) / 2
-
-private val CardDetailDateFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yy.MM.dd")
 
 @Preview(name = "Light", showBackground = true)
 @Suppress("UnusedPrivateMember")

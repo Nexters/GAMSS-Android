@@ -26,20 +26,16 @@ class ArchiveDetailViewModel @Inject constructor(
         ArchiveDetailState(yearMonth = YearMonth.now(KoreanTimeZone)),
     )
 
-    fun load(emotion: EmotionCharacter) = intent {
-        if (state.emotion == emotion) return@intent
-
-        reduce { state.copy(emotion = emotion) }
-        loadMonth(emotion, state.yearMonth)
-    }
-
     /**
-     * 방금 버린 카드를 보고 들어왔을 때 쓴다. 보던 달을 다시 받는다.
+     * 보던 달의 카드를 받아 온다.
      *
-     * [load] 는 같은 감정이면 건너뛴다. 그런데 이 칸에 이미 들어와 있던 채로 또 버리면 back stack
-     * 이 그대로라 ViewModel 도 살아남아, 조기 반환에 걸려 방금 만든 카드가 목록에 안 들어온다.
+     * @param force 같은 감정이어도 다시 받는다. 방금 버린 카드를 보고 들어왔을 때 쓴다. 이 칸에
+     *  이미 들어와 있던 채로 또 버리면 back stack 이 그대로라 ViewModel 도 살아남는데, 그때
+     *  건너뛰면 방금 만든 카드가 목록에 안 들어온다.
      */
-    fun reloadMonth(emotion: EmotionCharacter) = intent {
+    fun load(emotion: EmotionCharacter, force: Boolean = false) = intent {
+        if (!force && state.emotion == emotion) return@intent
+
         reduce { state.copy(emotion = emotion) }
         loadMonth(emotion, state.yearMonth)
     }

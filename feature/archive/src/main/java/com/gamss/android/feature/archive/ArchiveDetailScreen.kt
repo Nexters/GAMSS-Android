@@ -68,13 +68,17 @@ fun ArchiveDetailScreen(
     val cardLoadFailedMessage = stringResource(R.string.archive_card_load_error)
     val discardFailedMessage = stringResource(R.string.archive_card_discard_failure)
 
-    // nav key 에 남는 인자라 이 화면에 다시 들어올 때마다 살아난다. 첫 진입에 한 번만 읽고
-    // 잠가야, 상세에서 대화방에 들렀다 돌아왔을 때 방금 버린 것처럼 또 떨어지지 않는다.
+    // nav key 에 남는 인자라 이 화면에 다시 들어올 때마다 살아난다. 소비 여부만 이 화면 자리에
+    // 저장해 두고, 떨어뜨릴 날짜는 컴포지션에 들어올 때 한 번만 읽는다. 상세에서 대화방에
+    // 들렀다 돌아오면 컴포지션은 새로 만들어지지만 저장된 소비 여부는 남아 다시 안 떨어진다.
+    //
+    // 아래 remember 는 일부러 키가 없다. dropConsumed 가 true 로 바뀌어도 이번 화면이 들고 있는
+    // 날짜는 그대로여야, 낙하가 도는 중에 종이가 사라지지 않는다.
     var dropConsumed by rememberSaveable { mutableStateOf(false) }
     val pendingDrop = remember { droppedCardDate.takeUnless { dropConsumed } }
 
     LaunchedEffect(emotion) {
-        if (pendingDrop != null) viewModel.reloadMonth(emotion) else viewModel.load(emotion)
+        viewModel.load(emotion, force = pendingDrop != null)
         dropConsumed = true
     }
 

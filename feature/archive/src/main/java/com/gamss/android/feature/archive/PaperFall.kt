@@ -7,15 +7,24 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.currentCoroutineContext
-import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 import kotlin.random.Random
 
+/** 종이가 굴러다닐 수 있는 칸과 종이 한 장의 충돌 반지름. 화면 크기가 바뀌면 함께 바뀐다. */
+internal data class PaperGeometry(
+    val boundsWidthPx: Float,
+    val boundsHeightPx: Float,
+    val radiusPx: Float,
+)
+
 /**
  * 종이 [count] 장을 화면 위쪽에 흩뿌려 두고, [run] 이 도는 동안 [papers] 의 자리를 프레임마다 갱신한다.
  * 떨어지고 부딪히는 계산 자체는 [PaperPhysicsWorld] 가 맡는다.
+ *
+ * 칸의 크기는 생성 시점에 박지 않고 [geometry] 로 들고 프레임마다 다시 읽는다. 접는 기기를 펴거나
+ * 화면을 나눠 쓰면 칸이 바뀌는데, 처음 크기를 그대로 쓰면 종이가 옛 바닥과 벽을 기준으로 계속 굴러
+ * 화면 밖에 쌓인다.
  *
  * @param droppingIndex 이 자리의 종이 한 장만 떨어뜨리고 나머지는 이미 쌓인 자리에서 시작한다.
  *  방금 버린 카드로 들어왔을 때 쓴다. null 이면 전부 위에서 쏟는다.
@@ -23,22 +32,27 @@ import kotlin.random.Random
 @Stable
 internal class PaperFall(
     count: Int,
-    private val boundsWidthPx: Float,
-    private val boundsHeightPx: Float,
-    private val radiusPx: Float,
-    private val droppingIndex: Int? = null,
+    geometry: PaperGeometry,
+    private val droppingIndex: Int?,
 ) {
+    var geometry: PaperGeometry = geometry
+        private set
+
     /** 그리는 쪽이 읽어 가는 현재 자리. 프레임마다 바뀐다. */
-    val papers: List<PaperUiState> = spawnPapers(count, boundsWidthPx, radiusPx, droppingIndex)
+    val papers: List<PaperUiState> = spawnPapers(count, geometry, droppingIndex)
+
+    fun updateGeometry(geometry: PaperGeometry) {
+        this.geometry = geometry
+    }
 
     /**
-     * 다 쌓여 잠잠해지거나 [PHYSICS_MAX_DURATION_NANOS] 가 지나면 돌아온다 — 화면이 그대로인데도
+     * 다 쌓여 잠잠해지거나 [PAPER_MAX_DURATION_NANOS] 가 지나면 돌아온다 — 화면이 그대로인데도
      * 매 프레임 계속 깨어나지 않게 한다.
      */
     suspend fun run() = coroutineScope {
-        val bodies = papers.map { it.toBody(radiusPx) }
+        val bodies = papers.map { it.toBody(geometry.radiusPx) }
         settleAlreadyPiled(bodies)
-        val world = PaperPhysicsWorld(bodies, boundsWidth = boundsWidthPx, boundsHeight = boundsHeightPx)
+        val world = PaperPhysicsWorld(bodies, geometry)
 
         var lastFrameNanos = -1L
         var startFrameNanos = -1L
@@ -49,12 +63,13 @@ internal class PaperFall(
                 val dt = frameNanos.deltaSeconds(lastFrameNanos)
                 lastFrameNanos = frameNanos
 
+                world.geometry = geometry
                 world.step(dt)
                 bodies.forEachIndexed { index, body -> papers[index].follow(body) }
                 settledFrames = if (world.isAtRest()) settledFrames + 1 else 0
             }
-            val settled = settledFrames >= PHYSICS_SETTLE_FRAMES
-            val timedOut = lastFrameNanos - startFrameNanos > PHYSICS_MAX_DURATION_NANOS
+            val settled = settledFrames >= PAPER_SETTLE_FRAMES
+            val timedOut = lastFrameNanos - startFrameNanos > PAPER_MAX_DURATION_NANOS
             if (settled || timedOut) break
         }
     }
@@ -73,24 +88,9 @@ internal class PaperFall(
         // 프레임 밖에서 굴린다. 종이가 많으면 한 번에 수십만 번의 충돌 계산이라, 메인 스레드에
         // 두면 화면이 밀려 들어오는 트랜지션 위에 그대로 얹힌다.
         withContext(Dispatchers.Default) {
-            PaperPhysicsWorld(piled, boundsWidth = boundsWidthPx, boundsHeight = boundsHeightPx).settle()
+            PaperPhysicsWorld(piled, geometry).settle()
         }
         bodies.forEachIndexed { index, body -> if (index != droppingIndex) papers[index].follow(body) }
-    }
-}
-
-/**
- * 프레임을 기다리지 않고 잠잠해질 때까지 굴린다. 이미 쌓인 더미의 자리를 구하는 용도다.
- *
- * 중간에 취소를 확인한다. 화면을 벗어난 뒤에도 남은 step 을 다 도는 일이 없어야 한다.
- */
-private suspend fun PaperPhysicsWorld.settle() {
-    var settledSteps = 0
-    repeat(PHYSICS_SETTLE_MAX_STEPS) {
-        currentCoroutineContext().ensureActive()
-        step(PHYSICS_FIXED_DT)
-        settledSteps = if (isAtRest()) settledSteps + 1 else 0
-        if (settledSteps >= PHYSICS_SETTLE_FRAMES) return
     }
 }
 
@@ -110,17 +110,17 @@ internal class PaperUiState(x: Float, y: Float, rotationDegrees: Float) {
  */
 private fun spawnPapers(
     count: Int,
-    boundsWidthPx: Float,
-    radiusPx: Float,
+    geometry: PaperGeometry,
     droppingIndex: Int?,
 ): List<PaperUiState> {
-    val spawnRange = (boundsWidthPx - radiusPx * 2f).coerceAtLeast(0f)
+    val radiusPx = geometry.radiusPx
+    val spawnRange = (geometry.boundsWidthPx - radiusPx * 2f).coerceAtLeast(0f)
     return List(count) { index ->
         val stackHeight = if (index == droppingIndex) 0f else index * radiusPx * PAPER_SPAWN_STAGGER
         PaperUiState(
             x = radiusPx + Random.nextFloat() * spawnRange,
             y = -radiusPx - stackHeight,
-            rotationDegrees = (Random.nextFloat() - 0.5f) * 2f * PAPER_MAX_TILT_DEGREES,
+            rotationDegrees = Random.symmetric(PAPER_MAX_TILT_DEGREES),
         )
     }
 }
@@ -131,8 +131,8 @@ private fun PaperUiState.toBody(radiusPx: Float) = PaperBody(
     startY = y,
     startAngle = rotationDegrees.toRadians(),
     radius = radiusPx,
-    startVelX = (Random.nextFloat() - 0.5f) * PAPER_SPAWN_DRIFT,
-    startAngularVelocity = (Random.nextFloat() - 0.5f) * PAPER_SPAWN_SPIN,
+    startVelX = Random.symmetric(PAPER_SPAWN_DRIFT),
+    startAngularVelocity = Random.symmetric(PAPER_SPAWN_SPIN),
 )
 
 private fun PaperUiState.follow(body: PaperBody) {
@@ -141,23 +141,16 @@ private fun PaperUiState.follow(body: PaperBody) {
     rotationDegrees = body.angle.toDegrees()
 }
 
+/** `-range` 부터 `+range` 까지 고르게. 어느 쪽으로 치우치는지가 없어야 흩뿌린 모습이 자연스럽다. */
+private fun Random.symmetric(range: Float): Float = (nextFloat() - 0.5f) * 2f * range
+
 /** 첫 프레임은 기준이 없어 한 프레임치로 두고, 프레임이 밀렸을 때는 위로 잘라 시뮬레이션이 튀지 않게 한다. */
 private fun Long.deltaSeconds(previousNanos: Long): Float =
     if (previousNanos < 0) {
-        PHYSICS_FIXED_DT
+        PAPER_FIXED_DT
     } else {
-        ((this - previousNanos) / NANOS_PER_SECOND).coerceIn(0f, PHYSICS_MAX_DT)
+        ((this - previousNanos) / NANOS_PER_SECOND).coerceIn(0f, PAPER_MAX_DT)
     }
 
+/** 프레임 시각은 나노초로 들어온다. 시뮬레이션은 초 단위라 여기서 한 번 바꾼다. */
 private const val NANOS_PER_SECOND = 1_000_000_000f
-private const val PAPER_MAX_TILT_DEGREES = 42f
-private const val PAPER_SPAWN_STAGGER = 0.9f
-private const val PAPER_SPAWN_DRIFT = 120f
-private const val PAPER_SPAWN_SPIN = 0.15f
-private const val PHYSICS_FIXED_DT = 1f / 60f
-private const val PHYSICS_MAX_DT = 1f / 30f
-private const val PHYSICS_SETTLE_FRAMES = 30
-private const val PHYSICS_MAX_DURATION_NANOS = 5_000_000_000L
-
-/** 미리 굴릴 때의 상한. 10초치라 실제로는 훨씬 먼저 잠잠해진다. */
-private const val PHYSICS_SETTLE_MAX_STEPS = 600
