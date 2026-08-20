@@ -1,5 +1,10 @@
 package com.gamss.android.feature.chat
 
+import androidx.compose.animation.core.AnimationSpec
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 
@@ -89,3 +94,25 @@ internal val CardFoldArrowSize = DpSize(108.dp, 218.dp)
  * Figma 의 두 export 프레임에서 화살표가 416..634, 통이 642 부터다.
  */
 internal val CardFoldArrowBinGap = 8.dp
+
+/** 손을 뗀 종이가 통 뒤로 가라앉는 동안의 곡선. */
+internal val CardFoldSinkSpec: AnimationSpec<Float> =
+    tween(CARD_FOLD_DISCARD_SINK_MS, easing = FastOutSlowInEasing)
+
+/** 통에 못 미친 채 손을 뗐을 때 제자리로 돌아오는 곡선. 튕기면 버리다 만 것처럼 보인다. */
+internal val CardFoldReturnSpec: AnimationSpec<Float> =
+    spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMedium)
+
+/** [com.gamss.android.core.designsystem.card.GamssEmotionCard] 의 본문 상한과 같은 값이다. */
+internal const val CARD_FOLD_SUMMARY_MAX_LINES = 3
+
+/**
+ * 연출을 건너뛰는 우상단 닫기 버튼의 치수.
+ *
+ * 카드가 액션 슬롯을 Figma 값(우상단 28dp)에 맞춰 두므로 아이콘은 슬롯 좌상단에 딱 붙어야 한다.
+ * 그런데 터치 영역을 아이콘보다 크게 잡으면 그 차이만큼 아이콘이 안쪽으로 밀리므로,
+ * [CardFoldSkipCenteringInset] 만큼 되돌려 아이콘을 시안 위치로 보낸다.
+ */
+internal val CardFoldSkipIconSize = 20.dp
+internal val CardFoldSkipTouchSize = 48.dp
+internal val CardFoldSkipCenteringInset = (CardFoldSkipTouchSize - CardFoldSkipIconSize) / 2

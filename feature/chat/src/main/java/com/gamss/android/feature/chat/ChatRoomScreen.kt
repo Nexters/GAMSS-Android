@@ -141,17 +141,41 @@ fun ChatRoomScreen(
         )
     }
 
+    ChatRoomEndFlowHost(
+        endFlow = state.endFlow,
+        onEndConfirm = viewModel::onEndConfirm,
+        onEndCancel = viewModel::onEndCancel,
+        onFoldTap = viewModel::onCardFoldTap,
+        onCardSkip = onCardSkip,
+        onCardDiscard = onCardDiscard,
+    )
+}
+
+/**
+ * 대화 종료 단계마다 위에 얹히는 창. 카드가 어느 보관함 칸으로 가는지도 여기서 뽑아낸다.
+ *
+ * 화면 본문과 떼어 두어야 연출 단계가 늘어도 [ChatRoomScreen] 이 길어지지 않는다.
+ */
+@Composable
+private fun ChatRoomEndFlowHost(
+    endFlow: EndFlow,
+    onEndConfirm: () -> Unit,
+    onEndCancel: () -> Unit,
+    onFoldTap: () -> Unit,
+    onCardSkip: () -> Unit,
+    onCardDiscard: (EmotionCharacter, LocalDate) -> Unit,
+) {
     // else 를 두지 않아야 단계를 추가할 때 화면이 컴파일 에러로 알려준다.
-    when (val endFlow = state.endFlow) {
+    when (endFlow) {
         EndFlow.Confirming -> EndConversationDialog(
-            onConfirm = viewModel::onEndConfirm,
-            onDismiss = viewModel::onEndCancel,
+            onConfirm = onEndConfirm,
+            onDismiss = onEndCancel,
         )
 
         is EndFlow.CardReady -> CardFoldOverlay(
             card = endFlow.card,
             foldStage = endFlow.foldStage,
-            onFoldTap = viewModel::onCardFoldTap,
+            onFoldTap = onFoldTap,
             onSkip = onCardSkip,
             onDiscard = { onCardDiscard(endFlow.card.character, endFlow.card.date) },
         )

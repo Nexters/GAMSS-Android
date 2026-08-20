@@ -1,5 +1,6 @@
 package com.gamss.android.core.common.util
 
+import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -10,15 +11,16 @@ val KoreanTimeZone: ZoneId = ZoneId.of("Asia/Seoul")
 
 private const val KOREAN_TIME_PATTERN = "a h:mm"
 
-private const val CONVERSATION_DATE_PATTERN = "yy.MM.dd"
+/** 대화방 목록과 카드가 함께 쓰는 짧은 날짜. */
+private const val SHORT_DATE_PATTERN = "yy.MM.dd"
 
 // 존을 덮지 않는다. 이미 벽시계로 변환된 값을 그대로 찍는 용도다.
 private val KoreanWallClockFormatter: DateTimeFormatter =
     DateTimeFormatter.ofPattern(KOREAN_TIME_PATTERN, Locale.KOREAN)
 
 // 불교력이나 일본력 로케일에서 연도가 밀리지 않게 ROOT 로 고정한다.
-private val ConversationDateFormatter: DateTimeFormatter =
-    DateTimeFormatter.ofPattern(CONVERSATION_DATE_PATTERN, Locale.ROOT)
+private val ShortDateFormatter: DateTimeFormatter =
+    DateTimeFormatter.ofPattern(SHORT_DATE_PATTERN, Locale.ROOT)
 
 /**
  * 이미 벽시계로 바뀐 시각을 `오전/오후 h:mm` 형식으로 변환한다.
@@ -29,4 +31,7 @@ private val ConversationDateFormatter: DateTimeFormatter =
 fun formatKoreanTime(dateTime: LocalDateTime): String = KoreanWallClockFormatter.format(dateTime)
 
 /** 대화방 생성 시각을 `yy.MM.dd` 형식의 날짜로 표시한다. */
-fun formatConversationDate(dateTime: LocalDateTime): String = ConversationDateFormatter.format(dateTime)
+fun formatConversationDate(dateTime: LocalDateTime): String = ShortDateFormatter.format(dateTime)
+
+/** 카드에 찍히는 날짜를 `yy.MM.dd` 형식으로 표시한다. 접기 연출과 보관함 상세가 같은 값을 쓴다. */
+fun formatCardDate(date: LocalDate): String = ShortDateFormatter.format(date)
