@@ -207,7 +207,9 @@ class ChatRoomViewModel @Inject constructor(
             } else {
                 null
             }
-            if (pending == null) state else state.copy(isSending = true)
+            // 서버 왕복이 끝날 때까지 기다리지 않고 버튼을 누른 즉시 입력칸을 비운다. 아래
+            // 위험 신호 차단·전송 실패 분기에서 되돌리지 않는 한 이 상태로 남는다.
+            if (pending == null) state else state.copy(isSending = true, input = "")
         }
         val sending = pending ?: return@intent
 
@@ -223,6 +225,8 @@ class ChatRoomViewModel @Inject constructor(
                     } else {
                         state.isSending
                     },
+                    // 방금 비운 입력칸을 되돌린다. 그 사이 사용자가 새로 타이핑했다면 덮어쓰지 않는다.
+                    input = if (detection.shouldBlock && state.input.isEmpty()) sending.content else state.input,
                 )
             }
 
@@ -247,7 +251,6 @@ class ChatRoomViewModel @Inject constructor(
                         conversationId = sent.message.conversationId,
                         messages = state.messages + sent.message,
                         pendingComments = sent.comments,
-                        input = if (state.input == sending.content) "" else state.input,
                         replyTarget = state.replyTarget.takeIf { it?.messageId != sending.replyToMessageId },
                     )
                 }
@@ -257,7 +260,13 @@ class ChatRoomViewModel @Inject constructor(
                 refreshTokenUsageInBackground()
             }
             is AppResult.Failure -> {
-                reduce { state.copy(isSending = false) }
+                reduce {
+                    state.copy(
+                        isSending = false,
+                        // 방금 비운 입력칸을 되돌린다. 그 사이 사용자가 새로 타이핑했다면 덮어쓰지 않는다.
+                        input = if (state.input.isEmpty()) sending.content else state.input,
+                    )
+                }
                 postSideEffect(ChatRoomSideEffect.ShowToast(SEND_FAILED))
             }
         }
