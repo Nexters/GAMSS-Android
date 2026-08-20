@@ -272,11 +272,8 @@ private fun GamssCardDashedDivider(modifier: Modifier = Modifier) {
 }
 
 /**
- * 이미지 카드 안에 대화 로그를 배치하는 카드 퍼사드.
- *
- * 대화 내용 자체는 화면마다 달라 [content] 슬롯으로 남기고, 카드의 여백과 셸만 고정한다.
- * [content] 는 날짜 아래 남은 높이를 모두 받는다. 카드가 고정 크기라 대화가 길어졌을 때 어디까지
- * 보여 줄지는 카드가 정해야 하고, 호출부는 그 안에서 스크롤만 붙이면 된다.
+ * 이미지 카드 안에 대화 로그를 배치하는 카드 퍼사드. 카드가 고정 크기라 [content] 에 날짜 아래 남은
+ * 높이를 모두 넘긴다. 호출부는 그 안에서 스크롤만 붙이면 된다.
  */
 @Composable
 fun GamssChattingCard(

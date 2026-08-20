@@ -54,7 +54,7 @@ fun NewMessageToast(
     modifier: Modifier = Modifier,
 ) {
     // 발신자는 항상 캐릭터다 — 본인이 보낸 메시지는 호출부에서 애초에 이 토스트 대상으로 넘기지
-    // 않는다. Unknown 은 MessageBubble 과 동일하게 빈 이름/빈 아바타로 둔다.
+    // 않는다. Unknown 은 ChatMessageBubble 과 동일하게 빈 이름/빈 아바타로 둔다.
     val character = (message.sender as? MessageSender.Character)?.character
     val senderName = character?.displayName.orEmpty()
 

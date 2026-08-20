@@ -21,7 +21,7 @@ val EmotionCharacter.avatarIconRes: Int
         EmotionCharacter.PRICKLY -> DesignSystemR.drawable.ic_avatar_prickly
     }
 
-/** 말풍선의 아바타 자리를 꽉 채우는 캐릭터 이미지. 원형 클립과 테두리는 아바타 자리가 맡는다. */
+/** 원형 클립과 테두리는 아바타 자리가 맡으므로 여기서는 그 자리를 꽉 채우기만 한다. */
 @Composable
 fun CharacterAvatar(character: EmotionCharacter, modifier: Modifier = Modifier) {
     Image(

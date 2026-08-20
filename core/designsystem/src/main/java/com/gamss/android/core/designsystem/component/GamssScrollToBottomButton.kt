@@ -17,8 +17,7 @@ import com.gamss.android.core.designsystem.modifier.gamssShadow
 import com.gamss.android.core.designsystem.theme.GamssTheme
 
 /**
- * 목록 위에 떠서 맨 아래로 데려가는 둥근 버튼. 채팅방과 카드 안 대화처럼 대화를 보여 주는
- * 화면들이 같은 버튼을 쓴다.
+ * 목록 위에 떠서 맨 아래로 데려가는 둥근 버튼. 채팅방과 카드 안 대화가 같은 버튼을 쓴다.
  *
  * @param contentDescription 화면마다 목록이 달라 문구는 호출부가 정한다.
  */

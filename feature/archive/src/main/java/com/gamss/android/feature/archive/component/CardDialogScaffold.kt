@@ -23,14 +23,12 @@ import java.time.format.DateTimeFormatter
 
 /**
  * 카드 한 장을 화면 가운데 띄우는 다이얼로그. 감정 카드와 대화 카드가 같은 자리에서 서로 바뀌므로
- * 위치와 여백을 여기서 한 번만 정한다.
- *
- * 배경 dim 은 [Dialog] 창이 기본으로 그려 주므로 여기서 따로 그리지 않는다.
+ * 위치와 여백을 여기서 한 번만 정한다. 배경 dim 은 [Dialog] 창이 기본으로 그려 준다.
  */
 @Composable
 internal fun CardDialogScaffold(
     onDismiss: () -> Unit,
-    card: @Composable () -> Unit,
+    content: @Composable () -> Unit,
 ) {
     Dialog(
         onDismissRequest = onDismiss,
@@ -42,7 +40,7 @@ internal fun CardDialogScaffold(
                 .padding(horizontal = GamssTheme.spacing.spacing300),
             contentAlignment = Alignment.Center,
         ) {
-            card()
+            content()
         }
     }
 }

@@ -173,8 +173,7 @@ private fun ArchiveDetailOverlays(
         )
     }
 
-    // 감정 카드와 같은 자리에 뜨지만 둘이 함께 뜨는 일은 없다. 대화보기가 감정 카드를 내리고 이 카드를
-    // 올리며, 닫으면 다시 감정 카드로 돌아온다.
+    // 감정 카드와 같은 자리를 쓰지만 둘이 함께 뜨는 일은 없다.
     state.conversationCard?.let { conversationCard ->
         ConversationCardDialog(
             conversationCard = conversationCard,
