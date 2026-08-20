@@ -36,7 +36,6 @@ import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.gamss.android.core.common.util.formatCardDate
-import com.gamss.android.core.designsystem.R as DesignSystemR
 import com.gamss.android.core.designsystem.card.GamssCardDashedDivider
 import com.gamss.android.core.designsystem.card.GamssEmotionCardContent
 import com.gamss.android.core.designsystem.card.GamssImageCard
@@ -62,6 +61,7 @@ import com.gamss.android.feature.chat.CardFoldSummaryToDividerGap
 import com.gamss.android.feature.chat.CardFoldTapGuideSize
 import com.gamss.android.feature.chat.R
 import java.time.LocalDate
+import com.gamss.android.core.designsystem.R as DesignSystemR
 
 /**
  * 카드를 눌러 두 번 접고, 접힌 종이를 아래 통으로 끌어내려 버리는 연출.

@@ -65,7 +65,6 @@ import com.gamss.android.feature.setting.nicknamechange.NicknameChangeScreen
 import com.gamss.android.feature.webview.GamssWebPage
 import com.gamss.android.feature.webview.WebViewScreen
 import com.gamss.android.feature.webview.navigation.WebViewKey
-import java.time.LocalDate
 
 @Composable
 fun MainScreen(
@@ -140,9 +139,12 @@ private fun mainEntryProvider(navigator: Navigator) = entryProvider {
     }
     // 보관함 상세도 탭 안쪽의 상세 화면이라 다른 상세들과 같은 슬라이드를 쓴다.
     entry<ArchiveDetailKey>(metadata = detailSlideTransition) { key ->
+        // 낙하 신호는 한 번만 쓴다. 이 화면에 들어올 때 받아 가고 navigator 에서는 지운다.
+        // 상세에서 대화방에 들렀다 돌아오면 이 컴포지션이 다시 만들어지지만 이미 비어 있다.
+        val droppedCardDate = remember { navigator.consumeDroppedCardDate() }
         ArchiveDetailScreen(
             emotion = key.emotion,
-            droppedCardDate = key.droppedCardEpochDay?.let(LocalDate::ofEpochDay),
+            droppedCardDate = droppedCardDate,
             onBackClick = navigator::goBack,
             onOpenConversation = { conversationId -> navigator.navigate(ChatRoomKey(conversationId)) },
             onNavigateToCardDelete = { navigator.navigate(CardDeleteKey) },
@@ -190,7 +192,7 @@ private fun mainEntryProvider(navigator: Navigator) = entryProvider {
             // 다시 들어가고, 카드 단계가 그대로라 접기 연출이 또 열린다. 비우는 순서는
             // Navigator 가 안다.
             onCardDiscard = { emotion, date ->
-                navigator.openInTab(ArchiveKey, ArchiveDetailKey(emotion, date.toEpochDay()))
+                navigator.openDroppedCard(ArchiveKey, ArchiveDetailKey(emotion), date)
             },
             onCardSkip = navigator::goBack,
             onBackClick = navigator::goBack,

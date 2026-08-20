@@ -248,7 +248,14 @@ fun ColumnScope.GamssEmotionCardContent(
     content()
 }
 
-/** 카드 안을 가로로 끊어 주는 점선. 콘텐츠 열 전체 폭을 쓴다. */
+/**
+ * 카드 안을 가로로 끊어 주는 점선.
+ *
+ * 스스로 폭을 정하지 않고 부모가 준 폭을 채운다. 카드 콘텐츠 열 안에 두어야 좌우 여백이 시안과
+ * 맞고, 카드 밖에서 그대로 쓰면 화면 끝까지 뻗는다.
+ *
+ * @param modifier 폭을 좁히거나 위아래 간격을 줄 때만 쓴다. 폭을 넓히면 카드 밖으로 나간다.
+ */
 @Composable
 fun GamssCardDashedDivider(modifier: Modifier = Modifier) {
     val color = GamssTheme.colors.gray950

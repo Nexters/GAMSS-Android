@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
+import com.gamss.android.core.designsystem.theme.designScale
 import com.gamss.android.feature.chat.CARD_FOLD_ARROW_DELAY_MS
 import com.gamss.android.feature.chat.CARD_FOLD_BIN_ASPECT_RATIO
 import com.gamss.android.feature.chat.CARD_FOLD_BIN_DELAY_MS
@@ -32,7 +33,6 @@ import com.gamss.android.feature.chat.CardFoldReturnSpec
 import com.gamss.android.feature.chat.CardFoldSinkSpec
 import com.gamss.android.feature.chat.CardFoldStage
 import com.gamss.android.feature.chat.paperSize
-import com.gamss.android.core.designsystem.theme.designScale
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
