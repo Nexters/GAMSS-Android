@@ -28,8 +28,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.gamss.android.core.designsystem.card.GamssEmotionCard
-import com.gamss.android.core.designsystem.card.GamssEmotionCardActions
 import com.gamss.android.core.designsystem.card.GamssEmotionCardCharacter
+import com.gamss.android.core.designsystem.card.GamssEmotionCardFooter
 import com.gamss.android.core.designsystem.theme.GamssTheme
 import com.gamss.android.core.designsystem.theme.GamssTouchTarget
 import com.gamss.android.core.ui.card.cardTitleRes
@@ -77,11 +77,12 @@ internal fun CardDetailDialog(
                 character = card.character.toGamssEmotionCardCharacter(),
                 title = stringResource(card.character.cardTitleRes()),
                 description = card.summary,
-                // 캡처하는 동안에는 액션을 아예 넘기지 않아 그림에 남지 않게 한다.
-                actions = if (isCapturing) {
-                    null
+                // 캡처하는 동안에는 액션 대신 워드마크를 넣는다. 누를 수 없는 버튼이 그림에
+                // 남지 않고, 시안(Figma 4243:18230)의 공유용 카드와 같아진다.
+                footer = if (isCapturing) {
+                    GamssEmotionCardFooter.Brand
                 } else {
-                    GamssEmotionCardActions(
+                    GamssEmotionCardFooter.Actions(
                         primaryLabel = stringResource(R.string.archive_card_discard),
                         secondaryLabel = stringResource(R.string.archive_card_view_conversation),
                         shareLabel = stringResource(R.string.archive_card_share),
@@ -197,6 +198,22 @@ private fun CardDetailDialogDarkPreview() {
     }
 }
 
+/** 공유 이미지로 나가는 모양. 닫기 아이콘과 버튼이 빠지고 워드마크가 들어간다. */
+@Preview(name = "Share image", showBackground = true)
+@Suppress("UnusedPrivateMember")
+@Composable
+private fun CardShareImagePreview() {
+    GamssTheme(darkTheme = false) {
+        GamssEmotionCard(
+            date = "26.08.03",
+            character = GamssEmotionCardCharacter.ANGER,
+            title = "오늘 화~나네",
+            description = "설느닛람햄을 긱에자네에 신손 겅투히오의 흐랸비의 수매해으는 하어이",
+            footer = GamssEmotionCardFooter.Brand,
+        )
+    }
+}
+
 @Composable
 private fun CardDetailDialogPreviewContent() {
     GamssEmotionCard(
@@ -204,7 +221,7 @@ private fun CardDetailDialogPreviewContent() {
         character = GamssEmotionCardCharacter.ANGER,
         title = "오늘 화~나네",
         description = "설느닛람햄을 긱에자네에 신손 겅투히오의 흐랸비의 수매해으는 하어이",
-        actions = GamssEmotionCardActions(
+        footer = GamssEmotionCardFooter.Actions(
             primaryLabel = stringResource(R.string.archive_card_discard),
             secondaryLabel = stringResource(R.string.archive_card_view_conversation),
             shareLabel = stringResource(R.string.archive_card_share),
