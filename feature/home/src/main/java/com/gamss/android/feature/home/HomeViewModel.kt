@@ -25,16 +25,30 @@ class HomeViewModel @Inject constructor(
     private val session: ConversationSession,
 ) : ViewModel(), ContainerHost<HomeState, HomeSideEffect> {
 
+    // Top-level 화면은 back stack에 남아 ViewModel이 계속 살아 있을 수 있다. 화면을 벗어난 뒤
+    // 이전 전송이 끝나도 자동 이동 이벤트가 되살아나지 않도록 화면 세대로 무효화한다.
+    private var isScreenActive = true
+    private var navigationGeneration = 0L
+
     override val container = container<HomeState, HomeSideEffect>(HomeState())
 
     fun loadUserInfo() = intent {
-        // 닉네임을 못 받아도 화면은 성립한다. 세션이 끊긴 경우는 AuthRepository 가 로그인으로 되돌린다.
-        // 실패해도 기존 닉네임은 지우지 않는다 — 갱신 시도가 화면에 이미 보이던 값을 날리면 안 된다.
+        // 실패해도 기존 닉네임은 지우지 않는다. 갱신 시도가 화면에 이미 보이던 값을 날리면 안 된다.
         when (val result = getUserInfoUseCase()) {
             is AppResult.Success -> reduce { state.copy(isLoading = false, nickname = result.data.nickname) }
             is AppResult.Failure -> reduce { state.copy(isLoading = false) }
         }
     }
+
+    fun onScreenActiveChanged(active: Boolean) {
+        if (isScreenActive && !active) {
+            navigationGeneration++
+        }
+        isScreenActive = active
+    }
+
+    fun shouldHandleOpenConversation(generation: Long): Boolean =
+        isScreenActive && navigationGeneration == generation
 
     fun navigateToSetting() = intent {
         postSideEffect(HomeSideEffect.NavigateToSetting)
@@ -88,6 +102,7 @@ class HomeViewModel @Inject constructor(
             if (pending == null) state else state.copy(isSending = true, isEmotionPickerExpanded = false)
         }
         val message = pending ?: return@intent
+        val requestGeneration = navigationGeneration
 
         val result = session.send(
             conversationId = null,
@@ -103,10 +118,18 @@ class HomeViewModel @Inject constructor(
                 // applicationScope 로 돌려서 이 화면을 벗어나도 끊기지 않는다.
                 viewModelScope.launch { session.finishSend() }
                 reduce { state.copy(input = "") }
-                postSideEffect(HomeSideEffect.OpenConversation(result.data.message.conversationId))
+                if (isScreenActive && navigationGeneration == requestGeneration) {
+                    postSideEffect(
+                        HomeSideEffect.OpenConversation(
+                            conversationId = result.data.message.conversationId,
+                            navigationGeneration = requestGeneration,
+                        ),
+                    )
+                }
             }
             // 입력은 남겨 둔다. 실패한 문구를 다시 치게 하면 안 된다.
             is AppResult.Failure -> postSideEffect(HomeSideEffect.ShowToast(SEND_FAILED))
         }
     }
+
 }

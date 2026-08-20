@@ -312,6 +312,27 @@ class HomeViewModelTest {
     }
 
     @Test
+    fun `홈을 벗어난 뒤 전송이 끝나면 대화방 이동 이벤트를 발행하지 않는다`() = runTest {
+        val gate = CompletableDeferred<Unit>()
+        val gated = RecordingConversationRepository(gate = gate)
+
+        viewModel(gated).test(this) {
+            containerHost.onInputChange(WORRY)
+            expectState { copy(input = WORRY) }
+
+            containerHost.onScreenActiveChanged(false)
+            containerHost.onSubmit()
+            expectState { copy(isSending = true) }
+            expectNoItems()
+
+            gate.complete(Unit)
+            expectState { copy(isSending = false) }
+            expectState { copy(input = "") }
+            expectNoItems()
+        }
+    }
+
+    @Test
     fun `설정 아이콘을 누르면 설정으로 이동한다`() = runTest {
         viewModel().test(this) {
             containerHost.navigateToSetting()

@@ -129,6 +129,7 @@ private fun mainEntryProvider(navigator: Navigator) = entryProvider {
         HomeScreen(
             onNavigateToSetting = { navigator.navigate(SettingKey) },
             onOpenConversation = { conversationId -> navigator.navigate(ChatRoomKey(conversationId)) },
+            isActive = navigator.state.currentKey == HomeKey,
         )
     }
     entry<ArchiveKey> {
