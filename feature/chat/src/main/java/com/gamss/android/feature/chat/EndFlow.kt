@@ -26,6 +26,9 @@ sealed interface EndFlow {
     /**
      * 접기 단계를 카드와 함께 든다. 단계는 카드가 있을 때만 뜻이 있으므로 밖에 두면
      * "카드 없는데 두 번 접힘" 같은 조합이 타입상 표현된다.
+     *
+     * 연출 값을 컴포지션이 아니라 여기 두는 것은, 프로세스가 죽었다 살아나도 접다 만 자리에서
+     * 이어져야 하기 때문이다. rememberSaveable 로는 복원한 카드와 단계가 따로 놀 수 있다.
      */
     data class CardReady(
         val card: Card,

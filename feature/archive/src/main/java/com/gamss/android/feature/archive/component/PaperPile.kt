@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -16,12 +17,15 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.unit.dp
+import com.gamss.android.core.designsystem.theme.designScale
+import com.gamss.android.core.designsystem.theme.designWidth
 import com.gamss.android.domain.card.CardEntry
+import com.gamss.android.feature.archive.PAPER_COLLISION_RADIUS_SCALE
 import com.gamss.android.feature.archive.PaperFall
+import com.gamss.android.feature.archive.PaperGeometry
+import com.gamss.android.feature.archive.PaperPileTopPadding
+import com.gamss.android.feature.archive.PaperSize
 import com.gamss.android.feature.archive.R
-import com.gamss.android.feature.archive.designScale
-import com.gamss.android.feature.archive.designWidth
 import java.time.LocalDate
 
 /**
@@ -39,35 +43,37 @@ internal fun PaperPile(
     BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
-            .padding(top = PileTopPadding),
+            .padding(top = PaperPileTopPadding),
     ) {
         val scale = designScale(maxWidth)
         val density = LocalDensity.current
-        val boundsWidthPx = with(density) { designWidth(scale).toPx() }
-        val boundsHeightPx = with(density) { maxHeight.toPx() }
         val paperSizePx = with(density) { (PaperSize * scale).toPx() }
-        val radiusPx = paperSizePx / 2f * PAPER_COLLISION_RADIUS_SCALE
+        val geometry = PaperGeometry(
+            boundsWidthPx = with(density) { designWidth(scale).toPx() },
+            boundsHeightPx = with(density) { maxHeight.toPx() },
+            radiusPx = paperSizePx / 2f * PAPER_COLLISION_RADIUS_SCALE,
+        )
         // 시뮬레이션은 시안 폭(402dp) 안에서만 돈다. 더 넓은 화면에서는 그 폭을 가운데로 밀어야
         // 상단바·월 셀렉터와 축이 맞는다. 종이는 TopStart 기준이라 contentAlignment 로는 안 된다.
         val pileOffsetX = with(density) { ((maxWidth - designWidth(scale)) / 2).toPx() }
 
-        // 키에 화면 크기를 넣지 않는다. 회전 등으로 크기만 바뀌었을 때 이미 쌓인 종이가 다시 쏟아진다.
+        // 키에 화면 크기를 넣지 않는다. 크기만 바뀌었을 때 이미 쌓인 종이가 다시 쏟아지면 안 된다.
+        // 바뀐 칸은 컴포지션이 확정된 뒤에 흘려 넣는다. 버려질 수 있는 컴포지션에서 쓰면 안 된다.
         val fall = remember(cards, droppedCardDate) {
             PaperFall(
                 count = cards.size,
-                boundsWidthPx = boundsWidthPx,
-                boundsHeightPx = boundsHeightPx,
-                radiusPx = radiusPx,
+                geometry = geometry,
                 droppingIndex = cards.droppedIndex(droppedCardDate),
             )
         }
+        SideEffect { fall.updateGeometry(geometry) }
 
         LaunchedEffect(fall) { fall.run() }
 
-        cards.forEachIndexed { index, card ->
-            val paper = fall.papers.getOrNull(index) ?: return@forEachIndexed
+        val paperPainter = painterResource(R.drawable.archive_paper)
+        cards.zip(fall.papers).forEach { (card, paper) ->
             Image(
-                painter = painterResource(R.drawable.archive_paper),
+                painter = paperPainter,
                 contentDescription = stringResource(
                     R.string.archive_paper_description,
                     card.date.monthValue,
@@ -102,9 +108,3 @@ private fun List<CardEntry>.droppedIndex(date: LocalDate?): Int? {
         .maxByOrNull { (_, entry) -> entry.indexInDate }
         ?.index
 }
-
-/** 종이는 네모지만 충돌은 원으로 근사한다. 모서리까지 덮으려 반지름을 조금 키운다. */
-private const val PAPER_COLLISION_RADIUS_SCALE = 1.15f
-
-private val PileTopPadding = 136.dp
-private val PaperSize = 88.dp

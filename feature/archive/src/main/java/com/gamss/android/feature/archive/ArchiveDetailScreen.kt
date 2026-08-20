@@ -17,10 +17,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -68,14 +64,8 @@ fun ArchiveDetailScreen(
     val cardLoadFailedMessage = stringResource(R.string.archive_card_load_error)
     val discardFailedMessage = stringResource(R.string.archive_card_discard_failure)
 
-    // nav key 에 남는 인자라 이 화면에 다시 들어올 때마다 살아난다. 첫 진입에 한 번만 읽고
-    // 잠가야, 상세에서 대화방에 들렀다 돌아왔을 때 방금 버린 것처럼 또 떨어지지 않는다.
-    var dropConsumed by rememberSaveable { mutableStateOf(false) }
-    val pendingDrop = remember { droppedCardDate.takeUnless { dropConsumed } }
-
     LaunchedEffect(emotion) {
-        if (pendingDrop != null) viewModel.reloadMonth(emotion) else viewModel.load(emotion)
-        dropConsumed = true
+        viewModel.load(emotion, force = droppedCardDate != null)
     }
 
     viewModel.collectSideEffect { sideEffect ->
@@ -94,7 +84,7 @@ fun ArchiveDetailScreen(
     ArchiveDetailFrame(
         emotion = emotion,
         state = state,
-        droppedCardDate = pendingDrop,
+        droppedCardDate = droppedCardDate,
         onBackClick = onBackClick,
         onPaperClick = viewModel::selectCard,
         onMonthClick = viewModel::showMonthPicker,
