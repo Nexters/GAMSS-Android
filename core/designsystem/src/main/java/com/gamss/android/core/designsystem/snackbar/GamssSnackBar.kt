@@ -100,7 +100,7 @@ private fun GamssSnackBarPreviewContent() {
             message = "이것은 아이콘이 있는 스낵바입니다.\n스낵바는 한 줄로 사용하기를 권장합니다.",
             snackBarIcon = {
                 Icon(
-                    painter = painterResource(GamssIcons.Alert),
+                    painter = painterResource(GamssIcons.InfoFilled),
                     contentDescription = null,
                     tint = GamssTheme.colors.yellow,
                 )
