@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gamss.android.core.common.AppResult
 import com.gamss.android.domain.conversation.ConversationSession
+import com.gamss.android.domain.conversation.MAX_MESSAGE_LENGTH
 import com.gamss.android.domain.conversation.takeWithinMessageLimit
 import com.gamss.android.domain.emotion.EmotionCharacter
 import com.gamss.android.domain.user.GetUserInfoUseCase
@@ -17,6 +18,7 @@ import javax.inject.Inject
 
 internal const val LAST_CHARACTER_BLOCKED = "한 명은 남겨 주세요"
 internal const val SEND_FAILED = "보내지 못했어요. 잠시 후 다시 시도해 주세요."
+internal val MESSAGE_LENGTH_EXCEEDED = "메시지는 ${MAX_MESSAGE_LENGTH}자까지 입력할 수 있어요."
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
@@ -32,11 +34,21 @@ class HomeViewModel @Inject constructor(
     }
 
     fun onInputChange(text: String) = blockingIntent {
-        reduce { state.copy(input = text.takeWithinMessageLimit()) }
+        val limited = text.takeWithinMessageLimit()
+        // 잘린 결과가 넣어 둔 값과 같으면 상한에 붙은 채 계속 치는 중이다. 넘어서는 순간에만 알린다.
+        val crossedLimit = limited != text && limited != state.input
+        reduce { state.copy(input = limited) }
+
+        if (crossedLimit) postSideEffect(HomeSideEffect.ShowToast(MESSAGE_LENGTH_EXCEEDED))
     }
 
     fun onEmotionPickerToggle() = intent {
         reduce { state.copy(isEmotionPickerExpanded = !state.isEmotionPickerExpanded) }
+    }
+
+    // 닫기는 토글과 나눠 둔다. 바깥 탭과 뒤로가기가 겹쳐 들어와도 다시 열리면 안 된다.
+    fun onEmotionPickerDismiss() = intent {
+        reduce { state.copy(isEmotionPickerExpanded = false) }
     }
 
     fun onEmotionToggle(character: EmotionCharacter) = intent {
