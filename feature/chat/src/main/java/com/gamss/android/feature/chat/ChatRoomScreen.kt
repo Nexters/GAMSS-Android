@@ -45,6 +45,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
@@ -53,6 +54,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
@@ -305,52 +307,77 @@ private fun ChatRoomContent(
         isImeInTransition = false
     }
 
+    // Scaffold의 기본 snackbarHost 슬롯은 화면 최하단(네비게이션 바 위)에 붙는다. 입력창은
+    // bottomBar가 아니라 아래 Column의 마지막 자식이라 Scaffold가 그 높이를 모르므로, 여기선
+    // snackbarHost를 쓰지 않고 입력창과 같은 Box 안에서 실측 높이를 기준으로 직접 띄운다.
     Scaffold(
         modifier = modifier.addFocusCleaner(focusManager),
         topBar = { ChatRoomTopBar(state = state, actions = actions, onBackClick = onBackClick) },
-        snackbarHost = {
-            SnackbarHost(snackbarHostState) { data ->
-                val alert = (data.visuals as? TokenUsageSnackbarVisuals)?.alert
-                GamssSnackBar(
-                    message = data.visuals.message,
-                    snackBarIcon = { TokenUsageAlertIcon(alert) },
-                    modifier = Modifier.padding(horizontal = 18.dp, vertical = 12.dp),
-                )
-            }
-        },
         // 상위 Scaffold 가 인셋을 이미 적용해, imePadding 을 그대로 쓰면 이중 적용된다.
         contentWindowInsets = WindowInsets(0),
     ) { innerPadding ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(GamssTheme.colors.background)
                 .padding(innerPadding)
                 .windowInsetsPadding(WindowInsets.ime.union(WindowInsets.navigationBars)),
         ) {
-            ChatMessageList(
-                state = state,
-                actions = actions,
-                listState = listState,
-                animationState = messageAnimationState,
-                scrollState = chatScrollState,
-                showScrollToBottomButton = chatScrollState.showScrollToBottomButton && !isImeInTransition,
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth(),
-            )
+            var inputSectionHeight by remember { mutableStateOf(0.dp) }
+            val density = LocalDensity.current
 
-            ChatRoomInputSection(
-                endFlow = state.endFlow,
-                input = state.input,
-                isInputEnabled = !state.isLoading && state.endFlow == EndFlow.NotStarted,
-                isSending = state.isSending,
-                replyTarget = state.replyTarget,
-                actions = actions,
-            )
+            Column(modifier = Modifier.fillMaxSize()) {
+                ChatMessageList(
+                    state = state,
+                    actions = actions,
+                    listState = listState,
+                    animationState = messageAnimationState,
+                    scrollState = chatScrollState,
+                    showScrollToBottomButton = chatScrollState.showScrollToBottomButton && !isImeInTransition,
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth(),
+                )
+
+                ChatRoomInputSection(
+                    endFlow = state.endFlow,
+                    input = state.input,
+                    isInputEnabled = !state.isLoading && state.endFlow == EndFlow.NotStarted,
+                    isSending = state.isSending,
+                    replyTarget = state.replyTarget,
+                    actions = actions,
+                    modifier = Modifier.onGloballyPositioned { coordinates ->
+                        inputSectionHeight = with(density) { coordinates.size.height.toDp() }
+                    },
+                )
+            }
+
+            SnackbarHost(
+                snackbarHostState,
+                // 아래쪽은 입력창과의 간격을 여기 한 곳(TokenUsageSnackbarBottomGap)에서만 정확히
+                // 10dp로 맞춘다 — GamssSnackBar 쪽에 별도 bottom padding을 더 두면 간격이 겹친다.
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = inputSectionHeight + TokenUsageSnackbarBottomGap),
+            ) { data ->
+                val alert = (data.visuals as? TokenUsageSnackbarVisuals)?.alert
+                GamssSnackBar(
+                    message = data.visuals.message,
+                    snackBarIcon = { TokenUsageAlertIcon(alert) },
+                    modifier = Modifier.padding(
+                        top = 12.dp,
+                        start = 18.dp,
+                        end = 18.dp,
+                        bottom = 0.dp,
+                    ),
+                )
+            }
         }
     }
 }
+
+/** 토큰 안내 스낵바와 입력창 사이 간격. */
+private val TokenUsageSnackbarBottomGap: Dp = 10.dp
 
 @Composable
 private fun ChatRoomTopBar(
@@ -555,6 +582,7 @@ private fun ChatRoomInputSection(
     isSending: Boolean,
     replyTarget: ReplyTarget?,
     actions: ChatRoomActions,
+    modifier: Modifier = Modifier,
 ) {
     if (endFlow is EndFlow.Ended) {
         Text(
@@ -562,7 +590,7 @@ private fun ChatRoomInputSection(
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
-            modifier = Modifier
+            modifier = modifier
                 .fillMaxWidth()
                 .padding(16.dp),
         )
@@ -577,6 +605,7 @@ private fun ChatRoomInputSection(
         onInputChange = actions.onInputChange,
         onSendClick = actions.onSendClick,
         onReplyClear = actions.onReplyTargetClear,
+        modifier = modifier,
     )
 }
 

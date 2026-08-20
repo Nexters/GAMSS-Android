@@ -59,8 +59,9 @@ class ChatRoomViewModel @Inject constructor(
     }
 
     /**
-     * 10% 미만 남음/전부 소진 알림은 [tokenUsageRefreshNotifier]가 전역으로 한 번만 흘려보낸다 —
-     * 여러 채팅방을 오가도(대화방을 나갔다 들어와도) 중복으로 뜨지 않는다.
+     * [tokenUsageRefreshNotifier]가 전역으로 흘려보내는 알림을 그대로 옮긴다. LOW(10% 미만 남음)는
+     * 하루 1회만 오므로 여러 채팅방을 오가도(대화방을 나갔다 들어와도) 중복으로 뜨지 않지만,
+     * EXHAUSTED(전부 소진)는 보낼 때마다 소진 상태면 매번 온다.
      */
     private fun observeTokenUsageAlerts() = intent {
         tokenUsageRefreshNotifier.alerts.collect { alert ->

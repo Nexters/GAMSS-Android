@@ -20,12 +20,13 @@ fun MessageInputBar(
     onInputChange: (String) -> Unit,
     onSendClick: () -> Unit,
     onReplyClear: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     GamssInputBar(
         value = input,
         onValueChange = onInputChange,
         onTrailingClick = onSendClick,
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 18.dp, vertical = 12.dp),
         placeholder = stringResource(R.string.chat_room_input_placeholder),
