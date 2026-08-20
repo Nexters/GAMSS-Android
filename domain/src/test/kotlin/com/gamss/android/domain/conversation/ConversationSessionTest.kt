@@ -289,6 +289,9 @@ class ConversationSessionTest {
     }
 
     private object NoOpCardRepository : FakeCardRepository() {
+        override suspend fun getCardsByDate(date: LocalDate): AppResult<List<Card>> =
+            AppResult.Success(emptyList())
+
         override suspend fun createCard(
             conversationId: Long,
             character: EmotionCharacter,

@@ -3,6 +3,7 @@ import java.util.Properties
 plugins {
     alias(libs.plugins.gamss.android.library)
     alias(libs.plugins.gamss.android.hilt)
+    alias(libs.plugins.gamss.android.room)
     alias(libs.plugins.kotlinSerialization)
 }
 

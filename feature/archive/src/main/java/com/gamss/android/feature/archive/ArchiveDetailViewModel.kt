@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import com.gamss.android.core.common.AppResult
 import com.gamss.android.core.common.util.KoreanTimeZone
 import com.gamss.android.domain.card.CardEntry
+import com.gamss.android.domain.card.ClearCardCacheUseCase
 import com.gamss.android.domain.card.DeleteCardUseCase
 import com.gamss.android.domain.card.GetCardsByDateUseCase
 import com.gamss.android.domain.card.GetCardsByMonthUseCase
@@ -21,6 +22,7 @@ class ArchiveDetailViewModel @Inject constructor(
     private val getCardsByMonth: GetCardsByMonthUseCase,
     private val getCardsByDate: GetCardsByDateUseCase,
     private val deleteCard: DeleteCardUseCase,
+    private val clearCardCache: ClearCardCacheUseCase,
     private val getConversation: GetConversationUseCase,
 ) : ViewModel(), ContainerHost<ArchiveDetailState, ArchiveDetailSideEffect> {
 
@@ -82,8 +84,14 @@ class ArchiveDetailViewModel @Inject constructor(
         if (state.isCardLoading) return@intent
 
         reduce { state.copy(isCardLoading = true) }
-        val card = when (val result = getCardsByDate(entry.date)) {
-            is AppResult.Success -> result.data.getOrNull(entry.indexInDate)
+
+        val firstResult = getCardsByDate(entry.date)
+        val card = when (firstResult) {
+            is AppResult.Success -> firstResult.data.getOrNull(entry.indexInDate)
+                ?: run {
+                    clearCardCache()
+                    (getCardsByDate(entry.date) as? AppResult.Success)?.data?.getOrNull(entry.indexInDate)
+                }
             is AppResult.Failure -> null
         }
         reduce { state.copy(isCardLoading = false, selectedCard = card) }

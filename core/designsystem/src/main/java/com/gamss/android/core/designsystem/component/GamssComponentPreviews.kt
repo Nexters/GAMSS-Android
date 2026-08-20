@@ -29,16 +29,16 @@ private fun GamssTopBarPreview() {
     }
 }
 
-@Preview(name = "InputBar - Empty", showBackground = true, widthDp = 402)
+@Preview(name = "ExpandingInputBar - Empty", showBackground = true, widthDp = 402)
 @Composable
 @Suppress("UnusedPrivateMember")
-private fun GamssInputBarEmptyPreview() {
+private fun GamssExpandingInputBarEmptyPreview() {
     GamssTheme {
         Box(modifier = Modifier.padding(20.dp)) {
-            GamssInputBar(
+            GamssExpandingInputBar(
                 value = "",
                 onValueChange = {},
-                onTrailingClick = {},
+                onSend = {},
                 placeholder = "무슨 이야기를 버려볼까요?",
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -46,16 +46,16 @@ private fun GamssInputBarEmptyPreview() {
     }
 }
 
-@Preview(name = "InputBar - Filled", showBackground = true, widthDp = 402)
+@Preview(name = "ExpandingInputBar - Filled", showBackground = true, widthDp = 402)
 @Composable
 @Suppress("UnusedPrivateMember")
-private fun GamssInputBarFilledPreview() {
+private fun GamssExpandingInputBarFilledPreview() {
     GamssTheme {
         Box(modifier = Modifier.padding(20.dp)) {
-            GamssInputBar(
+            GamssExpandingInputBar(
                 value = "오늘 발표가 너무 떨려요",
                 onValueChange = {},
-                onTrailingClick = {},
+                onSend = {},
                 modifier = Modifier.fillMaxWidth(),
             )
         }

@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.gamss.android.core.designsystem.theme.GamssTheme
+import com.gamss.android.core.designsystem.theme.GamssTouchTarget
 import com.gamss.android.feature.archive.R
 import java.time.format.DateTimeFormatter
 
@@ -58,7 +59,7 @@ internal fun CardCloseButton(onClick: () -> Unit) {
     Box(
         modifier = Modifier
             .offset(x = CloseButtonCenteringInset, y = -CloseButtonCenteringInset)
-            .size(CloseButtonTouchSize)
+            .size(GamssTouchTarget.minimum)
             .clickable(role = Role.Button, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
@@ -73,7 +74,6 @@ internal fun CardCloseButton(onClick: () -> Unit) {
 
 /** Figma 우상단 닫기 아이콘 크기. */
 private val CloseIconSize = 20.dp
-private val CloseButtonTouchSize = 48.dp
-private val CloseButtonCenteringInset = (CloseButtonTouchSize - CloseIconSize) / 2
+private val CloseButtonCenteringInset = (GamssTouchTarget.minimum - CloseIconSize) / 2
 
 internal val CardDateFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yy.MM.dd")
