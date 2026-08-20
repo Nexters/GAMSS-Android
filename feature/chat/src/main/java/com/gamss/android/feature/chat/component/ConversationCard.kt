@@ -55,7 +55,6 @@ internal fun ConversationCard(
     onLongClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-
     Box(
         modifier = modifier
             .fillMaxWidth()
@@ -69,7 +68,7 @@ internal fun ConversationCard(
             painter = painterResource(R.drawable.bg_textfield_default),
             contentDescription = null,
             contentScale = ContentScale.FillBounds,
-            colorFilter = ColorFilter.tint( GamssTheme.colors.gray950),
+            colorFilter = ColorFilter.tint(GamssTheme.colors.gray950),
         )
         // SpaceBetween 은 쓸 수 없다. 제목이 짧으면 남는 폭이 자식 사이로 흩어져, 시각이 없는
         // 행에서 제목이 오른쪽 끝으로 밀려난다.
