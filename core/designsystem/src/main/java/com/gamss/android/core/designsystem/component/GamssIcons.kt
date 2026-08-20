@@ -48,5 +48,15 @@ object GamssIcons {
     val ScrollDown: Int = R.drawable.ic_scroll_down
 
     @DrawableRes
-    val Alert: Int = R.drawable.ic_alert
+    val InfoOutline: Int = R.drawable.ic_info_outline
+
+    @DrawableRes
+    val InfoFilled: Int = R.drawable.ic_info_filled
+
+    /**
+     * 상태바 스몰 아이콘(`app` 의 `ic_notification`)과 다른 에셋이다. 스몰 아이콘은 FCM
+     * 메타데이터가 이름으로 참조하므로 `app` 에 남겨 둔다.
+     */
+    @DrawableRes
+    val NotificationAlert: Int = R.drawable.ic_notification_alert
 }
