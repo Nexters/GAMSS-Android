@@ -10,7 +10,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -21,7 +20,7 @@ import com.gamss.android.core.designsystem.component.GamssScrollToBottomButton
 import com.gamss.android.core.designsystem.component.chat.GamssChatBubbleDefaults
 import com.gamss.android.core.designsystem.theme.GamssTheme
 import com.gamss.android.core.ui.chat.ChatMessageBubble
-import com.gamss.android.core.ui.chat.toReplyQuote
+import com.gamss.android.core.ui.chat.rememberReplyQuoteLookup
 import com.gamss.android.domain.conversation.Message
 import com.gamss.android.domain.conversation.MessageSender
 import com.gamss.android.domain.emotion.EmotionCharacter
@@ -67,9 +66,7 @@ private fun ConversationMessages(
         return
     }
 
-    // 답장 대상 조회를 여기서 한 번에 끝내고 아이템별로는 결과값만 넘긴다. 말풍선마다 목록 전체를
-    // 뒤지면 메시지가 하나 바뀔 때 떠 있는 말풍선이 전부 재구성 대상이 된다.
-    val messagesById = remember(messages) { messages.associateBy(Message::id) }
+    val replyQuotes = rememberReplyQuoteLookup(messages)
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
 
@@ -80,22 +77,17 @@ private fun ConversationMessages(
             verticalArrangement = Arrangement.spacedBy(GamssTheme.spacing.spacing300),
         ) {
             items(messages, key = { it.id }) { message ->
-                val replyQuote = message.repliesToMessageId
-                    ?.let { targetId -> messagesById[targetId] }
-                    ?.toReplyQuote()
                 ChatMessageBubble(
                     message = message,
-                    replyQuote = replyQuote,
-                    // 카드 안 대화 영역은 채팅방보다 좁아 말풍선 최대 너비 기준도 카드 값을 쓴다.
+                    replyQuote = replyQuotes.quoteFor(message),
                     oppositeWallGap = GamssChatBubbleDefaults.CardOppositeWallGap,
                 )
             }
         }
 
-        // 아래로 더 남았을 때만 띄운다. 끝에 닿아 있으면 눌러도 갈 곳이 없다.
         if (listState.canScrollForward) {
             GamssScrollToBottomButton(
-                onClick = { scope.launch { listState.animateScrollToItem(messages.lastIndex) } },
+                onClick = { scope.launch { listState.scrollToItem(messages.lastIndex) } },
                 contentDescription = stringResource(R.string.archive_conversation_scroll_to_bottom),
                 modifier = Modifier.align(Alignment.BottomEnd),
             )
