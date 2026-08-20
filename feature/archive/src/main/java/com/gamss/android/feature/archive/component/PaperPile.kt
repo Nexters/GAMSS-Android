@@ -17,11 +17,11 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
+import com.gamss.android.core.designsystem.theme.designScale
+import com.gamss.android.core.designsystem.theme.designWidth
 import com.gamss.android.domain.card.CardEntry
 import com.gamss.android.feature.archive.PaperFall
 import com.gamss.android.feature.archive.R
-import com.gamss.android.feature.archive.designScale
-import com.gamss.android.feature.archive.designWidth
 import java.time.LocalDate
 
 /**

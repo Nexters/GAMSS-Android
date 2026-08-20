@@ -51,12 +51,14 @@ import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.gamss.android.core.designsystem.R as DesignSystemR
 import com.gamss.android.core.designsystem.card.GamssCardDashedDivider
 import com.gamss.android.core.designsystem.card.GamssEmotionCardContent
 import com.gamss.android.core.designsystem.card.GamssImageCard
 import com.gamss.android.core.designsystem.component.GamssIcons
 import com.gamss.android.core.designsystem.modifier.noRippleClickableIfNotNull
 import com.gamss.android.core.designsystem.theme.GamssTheme
+import com.gamss.android.core.designsystem.theme.designScale
 import com.gamss.android.core.ui.card.cardTitleRes
 import com.gamss.android.core.ui.card.toGamssEmotionCardCharacter
 import com.gamss.android.domain.card.Card
@@ -72,7 +74,6 @@ import com.gamss.android.feature.chat.CARD_FOLD_GUIDE_DELAY_MS
 import com.gamss.android.feature.chat.CARD_FOLD_HINT_FADE_MS
 import com.gamss.android.feature.chat.CardFoldArrowBinGap
 import com.gamss.android.feature.chat.CardFoldArrowSize
-import com.gamss.android.feature.chat.CardFoldDesignWidth
 import com.gamss.android.feature.chat.CardFoldDividerToQuestionGap
 import com.gamss.android.feature.chat.CardFoldGuideGap
 import com.gamss.android.feature.chat.CardFoldQuestionToTapGuideGap
@@ -81,11 +82,10 @@ import com.gamss.android.feature.chat.CardFoldSummaryToDividerGap
 import com.gamss.android.feature.chat.CardFoldTapGuideSize
 import com.gamss.android.feature.chat.R
 import com.gamss.android.feature.chat.paperSize
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
-import com.gamss.android.core.designsystem.R as DesignSystemR
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 /**
  * 카드를 눌러 두 번 접고, 접힌 종이를 아래 통으로 끌어내려 버리는 연출.
@@ -153,8 +153,8 @@ private fun CardFoldContent(
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         // 시안은 402dp 폭 기준이다. 좁은 기기에서 종이와 힌트를 폭 비율만큼 함께 줄여 좌우 여백
         // 비율을 지킨다. 통은 폭을 채우고 높이를 비율로 뽑으므로 이미 같은 비율로 줄어든다.
-        val designScale = (maxWidth / CardFoldDesignWidth).coerceAtMost(1f)
-        val paperSize = foldStage.paperSize * designScale
+        val scale = designScale(maxWidth)
+        val paperSize = foldStage.paperSize * scale
 
         // 통은 창 아래에 붙고 종이는 창 중심에 붙으므로 내려갈 거리가 이 창의 크기에서 바로 나온다.
         // 화면 높이 상수로 되짚지 않아 인셋이나 폰트 배율이 바뀌어도 어긋나지 않는다.
@@ -182,7 +182,7 @@ private fun CardFoldContent(
             DiscardGuide(
                 // 안내와 화살표는 힌트라 끌기 시작하면 사라진다. 통은 남는다.
                 alpha = { guideProgress.value * (1f - dragFraction()) },
-                gap = CardFoldGuideGap * designScale,
+                gap = CardFoldGuideGap * scale,
                 modifier = Modifier.align(Alignment.TopCenter),
             )
             Box(
@@ -204,7 +204,7 @@ private fun CardFoldContent(
         // 종이보다 앞에 그린다. Figma 도 화살표를 종이 위에 얹고, 위쪽이 투명해 종이를 가리지 않는다.
         DiscardArrow(
             alpha = { arrowProgress.value * (1f - dragFraction()) },
-            size = CardFoldArrowSize * designScale,
+            size = CardFoldArrowSize * scale,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .padding(bottom = binHeight + CardFoldArrowBinGap),

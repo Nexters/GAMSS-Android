@@ -53,12 +53,6 @@ internal val CardFoldStage.paperSize: DpSize
     }
 
 /**
- * 시안 프레임의 폭. 이보다 좁은 기기에서는 종이와 힌트를 폭 비율만큼 함께 줄인다. 그대로 두면
- * 366dp 카드가 화면을 꽉 채워 시안의 좌우 여백이 사라진다.
- */
-internal val CardFoldDesignWidth = 402.dp
-
-/**
  * 통 그림(img_paper_discard_bin, Figma 402×232)의 가로:세로. 통은 화면 폭을 꽉 채우고 높이는 이
  * 비율로 따라간다. 높이를 dp 로 박으면 폭이 402 가 아닌 기기에서 손그림 테두리가 눌린다.
  */
