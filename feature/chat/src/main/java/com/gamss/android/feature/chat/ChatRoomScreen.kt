@@ -29,10 +29,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarDuration
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.SnackbarVisuals
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
@@ -45,7 +41,6 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
@@ -54,7 +49,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
@@ -65,7 +59,6 @@ import com.gamss.android.core.designsystem.component.GamssIcons
 import com.gamss.android.core.designsystem.component.GamssTokenUsageTooltip
 import com.gamss.android.core.designsystem.modifier.addFocusCleaner
 import com.gamss.android.core.designsystem.modifier.gamssShadow
-import com.gamss.android.core.designsystem.snackbar.GamssSnackBar
 import com.gamss.android.core.designsystem.theme.GamssTheme
 import com.gamss.android.core.designsystem.topnavigation.GamssTopNavigation
 import com.gamss.android.core.designsystem.topnavigation.GamssTopNavigationHeight
@@ -112,11 +105,8 @@ fun ChatRoomScreen(
 
     LaunchedEffect(conversationId) { viewModel.start(conversationId) }
 
-    // GamssSnackBar는 Scaffold(ChatRoomContent) 안에 있지만, 사이드이펙트 수집은 여기서 하는 게
-    // Toast와 한곳에 모여 흐름을 따라가기 쉽다. 그래서 host만 여기서 만들어 아래로 넘긴다.
-    val snackbarHostState = remember { SnackbarHostState() }
-    val tokenUsageLowMessage = stringResource(R.string.chat_room_token_usage_low_snackbar)
-    val tokenUsageExhaustedMessage = stringResource(R.string.chat_room_token_usage_exhausted_snackbar)
+    val tokenUsageLowMessage = stringResource(R.string.chat_room_token_usage_low_toast)
+    val tokenUsageExhaustedMessage = stringResource(R.string.chat_room_token_usage_exhausted_toast)
 
     viewModel.collectSideEffect { sideEffect ->
         when (sideEffect) {
@@ -128,10 +118,7 @@ fun ChatRoomScreen(
                     TokenUsageAlert.LOW -> tokenUsageLowMessage
                     TokenUsageAlert.EXHAUSTED -> tokenUsageExhaustedMessage
                 }
-
-                snackbarHostState.showSnackbar(
-                    TokenUsageSnackbarVisuals(message = message, alert = sideEffect.alert),
-                )
+                Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -151,7 +138,6 @@ fun ChatRoomScreen(
     ChatRoomContent(
         state = state,
         actions = actions,
-        snackbarHostState = snackbarHostState,
         modifier = modifier,
         onBackClick = onBackClick,
     )
@@ -223,45 +209,10 @@ private data class ChatRoomActions(
     val onTokenUsageRetry: () -> Unit,
 )
 
-/**
- * [alert] 종류에 따라 GamssSnackBar 아이콘을 달리 그리기 위한 커스텀 [SnackbarVisuals].
- * 기본 `showSnackbar(message)` 오버로드는 문자열만 실어 나를 수 있어, 렌더 시점에 아이콘을
- * 고를 근거가 메시지 문구밖에 안 남는다 — 문구가 바뀌면 아이콘도 같이 깨지므로 이 타입으로 감싼다.
- */
-private data class TokenUsageSnackbarVisuals(
-    override val message: String,
-    val alert: TokenUsageAlert,
-) : SnackbarVisuals {
-    override val actionLabel: String? = null
-    override val withDismissAction: Boolean = false
-    override val duration: SnackbarDuration = SnackbarDuration.Short
-}
-
-/**
- * 알림 종류별 GamssSnackBar 아이콘. LOW는 두 가지 색(원+체크)이 들어 있어 tint 하지 않고,
- * EXHAUSTED(전부 소진)는 경고 색으로 강조해 심각도 차이를 보여준다.
- */
-@Composable
-private fun TokenUsageAlertIcon(alert: TokenUsageAlert?) {
-    when (alert) {
-        TokenUsageAlert.EXHAUSTED -> Icon(
-            painter = painterResource(GamssIcons.Alert),
-            contentDescription = null,
-            tint = GamssTheme.colors.red,
-        )
-        TokenUsageAlert.LOW, null -> Icon(
-            painter = painterResource(GamssIcons.Alert),
-            contentDescription = null,
-            tint = GamssTheme.colors.yellow,
-        )
-    }
-}
-
 @Composable
 private fun ChatRoomContent(
     state: ChatRoomState,
     actions: ChatRoomActions,
-    snackbarHostState: SnackbarHostState,
     modifier: Modifier = Modifier,
     onBackClick: () -> Unit,
 ) {
@@ -313,68 +264,37 @@ private fun ChatRoomContent(
         // 상위 Scaffold 가 인셋을 이미 적용해, imePadding 을 그대로 쓰면 이중 적용된다.
         contentWindowInsets = WindowInsets(0),
     ) { innerPadding ->
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .background(GamssTheme.colors.background)
                 .padding(innerPadding)
                 .windowInsetsPadding(WindowInsets.ime.union(WindowInsets.navigationBars)),
         ) {
-            var inputSectionHeight by remember { mutableStateOf(0.dp) }
-            val density = LocalDensity.current
-
-            Column(modifier = Modifier.fillMaxSize()) {
-                ChatMessageList(
-                    state = state,
-                    actions = actions,
-                    listState = listState,
-                    animationState = messageAnimationState,
-                    scrollState = chatScrollState,
-                    showScrollToBottomButton = chatScrollState.showScrollToBottomButton && !isImeInTransition,
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxWidth(),
-                )
-
-                ChatRoomInputSection(
-                    endFlow = state.endFlow,
-                    input = state.input,
-                    isInputEnabled = !state.isLoading && state.endFlow == EndFlow.NotStarted,
-                    isSending = state.isSending,
-                    replyTarget = state.replyTarget,
-                    actions = actions,
-                    modifier = Modifier.onGloballyPositioned { coordinates ->
-                        inputSectionHeight = with(density) { coordinates.size.height.toDp() }
-                    },
-                )
-            }
-
-            SnackbarHost(
-                snackbarHostState,
-                // 아래쪽은 입력창과의 간격을 여기 한 곳(TokenUsageSnackbarBottomGap)에서만 정확히
-                // 10dp로 맞춘다 — GamssSnackBar 쪽에 별도 bottom padding을 더 두면 간격이 겹친다.
+            ChatMessageList(
+                state = state,
+                actions = actions,
+                listState = listState,
+                animationState = messageAnimationState,
+                scrollState = chatScrollState,
+                showScrollToBottomButton = chatScrollState.showScrollToBottomButton && !isImeInTransition,
                 modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = inputSectionHeight + TokenUsageSnackbarBottomGap),
-            ) { data ->
-                val alert = (data.visuals as? TokenUsageSnackbarVisuals)?.alert
-                GamssSnackBar(
-                    message = data.visuals.message,
-                    snackBarIcon = { TokenUsageAlertIcon(alert) },
-                    modifier = Modifier.padding(
-                        top = 12.dp,
-                        start = 18.dp,
-                        end = 18.dp,
-                        bottom = 0.dp,
-                    ),
-                )
-            }
+                    .weight(1f)
+                    .fillMaxWidth(),
+            )
+
+            ChatRoomInputSection(
+                endFlow = state.endFlow,
+                input = state.input,
+                isInputEnabled = !state.isLoading && state.endFlow == EndFlow.NotStarted,
+                isSending = state.isSending,
+                isTokenExhausted = state.isTokenExhausted,
+                replyTarget = state.replyTarget,
+                actions = actions,
+            )
         }
     }
 }
-
-/** 토큰 안내 스낵바와 입력창 사이 간격. */
-private val TokenUsageSnackbarBottomGap: Dp = 10.dp
 
 @Composable
 private fun ChatRoomTopBar(
@@ -577,6 +497,7 @@ private fun ChatRoomInputSection(
     input: String,
     isInputEnabled: Boolean,
     isSending: Boolean,
+    isTokenExhausted: Boolean,
     replyTarget: ReplyTarget?,
     actions: ChatRoomActions,
     modifier: Modifier = Modifier,
@@ -598,6 +519,7 @@ private fun ChatRoomInputSection(
         input = input,
         enabled = isInputEnabled,
         isSending = isSending,
+        isTokenExhausted = isTokenExhausted,
         replyTarget = replyTarget,
         onInputChange = actions.onInputChange,
         onSendClick = actions.onSendClick,
@@ -681,7 +603,6 @@ private fun ChatRoomPreviewContent() {
     ChatRoomContent(
         state = state,
         actions = actions,
-        snackbarHostState = remember { SnackbarHostState() },
         onBackClick = {},
     )
 }

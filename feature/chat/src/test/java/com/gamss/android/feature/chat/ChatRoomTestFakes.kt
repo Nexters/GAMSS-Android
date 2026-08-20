@@ -136,6 +136,7 @@ internal class FakeUserRepository(
 /** 갱신 요청 횟수만 센다. 알림 발생 자체를 검증하는 테스트는 별도 fake로 alerts를 채운다. */
 internal class RecordingTokenUsageRefreshNotifier(
     override val alerts: Flow<TokenUsageAlert> = emptyFlow(),
+    override val isExhausted: StateFlow<Boolean> = MutableStateFlow(false).asStateFlow(),
 ) : TokenUsageRefreshNotifier {
     var refreshCount = 0
         private set

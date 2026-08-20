@@ -21,6 +21,8 @@ data class ChatRoomState(
     val tokenUsagePercent: Int? = null,
     val isTokenUsagePopupExpanded: Boolean = false,
     val isTokenUsageLoading: Boolean = false,
+    /** 서버가 확정한 소진 여부. true면 입력창의 전송 버튼을 잠근다. */
+    val isTokenExhausted: Boolean = false,
 ) {
     /** 종료 흐름이 시작된 뒤로는 막는다. 종료 API 가 도는 중에 보내면 저장 여부가 갈린다. */
     val canSend: Boolean

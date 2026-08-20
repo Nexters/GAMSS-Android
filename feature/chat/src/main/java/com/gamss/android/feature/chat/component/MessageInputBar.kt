@@ -16,6 +16,7 @@ fun MessageInputBar(
     input: String,
     enabled: Boolean,
     isSending: Boolean,
+    isTokenExhausted: Boolean,
     replyTarget: ReplyTarget?,
     onInputChange: (String) -> Unit,
     onSendClick: () -> Unit,
@@ -32,9 +33,9 @@ fun MessageInputBar(
         placeholder = stringResource(R.string.chat_room_input_placeholder),
         trailingContentDescription = "보내기",
         enabled = enabled,
-        // 전송 중에도 입력칸 포커스·키보드는 유지하되(enabled), 전송 버튼만 잠가 중복 전송을
-        // 시각적으로도 막는다.
-        sendEnabled = enabled && !isSending,
+        // 전송 중에도, 토큰이 소진됐을 때도 입력칸 포커스·키보드는 유지하되(enabled), 전송
+        // 버튼만 잠가 중복 전송/불가능한 전송을 시각적으로도 막는다.
+        sendEnabled = enabled && !isSending && !isTokenExhausted,
         maxLines = MESSAGE_INPUT_MAX_LINES,
         replyQuote = replyTarget?.let {
             ChatReplyQuote(

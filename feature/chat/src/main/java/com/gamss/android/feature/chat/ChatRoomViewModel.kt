@@ -53,19 +53,36 @@ class ChatRoomViewModel @Inject constructor(
         loadChatEndFeatureFlag()
         loadMessages(conversationId)
         observeTokenUsageAlerts()
+        observeTokenExhausted()
+        // 방에 들어오자마자 소진 여부를 알아야 전송 버튼을 처음부터 올바르게 잠글 수 있다 —
+        // 이전에 이미 소진된 채로 재입장한 경우, 한 번도 안 보내봤어도 버튼이 바로 잠겨야 한다.
+        tokenUsageRefreshNotifier.requestRefresh()
         // 결과를 기다리지 않는다 — 채팅방에 들어온 시점부터 온디바이스 모델 다운로드를 미리
         // 걸어둬 첫 메시지/카드 생성 시점엔 이미 받아져 있을 확률을 높이는 순수 최적화용 호출이다.
         viewModelScope.launch { session.prefetchOnDeviceModels() }
     }
 
     /**
-     * [tokenUsageRefreshNotifier]가 전역으로 흘려보내는 알림을 그대로 옮긴다. LOW(10% 미만 남음)는
-     * 하루 1회만 오므로 여러 채팅방을 오가도(대화방을 나갔다 들어와도) 중복으로 뜨지 않지만,
-     * EXHAUSTED(전부 소진)는 보낼 때마다 소진 상태면 매번 온다.
+     * [tokenUsageRefreshNotifier]가 전역으로 흘려보내는 알림을 그대로 토스트로 옮긴다. LOW(10%
+     * 미만 남음)는 하루 1회만 오므로 여러 채팅방을 오가도(대화방을 나갔다 들어와도) 중복으로 뜨지
+     * 않지만, EXHAUSTED(전부 소진)는 refresh()가 소진을 확인할 때마다(전송 성공, 채팅방 진입 등)
+     * 매번 온다.
+     *
+     * EXHAUSTED를 여기서만 다루는 이유: [CommentGenerationStatus.LIMIT_EXCEEDED]는 "이미 소진된
+     * 상태에서 보냈다"는 신호라, 정작 이번 전송으로 막 소진된 순간(댓글 자체는 정상 생성되고 그
+     * 직후 조회에서 exceeded=true로 확인되는 경우)에는 오지 않는다 — 전송 버튼이 소진 즉시
+     * 잠기는 지금 구조에서는 그 순간을 놓치면 다시 보낼 방법이 없어 토스트가 영영 안 뜬다.
+     * 그래서 실측(exceeded)을 직접 보는 이 스트림을 유일한 소스로 쓴다(아래 [onSend] 참고).
      */
     private fun observeTokenUsageAlerts() = intent {
         tokenUsageRefreshNotifier.alerts.collect { alert ->
             postSideEffect(ChatRoomSideEffect.ShowTokenUsageAlert(alert))
+        }
+    }
+
+    private fun observeTokenExhausted() = intent {
+        tokenUsageRefreshNotifier.isExhausted.collect { exhausted ->
+            reduce { state.copy(isTokenExhausted = exhausted) }
         }
     }
 
@@ -235,7 +252,7 @@ class ChatRoomViewModel @Inject constructor(
                     )
                 }
                 launchCommentReveal()
-                sent.commentStatus.toUserMessage()?.let { postSideEffect(ChatRoomSideEffect.ShowToast(it)) }
+                sent.commentStatus.toSideEffect()?.let { postSideEffect(it) }
                 session.finishSend()
                 refreshTokenUsageInBackground()
             }
@@ -356,11 +373,12 @@ class ChatRoomViewModel @Inject constructor(
         }
     }
 
-    // LIMIT_EXCEEDED는 토큰이 이미 소진됐을 때 나는 신호라, 아래에서 requestRefresh()가 트리거하는
-    // tokenUsageRefreshNotifier의 EXHAUSTED 알림(GamssSnackBar)이 대신 안내한다 — 토스트를 따로 띄우지 않는다.
-    private fun CommentGenerationStatus.toUserMessage(): String? = when (this) {
+    // LIMIT_EXCEEDED는 토큰이 이미 소진됐을 때 나는 신호라, onSend() 성공 분기에서 이미 호출하는
+    // requestRefresh()가 트리거하는 tokenUsageRefreshNotifier의 EXHAUSTED 알림
+    // (observeTokenUsageAlerts 참고)이 대신 안내한다 — 토스트를 따로 띄우지 않는다.
+    private fun CommentGenerationStatus.toSideEffect(): ChatRoomSideEffect? = when (this) {
         CommentGenerationStatus.DONE, CommentGenerationStatus.LIMIT_EXCEEDED -> null
-        CommentGenerationStatus.FAILED -> "답장을 받지 못했어요. 잠시 후 다시 보내볼까요?"
+        CommentGenerationStatus.FAILED -> ChatRoomSideEffect.ShowToast("답장을 받지 못했어요. 잠시 후 다시 보내볼까요?")
     }
 
     private data class PendingSend(
