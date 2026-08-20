@@ -232,6 +232,8 @@ private fun HomeInputSection(
                 modifier = Modifier.onGloballyPositioned {
                     onToggleLeftChange(it.boundsInWindow().left)
                 },
+                // 전송 중 바꾼 선택은 이미 나간 요청에 닿지 않는다. 바와 함께 잠근다.
+                enabled = !state.isSending,
                 // 입력바 아트가 라이트 전용이라 다크에서도 전경을 검정으로 둔다.
                 contentColor = GamssTheme.colors.black,
             )

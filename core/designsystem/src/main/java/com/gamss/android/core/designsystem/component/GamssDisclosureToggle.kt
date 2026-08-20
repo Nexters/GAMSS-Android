@@ -33,25 +33,29 @@ fun GamssDisclosureToggle(
     expanded: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
     contentColor: Color = GamssTheme.colors.gray900,
 ) {
+    // 잠긴 상태의 회색은 같은 입력바의 placeholder 와 맞춘다. 다크에서도 반전되지 않는 중간 회색이다.
+    val resolvedColor = if (enabled) contentColor else GamssTheme.colors.gray500
+
     Row(
         modifier = modifier
             .heightIn(min = GamssTouchTarget.minimum)
-            .noRippleClickable(role = Role.DropdownList, onClick = onClick),
+            .noRippleClickable(enabled = enabled, role = Role.DropdownList, onClick = onClick),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(LabelChevronGap),
     ) {
         GamssText(
             text = label,
             style = GamssTheme.typography.body4Medium,
-            color = contentColor,
+            color = resolvedColor,
             maxLines = 1,
         )
         Icon(
             painter = painterResource(GamssIcons.RightChevron),
             contentDescription = null,
-            tint = contentColor,
+            tint = resolvedColor,
             modifier = Modifier
                 .size(ChevronSize)
                 .graphicsLayer {
