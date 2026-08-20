@@ -4,6 +4,8 @@ import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.gestures.DraggableState
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.draggable
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
@@ -15,20 +17,18 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import com.gamss.android.core.designsystem.theme.designScale
-import com.gamss.android.feature.chat.CARD_FOLD_ARROW_DELAY_MS
 import com.gamss.android.feature.chat.CARD_FOLD_BIN_ASPECT_RATIO
-import com.gamss.android.feature.chat.CARD_FOLD_BIN_DELAY_MS
 import com.gamss.android.feature.chat.CARD_FOLD_BIN_SHOWN_MS
 import com.gamss.android.feature.chat.CARD_FOLD_BIN_SINK_FRACTION
 import com.gamss.android.feature.chat.CARD_FOLD_DISCARD_HOLD_MS
 import com.gamss.android.feature.chat.CARD_FOLD_DISCARD_THRESHOLD
-import com.gamss.android.feature.chat.CARD_FOLD_GUIDE_DELAY_MS
 import com.gamss.android.feature.chat.CARD_FOLD_HINT_FADE_MS
 import com.gamss.android.feature.chat.CardFoldReturnSpec
 import com.gamss.android.feature.chat.CardFoldSinkSpec
@@ -58,8 +58,7 @@ internal fun rememberCardFoldMetrics(
 ): CardFoldMetrics {
     val density = LocalDensity.current
     return remember(maxWidth, maxHeight, foldStage, density) {
-        // 시안은 402dp 폭 기준이다. 좁은 기기에서 종이와 힌트를 폭 비율만큼 함께 줄여 좌우 여백
-        // 비율을 지킨다. 통은 폭을 채우고 높이를 비율로 뽑으므로 이미 같은 비율로 줄어든다.
+        // 종이와 힌트만 폭 비율로 줄인다. 통은 폭을 채우고 높이를 비율로 뽑으므로 이미 함께 줄어든다.
         val scale = designScale(maxWidth)
         val paperSize = foldStage.paperSize * scale
         val binHeight = maxWidth / CARD_FOLD_BIN_ASPECT_RATIO
@@ -72,24 +71,9 @@ internal fun rememberCardFoldMetrics(
     }
 }
 
-/** 셋 다 버리는 동안에도 남아야 하므로, 끌 수 있는지가 아니라 접힘 단계로 판단한다. */
-@Stable
-internal class CardFoldHints(
-    val bin: State<Float>,
-    val guide: State<Float>,
-    val arrow: State<Float>,
-)
-
+/** 통은 버리는 동안에도 남아야 하므로, 끌 수 있는지가 아니라 접힘 단계로 판단한다. */
 @Composable
-internal fun rememberCardFoldHints(folded: Boolean): CardFoldHints {
-    val bin = fadeInAfter(folded, CARD_FOLD_BIN_DELAY_MS, label = "cardFoldBin")
-    val guide = fadeInAfter(folded, CARD_FOLD_GUIDE_DELAY_MS, label = "cardFoldGuide")
-    val arrow = fadeInAfter(folded, CARD_FOLD_ARROW_DELAY_MS, label = "cardFoldArrow")
-    return remember(bin, guide, arrow) { CardFoldHints(bin, guide, arrow) }
-}
-
-@Composable
-private fun fadeInAfter(visible: Boolean, delayMillis: Int, label: String): State<Float> =
+internal fun fadeInAfter(visible: Boolean, delayMillis: Int, label: String): State<Float> =
     animateFloatAsState(
         targetValue = if (visible) 1f else 0f,
         animationSpec = tween(CARD_FOLD_HINT_FADE_MS, delayMillis = delayMillis),
@@ -108,9 +92,12 @@ private fun fadeInAfter(visible: Boolean, delayMillis: Int, label: String): Stat
 @Stable
 internal class CardFoldDragState(private val scope: CoroutineScope) {
 
-    val offset = mutableFloatStateOf(0f)
+    private val offset = mutableFloatStateOf(0f)
 
-    var discarding by mutableStateOf(false)
+    /** 종이를 아래로 옮길 거리. graphicsLayer 안에서만 읽어야 컴포지션이 매 프레임 돌지 않는다. */
+    val translationY: Float get() = offset.floatValue
+
+    internal var discarding by mutableStateOf(false)
         private set
 
     internal var travel by mutableStateOf(DiscardTravel.None)
@@ -118,7 +105,7 @@ internal class CardFoldDragState(private val scope: CoroutineScope) {
 
     internal var onDiscard: () -> Unit = {}
 
-    val draggableState = DraggableState { delta ->
+    internal val draggableState = DraggableState { delta ->
         offset.floatValue = (offset.floatValue + delta).coerceIn(0f, travel.dragDistancePx)
     }
 
@@ -141,7 +128,7 @@ internal class CardFoldDragState(private val scope: CoroutineScope) {
         }
     }
 
-    fun onDragStopped() {
+    internal fun onDragStopped() {
         if (reachedBin()) {
             discarding = true
             scope.launch {
@@ -181,6 +168,14 @@ internal fun rememberCardFoldDragState(
     }
     return state
 }
+
+/** 종이를 통 방향으로만 끈다. 가라앉는 동안에는 다시 잡히지 않는다. */
+internal fun Modifier.cardFoldDraggable(state: CardFoldDragState, enabled: Boolean) = draggable(
+    state = state.draggableState,
+    orientation = Orientation.Vertical,
+    enabled = enabled && !state.discarding,
+    onDragStopped = { state.onDragStopped() },
+)
 
 /**
  * 종이가 통까지 움직일 거리.

@@ -34,20 +34,13 @@ internal class PaperFall(
     geometry: PaperGeometry,
     private val droppingIndex: Int?,
 ) {
+    /** 창 크기가 바뀌면 갈아 끼운다. 컴포지션이 확정된 뒤에 넣어야 버려질 값이 안 들어간다. */
     var geometry: PaperGeometry = geometry
-        private set
 
     /** 그리는 쪽이 읽어 가는 현재 자리. 프레임마다 바뀐다. */
     val papers: List<PaperUiState> = spawnPapers(count, geometry, droppingIndex)
 
-    fun updateGeometry(geometry: PaperGeometry) {
-        this.geometry = geometry
-    }
-
-    /**
-     * 다 쌓여 잠잠해지거나 [PAPER_MAX_DURATION_NANOS] 가 지나면 돌아온다 — 화면이 그대로인데도
-     * 매 프레임 계속 깨어나지 않게 한다.
-     */
+    /** 다 쌓여 잠잠해지거나 [PAPER_MAX_DURATION_NANOS] 가 지나면 돌아온다. */
     suspend fun run() = coroutineScope {
         val bodies = papers.map { it.toBody(geometry.radiusPx) }
         settleAlreadyPiled(bodies)
@@ -102,7 +95,7 @@ internal class PaperUiState(x: Float, y: Float, rotationDegrees: Float) {
 }
 
 /**
- * 가로로 흩뿌린 시작 위치. 뒤 순번일수록 더 높이 두어 한꺼번에 떨어지지 않게 한다.
+ * 가로로 흩뿌린 시작 위치.
  *
  * 한 장만 떨어질 때 그 장은 화면 바로 위에 둔다. 순번대로 높이를 주면 뒤쪽 카드일수록 한참
  * 뒤에야 화면에 들어온다.

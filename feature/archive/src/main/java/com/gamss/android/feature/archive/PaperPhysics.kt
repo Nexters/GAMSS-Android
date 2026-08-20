@@ -49,7 +49,7 @@ internal class PaperPhysicsWorld(
     /**
      * 프레임을 기다리지 않고 잠잠해질 때까지 굴린다. 이미 쌓인 더미의 자리를 구하는 용도다.
      *
-     * 중간에 취소를 확인한다. 화면을 벗어난 뒤에도 남은 step 을 다 도는 일이 없어야 한다.
+     * 화면을 벗어난 뒤에도 남은 step 을 다 도는 일이 없어야 한다.
      */
     suspend fun settle() {
         var settledSteps = 0
@@ -183,7 +183,7 @@ private fun pushApart(a: PaperBody, b: PaperBody, normalX: Float, normalY: Float
     b.y += correctionY
 }
 
-/** 법선 방향으로 되튕긴다. 종이 무게는 모두 같다고 보고 충격량을 반씩 나눈다. */
+/** 법선 방향으로 되튕긴다. */
 private fun applyBounce(
     a: PaperBody,
     b: PaperBody,

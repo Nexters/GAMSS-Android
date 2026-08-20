@@ -9,7 +9,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
@@ -32,7 +35,7 @@ import java.time.LocalDate
  * 위에서 쏟아져 바닥에 쌓이는 종이 더미. 어디에 어떻게 놓이는지는 [PaperFall] 이 정한다.
  *
  * @param droppedCardDate 방금 버려서 이 화면으로 넘어온 카드의 날짜. 그 한 장만 떨어지고 나머지는
- *  이미 쌓인 채로 시작한다. null 이면 전부 쏟는다.
+ *  이미 쌓인 채로 시작한다. null 이면 전부 쏟는다. 첫 더미에만 쓰고 버린다.
  */
 @Composable
 internal fun PaperPile(
@@ -46,27 +49,39 @@ internal fun PaperPile(
             .padding(top = PaperPileTopPadding),
     ) {
         val scale = designScale(maxWidth)
-        val density = LocalDensity.current
-        val paperSizePx = with(density) { (PaperSize * scale).toPx() }
-        val geometry = PaperGeometry(
-            boundsWidthPx = with(density) { designWidth(scale).toPx() },
-            boundsHeightPx = with(density) { maxHeight.toPx() },
-            radiusPx = paperSizePx / 2f * PAPER_COLLISION_RADIUS_SCALE,
-        )
-        // 시뮬레이션은 시안 폭(402dp) 안에서만 돈다. 더 넓은 화면에서는 그 폭을 가운데로 밀어야
-        // 상단바·월 셀렉터와 축이 맞는다. 종이는 TopStart 기준이라 contentAlignment 로는 안 된다.
-        val pileOffsetX = with(density) { ((maxWidth - designWidth(scale)) / 2).toPx() }
+        val paperSizePx: Float
+        val geometry: PaperGeometry
+        val pileOffsetX: Float
+        with(LocalDensity.current) {
+            paperSizePx = (PaperSize * scale).toPx()
+            geometry = PaperGeometry(
+                boundsWidthPx = designWidth(scale).toPx(),
+                boundsHeightPx = maxHeight.toPx(),
+                radiusPx = paperSizePx / 2f * PAPER_COLLISION_RADIUS_SCALE,
+            )
+            // 시뮬레이션은 시안 폭(402dp) 안에서만 돈다. 더 넓은 화면에서는 그 폭을 가운데로
+            // 밀어야 상단바·월 셀렉터와 축이 맞는다. 종이는 TopStart 기준이라 contentAlignment
+            // 로는 안 된다.
+            pileOffsetX = ((maxWidth - designWidth(scale)) / 2).toPx()
+        }
 
+        // Navigator 가 한 번만 내주지만 이 화면은 그 값을 파라미터로 계속 들고 있다. 목록이 새로
+        // 만들어질 때마다(카드 삭제, 달 바꿔 돌아오기) 또 한 장만 떨어지지 않게 여기서도 한 번
+        // 쓰고 비운다.
+        var pendingDrop by remember { mutableStateOf(droppedCardDate) }
         // 키에 화면 크기를 넣지 않는다. 크기만 바뀌었을 때 이미 쌓인 종이가 다시 쏟아지면 안 된다.
         // 바뀐 칸은 컴포지션이 확정된 뒤에 흘려 넣는다. 버려질 수 있는 컴포지션에서 쓰면 안 된다.
-        val fall = remember(cards, droppedCardDate) {
+        val fall = remember(cards) {
             PaperFall(
                 count = cards.size,
                 geometry = geometry,
-                droppingIndex = cards.droppedIndex(droppedCardDate),
+                droppingIndex = cards.droppedIndex(pendingDrop),
             )
         }
-        SideEffect { fall.updateGeometry(geometry) }
+        SideEffect {
+            fall.geometry = geometry
+            pendingDrop = null
+        }
 
         LaunchedEffect(fall) { fall.run() }
 

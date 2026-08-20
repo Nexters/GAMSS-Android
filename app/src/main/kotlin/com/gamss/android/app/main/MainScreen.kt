@@ -187,9 +187,7 @@ private fun mainEntryProvider(navigator: Navigator) = entryProvider {
     entry<ChatRoomKey>(metadata = detailSlideTransition) { key ->
         ChatRoomScreen(
             conversationId = key.conversationId,
-            // 버린 카드가 어디로 갔는지 바로 보여 준다. 끝난 대화방을 남기면 뒤로 나왔을 때
-            // 다시 들어가고, 카드 단계가 그대로라 접기 연출이 또 열린다. 비우는 순서는
-            // Navigator 가 안다.
+            // 버린 카드가 어디로 갔는지 바로 보여 준다.
             onCardDiscard = { emotion, date ->
                 navigator.openDroppedCard(ArchiveKey, ArchiveDetailKey(emotion), date)
             },

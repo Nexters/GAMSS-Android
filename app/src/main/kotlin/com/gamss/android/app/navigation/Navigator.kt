@@ -1,8 +1,5 @@
 package com.gamss.android.app.navigation
 
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.navigation3.runtime.NavKey
 import java.time.LocalDate
 
@@ -21,7 +18,7 @@ class Navigator(val state: NavigationState) {
      * 때마다 방금 버린 것처럼 또 떨어진다. 프로세스가 죽으면 이 값도 사라지는데, 그때는 낙하를
      * 건너뛰는 쪽이 맞다.
      */
-    private var droppedCardDate: LocalDate? by mutableStateOf(null)
+    private var droppedCardDate: LocalDate? = null
 
     fun consumeDroppedCardDate(): LocalDate? = droppedCardDate.also { droppedCardDate = null }
 

@@ -276,7 +276,6 @@ class ChatRoomViewModel @Inject constructor(
         reduce { state.copy(riskDetection = null) }
     }
 
-    /** 카드를 누를 때마다 한 단계 접힌다. 다 접힌 뒤 누르는 건 무시한다. */
     fun onCardFoldTap() = intent {
         reduce {
             val ready = state.endFlow as? EndFlow.CardReady ?: return@reduce state

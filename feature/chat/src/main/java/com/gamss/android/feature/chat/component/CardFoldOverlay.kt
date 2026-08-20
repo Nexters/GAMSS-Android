@@ -4,13 +4,10 @@ import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.Orientation
-import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -46,7 +43,9 @@ import com.gamss.android.core.ui.card.cardTitleRes
 import com.gamss.android.core.ui.card.toGamssEmotionCardCharacter
 import com.gamss.android.domain.card.Card
 import com.gamss.android.domain.emotion.EmotionCharacter
-import com.gamss.android.feature.chat.CARD_FOLD_BIN_ASPECT_RATIO
+import com.gamss.android.feature.chat.CARD_FOLD_ARROW_DELAY_MS
+import com.gamss.android.feature.chat.CARD_FOLD_BIN_DELAY_MS
+import com.gamss.android.feature.chat.CARD_FOLD_GUIDE_DELAY_MS
 import com.gamss.android.feature.chat.CARD_FOLD_SUMMARY_MAX_LINES
 import com.gamss.android.feature.chat.CardFoldArrowBinGap
 import com.gamss.android.feature.chat.CardFoldArrowSize
@@ -113,13 +112,14 @@ private fun CardFoldContent(
 ) {
     val folded = foldStage.next == null
     val binReady = rememberBinReady(folded)
-    val hints = rememberCardFoldHints(folded)
+    val binAlpha = fadeInAfter(folded, CARD_FOLD_BIN_DELAY_MS, label = "cardFoldBin")
+    val guideAlpha = fadeInAfter(folded, CARD_FOLD_GUIDE_DELAY_MS, label = "cardFoldGuide")
+    val arrowAlpha = fadeInAfter(folded, CARD_FOLD_ARROW_DELAY_MS, label = "cardFoldArrow")
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val metrics = rememberCardFoldMetrics(maxWidth, maxHeight, foldStage)
         val drag = rememberCardFoldDragState(metrics.travel, onDiscard)
 
-        // Figma 에서 세 단계가 모두 같은 중심선에 놓인다.
         Box(
             modifier = Modifier
                 .align(Alignment.Center)
@@ -127,16 +127,16 @@ private fun CardFoldContent(
         ) {
             DiscardGuide(
                 // 안내와 화살표는 힌트라 끌기 시작하면 사라진다. 통은 남는다.
-                alpha = { hints.guide.value * (1f - drag.dragFraction()) },
+                alpha = { guideAlpha.value * (1f - drag.dragFraction()) },
                 gap = CardFoldGuideGap * metrics.scale,
                 modifier = Modifier.align(Alignment.TopCenter),
             )
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .graphicsLayer { translationY = drag.offset.floatValue }
+                    .graphicsLayer { translationY = drag.translationY }
                     .noRippleClickableIfNotNull(onFoldTap.takeIf { !folded })
-                    .discardDraggable(state = drag, enabled = binReady),
+                    .cardFoldDraggable(state = drag, enabled = binReady),
             ) {
                 StagePaper(stage = foldStage, card = card, onSkip = onSkip)
             }
@@ -144,7 +144,7 @@ private fun CardFoldContent(
 
         // 종이보다 앞에 그린다. Figma 도 화살표를 종이 위에 얹고, 위쪽이 투명해 종이를 가리지 않는다.
         DiscardArrow(
-            alpha = { hints.arrow.value * (1f - drag.dragFraction()) },
+            alpha = { arrowAlpha.value * (1f - drag.dragFraction()) },
             size = CardFoldArrowSize * metrics.scale,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
@@ -153,7 +153,8 @@ private fun CardFoldContent(
 
         // 종이보다 뒤에 그리면 통 앞면에 가려 파묻히는 모습이 안 나온다.
         DiscardBin(
-            alpha = { hints.bin.value },
+            alpha = { binAlpha.value },
+            height = metrics.binHeight,
             modifier = Modifier.align(Alignment.BottomCenter),
         )
     }
@@ -279,7 +280,6 @@ private fun DiscardGuide(alpha: () -> Float, gap: Dp, modifier: Modifier = Modif
     )
 }
 
-/** 위쪽이 투명한 그라데이션이라 종이 위에 겹쳐도 가리지 않는다. */
 @Composable
 private fun DiscardArrow(alpha: () -> Float, size: DpSize, modifier: Modifier = Modifier) {
     FoldImage(
@@ -289,16 +289,15 @@ private fun DiscardArrow(alpha: () -> Float, size: DpSize, modifier: Modifier = 
     )
 }
 
-/** 높이를 dp 로 박지 않고 폭에 비율을 걸어 뽑는다. 손그림 테두리라 폭만 늘리면 눌린 모습이 난다. */
 @Composable
-private fun DiscardBin(alpha: () -> Float, modifier: Modifier = Modifier) {
+private fun DiscardBin(alpha: () -> Float, height: Dp, modifier: Modifier = Modifier) {
     FoldImage(
         resId = DesignSystemR.drawable.img_paper_discard_bin,
         alpha = alpha,
         contentScale = ContentScale.FillBounds,
         modifier = modifier
             .fillMaxWidth()
-            .aspectRatio(CARD_FOLD_BIN_ASPECT_RATIO),
+            .height(height),
     )
 }
 
@@ -328,13 +327,6 @@ private fun Modifier.anchorAbove(gap: Dp) = layout { measurable, constraints ->
         placeable.place(x = 0, y = -(placeable.height + gap.roundToPx()))
     }
 }
-
-private fun Modifier.discardDraggable(state: CardFoldDragState, enabled: Boolean) = draggable(
-    state = state.draggableState,
-    orientation = Orientation.Vertical,
-    enabled = enabled && !state.discarding,
-    onDragStopped = { state.onDragStopped() },
-)
 
 private val Opaque: () -> Float = { 1f }
 
