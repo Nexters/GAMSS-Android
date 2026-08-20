@@ -27,6 +27,7 @@ internal object DatabaseModule {
             DATABASE_NAME,
         )
             .setDriver(BundledSQLiteDriver())
+            .fallbackToDestructiveMigration(dropAllTables = true)
             .build()
 
     @Provides
