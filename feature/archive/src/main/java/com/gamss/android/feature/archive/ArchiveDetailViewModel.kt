@@ -3,10 +3,9 @@ package com.gamss.android.feature.archive
 import androidx.lifecycle.ViewModel
 import com.gamss.android.core.common.AppResult
 import com.gamss.android.core.common.util.KoreanTimeZone
-import com.gamss.android.domain.card.CardEntry
-import com.gamss.android.domain.card.ClearCardCacheUseCase
-import com.gamss.android.domain.card.GetCardsByDateUseCase
-import com.gamss.android.domain.card.GetCardsByMonthUseCase
+import com.gamss.android.domain.card.Card
+import com.gamss.android.domain.card.GetCardsByMonthAndEmotionUseCase
+import com.gamss.android.domain.card.MonthlyEmotionQuery
 import com.gamss.android.domain.conversation.GetConversationUseCase
 import com.gamss.android.domain.emotion.EmotionCharacter
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -18,9 +17,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class ArchiveDetailViewModel @Inject constructor(
-    private val getCardsByMonth: GetCardsByMonthUseCase,
-    private val getCardsByDate: GetCardsByDateUseCase,
-    private val clearCardCache: ClearCardCacheUseCase,
+    private val getCardsByMonthAndEmotion: GetCardsByMonthAndEmotionUseCase,
     private val getConversation: GetConversationUseCase,
 ) : ViewModel(), ContainerHost<ArchiveDetailState, ArchiveDetailSideEffect> {
 
@@ -82,27 +79,8 @@ class ArchiveDetailViewModel @Inject constructor(
         loadMonth(emotion, yearMonth)
     }
 
-    /**
-     * 월별 응답에는 카드 식별자가 없어 종이는 날짜와 그날 순번만 들고 있다. 눌린 종이의 날짜로 다시
-     * 조회해 그 순번의 카드를 집어야 요약·대사와 id 가 손에 들어온다.
-     */
-    fun selectCard(entry: CardEntry) = intent {
-        if (state.isCardLoading) return@intent
-
-        reduce { state.copy(isCardLoading = true) }
-
-        val firstResult = getCardsByDate(entry.date)
-        val card = when (firstResult) {
-            is AppResult.Success -> firstResult.data.getOrNull(entry.indexInDate)
-                ?: run {
-                    clearCardCache()
-                    (getCardsByDate(entry.date) as? AppResult.Success)?.data?.getOrNull(entry.indexInDate)
-                }
-            is AppResult.Failure -> null
-        }
-        reduce { state.copy(isCardLoading = false, selectedCard = card) }
-
-        if (card == null) postSideEffect(ArchiveDetailSideEffect.CardLoadFailed)
+    fun selectCard(card: Card) = intent {
+        reduce { state.copy(selectedCard = card) }
     }
 
     fun dismissCard() = intent {
@@ -111,8 +89,7 @@ class ArchiveDetailViewModel @Inject constructor(
 
     /**
      * 한 장 버리기도 되돌릴 수 없어 파쇄 화면을 거친다. 지운 뒤 목록을 다시 받는 일은 그 화면에서
-     * 돌아올 때 [load] 가 맡는다 — 카드를 지우면 같은 날짜 뒤 순번이 한 칸씩 당겨지므로, 목록에서
-     * 빼는 것만으로는 남은 종이의 순번이 서버와 어긋난다.
+     * 돌아올 때 [load] 가 맡는다.
      */
     fun discardSelectedCard() = intent {
         val card = state.selectedCard ?: return@intent
@@ -159,13 +136,12 @@ class ArchiveDetailViewModel @Inject constructor(
         reduce { state.copy(conversationCard = null, selectedCard = card) }
     }
 
-    /** 월별 응답은 모든 감정을 섞어 주므로 이 화면이 보고 있는 감정만 남긴다. */
     private suspend fun Syntax<ArchiveDetailState, ArchiveDetailSideEffect>.loadMonth(
         emotion: EmotionCharacter,
         yearMonth: YearMonth,
     ) {
-        val cards = when (val result = getCardsByMonth(yearMonth)) {
-            is AppResult.Success -> ArchiveCards.Loaded(result.data.filter { it.character == emotion })
+        val cards = when (val result = getCardsByMonthAndEmotion(MonthlyEmotionQuery(emotion, yearMonth))) {
+            is AppResult.Success -> ArchiveCards.Loaded(result.data)
             is AppResult.Failure -> ArchiveCards.LoadFailed
         }
         // intent 는 서로 병렬로 돈다. 느린 달을 기다리는 사이 다른 달로 옮겼다면, 늦게 온 응답이

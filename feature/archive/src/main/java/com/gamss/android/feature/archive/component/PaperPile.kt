@@ -22,26 +22,25 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import com.gamss.android.core.designsystem.theme.designScale
 import com.gamss.android.core.designsystem.theme.designWidth
-import com.gamss.android.domain.card.CardEntry
+import com.gamss.android.domain.card.Card
 import com.gamss.android.feature.archive.PAPER_COLLISION_RADIUS_SCALE
 import com.gamss.android.feature.archive.PaperFall
 import com.gamss.android.feature.archive.PaperGeometry
 import com.gamss.android.feature.archive.PaperPileTopPadding
 import com.gamss.android.feature.archive.PaperSize
 import com.gamss.android.feature.archive.R
-import java.time.LocalDate
 
 /**
  * 위에서 쏟아져 바닥에 쌓이는 종이 더미. 어디에 어떻게 놓이는지는 [PaperFall] 이 정한다.
  *
- * @param droppedCardDate 방금 버려서 이 화면으로 넘어온 카드의 날짜. 그 한 장만 떨어지고 나머지는
- *  이미 쌓인 채로 시작한다. null 이면 전부 쏟는다. 첫 더미에만 쓰고 버린다.
+ * @param droppedCardId 방금 버려서 이 화면으로 넘어온 카드. 그 한 장만 떨어지고 나머지는 이미
+ *  쌓인 채로 시작한다. null 이면 전부 쏟는다. 첫 더미에만 쓰고 버린다.
  */
 @Composable
 internal fun PaperPile(
-    cards: List<CardEntry>,
-    droppedCardDate: LocalDate?,
-    onPaperClick: (CardEntry) -> Unit,
+    cards: List<Card>,
+    droppedCardId: Long?,
+    onPaperClick: (Card) -> Unit,
 ) {
     BoxWithConstraints(
         modifier = Modifier
@@ -68,7 +67,7 @@ internal fun PaperPile(
         // Navigator 가 한 번만 내주지만 이 화면은 그 값을 파라미터로 계속 들고 있다. 목록이 새로
         // 만들어질 때마다(카드 삭제, 달 바꿔 돌아오기) 또 한 장만 떨어지지 않게 여기서도 한 번
         // 쓰고 비운다.
-        var pendingDrop by remember { mutableStateOf(droppedCardDate) }
+        var pendingDrop by remember { mutableStateOf(droppedCardId) }
         // 키에 화면 크기를 넣지 않는다. 크기만 바뀌었을 때 이미 쌓인 종이가 다시 쏟아지면 안 된다.
         // 바뀐 칸은 컴포지션이 확정된 뒤에 흘려 넣는다. 버려질 수 있는 컴포지션에서 쓰면 안 된다.
         val fall = remember(cards) {
@@ -109,17 +108,8 @@ internal fun PaperPile(
     }
 }
 
-/**
- * 방금 버린 카드가 목록에서 몇 번째인지. 월별 응답에 카드 식별자가 없어 날짜와 그날 순번으로 찾고,
- * 같은 날 여러 장이면 순번이 가장 큰 마지막 장이 방금 버린 것이다.
- *
- * 못 찾으면 null 이라 전부 쏟는 원래 연출로 돌아간다. 달을 바꿔 그 날짜가 목록에서 사라졌을 때가
- * 그렇다.
- */
-private fun List<CardEntry>.droppedIndex(date: LocalDate?): Int? {
-    if (date == null) return null
-    return withIndex()
-        .filter { (_, entry) -> entry.date == date }
-        .maxByOrNull { (_, entry) -> entry.indexInDate }
-        ?.index
+/** 못 찾으면 null 이라 전부 쏟는 원래 연출로 돌아간다. 달을 바꿔 목록에서 사라졌을 때가 그렇다. */
+private fun List<Card>.droppedIndex(cardId: Long?): Int? {
+    if (cardId == null) return null
+    return indexOfFirst { it.id == cardId }.takeIf { it >= 0 }
 }

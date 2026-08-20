@@ -3,7 +3,6 @@ package com.gamss.android.feature.home
 import androidx.paging.PagingData
 import com.gamss.android.core.common.AppResult
 import com.gamss.android.domain.card.Card
-import com.gamss.android.domain.card.CardEntry
 import com.gamss.android.domain.card.CardRepository
 import com.gamss.android.domain.card.CreateCardUseCase
 import com.gamss.android.domain.card.CreateConversationCardUseCase
@@ -128,7 +127,10 @@ internal class RecordingConversationRepository(
 }
 
 private object NoCardRepository : CardRepository {
-    override suspend fun getCardsByMonth(yearMonth: YearMonth): AppResult<List<CardEntry>> =
+    override suspend fun getCardsByMonthAndEmotion(
+        character: EmotionCharacter,
+        yearMonth: YearMonth,
+    ): AppResult<List<Card>> =
         error("홈 테스트에서 쓰지 않는다")
 
     override suspend fun getCardsByDate(date: LocalDate): AppResult<List<Card>> =

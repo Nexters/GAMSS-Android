@@ -1,7 +1,6 @@
 package com.gamss.android.feature.archive
 
 import com.gamss.android.domain.card.Card
-import com.gamss.android.domain.card.CardEntry
 import com.gamss.android.domain.conversation.Message
 import com.gamss.android.domain.emotion.EmotionCharacter
 import java.time.YearMonth
@@ -13,7 +12,6 @@ data class ArchiveDetailState(
     val isMonthPickerVisible: Boolean = false,
     val isClearDialogVisible: Boolean = false,
     val selectedCard: Card? = null,
-    val isCardLoading: Boolean = false,
     val conversationCard: ConversationCard? = null,
     val isConversationLoading: Boolean = false,
 )
@@ -22,7 +20,7 @@ data class ArchiveDetailState(
 sealed interface ArchiveCards {
     data object Loading : ArchiveCards
     data object LoadFailed : ArchiveCards
-    data class Loaded(val entries: List<CardEntry>) : ArchiveCards
+    data class Loaded(val cards: List<Card>) : ArchiveCards
 }
 
 /**
