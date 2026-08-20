@@ -38,6 +38,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.gamss.android.core.designsystem.button.GamssButton
+import com.gamss.android.core.designsystem.component.GamssIcons
 import com.gamss.android.core.designsystem.theme.GamssTheme
 import com.gamss.android.domain.safety.SupportAgency
 import com.gamss.android.feature.chat.R
@@ -217,7 +218,7 @@ private fun AdditionalInfo() {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
-            painter = painterResource(R.drawable.ic_info),
+            painter = painterResource(GamssIcons.InfoFilled),
             contentDescription = null,
             tint = GamssTheme.colors.gray300,
             modifier = Modifier.size(18.dp),

@@ -26,6 +26,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.gamss.android.core.designsystem.button.GamssButton
 import com.gamss.android.core.designsystem.button.GamssButtonVariant
+import com.gamss.android.core.designsystem.component.GamssIcons
 import com.gamss.android.core.designsystem.component.GamssText
 import com.gamss.android.core.designsystem.theme.GamssTheme
 import com.gamss.android.feature.onboarding.R
@@ -134,7 +135,7 @@ private fun PermissionPanel() {
             horizontalArrangement = Arrangement.spacedBy(GamssTheme.spacing.spacing200),
         ) {
             Icon(
-                painter = painterResource(R.drawable.ic_notification),
+                painter = painterResource(GamssIcons.NotificationAlert),
                 contentDescription = stringResource(R.string.onboarding_notification_permission_description),
                 tint = GamssTheme.colors.red,
                 modifier = Modifier.size(PermissionIconSize),
@@ -155,7 +156,7 @@ private fun PermissionPanel() {
             horizontalArrangement = Arrangement.spacedBy(GamssTheme.spacing.spacing100),
         ) {
             Icon(
-                painter = painterResource(R.drawable.ic_info),
+                painter = painterResource(GamssIcons.InfoOutline),
                 contentDescription = null,
                 tint = GamssTheme.colors.gray300,
                 modifier = Modifier.size(PermissionInfoIconSize),

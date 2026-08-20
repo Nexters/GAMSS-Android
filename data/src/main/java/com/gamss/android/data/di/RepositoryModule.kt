@@ -7,6 +7,8 @@ import com.gamss.android.data.local.auth.TinkTokenCipher
 import com.gamss.android.data.local.auth.TokenCipher
 import com.gamss.android.data.local.auth.TokenProvider
 import com.gamss.android.data.local.auth.TokenProviderImpl
+import com.gamss.android.data.local.card.CardLocalDataSource
+import com.gamss.android.data.local.card.RoomCardLocalDataSource
 import com.gamss.android.data.repository.CardRepositoryImpl
 import com.gamss.android.data.repository.ConversationRepositoryImpl
 import com.gamss.android.data.repository.DeviceTokenRepositoryImpl
@@ -55,6 +57,11 @@ internal abstract class RepositoryModule {
     abstract fun bindCardRepository(
         cardRepositoryImpl: CardRepositoryImpl
     ): CardRepository
+
+    @Binds
+    abstract fun bindCardLocalDataSource(
+        roomCardLocalDataSource: RoomCardLocalDataSource,
+    ): CardLocalDataSource
 
     @Binds
     abstract fun bindTokenUsageRefreshNotifier(
