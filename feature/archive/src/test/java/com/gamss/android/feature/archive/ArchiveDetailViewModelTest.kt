@@ -5,6 +5,7 @@ import com.gamss.android.core.common.util.KoreanTimeZone
 import com.gamss.android.domain.card.Card
 import com.gamss.android.domain.card.CardEntry
 import com.gamss.android.domain.card.CardRepository
+import com.gamss.android.domain.card.ClearCardCacheUseCase
 import com.gamss.android.domain.card.DeleteCardUseCase
 import com.gamss.android.domain.card.GetCardsByDateUseCase
 import com.gamss.android.domain.card.GetCardsByMonthUseCase
@@ -117,8 +118,9 @@ class ArchiveDetailViewModelTest {
         assertEquals(listOf(joyEntry.date), repository.requestedDates)
     }
 
+    /** 재조회까지 마쳤는데도 그 순번이 없다면 서버에도 정말 없는 카드다. */
     @Test
-    fun `그 순번에 카드가 없으면 상세를 올리지 않고 실패를 알린다`() = runTest {
+    fun `재조회해도 그 순번에 카드가 없으면 상세를 올리지 않고 실패를 알린다`() = runTest {
         val repository = FakeCardRepository(
             monthResult = AppResult.Success(listOf(angerEntry)),
             dateResult = AppResult.Success(emptyList()),
@@ -135,6 +137,60 @@ class ArchiveDetailViewModelTest {
             expectState { copy(isCardLoading = false) }
             expectSideEffect(ArchiveDetailSideEffect.CardLoadFailed)
         }
+
+        assertEquals(1, repository.clearCacheCallCount)
+        assertEquals(listOf(angerEntry.date, angerEntry.date), repository.requestedDates)
+    }
+
+    /**
+     * 다른 기기에서 그 날짜에 카드가 추가되면 월별 응답엔 새 순번이 보이지만, 이 기기의 날짜 캐시는
+     * 그 전 상태로 멈춰 있어 그 순번을 못 찾을 수 있다. 캐시를 비우고 한 번 더 받으면 찾아야 한다.
+     */
+    @Test
+    fun `해당 순번에 카드가 없으면 캐시를 비우고 한 번 더 조회해 상세를 올린다`() = runTest {
+        val repository = FakeCardRepository(
+            monthResult = AppResult.Success(listOf(angerEntry, joyEntry)),
+            dateResult = AppResult.Success(listOf(firstCardOfDay)),
+            dateResultAfterClear = AppResult.Success(listOf(firstCardOfDay, secondCardOfDay)),
+        )
+        val viewModel = viewModel(repository)
+
+        viewModel.test(this) {
+            containerHost.load(EmotionCharacter.ANGER)
+            expectState { copy(emotion = EmotionCharacter.ANGER) }
+            expectState { copy(cards = ArchiveCards.Loaded(listOf(angerEntry))) }
+
+            containerHost.selectCard(joyEntry)
+            expectState { copy(isCardLoading = true) }
+            expectState { copy(isCardLoading = false, selectedCard = secondCardOfDay) }
+        }
+
+        assertEquals(1, repository.clearCacheCallCount)
+        assertEquals(listOf(joyEntry.date, joyEntry.date), repository.requestedDates)
+    }
+
+    /** 이미 네트워크까지 갔다가 실패한 경우엔 재시도로 캐시를 다시 비우지 않는다. */
+    @Test
+    fun `카드 조회 자체가 실패하면 재조회하지 않고 바로 실패를 알린다`() = runTest {
+        val repository = FakeCardRepository(
+            monthResult = AppResult.Success(listOf(angerEntry)),
+            dateResult = AppResult.Failure(IllegalStateException("network")),
+        )
+        val viewModel = viewModel(repository)
+
+        viewModel.test(this) {
+            containerHost.load(EmotionCharacter.ANGER)
+            expectState { copy(emotion = EmotionCharacter.ANGER) }
+            expectState { copy(cards = ArchiveCards.Loaded(listOf(angerEntry))) }
+
+            containerHost.selectCard(angerEntry)
+            expectState { copy(isCardLoading = true) }
+            expectState { copy(isCardLoading = false) }
+            expectSideEffect(ArchiveDetailSideEffect.CardLoadFailed)
+        }
+
+        assertEquals(0, repository.clearCacheCallCount)
+        assertEquals(listOf(angerEntry.date), repository.requestedDates)
     }
 
     @Test
@@ -246,6 +302,7 @@ class ArchiveDetailViewModelTest {
         getCardsByMonth = GetCardsByMonthUseCase(repository),
         getCardsByDate = GetCardsByDateUseCase(repository),
         deleteCard = DeleteCardUseCase(repository),
+        clearCardCache = ClearCardCacheUseCase(repository),
     )
 
     private companion object {
@@ -273,6 +330,8 @@ class ArchiveDetailViewModelTest {
 private class FakeCardRepository(
     private val monthResult: AppResult<List<CardEntry>>,
     private val dateResult: AppResult<List<Card>> = AppResult.Success(emptyList()),
+    /** clearCache() 이후의 getCardsByDate 응답. 지정하지 않으면 [dateResult] 를 그대로 다시 준다. */
+    private val dateResultAfterClear: AppResult<List<Card>>? = null,
     /** 여기 담긴 달은 게이트가 열릴 때까지 응답을 붙잡는다. 늦게 도착하는 응답을 만들 때 쓴다. */
     private val monthGates: Map<YearMonth, CompletableDeferred<Unit>> = emptyMap(),
     /** 달마다 다른 목록을 줘야 할 때만 채운다. 없는 달은 [monthResult] 로 답한다. */
@@ -282,10 +341,12 @@ private class FakeCardRepository(
     val requestedMonths = mutableListOf<YearMonth>()
     val requestedDates = mutableListOf<LocalDate>()
     val deletedCardIds = mutableListOf<Long>()
+    var clearCacheCallCount = 0
+        private set
 
     override suspend fun getCardsByDate(date: LocalDate): AppResult<List<Card>> {
         requestedDates += date
-        return dateResult
+        return if (clearCacheCallCount > 0) dateResultAfterClear ?: dateResult else dateResult
     }
 
     override suspend fun getCardsByMonth(yearMonth: YearMonth): AppResult<List<CardEntry>> {
@@ -311,5 +372,7 @@ private class FakeCardRepository(
     override suspend fun deleteCardsByEmotion(character: EmotionCharacter): AppResult<Unit> =
         error("보관함 테스트에서 쓰지 않는다")
 
-    override suspend fun clearCache(): Unit = error("보관함 테스트에서 쓰지 않는다")
+    override suspend fun clearCache() {
+        clearCacheCallCount++
+    }
 }

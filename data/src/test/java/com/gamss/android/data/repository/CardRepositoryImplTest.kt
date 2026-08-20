@@ -340,6 +340,17 @@ class CardRepositoryImplTest {
         coVerify(exactly = 1) { cardLocalDataSource.deleteAll() }
     }
 
+    /**
+     * 로그아웃 중 세션 정리를 무너뜨리거나, Orbit intent 안에서 전역 예외 핸들러 없이 그대로
+     * 크래시로 번지지 않도록 호출부가 아니라 여기서 막는다.
+     */
+    @Test
+    fun `캐시 삭제가 실패해도 던지지 않는다`() = runTest {
+        coEvery { cardLocalDataSource.deleteAll() } throws IllegalStateException("disk error")
+
+        repository.clearCache()
+    }
+
     private fun cardEntity(id: Long, indexInDate: Int) = CardEntity(
         id = id,
         conversationId = id,

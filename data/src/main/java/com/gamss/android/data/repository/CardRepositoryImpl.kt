@@ -154,7 +154,15 @@ internal class CardRepositoryImpl @Inject constructor(
             cardLocalDataSource.deleteAll()
         }
 
+    /**
+     * 실패해도 던지지 않고 기록만 한다. 로그아웃 중 세션 정리를 무너뜨리거나, Orbit intent 안에서
+     * 전역 예외 핸들러 없이 그대로 크래시로 번지는 걸 호출부마다 따로 막지 않아도 되게 한다.
+     */
     override suspend fun clearCache() {
-        cardLocalDataSource.deleteAll()
+        runCatching { cardLocalDataSource.deleteAll() }
+            .onFailure { throwable ->
+                if (throwable is CancellationException) throw throwable
+                runCatching { Log.w(TAG, "카드 캐시 삭제에 실패했습니다.", throwable) }
+            }
     }
 }
