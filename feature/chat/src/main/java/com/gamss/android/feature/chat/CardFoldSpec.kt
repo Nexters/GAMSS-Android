@@ -17,8 +17,16 @@ internal const val CARD_FOLD_HINT_FADE_MS = 400
 // 다 접히면 쪽지 → 통 → 안내 문구 → 화살표 순으로 하나씩 나온다. 한꺼번에 나오면 접힌 모양을
 // 볼 새가 없고, 무엇부터 봐야 하는지도 안 읽힌다. 아래는 마지막으로 접은 시점부터의 시간이다.
 
-/** 접힌 쪽지를 본 뒤 통이 나온다. */
+/** 접힌 쪽지를 본 뒤 통이 나오기 시작한다. */
 internal const val CARD_FOLD_BIN_DELAY_MS = 800
+
+/**
+ * 통이 다 보이는 시점. 여기서부터 종이를 끌 수 있다.
+ *
+ * 배어 나오기 시작하는 [CARD_FOLD_BIN_DELAY_MS] 가 아니라 다 나온 뒤여야 한다. 통이 아직 흐릴
+ * 때 열어 두면 그대로 내려 버려, 어디에 버린 건지 못 본 채 화면이 넘어간다.
+ */
+internal const val CARD_FOLD_BIN_SHOWN_MS = CARD_FOLD_BIN_DELAY_MS + CARD_FOLD_HINT_FADE_MS
 
 /** 통에서 한 박자 뒤 안내 문구. */
 internal const val CARD_FOLD_GUIDE_DELAY_MS = CARD_FOLD_BIN_DELAY_MS + 450

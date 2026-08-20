@@ -24,6 +24,7 @@ import com.gamss.android.core.designsystem.theme.designScale
 import com.gamss.android.feature.chat.CARD_FOLD_ARROW_DELAY_MS
 import com.gamss.android.feature.chat.CARD_FOLD_BIN_ASPECT_RATIO
 import com.gamss.android.feature.chat.CARD_FOLD_BIN_DELAY_MS
+import com.gamss.android.feature.chat.CARD_FOLD_BIN_SHOWN_MS
 import com.gamss.android.feature.chat.CARD_FOLD_BIN_SINK_FRACTION
 import com.gamss.android.feature.chat.CARD_FOLD_DISCARD_HOLD_MS
 import com.gamss.android.feature.chat.CARD_FOLD_DISCARD_THRESHOLD
@@ -222,7 +223,9 @@ private fun Density.discardTravel(windowHeight: Dp, binHeight: Dp, paperHeight: 
 /**
  * 통이 다 보인 뒤에야 끌 수 있게 연다.
  *
- * 다 접자마자 그대로 내려 버리면 종이가 빈 자리로 가라앉고, 어디에 버린 건지 못 본 채 화면이 넘어간다.
+ * 힌트 진행률을 컴포지션에서 읽지 않고 같은 박자를 다시 잰다. 진행률을 여기서 읽으면 통이 배어
+ * 나오는 400ms 동안 매 프레임 카드까지 다시 그려진다. 대신 시점은 [CARD_FOLD_BIN_SHOWN_MS] 한
+ * 곳에서만 나온다.
  */
 @Composable
 internal fun rememberBinReady(folded: Boolean): Boolean {
@@ -230,7 +233,7 @@ internal fun rememberBinReady(folded: Boolean): Boolean {
     LaunchedEffect(folded) {
         ready = false
         if (folded) {
-            delay(CARD_FOLD_BIN_DELAY_MS.toLong())
+            delay(CARD_FOLD_BIN_SHOWN_MS.toLong())
             ready = true
         }
     }
