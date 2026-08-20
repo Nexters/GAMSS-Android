@@ -12,7 +12,6 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
 import org.orbitmvi.orbit.ContainerHost
 import org.orbitmvi.orbit.blockingIntent
-import org.orbitmvi.orbit.syntax.Syntax
 import org.orbitmvi.orbit.viewmodel.container
 import javax.inject.Inject
 
@@ -26,8 +25,16 @@ class HomeViewModel @Inject constructor(
     private val session: ConversationSession,
 ) : ViewModel(), ContainerHost<HomeState, HomeSideEffect> {
 
-    // init 대신 onCreate 를 쓴다. 구독 시점에 한 번 돌고, 테스트에서 실행 시점을 잡을 수 있다.
-    override val container = container<HomeState, HomeSideEffect>(HomeState()) { loadUserInfo() }
+    override val container = container<HomeState, HomeSideEffect>(HomeState())
+
+    fun loadUserInfo() = intent {
+        // 닉네임을 못 받아도 화면은 성립한다. 세션이 끊긴 경우는 AuthRepository 가 로그인으로 되돌린다.
+        // 실패해도 기존 닉네임은 지우지 않는다 — 갱신 시도가 화면에 이미 보이던 값을 날리면 안 된다.
+        when (val result = getUserInfoUseCase()) {
+            is AppResult.Success -> reduce { state.copy(isLoading = false, nickname = result.data.nickname) }
+            is AppResult.Failure -> reduce { state.copy(isLoading = false) }
+        }
+    }
 
     fun navigateToSetting() = intent {
         postSideEffect(HomeSideEffect.NavigateToSetting)
@@ -101,11 +108,5 @@ class HomeViewModel @Inject constructor(
             // 입력은 남겨 둔다. 실패한 문구를 다시 치게 하면 안 된다.
             is AppResult.Failure -> postSideEffect(HomeSideEffect.ShowToast(SEND_FAILED))
         }
-    }
-
-    private suspend fun Syntax<HomeState, HomeSideEffect>.loadUserInfo() {
-        // 닉네임을 못 받아도 화면은 성립한다. 세션이 끊긴 경우는 AuthRepository 가 로그인으로 되돌린다.
-        val nickname = (getUserInfoUseCase() as? AppResult.Success)?.data?.nickname
-        reduce { state.copy(isLoading = false, nickname = nickname) }
     }
 }

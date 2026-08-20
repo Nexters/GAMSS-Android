@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
@@ -69,6 +70,10 @@ fun HomeScreen(
 ) {
     val state by viewModel.collectAsState()
     val context = LocalContext.current
+
+    // 닉네임 변경 화면에서 저장하고 돌아왔을 때 최신 정보를 다시 불러오기 위해
+    // ViewModel init이 아니라 화면이 보일 때마다 실행되는 LaunchedEffect로 조회한다.
+    LaunchedEffect(Unit) { viewModel.loadUserInfo() }
 
     viewModel.collectSideEffect { sideEffect ->
         when (sideEffect) {

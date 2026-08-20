@@ -30,7 +30,7 @@ class HomeViewModelTest {
         givenUserInfo(nickname = "이소연")
 
         viewModel().test(this) {
-            runOnCreate()
+            containerHost.loadUserInfo()
             expectState { copy(isLoading = false, nickname = "이소연") }
         }
     }
@@ -40,8 +40,37 @@ class HomeViewModelTest {
         coEvery { getUserInfoUseCase() } returns AppResult.Failure(IllegalStateException("boom"))
 
         viewModel().test(this) {
-            runOnCreate()
+            containerHost.loadUserInfo()
             expectState { copy(isLoading = false, nickname = null) }
+        }
+    }
+
+    // 닉네임 변경 화면에서 돌아오면 HomeScreen이 loadUserInfo를 다시 호출한다. 그 경로를 흉내낸다.
+    @Test
+    fun `닉네임 변경 후 돌아와 다시 불러오면 바뀐 값으로 갱신된다`() = runTest {
+        givenUserInfo(nickname = "이소연")
+
+        viewModel().test(this) {
+            containerHost.loadUserInfo()
+            expectState { copy(isLoading = false, nickname = "이소연") }
+
+            givenUserInfo(nickname = "소연이")
+            containerHost.loadUserInfo()
+            expectState { copy(nickname = "소연이") }
+        }
+    }
+
+    @Test
+    fun `다시 불러오다 실패해도 이미 보이던 닉네임은 남는다`() = runTest {
+        givenUserInfo(nickname = "이소연")
+
+        viewModel().test(this) {
+            containerHost.loadUserInfo()
+            expectState { copy(isLoading = false, nickname = "이소연") }
+
+            coEvery { getUserInfoUseCase() } returns AppResult.Failure(IllegalStateException("boom"))
+            containerHost.loadUserInfo()
+            expectNoItems()
         }
     }
 
