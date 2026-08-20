@@ -111,7 +111,6 @@ private fun CardFoldContent(
     onSkip: () -> Unit,
     onDiscard: () -> Unit,
 ) {
-    // 다 접혔는지가 접기와 끌기를 가른다. 더 접을 게 없으면 이제 통으로 내리는 단계다.
     val folded = foldStage.next == null
     val binReady = rememberBinReady(folded)
     val hints = rememberCardFoldHints(folded)
@@ -120,7 +119,7 @@ private fun CardFoldContent(
         val metrics = rememberCardFoldMetrics(maxWidth, maxHeight, foldStage)
         val drag = rememberCardFoldDragState(metrics.travel, onDiscard)
 
-        // 종이는 화면 중심에 고정한다. Figma 에서 세 단계가 모두 같은 중심선에 놓인다.
+        // Figma 에서 세 단계가 모두 같은 중심선에 놓인다.
         Box(
             modifier = Modifier
                 .align(Alignment.Center)
@@ -170,7 +169,6 @@ private fun StagePaper(stage: CardFoldStage, card: Card, onSkip: () -> Unit) {
     }
 }
 
-/** 아직 안 접힌 카드. 본문 아래로 점선과 안내 문구, 접으라는 손글씨가 이어 붙는다. */
 @Composable
 private fun UnfoldedPaper(card: Card, onSkip: () -> Unit) {
     GamssImageCard(
@@ -196,8 +194,6 @@ private fun UnfoldedPaper(card: Card, onSkip: () -> Unit) {
 }
 
 /**
- * 카드 본문. 남는 자리만 차지하고 모자라면 줄인다.
- *
  * 카드 높이는 폭에 비례해 줄어드는데 안쪽 여백과 캐릭터 그림은 절대 dp 라, 좁은 기기에서 세 줄을
  * 다 쓰면 아래 점선과 안내가 카드 밖으로 밀려 잘린다. 밀리는 쪽이 아니라 요약이 양보해야 한다.
  */
@@ -214,11 +210,7 @@ private fun CardSummaryText(summary: String, modifier: Modifier = Modifier) {
     )
 }
 
-/**
- * 본문 아래로 점선을 한 번 더 긋고, 그 아래에 버릴지 묻는 문구와 접으라는 손글씨를 둔다.
- *
- * 카드 밑에 겹쳐 놓지 않고 흐름에 넣어야 본문 길이가 달라져도 시안의 간격이 유지된다.
- */
+/** 카드 밑에 겹쳐 놓지 않고 흐름에 넣어야 본문 길이가 달라져도 시안의 간격이 유지된다. */
 @Composable
 private fun ColumnScope.FoldPromptFooter() {
     Spacer(modifier = Modifier.height(CardFoldSummaryToDividerGap))
@@ -274,7 +266,6 @@ private fun FoldSkipButton(onClick: () -> Unit) {
     }
 }
 
-/** 통으로 내리라는 안내. 종이 위쪽 바깥에 붙는다. */
 @Composable
 private fun DiscardGuide(alpha: () -> Float, gap: Dp, modifier: Modifier = Modifier) {
     Text(
@@ -288,7 +279,7 @@ private fun DiscardGuide(alpha: () -> Float, gap: Dp, modifier: Modifier = Modif
     )
 }
 
-/** 아래로 끌어내리라는 힌트. 위쪽이 투명한 그라데이션이라 종이 위에 겹쳐도 가리지 않는다. */
+/** 위쪽이 투명한 그라데이션이라 종이 위에 겹쳐도 가리지 않는다. */
 @Composable
 private fun DiscardArrow(alpha: () -> Float, size: DpSize, modifier: Modifier = Modifier) {
     FoldImage(
@@ -298,11 +289,7 @@ private fun DiscardArrow(alpha: () -> Float, size: DpSize, modifier: Modifier = 
     )
 }
 
-/**
- * 화면 아래에 걸친 쓰레기통.
- *
- * 높이를 dp 로 박지 않고 폭에 비율을 걸어 뽑는다. 손그림 테두리라 폭만 늘리면 눌린 모습이 난다.
- */
+/** 높이를 dp 로 박지 않고 폭에 비율을 걸어 뽑는다. 손그림 테두리라 폭만 늘리면 눌린 모습이 난다. */
 @Composable
 private fun DiscardBin(alpha: () -> Float, modifier: Modifier = Modifier) {
     FoldImage(

@@ -11,7 +11,6 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 import kotlin.random.Random
 
-/** 종이가 굴러다닐 수 있는 칸과 종이 한 장의 충돌 반지름. */
 internal data class PaperGeometry(
     val boundsWidthPx: Float,
     val boundsHeightPx: Float,

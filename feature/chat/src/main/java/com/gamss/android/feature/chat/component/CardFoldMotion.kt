@@ -72,12 +72,7 @@ internal fun rememberCardFoldMetrics(
     }
 }
 
-/**
- * 다 접힌 뒤 통 → 안내 → 화살표가 하나씩 배어 나오는 진행률.
- *
- * 셋 다 버리는 동안에도 남아야 하므로, 끌 수 있는지가 아니라 단계로 판단한다. 진행률은
- * graphicsLayer 안에서만 불러 쓴다. 컴포지션 본문에서 읽으면 끄는 동안 매 프레임 카드까지 다시 그려진다.
- */
+/** 셋 다 버리는 동안에도 남아야 하므로, 끌 수 있는지가 아니라 접힘 단계로 판단한다. */
 @Stable
 internal class CardFoldHints(
     val bin: State<Float>,
@@ -93,7 +88,6 @@ internal fun rememberCardFoldHints(folded: Boolean): CardFoldHints {
     return remember(bin, guide, arrow) { CardFoldHints(bin, guide, arrow) }
 }
 
-/** 마지막으로 접은 뒤 [delayMillis] 만큼 쉬었다 배어 나온다. */
 @Composable
 private fun fadeInAfter(visible: Boolean, delayMillis: Int, label: String): State<Float> =
     animateFloatAsState(
@@ -103,8 +97,6 @@ private fun fadeInAfter(visible: Boolean, delayMillis: Int, label: String): Stat
     )
 
 /**
- * 종이를 통까지 끌어내리는 동작의 상태.
- *
  * 끄는 동안은 [offset] 을 직접 바꾼다. Animatable 을 두고 델타마다 코루틴을 열어 snapTo 를 부르면,
  * 손을 뗀 뒤 시작한 가라앉기 애니메이션을 뒤늦게 도착한 snapTo 가 Animatable 의 MutatorMutex 로
  * 취소한다(같은 우선순위는 나중 것이 이긴다). 그러면 종이만 멈춰 선 채 [onDiscard] 가 영영 안
@@ -118,7 +110,6 @@ internal class CardFoldDragState(private val scope: CoroutineScope) {
 
     val offset = mutableFloatStateOf(0f)
 
-    /** 가라앉는 동안 다시 잡히지 않게 잠근다. */
     var discarding by mutableStateOf(false)
         private set
 
@@ -128,7 +119,6 @@ internal class CardFoldDragState(private val scope: CoroutineScope) {
     internal var onDiscard: () -> Unit = {}
 
     val draggableState = DraggableState { delta ->
-        // 통 방향으로만 움직이고 통을 지나 더 내려가지는 않는다.
         offset.floatValue = (offset.floatValue + delta).coerceIn(0f, travel.dragDistancePx)
     }
 
@@ -151,7 +141,6 @@ internal class CardFoldDragState(private val scope: CoroutineScope) {
         }
     }
 
-    /** 절반 넘게 내려놓으면 손을 떼도 통 뒤로 완전히 넣고, 못 미치면 제자리로 돌아온다. */
     fun onDragStopped() {
         if (reachedBin()) {
             discarding = true
@@ -203,12 +192,11 @@ internal fun rememberCardFoldDragState(
  */
 internal data class DiscardTravel(val dragDistancePx: Float, val swallowDistancePx: Float) {
     companion object {
-        /** 아직 창 크기를 못 잰 상태. 끌어도 움직이지 않는다. */
+        /** 아직 창 크기를 못 잰 상태. */
         val None = DiscardTravel(dragDistancePx = 0f, swallowDistancePx = 0f)
     }
 }
 
-/** 통은 창 아래에, 종이는 창 중심에 붙으므로 두 거리가 창 크기에서 바로 나온다. */
 private fun Density.discardTravel(windowHeight: Dp, binHeight: Dp, paperHeight: Dp): DiscardTravel {
     val sinkTarget = windowHeight - binHeight * (1f - CARD_FOLD_BIN_SINK_FRACTION)
     return DiscardTravel(
