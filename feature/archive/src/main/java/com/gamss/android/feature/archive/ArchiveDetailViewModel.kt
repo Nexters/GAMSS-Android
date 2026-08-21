@@ -5,7 +5,6 @@ import com.gamss.android.core.common.AppResult
 import com.gamss.android.core.common.util.KoreanTimeZone
 import com.gamss.android.domain.card.CardEntry
 import com.gamss.android.domain.card.ClearCardCacheUseCase
-import com.gamss.android.domain.card.DeleteCardUseCase
 import com.gamss.android.domain.card.GetCardsByDateUseCase
 import com.gamss.android.domain.card.GetCardsByMonthUseCase
 import com.gamss.android.domain.conversation.GetConversationUseCase
@@ -21,7 +20,6 @@ import javax.inject.Inject
 class ArchiveDetailViewModel @Inject constructor(
     private val getCardsByMonth: GetCardsByMonthUseCase,
     private val getCardsByDate: GetCardsByDateUseCase,
-    private val deleteCard: DeleteCardUseCase,
     private val clearCardCache: ClearCardCacheUseCase,
     private val getConversation: GetConversationUseCase,
 ) : ViewModel(), ContainerHost<ArchiveDetailState, ArchiveDetailSideEffect> {
@@ -30,8 +28,15 @@ class ArchiveDetailViewModel @Inject constructor(
         ArchiveDetailState(yearMonth = YearMonth.now(KoreanTimeZone)),
     )
 
-    fun load(emotion: EmotionCharacter) = intent {
-        if (state.emotion == emotion) return@intent
+    /**
+     * 보던 달의 카드를 받아 온다.
+     *
+     * @param force 같은 감정이어도 다시 받는다. 방금 버린 카드를 보고 들어왔을 때 쓴다. 이 칸에
+     *  이미 들어와 있던 채로 또 버리면 back stack 이 그대로라 ViewModel 도 살아남는데, 그때
+     *  건너뛰면 방금 만든 카드가 목록에 안 들어온다.
+     */
+    fun load(emotion: EmotionCharacter, force: Boolean = false) = intent {
+        if (!force && state.emotion == emotion) return@intent
 
         reduce { state.copy(emotion = emotion) }
         loadMonth(emotion, state.yearMonth)
@@ -55,7 +60,8 @@ class ArchiveDetailViewModel @Inject constructor(
 
     fun confirmClear() = intent {
         reduce { state.copy(isClearDialogVisible = false) }
-        postSideEffect(ArchiveDetailSideEffect.OpenCardDelete)
+        // 카드를 고르지 않았으니 이 감정 칸을 통째로 비운다. 다른 칸은 건드리지 않는다.
+        postSideEffect(ArchiveDetailSideEffect.OpenCardDelete(cardId = null))
     }
 
     fun selectMonth(yearMonth: YearMonth) = intent {
@@ -103,17 +109,15 @@ class ArchiveDetailViewModel @Inject constructor(
         reduce { state.copy(selectedCard = null) }
     }
 
+    /**
+     * 한 장 버리기도 되돌릴 수 없어 파쇄 화면을 거친다. 지운 뒤 목록을 다시 받는 일은 그 화면에서
+     * 돌아올 때 [load] 가 맡는다 — 카드를 지우면 같은 날짜 뒤 순번이 한 칸씩 당겨지므로, 목록에서
+     * 빼는 것만으로는 남은 종이의 순번이 서버와 어긋난다.
+     */
     fun discardSelectedCard() = intent {
         val card = state.selectedCard ?: return@intent
-        val emotion = state.emotion ?: return@intent
         reduce { state.copy(selectedCard = null) }
-
-        when (deleteCard(card.id)) {
-            // 카드를 지우면 같은 날짜 뒤 순번이 한 칸씩 당겨진다. 목록에서 빼는 것으로는 남은 종이의
-            // 순번이 어긋나므로 그 달을 다시 받아 온다.
-            is AppResult.Success -> loadMonth(emotion, state.yearMonth)
-            is AppResult.Failure -> postSideEffect(ArchiveDetailSideEffect.CardDiscardFailed)
-        }
+        postSideEffect(ArchiveDetailSideEffect.OpenCardDelete(cardId = card.id))
     }
 
     /**

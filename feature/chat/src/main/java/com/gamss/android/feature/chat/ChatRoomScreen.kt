@@ -21,9 +21,7 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -61,10 +59,10 @@ import com.gamss.android.core.designsystem.topnavigation.GamssTopNavigationIconA
 import com.gamss.android.core.designsystem.topnavigation.GamssTopNavigationTitleAlignment
 import com.gamss.android.core.ui.chat.ChatMessageBubble
 import com.gamss.android.core.ui.chat.rememberReplyQuoteLookup
-import com.gamss.android.domain.card.Card
 import com.gamss.android.domain.conversation.Message
 import com.gamss.android.domain.conversation.MessageSender
 import com.gamss.android.domain.emotion.EmotionCharacter
+import com.gamss.android.feature.chat.component.CardFoldOverlay
 import com.gamss.android.domain.repository.TokenUsageAlert
 import com.gamss.android.feature.chat.component.EndConversationDialog
 import com.gamss.android.feature.chat.component.LoadingMessageBubble
@@ -83,15 +81,21 @@ import kotlinx.coroutines.ensureActive
 import org.orbitmvi.orbit.compose.collectAsState
 import org.orbitmvi.orbit.compose.collectSideEffect
 import kotlin.coroutines.cancellation.CancellationException
+import java.time.LocalDate
 
 /**
- * @param onCardClose 카드 시트를 닫을 때 호출한다. 이 화면을 실제로 벗어나야 한다.
- *  머무르면 카드 단계가 그대로라 시트가 다시 열린다.
+ * 두 콜백 모두 이 화면을 실제로 벗어나야 한다. 머무르면 카드 단계가 그대로라 접기 연출이 다시 열린다.
+ *
+ * @param onCardDiscard 접은 카드를 통에 버린 뒤 호출한다. 버린 카드가 쌓인 보관함 칸으로 보내려면
+ *  어느 감정 칸인지, 그중 어느 날 카드인지 알아야 하므로 함께 넘긴다.
+ * @param onCardSkip 연출을 건너뛴 뒤 호출한다. 카드는 이미 기록에 남아 결과는 같지만, 버리는
+ *  동작을 하지 않았으니 보관함까지 데려가지 않는다.
  */
 @Composable
 fun ChatRoomScreen(
     conversationId: Long,
-    onCardClose: () -> Unit,
+    onCardDiscard: (EmotionCharacter, LocalDate) -> Unit,
+    onCardSkip: () -> Unit,
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: ChatRoomViewModel = hiltViewModel(),
@@ -156,50 +160,47 @@ fun ChatRoomScreen(
         )
     }
 
+    ChatRoomEndFlowHost(
+        endFlow = state.endFlow,
+        onEndConfirm = viewModel::onEndConfirm,
+        onEndCancel = viewModel::onEndCancel,
+        onFoldTap = viewModel::onCardFoldTap,
+        onCardSkip = onCardSkip,
+        onCardDiscard = onCardDiscard,
+    )
+}
+
+/** 대화 종료 단계마다 위에 얹히는 창. 카드가 어느 보관함 칸으로 가는지도 여기서 뽑아낸다. */
+@Composable
+private fun ChatRoomEndFlowHost(
+    endFlow: EndFlow,
+    onEndConfirm: () -> Unit,
+    onEndCancel: () -> Unit,
+    onFoldTap: () -> Unit,
+    onCardSkip: () -> Unit,
+    onCardDiscard: (EmotionCharacter, LocalDate) -> Unit,
+) {
     // else 를 두지 않아야 단계를 추가할 때 화면이 컴파일 에러로 알려준다.
-    when (val endFlow = state.endFlow) {
+    when (endFlow) {
         EndFlow.Confirming -> EndConversationDialog(
-            onConfirm = viewModel::onEndConfirm,
-            onDismiss = viewModel::onEndCancel,
+            onConfirm = onEndConfirm,
+            onDismiss = onEndCancel,
         )
 
-        is EndFlow.CardReady -> CardBottomSheet(card = endFlow.card, onDismiss = onCardClose)
+        is EndFlow.CardReady -> CardFoldOverlay(
+            card = endFlow.card,
+            foldStage = endFlow.foldStage,
+            onFoldTap = onFoldTap,
+            onSkip = onCardSkip,
+            onDiscard = { onCardDiscard(endFlow.card.character, endFlow.card.date) },
+        )
+
         EndFlow.NotStarted,
         EndFlow.Ending,
         EndFlow.CreatingCard,
         EndFlow.CardFailedRetryable,
         EndFlow.CardFailedFinal,
         -> Unit
-    }
-}
-
-// 카드생성 bottomsheet
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun CardBottomSheet(
-    card: Card,
-    onDismiss: () -> Unit,
-) {
-    ModalBottomSheet(onDismissRequest = onDismiss) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 24.dp)
-                .padding(bottom = 32.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Text(
-                text = card.character.displayName,
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.primary,
-            )
-            Text(text = card.summary, style = MaterialTheme.typography.titleMedium)
-            Text(
-                text = card.message,
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
     }
 }
 
@@ -236,10 +237,7 @@ private fun ChatRoomContent(
     val imeInsets = WindowInsets.ime
     val imeDensity = LocalDensity.current
     val imeBottomPx = imeInsets.getBottom(imeDensity)
-    // 키보드 인셋은 시스템이 여러 프레임에 걸쳐 애니메이션으로 흘려보낸다. LaunchedEffect(key)로
-    // 매번 새 코루틴을 띄우면, 이전 scrollBy()가 끝나기 전에 다음 인셋 값이 도착해 진행 중이던
-    // scrollBy가 취소되면서 그 구간만큼 보정이 누락된다 — 그러면 이 보정 자체가 안 먹는 것처럼
-    // 보인다. 코루틴 하나를 계속 살려두고 snapshotFlow로 값을 순서대로 받아야 delta가 안 끊긴다.
+
     LaunchedEffect(listState, imeInsets, imeDensity) {
         var previous = imeInsets.getBottom(imeDensity)
         snapshotFlow { imeInsets.getBottom(imeDensity) }.collect { current ->

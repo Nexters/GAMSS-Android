@@ -15,6 +15,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
+import com.gamss.android.core.common.util.formatCardDate
 import com.gamss.android.core.designsystem.card.GamssChattingCard
 import com.gamss.android.core.designsystem.component.GamssScrollToBottomButton
 import com.gamss.android.core.designsystem.component.chat.GamssChatBubbleDefaults
@@ -38,7 +39,7 @@ internal fun ConversationCardDialog(
 ) {
     CardDialogScaffold(onDismiss = onDismiss) {
         GamssChattingCard(
-            date = conversationCard.card.date.format(CardDateFormatter),
+            date = formatCardDate(conversationCard.card.date),
             topEndAction = { CardCloseButton(onClick = onDismiss) },
         ) {
             ConversationMessages(
