@@ -43,6 +43,11 @@ tink = "1.23.0"
 mockk = "1.13.14"
 playAssetDelivery = "2.3.0"
 paging = "3.4.2"
+androidx-core-splashscreen = "1.2.0"
+profileinstaller = "1.4.1"
+# AGP 9 를 지원하는 라인이 아직 rc 뿐이다. 앱에 실리지 않는 빌드 도구다.
+benchmark = "1.5.0-rc01"
+uiautomator = "2.4.0"
 
 [libraries]
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidx-activity" }
@@ -114,6 +119,10 @@ firebase-messaging = { module = "com.google.firebase:firebase-messaging" }
 androidx-credentials = { module = "androidx.credentials:credentials", version.ref = "androidx-credentials" }
 androidx-credentials-play-services-auth = { module = "androidx.credentials:credentials-play-services-auth", version.ref = "androidx-credentials" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+androidx-core-splashscreen = { module = "androidx.core:core-splashscreen", version.ref = "androidx-core-splashscreen" }
+androidx-profileinstaller = { module = "androidx.profileinstaller:profileinstaller", version.ref = "profileinstaller" }
+androidx-benchmark-macro-junit4 = { module = "androidx.benchmark:benchmark-macro-junit4", version.ref = "benchmark" }
+androidx-test-uiautomator = { module = "androidx.test.uiautomator:uiautomator", version.ref = "uiautomator" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
 androidx-test-runner = { module = "androidx.test:runner", version.ref = "androidx-test-runner" }
 androidx-test-rules = { module = "androidx.test:rules", version.ref = "androidx-test-runner" }
@@ -138,9 +147,11 @@ hilt-gradlePlugin = { module = "com.google.dagger:hilt-android-gradle-plugin", v
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
 androidLibrary = { id = "com.android.library", version.ref = "agp" }
+androidxBaselineProfile = { id = "androidx.baselineprofile", version.ref = "benchmark" }
 # AGP 클래스패스에 이미 실려 있는 플러그인(com.android.application/library 와 같은 아티팩트) —
 # 버전을 명시하면 "이미 알 수 없는 버전으로 클래스패스에 있다" 충돌이 나서 버전 없이 선언한다.
 androidAssetPack = { id = "com.android.asset-pack" }
+androidTest = { id = "com.android.test" }
 kotlinJvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 composeCompiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 kotlinSerialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
