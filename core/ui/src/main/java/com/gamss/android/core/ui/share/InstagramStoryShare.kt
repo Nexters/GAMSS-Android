@@ -75,6 +75,9 @@ fun Context.shareBitmapToInstagramStory(
     } catch (e: ActivityNotFoundException) {
         Log.i(TAG, "인스타그램 스토리 공유를 받을 액티비티가 없다", e)
         StoryShareResult.InstagramUnavailable
+    } catch (e: SecurityException) {
+        Log.w(TAG, "인스타그램 스토리 공유 액티비티를 실행할 권한이 없다", e)
+        StoryShareResult.InstagramUnavailable
     }
 }
 
@@ -141,12 +144,29 @@ private fun Bitmap.saveToShareCache(context: Context): Uri? {
     }
     dir.deleteFilesOlderThan(SHARE_FILE_TTL_MILLIS)
 
+    var file: File? = null
     return try {
-        val file = File.createTempFile(SHARE_FILE_PREFIX, SHARE_FILE_SUFFIX, dir)
-        FileOutputStream(file).use { out -> compress(Bitmap.CompressFormat.PNG, PNG_QUALITY, out) }
+        file = File.createTempFile(SHARE_FILE_PREFIX, SHARE_FILE_SUFFIX, dir)
+        val compressed = FileOutputStream(file).use { out ->
+            compress(Bitmap.CompressFormat.PNG, PNG_QUALITY, out)
+        }
+        if (!compressed) {
+            Log.w(TAG, "공유 이미지를 PNG로 압축하지 못했다")
+            file.delete()
+            return null
+        }
         FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
     } catch (e: IOException) {
         Log.w(TAG, "공유 이미지를 캐시에 쓰지 못했다", e)
+        file?.delete()
+        null
+    } catch (e: IllegalArgumentException) {
+        Log.w(TAG, "공유 이미지의 FileProvider URI를 만들지 못했다", e)
+        file?.delete()
+        null
+    } catch (e: SecurityException) {
+        Log.w(TAG, "공유 이미지 캐시에 접근할 권한이 없다", e)
+        file?.delete()
         null
     }
 }

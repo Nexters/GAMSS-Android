@@ -70,6 +70,7 @@ internal fun CardDetailDialog(
     // 그 상태가 실제로 그려진 뒤에 캡처한다.
     var isCapturing by remember { mutableStateOf(false) }
     var isShareSheetVisible by remember { mutableStateOf(false) }
+    var isSharing by remember { mutableStateOf(false) }
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -117,16 +118,23 @@ internal fun CardDetailDialog(
                 },
                 onInstagramStoryClick = {
                     isShareSheetVisible = false
-                    scope.launch {
-                        val failure = shareCardToStory(
-                            context = context,
-                            capture = capture,
-                            instagramUnavailableMessage = instagramUnavailableMessage,
-                            imageUnavailableMessage = imageUnavailableMessage,
-                            setCapturing = { isCapturing = it },
-                        )
-                        failure?.let { message ->
-                            Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                    if (!isSharing) {
+                        isSharing = true
+                        scope.launch {
+                            try {
+                                val failure = shareCardToStory(
+                                    context = context,
+                                    capture = capture,
+                                    instagramUnavailableMessage = instagramUnavailableMessage,
+                                    imageUnavailableMessage = imageUnavailableMessage,
+                                    setCapturing = { isCapturing = it },
+                                )
+                                failure?.let { message ->
+                                    Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                                }
+                            } finally {
+                                isSharing = false
+                            }
                         }
                     }
                 },
