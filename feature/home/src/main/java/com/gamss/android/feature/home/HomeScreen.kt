@@ -21,7 +21,6 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -73,25 +72,19 @@ fun HomeScreen(
     val state by viewModel.collectAsState()
     val context = LocalContext.current
 
-    LaunchedEffect(isActive) {
-        viewModel.onScreenActiveChanged(isActive)
-    }
-
     // 닉네임 변경 화면에서 저장하고 돌아왔을 때 최신 정보를 다시 불러온다.
     LaunchedEffect(Unit) { viewModel.loadUserInfo() }
 
-    DisposableEffect(Unit) {
-        onDispose { viewModel.onScreenActiveChanged(false) }
+    LaunchedEffect(isActive) {
+        if (!isActive) return@LaunchedEffect
+        viewModel.openConversationEvents.collect { conversationId ->
+            onOpenConversation(conversationId)
+        }
     }
 
     viewModel.collectSideEffect { sideEffect ->
         when (sideEffect) {
             is HomeSideEffect.NavigateToSetting -> onNavigateToSetting()
-            is HomeSideEffect.OpenConversation -> {
-                if (isActive && viewModel.shouldHandleOpenConversation(sideEffect.navigationGeneration)) {
-                    onOpenConversation(sideEffect.conversationId)
-                }
-            }
             is HomeSideEffect.ShowToast ->
                 Toast.makeText(context, sideEffect.message, Toast.LENGTH_SHORT).show()
         }

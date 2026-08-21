@@ -9,6 +9,8 @@ import com.gamss.android.domain.conversation.takeWithinMessageLimit
 import com.gamss.android.domain.emotion.EmotionCharacter
 import com.gamss.android.domain.user.GetUserInfoUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 import org.orbitmvi.orbit.ContainerHost
 import org.orbitmvi.orbit.blockingIntent
@@ -25,10 +27,8 @@ class HomeViewModel @Inject constructor(
     private val session: ConversationSession,
 ) : ViewModel(), ContainerHost<HomeState, HomeSideEffect> {
 
-    // Top-level 화면은 back stack에 남아 ViewModel이 계속 살아 있을 수 있다. 화면을 벗어난 뒤
-    // 이전 전송이 끝나도 자동 이동 이벤트가 되살아나지 않도록 화면 세대로 무효화한다.
-    private var isScreenActive = true
-    private var navigationGeneration = 0L
+    private val _openConversationEvents = MutableSharedFlow<Long>(replay = 0)
+    val openConversationEvents = _openConversationEvents.asSharedFlow()
 
     override val container = container<HomeState, HomeSideEffect>(HomeState())
 
@@ -39,16 +39,6 @@ class HomeViewModel @Inject constructor(
             is AppResult.Failure -> reduce { state.copy(isLoading = false) }
         }
     }
-
-    fun onScreenActiveChanged(active: Boolean) {
-        if (isScreenActive && !active) {
-            navigationGeneration++
-        }
-        isScreenActive = active
-    }
-
-    fun shouldHandleOpenConversation(generation: Long): Boolean =
-        isScreenActive && navigationGeneration == generation
 
     fun navigateToSetting() = intent {
         postSideEffect(HomeSideEffect.NavigateToSetting)
@@ -102,7 +92,6 @@ class HomeViewModel @Inject constructor(
             if (pending == null) state else state.copy(isSending = true, isEmotionPickerExpanded = false)
         }
         val message = pending ?: return@intent
-        val requestGeneration = navigationGeneration
 
         val result = session.send(
             conversationId = null,
@@ -118,18 +107,10 @@ class HomeViewModel @Inject constructor(
                 // applicationScope 로 돌려서 이 화면을 벗어나도 끊기지 않는다.
                 viewModelScope.launch { session.finishSend() }
                 reduce { state.copy(input = "") }
-                if (isScreenActive && navigationGeneration == requestGeneration) {
-                    postSideEffect(
-                        HomeSideEffect.OpenConversation(
-                            conversationId = result.data.message.conversationId,
-                            navigationGeneration = requestGeneration,
-                        ),
-                    )
-                }
+                _openConversationEvents.emit(result.data.message.conversationId)
             }
             // 입력은 남겨 둔다. 실패한 문구를 다시 치게 하면 안 된다.
             is AppResult.Failure -> postSideEffect(HomeSideEffect.ShowToast(SEND_FAILED))
         }
     }
-
 }

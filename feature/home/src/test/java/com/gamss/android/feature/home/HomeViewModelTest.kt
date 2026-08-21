@@ -9,7 +9,10 @@ import com.gamss.android.domain.user.UserProfile
 import io.mockk.coEvery
 import io.mockk.mockk
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.async
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -84,7 +87,7 @@ class HomeViewModelTest {
             expectState { copy(isSending = true) }
             expectState { copy(isSending = false) }
             expectState { copy(input = "") }
-            expectSideEffect(HomeSideEffect.OpenConversation(NEW_ROOM_ID))
+            expectNoItems()
         }
         assertEquals(WORRY, repository.sentContent)
         assertNull(repository.sentConversationId)
@@ -117,7 +120,7 @@ class HomeViewModelTest {
             expectState { copy(isSending = true) }
             expectState { copy(isSending = false) }
             expectState { copy(input = "") }
-            expectSideEffect(HomeSideEffect.OpenConversation(NEW_ROOM_ID))
+            expectNoItems()
         }
         assertEquals(setOf(EmotionCharacter.SADNESS), repository.sentExcludeCharacters)
     }
@@ -176,7 +179,7 @@ class HomeViewModelTest {
             expectState { copy(isSending = true, isEmotionPickerExpanded = false) }
             expectState { copy(isSending = false) }
             expectState { copy(input = "") }
-            expectSideEffect(HomeSideEffect.OpenConversation(NEW_ROOM_ID))
+            expectNoItems()
         }
     }
 
@@ -232,7 +235,7 @@ class HomeViewModelTest {
             expectState { copy(isSending = true) }
             expectState { copy(isSending = false) }
             expectState { copy(input = "") }
-            expectSideEffect(HomeSideEffect.OpenConversation(NEW_ROOM_ID))
+            expectNoItems()
 
             containerHost.onInputChange(filled + "나")
             expectState { copy(input = filled) }
@@ -261,7 +264,7 @@ class HomeViewModelTest {
             expectState { copy(isSending = true) }
             expectState { copy(isSending = false) }
             expectState { copy(input = "") }
-            expectSideEffect(HomeSideEffect.OpenConversation(NEW_ROOM_ID))
+            expectNoItems()
 
             containerHost.onSubmit()
             expectNoItems()
@@ -277,7 +280,7 @@ class HomeViewModelTest {
             expectState { copy(isSending = true) }
             expectState { copy(isSending = false) }
             expectState { copy(input = "") }
-            expectSideEffect(HomeSideEffect.OpenConversation(NEW_ROOM_ID))
+            expectNoItems()
 
             containerHost.onInputChange(SECOND_WORRY)
             expectState { copy(input = SECOND_WORRY) }
@@ -285,7 +288,7 @@ class HomeViewModelTest {
             expectState { copy(isSending = true) }
             expectState { copy(isSending = false) }
             expectState { copy(input = "") }
-            expectSideEffect(HomeSideEffect.OpenConversation(NEW_ROOM_ID))
+            expectNoItems()
         }
         assertEquals(listOf(null, null), repository.sentContextSummaries)
     }
@@ -306,13 +309,34 @@ class HomeViewModelTest {
             gate.complete(Unit)
             expectState { copy(isSending = false) }
             expectState { copy(input = "") }
-            expectSideEffect(HomeSideEffect.OpenConversation(NEW_ROOM_ID))
+            expectNoItems()
         }
         assertEquals(1, gated.sendCount)
     }
 
     @Test
-    fun `홈을 벗어난 뒤 전송이 끝나면 대화방 이동 이벤트를 발행하지 않는다`() = runTest {
+    fun `대화 생성이 완료되면 이동 이벤트를 발행한다`() = runTest {
+        val homeViewModel = viewModel()
+        val openConversation = async(start = CoroutineStart.UNDISPATCHED) {
+            homeViewModel.openConversationEvents.first()
+        }
+
+        homeViewModel.test(this) {
+            containerHost.onInputChange(WORRY)
+            expectState { copy(input = WORRY) }
+
+            containerHost.onSubmit()
+            expectState { copy(isSending = true) }
+            expectState { copy(isSending = false) }
+            expectState { copy(input = "") }
+            expectNoItems()
+        }
+
+        assertEquals(NEW_ROOM_ID, openConversation.await())
+    }
+
+    @Test
+    fun `이동 이벤트를 수집하는 화면이 없으면 대화방 이동이 재생되지 않는다`() = runTest {
         val gate = CompletableDeferred<Unit>()
         val gated = RecordingConversationRepository(gate = gate)
 
@@ -320,7 +344,6 @@ class HomeViewModelTest {
             containerHost.onInputChange(WORRY)
             expectState { copy(input = WORRY) }
 
-            containerHost.onScreenActiveChanged(false)
             containerHost.onSubmit()
             expectState { copy(isSending = true) }
             expectNoItems()
