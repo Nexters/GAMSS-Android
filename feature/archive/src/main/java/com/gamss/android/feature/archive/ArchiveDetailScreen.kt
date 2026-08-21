@@ -94,6 +94,7 @@ fun ArchiveDetailScreen(
     )
 
     ArchiveDetailOverlays(
+        emotion = emotion,
         state = state,
         onMonthSelect = viewModel::selectMonth,
         onMonthPickerDismiss = viewModel::dismissMonthPicker,
@@ -148,6 +149,7 @@ private fun ArchiveDetailFrame(
 /** 넷 다 아무것도 안 뜬 상태가 기본이라, 프레임과 떼어 여기서만 켜고 끈다. */
 @Composable
 private fun ArchiveDetailOverlays(
+    emotion: EmotionCharacter,
     state: ArchiveDetailState,
     onMonthSelect: (YearMonth) -> Unit,
     onMonthPickerDismiss: () -> Unit,
@@ -168,7 +170,11 @@ private fun ArchiveDetailOverlays(
     }
 
     if (state.isClearDialogVisible) {
-        ClearConfirmDialog(onConfirm = onClearConfirm, onDismiss = onClearDismiss)
+        ClearConfirmDialog(
+            emotionName = emotion.displayName,
+            onConfirm = onClearConfirm,
+            onDismiss = onClearDismiss,
+        )
     }
 
     state.selectedCard?.let { card ->
@@ -201,12 +207,13 @@ private fun shareCard(context: Context, card: Card, chooserTitle: String) {
 /** 되돌릴 수 없는 삭제라 파쇄 화면으로 넘기기 전에 확인을 한 번 받는다. */
 @Composable
 private fun ClearConfirmDialog(
+    emotionName: String,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     GamssDialog(
-        title = stringResource(R.string.archive_clear_dialog_title),
-        subtitle = stringResource(R.string.archive_clear_dialog_description),
+        title = stringResource(R.string.archive_clear_dialog_title, emotionName),
+        subtitle = stringResource(R.string.archive_clear_dialog_description, emotionName),
         primaryAction = GamssDialogAction(
             label = stringResource(R.string.archive_clear),
             onClick = onConfirm,

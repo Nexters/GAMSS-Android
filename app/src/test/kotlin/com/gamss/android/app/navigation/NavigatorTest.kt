@@ -29,19 +29,19 @@ class NavigatorTest {
 
     private fun Navigator.openArchiveDetail() {
         navigate(ArchiveKey)
-        navigate(ArchiveDetailKey(EmotionCharacter.ANGER))
+        navigate(ArchiveDetailKey(EMOTION))
     }
 
     @Test
-    fun 보관함_상세에서_비우기를_확인하면_전체_파쇄_화면이_열린다() {
+    fun 보관함_상세에서_비우기를_확인하면_그_칸의_파쇄_화면이_열린다() {
         val navigator = navigator()
         navigator.openArchiveDetail()
 
-        navigator.navigate(CardDeleteKey())
+        navigator.navigate(CardDeleteKey(EMOTION))
 
-        assertEquals(CardDeleteKey(), navigator.state.currentKey)
+        assertEquals(CardDeleteKey(EMOTION), navigator.state.currentKey)
         assertEquals(
-            listOf(ArchiveKey, ArchiveDetailKey(EmotionCharacter.ANGER), CardDeleteKey()),
+            listOf(ArchiveKey, ArchiveDetailKey(EMOTION), CardDeleteKey(EMOTION)),
             navigator.state.currentSubStack.toList(),
         )
     }
@@ -51,17 +51,17 @@ class NavigatorTest {
         val navigator = navigator()
         navigator.openArchiveDetail()
 
-        navigator.navigate(CardDeleteKey(CARD_ID))
+        navigator.navigate(CardDeleteKey(EMOTION, CARD_ID))
 
-        assertEquals(CardDeleteKey(CARD_ID), navigator.state.currentKey)
+        assertEquals(CardDeleteKey(EMOTION, CARD_ID), navigator.state.currentKey)
     }
 
-    /** 전체를 비우면 돌아갈 칸이 비어 있으므로, 상세까지 걷어내고 보관함 첫 화면만 남긴다. */
+    /** 칸을 비우면 돌아갈 자리가 비어 있으므로, 상세까지 걷어내고 보관함 첫 화면만 남긴다. */
     @Test
-    fun 전체_파쇄를_마치면_상세까지_걷어내고_보관함_첫_화면으로_돌아온다() {
+    fun 칸_파쇄를_마치면_상세까지_걷어내고_보관함_첫_화면으로_돌아온다() {
         val navigator = navigator()
         navigator.openArchiveDetail()
-        navigator.navigate(CardDeleteKey())
+        navigator.navigate(CardDeleteKey(EMOTION))
 
         navigator.finishCurrentFlow()
 
@@ -74,11 +74,11 @@ class NavigatorTest {
     fun 카드_한_장_파쇄를_마치면_보관함_상세로_돌아가_목록을_다시_받는다() {
         val navigator = navigator()
         navigator.openArchiveDetail()
-        navigator.navigate(CardDeleteKey(CARD_ID))
+        navigator.navigate(CardDeleteKey(EMOTION, CARD_ID))
 
         navigator.finishShreddedCard()
 
-        assertEquals(ArchiveDetailKey(EmotionCharacter.ANGER), navigator.state.currentKey)
+        assertEquals(ArchiveDetailKey(EMOTION), navigator.state.currentKey)
         assertTrue(navigator.consumeShreddedCard())
     }
 
@@ -87,7 +87,7 @@ class NavigatorTest {
     fun 파쇄_신호는_한_번만_읽힌다() {
         val navigator = navigator()
         navigator.openArchiveDetail()
-        navigator.navigate(CardDeleteKey(CARD_ID))
+        navigator.navigate(CardDeleteKey(EMOTION, CARD_ID))
         navigator.finishShreddedCard()
 
         navigator.consumeShreddedCard()
@@ -97,5 +97,6 @@ class NavigatorTest {
 
     private companion object {
         const val CARD_ID = 7L
+        val EMOTION = EmotionCharacter.ANGER
     }
 }

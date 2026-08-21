@@ -22,14 +22,16 @@ import com.gamss.android.core.designsystem.button.GamssButton
 import com.gamss.android.core.designsystem.button.GamssButtonVariant
 import com.gamss.android.core.designsystem.theme.GamssTheme
 import com.gamss.android.core.designsystem.topnavigation.GamssTopNavigation
+import com.gamss.android.domain.emotion.EmotionCharacter
 import com.gamss.android.feature.carddelete.component.ShredStatusRow
 import com.gamss.android.feature.carddelete.component.ShredStrips
 import org.orbitmvi.orbit.compose.collectAsState
 import org.orbitmvi.orbit.compose.collectSideEffect
 
-/** @param cardId 파쇄할 카드. null 이면 보관함 전체를 파쇄한다. */
+/** @param cardId 파쇄할 카드. null 이면 [emotion] 칸을 통째로 파쇄한다. */
 @Composable
 fun CardDeleteScreen(
+    emotion: EmotionCharacter,
     cardId: Long?,
     onBackClick: () -> Unit,
     onDeleteComplete: () -> Unit,
@@ -55,7 +57,7 @@ fun CardDeleteScreen(
             else -> onBackClick
         },
         onDeleteComplete = onDeleteComplete,
-        onShredTap = { viewModel.onShredTap(cardId) },
+        onShredTap = { viewModel.onShredTap(emotion, cardId) },
         modifier = modifier,
     )
 }

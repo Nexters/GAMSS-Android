@@ -147,7 +147,7 @@ private fun mainEntryProvider(navigator: Navigator) = entryProvider {
             droppedCardDate = droppedCardDate,
             hasShreddedCard = hasShreddedCard,
             onBackClick = navigator::goBack,
-            onNavigateToCardDelete = { cardId -> navigator.navigate(CardDeleteKey(cardId)) },
+            onNavigateToCardDelete = { cardId -> navigator.navigate(CardDeleteKey(key.emotion, cardId)) },
         )
     }
     entry<SettingKey>(metadata = detailSlideTransition) {
@@ -160,9 +160,10 @@ private fun mainEntryProvider(navigator: Navigator) = entryProvider {
     }
     entry<CardDeleteKey>(metadata = detailSlideTransition) { key ->
         CardDeleteScreen(
+            emotion = key.emotion,
             cardId = key.cardId,
             onBackClick = navigator::goBack,
-            // 전체를 비웠으면 돌아갈 칸이 비어 있으니 보관함 첫 화면까지 걷어낸다.
+            // 칸을 통째로 비웠으면 돌아갈 자리가 비어 있으니 보관함 목록까지 걷어낸다.
             onDeleteComplete = if (key.cardId == null) {
                 navigator::finishCurrentFlow
             } else {

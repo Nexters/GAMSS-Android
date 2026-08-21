@@ -60,6 +60,7 @@ class ArchiveDetailViewModel @Inject constructor(
 
     fun confirmClear() = intent {
         reduce { state.copy(isClearDialogVisible = false) }
+        // 카드를 고르지 않았으니 이 감정 칸을 통째로 비운다. 다른 칸은 건드리지 않는다.
         postSideEffect(ArchiveDetailSideEffect.OpenCardDelete(cardId = null))
     }
 

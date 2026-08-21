@@ -2,8 +2,9 @@ package com.gamss.android.feature.carddelete
 
 import androidx.lifecycle.ViewModel
 import com.gamss.android.core.common.AppResult
-import com.gamss.android.domain.card.DeleteAllCardsUseCase
 import com.gamss.android.domain.card.DeleteCardUseCase
+import com.gamss.android.domain.card.DeleteCardsByEmotionUseCase
+import com.gamss.android.domain.emotion.EmotionCharacter
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
@@ -14,7 +15,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class CardDeleteViewModel @Inject constructor(
-    private val deleteAllCards: DeleteAllCardsUseCase,
+    private val deleteCardsByEmotion: DeleteCardsByEmotionUseCase,
     private val deleteCard: DeleteCardUseCase,
 ) : ViewModel(), ContainerHost<CardDeleteState, CardDeleteSideEffect> {
 
@@ -23,9 +24,9 @@ class CardDeleteViewModel @Inject constructor(
     /**
      * 누를 때마다 종이가 한 단계씩 내려간다. 끝까지 내려가면 그 시점에 실제 삭제를 요청한다.
      *
-     * @param cardId 파쇄할 카드. null 이면 모든 카드를 삭제한다.
+     * @param cardId 파쇄할 카드. null 이면 [emotion] 칸의 카드를 모두 삭제한다.
      */
-    fun onShredTap(cardId: Long?) = intent {
+    fun onShredTap(emotion: EmotionCharacter, cardId: Long?) = intent {
         if (state.isDeleting || state.shredTapCount >= SHRED_TOTAL_TAPS) return@intent
 
         val nextTapCount = state.shredTapCount + 1
@@ -35,7 +36,7 @@ class CardDeleteViewModel @Inject constructor(
         reduce { state.copy(isDeleting = true) }
         val result = coroutineScope {
             val minimumHold = launch { delay(SHRED_COMPLETE_HOLD_MS) }
-            val outcome = if (cardId == null) deleteAllCards() else deleteCard(cardId)
+            val outcome = if (cardId == null) deleteCardsByEmotion(emotion) else deleteCard(cardId)
             minimumHold.join()
             outcome
         }
