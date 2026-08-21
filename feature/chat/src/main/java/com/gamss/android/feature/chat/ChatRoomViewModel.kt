@@ -44,13 +44,54 @@ class ChatRoomViewModel @Inject constructor(
     @Volatile
     private var revealJob: Job? = null
 
+    @Volatile
+    private var tokenAlertJob: Job? = null
+
     fun start(conversationId: Long) {
         if (started) return
         started = true
         loadMessages(conversationId)
+        observeTokenExhausted()
+        // 방에 들어오자마자 소진 여부를 알아야 전송 버튼을 처음부터 올바르게 잠글 수 있다 —
+        // 이전에 이미 소진된 채로 재입장한 경우, 한 번도 안 보내봤어도 버튼이 바로 잠겨야 한다.
+        tokenUsageRefreshNotifier.requestRefresh()
         // 결과를 기다리지 않는다 — 채팅방에 들어온 시점부터 온디바이스 모델 다운로드를 미리
         // 걸어둬 첫 메시지/카드 생성 시점엔 이미 받아져 있을 확률을 높이는 순수 최적화용 호출이다.
         viewModelScope.launch { session.prefetchOnDeviceModels() }
+    }
+
+    /**
+     * [tokenUsageRefreshNotifier]의 알림(LOW/EXHAUSTED)을 토스트로 옮긴다. EXHAUSTED를 여기서
+     * 다루는 이유: [CommentGenerationStatus.LIMIT_EXCEEDED]는 "이미 소진된 채로 보냈다"는
+     * 신호라 막 소진된 순간을 놓친다 — 실측(exceeded)을 보는 이 스트림이 유일한 소스다(아래
+     * [onSend] 참고).
+     *
+     * alerts는 Channel이라 값을 그 순간 receive() 중인 구독자 한 곳에만 준다. 백스택에 남은
+     * 다른 채팅방이 먼저 가로채지 않도록, [start]가 아니라 화면이 RESUMED일 때만 구독한다.
+     */
+    fun onScreenResumed() {
+        if (tokenAlertJob?.isActive == true) return
+        tokenAlertJob = intent {
+            tokenUsageRefreshNotifier.alerts.collect { alert ->
+                postSideEffect(ChatRoomSideEffect.ShowTokenUsageAlert(alert))
+            }
+        }
+    }
+
+    fun onScreenPaused() {
+        tokenAlertJob?.cancel()
+        tokenAlertJob = null
+    }
+
+    private fun observeTokenExhausted() = intent {
+        tokenUsageRefreshNotifier.isExhausted.collect { exhausted ->
+            reduce {
+                state.copy(
+                    isTokenExhausted = exhausted,
+                    input = if (exhausted) "" else state.input,
+                )
+            }
+        }
     }
 
     private fun loadMessages(conversationId: Long) = intent {
@@ -169,7 +210,9 @@ class ChatRoomViewModel @Inject constructor(
             } else {
                 null
             }
-            if (pending == null) state else state.copy(isSending = true)
+            // 서버 왕복이 끝날 때까지 기다리지 않고 버튼을 누른 즉시 입력칸을 비운다. 아래
+            // 위험 신호 차단·전송 실패 분기에서 되돌리지 않는 한 이 상태로 남는다.
+            if (pending == null) state else state.copy(isSending = true, input = "")
         }
         val sending = pending ?: return@intent
 
@@ -185,6 +228,8 @@ class ChatRoomViewModel @Inject constructor(
                     } else {
                         state.isSending
                     },
+                    // 방금 비운 입력칸을 되돌린다. 그 사이 사용자가 새로 타이핑했다면 덮어쓰지 않는다.
+                    input = if (detection.shouldBlock && state.input.isEmpty()) sending.content else state.input,
                 )
             }
 
@@ -209,17 +254,22 @@ class ChatRoomViewModel @Inject constructor(
                         conversationId = sent.message.conversationId,
                         messages = state.messages + sent.message,
                         pendingComments = sent.comments,
-                        input = if (state.input == sending.content) "" else state.input,
                         replyTarget = state.replyTarget.takeIf { it?.messageId != sending.replyToMessageId },
                     )
                 }
                 launchCommentReveal()
-                sent.commentStatus.toUserMessage()?.let { postSideEffect(ChatRoomSideEffect.ShowToast(it)) }
+                sent.commentStatus.toSideEffect()?.let { postSideEffect(it) }
                 session.finishSend()
                 refreshTokenUsageInBackground()
             }
             is AppResult.Failure -> {
-                reduce { state.copy(isSending = false) }
+                reduce {
+                    state.copy(
+                        isSending = false,
+                        // 방금 비운 입력칸을 되돌린다. 그 사이 사용자가 새로 타이핑했다면 덮어쓰지 않는다.
+                        input = if (state.input.isEmpty()) sending.content else state.input,
+                    )
+                }
                 postSideEffect(ChatRoomSideEffect.ShowToast(SEND_FAILED))
             }
         }
@@ -343,10 +393,12 @@ class ChatRoomViewModel @Inject constructor(
         }
     }
 
-    private fun CommentGenerationStatus.toUserMessage(): String? = when (this) {
-        CommentGenerationStatus.DONE -> null
-        CommentGenerationStatus.FAILED -> "답장을 받지 못했어요. 잠시 후 다시 보내볼까요?"
-        CommentGenerationStatus.LIMIT_EXCEEDED -> "오늘은 대화를 많이 했어요. 내일 다시 이야기해요."
+    // LIMIT_EXCEEDED는 토큰이 이미 소진됐을 때 나는 신호라, onSend() 성공 분기에서 이미 호출하는
+    // requestRefresh()가 트리거하는 tokenUsageRefreshNotifier의 EXHAUSTED 알림
+    // (observeTokenUsageAlerts 참고)이 대신 안내한다 — 토스트를 따로 띄우지 않는다.
+    private fun CommentGenerationStatus.toSideEffect(): ChatRoomSideEffect? = when (this) {
+        CommentGenerationStatus.DONE, CommentGenerationStatus.LIMIT_EXCEEDED -> null
+        CommentGenerationStatus.FAILED -> ChatRoomSideEffect.ShowToast("답장을 받지 못했어요. 잠시 후 다시 보내볼까요?")
     }
 
     private data class PendingSend(

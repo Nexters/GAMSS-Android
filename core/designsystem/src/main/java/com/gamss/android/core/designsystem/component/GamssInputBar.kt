@@ -2,8 +2,6 @@ package com.gamss.android.core.designsystem.component
 
 import android.content.res.Configuration
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -20,7 +18,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
@@ -33,10 +30,9 @@ import com.gamss.android.core.designsystem.component.chat.ChatReplyQuote
 import com.gamss.android.core.designsystem.theme.GamssTheme
 
 /** 입력바 아래에 무언가를 띄우는 화면이 있어 공개한다. */
-val GamssInputBarHeight = 53.dp
+val GamssInputBarHeight = 48.dp
 
 private val InputBarHeight = GamssInputBarHeight
-private val InputBarBorderWidth = 1.5.dp
 private val InputBarStartPadding = 16.dp
 
 /** 전송 버튼은 배경까지 담긴 32x32 에셋이라 tint 하지 않고 그대로 그린다. */
@@ -45,7 +41,11 @@ private val SendButtonSize = 32.dp
 private val SendButtonTouchSize = 48.dp
 private val InputBarEndPadding = 8.dp
 
-// 답장 미리보기가 있을 때만 쓰는 세로 여백/간격. 없을 때는 기존처럼 최소 높이 + 가운데 정렬로 채운다.
+// 답장 미리보기가 없을 때 글과 테두리 사이에 항상 남겨야 하는 여백. 줄 수와 무관하게 고정값으로
+// 둬야 두 줄 이상으로 늘어나도 글이 테두리에 붙지 않는다.
+private val InputBarVerticalPadding = 8.dp
+
+// 답장 미리보기가 있을 때 쓰는 세로 여백/간격.
 private val InputBarReplyVerticalPadding = 14.dp
 private val InputBarReplyGap = 14.dp
 
@@ -53,7 +53,7 @@ private val ReplyClearIconSize = 20.dp
 private val ReplyClearTouchSize = 32.dp
 
 // 140자 상한을 이 폭에서 담으려면 6줄이면 넉넉하다. 넘치면 입력칸 안에서 스크롤된다.
-private const val INPUT_MAX_LINES = 6
+private const val INPUT_MAX_LINES = 5
 
 @Suppress("LongParameterList")
 @Composable
@@ -85,8 +85,8 @@ fun GamssInputBar(
 
     Column(
         modifier = modifier
-            .background(GamssTheme.colors.white, RectangleShape)
-            .border(InputBarBorderWidth, GamssTheme.colors.black, RectangleShape)
+            .gamssSketchyBox(artRes = R.drawable.bg_textfield_default, background = GamssTheme.colors.white)
+            .heightIn(min = GamssInputBarHeight)
             .padding(start = InputBarStartPadding, top = verticalPadding, bottom = verticalPadding),
     ) {
         if (replyQuote != null) {
@@ -101,7 +101,8 @@ fun GamssInputBar(
         }
         Row(
             modifier = Modifier
-                // 140자를 채우면 여러 줄이 된다. 한 줄일 때의 높이를 최소치로만 잡고 아래로 늘어나게 둔다.
+                // 전송 버튼 터치 영역(48dp)을 최소치로 잡는다. 140자를 채워 여러 줄이 되면 그
+                // 이상으로 늘어난다.
                 .heightIn(min = InputBarHeight)
                 .padding(end = InputBarEndPadding),
             verticalAlignment = Alignment.CenterVertically,
@@ -109,7 +110,9 @@ fun GamssInputBar(
             BasicTextField(
                 value = value,
                 onValueChange = onValueChange,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier
+                    .weight(1f)
+                    .let { if (replyQuote == null) it.padding(vertical = InputBarVerticalPadding) else it },
                 enabled = enabled,
                 // 한 줄로 묶으면 140자 상한에 걸려도 가로로 스크롤만 되어 잘린 게 보이지 않는다.
                 // 상한을 안 걸면 남은 세로 공간을 전부 채워 버리므로 줄 수로 묶는다.
@@ -130,7 +133,7 @@ fun GamssInputBar(
                             GamssText(
                                 text = placeholder,
                                 style = GamssTheme.typography.body4Medium,
-                                color = GamssTheme.colors.gray500,
+                                color = GamssTheme.colors.gray400,
                             )
                         }
                         innerTextField()
@@ -192,7 +195,7 @@ private fun ReplyPreviewRow(
             contentAlignment = Alignment.Center,
         ) {
             Icon(
-                painter = painterResource(R.drawable.ic_close),
+                painter = painterResource(GamssIcons.ClearButton),
                 contentDescription = clearContentDescription,
                 modifier = Modifier.size(ReplyClearIconSize),
                 tint = GamssTheme.colors.gray300,

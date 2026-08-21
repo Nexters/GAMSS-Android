@@ -27,6 +27,7 @@ import com.gamss.android.domain.emotion.EmotionCharacter
 import com.gamss.android.domain.emotion.EmotionClassifier
 import com.gamss.android.domain.emotion.EmotionLabel
 import com.gamss.android.domain.model.DailyTokenUsage
+import com.gamss.android.domain.repository.TokenUsageAlert
 import com.gamss.android.domain.repository.TokenUsageRefreshNotifier
 import com.gamss.android.domain.safety.DetectRiskInTextUseCase
 import com.gamss.android.domain.safety.RiskLexicon
@@ -40,6 +41,9 @@ import com.gamss.android.domain.user.UserProfile
 import com.gamss.android.domain.user.UserRepository
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.emptyFlow
 import java.time.LocalDate
 import java.time.YearMonth
@@ -110,12 +114,16 @@ internal class FakeUserRepository(
     override suspend fun getDailyTokenUsage(): AppResult<DailyTokenUsage> = AppResult.Success(usage)
 }
 
-/** 갱신 요청 횟수만 센다. 홈 쪽 수신은 feature:home 테스트가 본다. */
-internal class RecordingTokenUsageRefreshNotifier : TokenUsageRefreshNotifier {
+/** 갱신 요청 횟수만 센다. 알림 발생 자체를 검증하는 테스트는 별도 fake로 alerts를 채운다. */
+internal class RecordingTokenUsageRefreshNotifier(
+    override val alerts: Flow<TokenUsageAlert> = emptyFlow(),
+    override val isExhausted: StateFlow<Boolean> = MutableStateFlow(false).asStateFlow(),
+) : TokenUsageRefreshNotifier {
     var refreshCount = 0
         private set
 
     override val refreshEvents: Flow<Unit> = emptyFlow()
+    override val usagePercent: StateFlow<Int?> = MutableStateFlow(null).asStateFlow()
 
     override fun requestRefresh() {
         refreshCount++

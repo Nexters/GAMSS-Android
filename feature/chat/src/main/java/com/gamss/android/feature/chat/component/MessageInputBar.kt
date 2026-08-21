@@ -17,24 +17,30 @@ fun MessageInputBar(
     input: String,
     enabled: Boolean,
     isSending: Boolean,
+    isTokenExhausted: Boolean,
     replyTarget: ReplyTarget?,
     onInputChange: (String) -> Unit,
     onSendClick: () -> Unit,
     onReplyClear: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     GamssInputBar(
         value = input,
         onValueChange = onInputChange,
         onTrailingClick = onSendClick,
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 18.dp, vertical = 12.dp),
-        placeholder = stringResource(R.string.chat_room_input_placeholder),
+        placeholder = if (isTokenExhausted) {
+            stringResource(R.string.chat_room_input_placeholder_exhausted)
+        } else {
+            stringResource(R.string.chat_room_input_placeholder)
+        },
         trailingContentDescription = "보내기",
-        enabled = enabled,
-        // 전송 중에도 입력칸 포커스·키보드는 유지하되(enabled), 전송 버튼만 잠가 중복 전송을
-        // 시각적으로도 막는다.
-        sendEnabled = enabled && !isSending,
+        // 토큰이 소진되면 다시 채울 방법이 없으니(다음 날까지) 입력칸 자체를 잠가 자리표시자
+        // 문구로 안내한다. 전송 중일 때는 입력은 유지하고 전송 버튼만 잠근다.
+        enabled = enabled && !isTokenExhausted,
+        sendEnabled = enabled && !isSending && !isTokenExhausted,
         maxLines = MESSAGE_INPUT_MAX_LINES,
         replyQuote = replyTarget?.let {
             ChatReplyQuote(
