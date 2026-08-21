@@ -10,8 +10,6 @@ import com.gamss.android.feature.chat.navigation.ChatKey
 import com.gamss.android.feature.chat.navigation.ChatRoomKey
 import com.gamss.android.feature.home.navigation.HomeKey
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class NavigatorTest {
@@ -72,15 +70,16 @@ class NavigatorTest {
 
     /** 한 장만 지웠으면 남은 종이를 봐야 하므로 보던 칸으로 돌아간다. */
     @Test
-    fun 카드_한_장_파쇄를_마치면_보관함_상세로_돌아가_목록을_다시_받는다() {
+    fun 카드_한_장_파쇄를_마치면_보관함_상세로_돌아가_지운_카드를_알린다() {
         val navigator = navigator()
         navigator.openArchiveDetail()
         navigator.navigate(CardDeleteKey(EMOTION, CARD_ID))
 
-        navigator.finishShreddedCard()
+        navigator.finishShreddedCard(CARD_ID)
 
         assertEquals(ArchiveDetailKey(EMOTION), navigator.state.currentKey)
-        assertTrue(navigator.consumeShreddedCard())
+        // 어느 카드를 뺄지 알려야 목록을 통째로 다시 받지 않고 그 한 장만 지울 수 있다.
+        assertEquals(CARD_ID, navigator.consumeShreddedCardId())
     }
 
     /** 끝난 대화방이 남으면 뒤로 나갔을 때 이어 쓸 수 없는 방으로 돌아간다. */
@@ -110,17 +109,17 @@ class NavigatorTest {
         assertEquals(null, navigator.consumeDroppedCardId())
     }
 
-    /** 신호를 비우지 않으면 그 칸에 다시 들어올 때마다 목록을 또 받는다. */
+    /** 신호를 비우지 않으면 그 칸에 다시 들어올 때마다 같은 카드를 또 뺀다. */
     @Test
     fun 파쇄_신호는_한_번만_읽힌다() {
         val navigator = navigator()
         navigator.openArchiveDetail()
         navigator.navigate(CardDeleteKey(EMOTION, CARD_ID))
-        navigator.finishShreddedCard()
+        navigator.finishShreddedCard(CARD_ID)
 
-        navigator.consumeShreddedCard()
+        navigator.consumeShreddedCardId()
 
-        assertFalse(navigator.consumeShreddedCard())
+        assertEquals(null, navigator.consumeShreddedCardId())
     }
 
     private companion object {

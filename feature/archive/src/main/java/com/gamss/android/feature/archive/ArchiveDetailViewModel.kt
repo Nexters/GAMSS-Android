@@ -28,13 +28,14 @@ class ArchiveDetailViewModel @Inject constructor(
     /**
      * 보던 달의 카드를 받아 온다.
      *
-     * @param force 같은 감정이어도 다시 받는다. 방금 버린 카드를 보고 들어왔을 때와 파쇄 화면에서
-     *  돌아왔을 때 쓴다. 그 칸의 ViewModel 이 back stack 에 살아남아 지운 카드를 그대로 들고 있다.
+     * @param force 같은 감정이어도 다시 받는다. 방금 버린 카드를 보고 들어왔을 때 쓴다. 그 칸의
+     *  ViewModel 이 back stack 에 살아남아 새 카드가 빠진 목록을 그대로 들고 있다.
      */
     fun load(emotion: EmotionCharacter, force: Boolean = false) = intent {
         if (!force && state.emotion == emotion) return@intent
 
-        // 다시 받는 동안 지난 목록을 남겨 두면 이미 지운 종이를 눌러 그 카드로 파쇄까지 들어갈 수 있다.
+        // 다시 받는 동안 지난 목록을 남겨 두면 방금 버린 카드가 없는 더미를 먼저 쏟는다. 그 사이
+        // 낙하 신호가 소비돼, 목록이 도착해도 그 한 장만 떨어지는 연출이 나오지 않는다.
         reduce { state.copy(emotion = emotion, cards = ArchiveCards.Loading) }
         loadMonth(emotion, state.yearMonth)
     }
@@ -88,13 +89,33 @@ class ArchiveDetailViewModel @Inject constructor(
     }
 
     /**
-     * 한 장 버리기도 되돌릴 수 없어 파쇄 화면을 거친다. 지운 뒤 목록을 다시 받는 일은 그 화면에서
-     * 돌아올 때 [load] 가 맡는다.
+     * 한 장 버리기도 되돌릴 수 없어 파쇄 화면을 거친다. 지운 카드를 목록에서 빼는 일은 그 화면에서
+     * 돌아올 때 [removeCard] 가 맡는다.
      */
     fun discardSelectedCard() = intent {
         val card = state.selectedCard ?: return@intent
         reduce { state.copy(selectedCard = null) }
         postSideEffect(ArchiveDetailSideEffect.OpenCardDelete(cardId = card.id))
+    }
+
+    /**
+     * 파쇄 화면에서 지우고 온 카드를 목록에서 뺀다.
+     *
+     * 파쇄가 끝났다는 건 서버에서 이미 지워졌다는 뜻이고, 카드를 날짜·순번이 아니라 id 로 들고
+     * 있으므로 그 한 장만 빼도 남은 목록이 서버와 어긋나지 않는다. 통째로 다시 받으면 남은 종이가
+     * 사라졌다 다시 쌓이고, 조회가 실패하면 지운 카드와 상관없는 나머지까지 못 보게 된다.
+     *
+     * 목록을 아직 못 받았거나 그 사이 달을 옮겨 그 카드가 없으면 뺄 것이 없어 그대로 둔다.
+     */
+    fun removeCard(cardId: Long) = intent {
+        reduce {
+            when (val loaded = state.cards) {
+                is ArchiveCards.Loaded ->
+                    state.copy(cards = ArchiveCards.Loaded(loaded.cards.filterNot { it.id == cardId }))
+
+                else -> state
+            }
+        }
     }
 
     /**

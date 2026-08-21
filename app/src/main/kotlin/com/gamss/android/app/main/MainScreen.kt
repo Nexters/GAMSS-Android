@@ -141,11 +141,11 @@ private fun mainEntryProvider(navigator: Navigator) = entryProvider {
     entry<ArchiveDetailKey>(metadata = detailSlideTransition) { key ->
         // 대화방에 들렀다 돌아오면 이 컴포지션이 다시 만들어진다. 그때는 이미 비어 있어야 한다.
         val droppedCardId = remember { navigator.consumeDroppedCardId() }
-        val hasShreddedCard = remember { navigator.consumeShreddedCard() }
+        val shreddedCardId = remember { navigator.consumeShreddedCardId() }
         ArchiveDetailScreen(
             emotion = key.emotion,
             droppedCardId = droppedCardId,
-            hasShreddedCard = hasShreddedCard,
+            shreddedCardId = shreddedCardId,
             onBackClick = navigator::goBack,
             onNavigateToCardDelete = { cardId -> navigator.navigate(CardDeleteKey(key.emotion, cardId)) },
         )
@@ -159,15 +159,16 @@ private fun mainEntryProvider(navigator: Navigator) = entryProvider {
         )
     }
     entry<CardDeleteKey>(metadata = detailSlideTransition) { key ->
+        val cardId = key.cardId
         CardDeleteScreen(
             emotion = key.emotion,
-            cardId = key.cardId,
+            cardId = cardId,
             onBackClick = navigator::goBack,
             // 칸을 통째로 비웠으면 돌아갈 자리가 비어 있으니 보관함 목록까지 걷어낸다.
-            onDeleteComplete = if (key.cardId == null) {
+            onDeleteComplete = if (cardId == null) {
                 navigator::finishCurrentFlow
             } else {
-                navigator::finishShreddedCard
+                { navigator.finishShreddedCard(cardId) }
             },
         )
     }

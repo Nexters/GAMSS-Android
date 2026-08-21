@@ -22,9 +22,9 @@ class Navigator(val state: NavigationState) {
     fun consumeDroppedCardId(): Long? = droppedCardId.also { droppedCardId = null }
 
     /** 위 카드 id 와 같은 이유로 key 에 싣지 않는다. */
-    private var hasShreddedCard = false
+    private var shreddedCardId: Long? = null
 
-    fun consumeShreddedCard(): Boolean = hasShreddedCard.also { hasShreddedCard = false }
+    fun consumeShreddedCardId(): Long? = shreddedCardId.also { shreddedCardId = null }
 
     /** top-level key인지, 현재 탭인지, 상세 key인지에 따라 stack 갱신 규칙이 달라진다. */
     fun navigate(key: NavKey) {
@@ -57,11 +57,12 @@ class Navigator(val state: NavigationState) {
      * 카드 한 장을 파쇄하고 원래 보던 칸으로 돌아간다.
      *
      * 남은 종이는 그대로 보여야 하므로 [finishCurrentFlow] 처럼 보관함 첫 화면까지 걷어내지 않는다.
-     * 대신 그 칸의 ViewModel 이 살아남아 지운 카드를 그대로 들고 있으므로, 목록을 다시 받으라고
-     * 신호를 남긴다.
+     * 대신 그 칸의 ViewModel 이 살아남아 지운 카드를 그대로 들고 있으므로, 어느 카드였는지를
+     * 남긴다. 파쇄가 끝났다는 건 서버에서 이미 지워졌다는 뜻이라, 그 한 장만 빼면 목록이 서버와
+     * 같아진다. 달·감정이 그대로인 목록을 통째로 다시 받을 이유가 없다.
      */
-    fun finishShreddedCard() {
-        hasShreddedCard = true
+    fun finishShreddedCard(cardId: Long) {
+        shreddedCardId = cardId
         goBack()
     }
 

@@ -56,7 +56,7 @@ import com.gamss.android.core.designsystem.R as DesignSystemR
 fun ArchiveDetailScreen(
     emotion: EmotionCharacter,
     droppedCardId: Long?,
-    hasShreddedCard: Boolean,
+    shreddedCardId: Long?,
     onBackClick: () -> Unit,
     onNavigateToCardDelete: (Long?) -> Unit,
     viewModel: ArchiveDetailViewModel = hiltViewModel(),
@@ -66,9 +66,11 @@ fun ArchiveDetailScreen(
     val shareChooserTitle = stringResource(R.string.archive_card_share_chooser_title)
     val conversationLoadFailedMessage = stringResource(R.string.archive_conversation_load_error)
 
-    // 다시 받지 않으면 파쇄 화면에서 지운 카드가 목록에 그대로 남는다.
+    // 방금 버린 카드는 목록에 아직 없어 다시 받아야 한다. 파쇄한 카드는 서버에서 이미 지워진
+    // 뒤라, 남은 목록을 그대로 두고 그 한 장만 뺀다.
     LaunchedEffect(emotion) {
-        viewModel.load(emotion, force = droppedCardId != null || hasShreddedCard)
+        viewModel.load(emotion, force = droppedCardId != null)
+        if (shreddedCardId != null) viewModel.removeCard(shreddedCardId)
     }
 
     // Navigator 가 한 번만 내주지만 이 화면은 그 값을 파라미터로 계속 들고 있다. 달을 바꾸면 종이
