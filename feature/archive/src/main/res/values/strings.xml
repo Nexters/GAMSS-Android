@@ -7,7 +7,6 @@
 
     <string name="archive_back_description">뒤로 가기</string>
     <string name="archive_paper_description">%1$d월 %2$d일 카드</string>
-    <string name="archive_cards_empty">아직 남겨둔 이야기가 없어요.</string>
     <string name="archive_cards_load_failed">이야기를 불러오지 못했어요.</string>
 
     <string name="archive_clear">비우기</string>
