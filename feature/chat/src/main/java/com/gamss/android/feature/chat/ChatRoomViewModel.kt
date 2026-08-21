@@ -78,7 +78,12 @@ class ChatRoomViewModel @Inject constructor(
 
     private fun observeTokenExhausted() = intent {
         tokenUsageRefreshNotifier.isExhausted.collect { exhausted ->
-            reduce { state.copy(isTokenExhausted = exhausted) }
+            reduce {
+                state.copy(
+                    isTokenExhausted = exhausted,
+                    input = if (exhausted) "" else state.input,
+                )
+            }
         }
     }
 
