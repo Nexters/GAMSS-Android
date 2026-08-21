@@ -31,6 +31,8 @@ import com.gamss.android.core.designsystem.component.GamssIcons
 import com.gamss.android.core.designsystem.component.GamssLogo
 import com.gamss.android.core.designsystem.component.GamssTopBar
 import com.gamss.android.core.designsystem.theme.GamssTheme
+import com.gamss.android.core.designsystem.theme.designScale
+import com.gamss.android.core.designsystem.theme.designWidth
 import com.gamss.android.domain.emotion.EmotionCharacter
 
 private val archiveItems = listOf(

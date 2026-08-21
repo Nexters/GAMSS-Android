@@ -1,16 +1,26 @@
 package com.gamss.android.feature.archive
 
+import androidx.paging.PagingData
 import com.gamss.android.core.common.AppResult
 import com.gamss.android.core.common.util.KoreanTimeZone
 import com.gamss.android.domain.card.Card
 import com.gamss.android.domain.card.CardEntry
 import com.gamss.android.domain.card.CardRepository
-import com.gamss.android.domain.card.DeleteCardUseCase
+import com.gamss.android.domain.card.ClearCardCacheUseCase
 import com.gamss.android.domain.card.GetCardsByDateUseCase
 import com.gamss.android.domain.card.GetCardsByMonthUseCase
+import com.gamss.android.domain.conversation.Conversation
+import com.gamss.android.domain.conversation.ConversationDetail
+import com.gamss.android.domain.conversation.ConversationRepository
+import com.gamss.android.domain.conversation.GetConversationUseCase
+import com.gamss.android.domain.conversation.Message
+import com.gamss.android.domain.conversation.MessageSender
+import com.gamss.android.domain.conversation.SentMessage
+import com.gamss.android.domain.conversation.chattingsearch.ChattingRoomSummary
 import com.gamss.android.domain.emotion.EmotionCharacter
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -117,8 +127,9 @@ class ArchiveDetailViewModelTest {
         assertEquals(listOf(joyEntry.date), repository.requestedDates)
     }
 
+    /** 재조회까지 마쳤는데도 그 순번이 없다면 서버에도 정말 없는 카드다. */
     @Test
-    fun `그 순번에 카드가 없으면 상세를 올리지 않고 실패를 알린다`() = runTest {
+    fun `재조회해도 그 순번에 카드가 없으면 상세를 올리지 않고 실패를 알린다`() = runTest {
         val repository = FakeCardRepository(
             monthResult = AppResult.Success(listOf(angerEntry)),
             dateResult = AppResult.Success(emptyList()),
@@ -135,10 +146,64 @@ class ArchiveDetailViewModelTest {
             expectState { copy(isCardLoading = false) }
             expectSideEffect(ArchiveDetailSideEffect.CardLoadFailed)
         }
+
+        assertEquals(1, repository.clearCacheCallCount)
+        assertEquals(listOf(angerEntry.date, angerEntry.date), repository.requestedDates)
+    }
+
+    /**
+     * 다른 기기에서 그 날짜에 카드가 추가되면 월별 응답엔 새 순번이 보이지만, 이 기기의 날짜 캐시는
+     * 그 전 상태로 멈춰 있어 그 순번을 못 찾을 수 있다. 캐시를 비우고 한 번 더 받으면 찾아야 한다.
+     */
+    @Test
+    fun `해당 순번에 카드가 없으면 캐시를 비우고 한 번 더 조회해 상세를 올린다`() = runTest {
+        val repository = FakeCardRepository(
+            monthResult = AppResult.Success(listOf(angerEntry, joyEntry)),
+            dateResult = AppResult.Success(listOf(firstCardOfDay)),
+            dateResultAfterClear = AppResult.Success(listOf(firstCardOfDay, secondCardOfDay)),
+        )
+        val viewModel = viewModel(repository)
+
+        viewModel.test(this) {
+            containerHost.load(EmotionCharacter.ANGER)
+            expectState { copy(emotion = EmotionCharacter.ANGER) }
+            expectState { copy(cards = ArchiveCards.Loaded(listOf(angerEntry))) }
+
+            containerHost.selectCard(joyEntry)
+            expectState { copy(isCardLoading = true) }
+            expectState { copy(isCardLoading = false, selectedCard = secondCardOfDay) }
+        }
+
+        assertEquals(1, repository.clearCacheCallCount)
+        assertEquals(listOf(joyEntry.date, joyEntry.date), repository.requestedDates)
+    }
+
+    /** 이미 네트워크까지 갔다가 실패한 경우엔 재시도로 캐시를 다시 비우지 않는다. */
+    @Test
+    fun `카드 조회 자체가 실패하면 재조회하지 않고 바로 실패를 알린다`() = runTest {
+        val repository = FakeCardRepository(
+            monthResult = AppResult.Success(listOf(angerEntry)),
+            dateResult = AppResult.Failure(IllegalStateException("network")),
+        )
+        val viewModel = viewModel(repository)
+
+        viewModel.test(this) {
+            containerHost.load(EmotionCharacter.ANGER)
+            expectState { copy(emotion = EmotionCharacter.ANGER) }
+            expectState { copy(cards = ArchiveCards.Loaded(listOf(angerEntry))) }
+
+            containerHost.selectCard(angerEntry)
+            expectState { copy(isCardLoading = true) }
+            expectState { copy(isCardLoading = false) }
+            expectSideEffect(ArchiveDetailSideEffect.CardLoadFailed)
+        }
+
+        assertEquals(0, repository.clearCacheCallCount)
+        assertEquals(listOf(angerEntry.date), repository.requestedDates)
     }
 
     @Test
-    fun `카드를 버리면 삭제하고 그 달을 다시 조회한다`() = runTest {
+    fun `카드를 버리면 그 카드를 지우는 파쇄 화면을 연다`() = runTest {
         val repository = FakeCardRepository(
             monthResult = AppResult.Success(listOf(angerEntry)),
             dateResult = AppResult.Success(listOf(firstCardOfDay)),
@@ -154,22 +219,26 @@ class ArchiveDetailViewModelTest {
             expectState { copy(isCardLoading = true) }
             expectState { copy(isCardLoading = false, selectedCard = firstCardOfDay) }
 
+            // 실제 삭제는 파쇄 화면이 맡으므로 여기서는 카드를 지우지 않는다.
             containerHost.discardSelectedCard()
             expectState { copy(selectedCard = null) }
+            expectSideEffect(ArchiveDetailSideEffect.OpenCardDelete(cardId = firstCardOfDay.id))
         }
 
-        // 재조회 결과가 이전과 같은 상태라 emission 이 더 없다. 다시 받아 왔는지는 호출로 확인한다.
-        assertEquals(listOf(firstCardOfDay.id), repository.deletedCardIds)
-        assertEquals(2, repository.requestedMonths.size)
+        // 다시 받아 오는 일은 파쇄 화면에서 돌아올 때 force load 가 맡는다.
+        assertEquals(1, repository.requestedMonths.size)
     }
 
     @Test
-    fun `대화보기를 누르면 그 카드의 대화방을 연다`() = runTest {
+    fun `대화보기를 누르면 채팅방으로 나가지 않고 그 대화를 카드로 띄운다`() = runTest {
         val repository = FakeCardRepository(
             monthResult = AppResult.Success(listOf(angerEntry)),
             dateResult = AppResult.Success(listOf(firstCardOfDay)),
         )
-        val viewModel = viewModel(repository)
+        val conversationRepository = FakeConversationRepository(
+            AppResult.Success(conversationDetail(firstCardOfDay.conversationId)),
+        )
+        val viewModel = viewModel(repository, conversationRepository)
 
         viewModel.test(this) {
             containerHost.load(EmotionCharacter.ANGER)
@@ -181,8 +250,160 @@ class ArchiveDetailViewModelTest {
             expectState { copy(isCardLoading = false, selectedCard = firstCardOfDay) }
 
             containerHost.viewSelectedConversation()
+            expectState { copy(isConversationLoading = true) }
+            expectState {
+                copy(
+                    isConversationLoading = false,
+                    selectedCard = null,
+                    conversationCard = ConversationCard(
+                        card = firstCardOfDay,
+                        messages = listOf(userMessage, characterMessage),
+                    ),
+                )
+            }
+        }
+
+        assertEquals(listOf(firstCardOfDay.conversationId), conversationRepository.requestedConversationIds)
+    }
+
+    @Test
+    fun `대화 카드를 닫으면 원래 보던 감정 카드로 돌아온다`() = runTest {
+        val repository = FakeCardRepository(
+            monthResult = AppResult.Success(listOf(angerEntry)),
+            dateResult = AppResult.Success(listOf(firstCardOfDay)),
+        )
+        val viewModel = viewModel(
+            repository,
+            FakeConversationRepository(AppResult.Success(conversationDetail(firstCardOfDay.conversationId))),
+        )
+
+        viewModel.test(this) {
+            containerHost.load(EmotionCharacter.ANGER)
+            expectState { copy(emotion = EmotionCharacter.ANGER) }
+            expectState { copy(cards = ArchiveCards.Loaded(listOf(angerEntry))) }
+
+            containerHost.selectCard(angerEntry)
+            expectState { copy(isCardLoading = true) }
+            expectState { copy(isCardLoading = false, selectedCard = firstCardOfDay) }
+
+            containerHost.viewSelectedConversation()
+            expectState { copy(isConversationLoading = true) }
+            expectState {
+                copy(
+                    isConversationLoading = false,
+                    selectedCard = null,
+                    conversationCard = ConversationCard(
+                        card = firstCardOfDay,
+                        messages = listOf(userMessage, characterMessage),
+                    ),
+                )
+            }
+
+            containerHost.dismissConversationCard()
+            expectState { copy(conversationCard = null, selectedCard = firstCardOfDay) }
+        }
+    }
+
+    @Test
+    fun `대화 조회에 실패하면 감정 카드를 그대로 두고 실패를 알린다`() = runTest {
+        val repository = FakeCardRepository(
+            monthResult = AppResult.Success(listOf(angerEntry)),
+            dateResult = AppResult.Success(listOf(firstCardOfDay)),
+        )
+        val viewModel = viewModel(
+            repository,
+            FakeConversationRepository(AppResult.Failure(IllegalStateException("network"))),
+        )
+
+        viewModel.test(this) {
+            containerHost.load(EmotionCharacter.ANGER)
+            expectState { copy(emotion = EmotionCharacter.ANGER) }
+            expectState { copy(cards = ArchiveCards.Loaded(listOf(angerEntry))) }
+
+            containerHost.selectCard(angerEntry)
+            expectState { copy(isCardLoading = true) }
+            expectState { copy(isCardLoading = false, selectedCard = firstCardOfDay) }
+
+            containerHost.viewSelectedConversation()
+            expectState { copy(isConversationLoading = true) }
+            expectState { copy(isConversationLoading = false) }
+            expectSideEffect(ArchiveDetailSideEffect.ConversationLoadFailed)
+        }
+    }
+
+    @Test
+    fun `늦게 온 대화 실패 응답은 이미 닫은 감정 카드를 되살리지 않는다`() = runTest {
+        val repository = FakeCardRepository(
+            monthResult = AppResult.Success(listOf(angerEntry)),
+            dateResult = AppResult.Success(listOf(firstCardOfDay)),
+        )
+        val conversationGate = CompletableDeferred<Unit>()
+        val viewModel = viewModel(
+            repository,
+            FakeConversationRepository(AppResult.Failure(IllegalStateException("network")), conversationGate),
+        )
+        val testScope = this
+
+        viewModel.test(this) {
+            containerHost.load(EmotionCharacter.ANGER)
+            expectState { copy(emotion = EmotionCharacter.ANGER) }
+            expectState { copy(cards = ArchiveCards.Loaded(listOf(angerEntry))) }
+
+            containerHost.selectCard(angerEntry)
+            expectState { copy(isCardLoading = true) }
+            expectState { copy(isCardLoading = false, selectedCard = firstCardOfDay) }
+
+            // 대화 응답이 게이트에 걸려 멈춰 있는 동안 감정 카드를 닫는다.
+            containerHost.viewSelectedConversation()
+            expectState { copy(isConversationLoading = true) }
+
+            containerHost.dismissCard()
             expectState { copy(selectedCard = null) }
-            expectSideEffect(ArchiveDetailSideEffect.OpenChatRoom(firstCardOfDay.conversationId))
+
+            // 닫아 버린 카드의 실패를 뒤늦게 토스트로 알리지 않는다.
+            conversationGate.complete(Unit)
+            testScope.runCurrent()
+            expectState { copy(isConversationLoading = false) }
+            expectNoItems()
+        }
+    }
+
+    @Test
+    fun `늦게 온 대화 성공 응답은 이미 닫은 감정 카드를 다시 열지 않는다`() = runTest {
+        val repository = FakeCardRepository(
+            monthResult = AppResult.Success(listOf(angerEntry)),
+            dateResult = AppResult.Success(listOf(firstCardOfDay)),
+        )
+        val conversationGate = CompletableDeferred<Unit>()
+        val viewModel = viewModel(
+            repository,
+            FakeConversationRepository(
+                AppResult.Success(conversationDetail(firstCardOfDay.conversationId)),
+                conversationGate,
+            ),
+        )
+        val testScope = this
+
+        viewModel.test(this) {
+            containerHost.load(EmotionCharacter.ANGER)
+            expectState { copy(emotion = EmotionCharacter.ANGER) }
+            expectState { copy(cards = ArchiveCards.Loaded(listOf(angerEntry))) }
+
+            containerHost.selectCard(angerEntry)
+            expectState { copy(isCardLoading = true) }
+            expectState { copy(isCardLoading = false, selectedCard = firstCardOfDay) }
+
+            containerHost.viewSelectedConversation()
+            expectState { copy(isConversationLoading = true) }
+
+            containerHost.dismissCard()
+            expectState { copy(selectedCard = null) }
+
+            // 요청을 시작한 카드가 이미 닫혔으므로 대화 카드로 전환하지 않는다.
+            conversationGate.complete(Unit)
+            testScope.runCurrent()
+            expectState { copy(isConversationLoading = false) }
+            expectNoItems()
         }
     }
 
@@ -238,14 +459,18 @@ class ArchiveDetailViewModelTest {
             // 실제 삭제는 파쇄 화면이 맡으므로 여기서는 카드를 지우지 않는다.
             containerHost.confirmClear()
             expectState { copy(isClearDialogVisible = false) }
-            expectSideEffect(ArchiveDetailSideEffect.OpenCardDelete)
+            expectSideEffect(ArchiveDetailSideEffect.OpenCardDelete(cardId = null))
         }
     }
 
-    private fun viewModel(repository: FakeCardRepository) = ArchiveDetailViewModel(
+    private fun viewModel(
+        repository: FakeCardRepository,
+        conversationRepository: FakeConversationRepository = FakeConversationRepository(),
+    ) = ArchiveDetailViewModel(
         getCardsByMonth = GetCardsByMonthUseCase(repository),
         getCardsByDate = GetCardsByDateUseCase(repository),
-        deleteCard = DeleteCardUseCase(repository),
+        clearCardCache = ClearCardCacheUseCase(repository),
+        getConversation = GetConversationUseCase(conversationRepository),
     )
 
     private companion object {
@@ -267,12 +492,34 @@ class ArchiveDetailViewModelTest {
             message = "대사 $id",
             date = DATE,
         )
+
+        val userMessage = Message(
+            id = 1L,
+            conversationId = firstCardOfDay.conversationId,
+            sender = MessageSender.User,
+            content = "오늘 진짜 화났어",
+            createdTime = "오후 1:37",
+        )
+        val characterMessage = Message(
+            id = 2L,
+            conversationId = firstCardOfDay.conversationId,
+            sender = MessageSender.Character(EmotionCharacter.ANGER),
+            content = "그럴 만했네!",
+            createdTime = "오후 1:38",
+        )
+
+        fun conversationDetail(conversationId: Long) = ConversationDetail(
+            conversation = Conversation(id = conversationId, title = "화났던 날"),
+            messages = listOf(userMessage, characterMessage),
+        )
     }
 }
 
 private class FakeCardRepository(
     private val monthResult: AppResult<List<CardEntry>>,
     private val dateResult: AppResult<List<Card>> = AppResult.Success(emptyList()),
+    /** clearCache() 이후의 getCardsByDate 응답. 지정하지 않으면 [dateResult] 를 그대로 다시 준다. */
+    private val dateResultAfterClear: AppResult<List<Card>>? = null,
     /** 여기 담긴 달은 게이트가 열릴 때까지 응답을 붙잡는다. 늦게 도착하는 응답을 만들 때 쓴다. */
     private val monthGates: Map<YearMonth, CompletableDeferred<Unit>> = emptyMap(),
     /** 달마다 다른 목록을 줘야 할 때만 채운다. 없는 달은 [monthResult] 로 답한다. */
@@ -281,11 +528,12 @@ private class FakeCardRepository(
 
     val requestedMonths = mutableListOf<YearMonth>()
     val requestedDates = mutableListOf<LocalDate>()
-    val deletedCardIds = mutableListOf<Long>()
+    var clearCacheCallCount = 0
+        private set
 
     override suspend fun getCardsByDate(date: LocalDate): AppResult<List<Card>> {
         requestedDates += date
-        return dateResult
+        return if (clearCacheCallCount > 0) dateResultAfterClear ?: dateResult else dateResult
     }
 
     override suspend fun getCardsByMonth(yearMonth: YearMonth): AppResult<List<CardEntry>> {
@@ -303,11 +551,52 @@ private class FakeCardRepository(
     override suspend fun deleteAllCards(): AppResult<Unit> =
         error("보관함 테스트에서 쓰지 않는다")
 
-    override suspend fun deleteCard(cardId: Long): AppResult<Unit> {
-        deletedCardIds += cardId
-        return AppResult.Success(Unit)
-    }
+    override suspend fun deleteCard(cardId: Long): AppResult<Unit> =
+        error("실제 삭제는 파쇄 화면이 맡는다")
 
     override suspend fun deleteCardsByEmotion(character: EmotionCharacter): AppResult<Unit> =
+        error("보관함 테스트에서 쓰지 않는다")
+
+    override suspend fun clearCache() {
+        clearCacheCallCount++
+    }
+}
+
+private class FakeConversationRepository(
+    private val conversationResult: AppResult<ConversationDetail> =
+        AppResult.Failure(IllegalStateException("대화를 준비하지 않았다")),
+    /** 넘기면 게이트가 열릴 때까지 응답을 붙잡는다. 늦게 도착하는 응답을 만들 때 쓴다. */
+    private val gate: CompletableDeferred<Unit>? = null,
+) : ConversationRepository {
+
+    val requestedConversationIds = mutableListOf<Long>()
+
+    override suspend fun getConversation(conversationId: Long): AppResult<ConversationDetail> {
+        requestedConversationIds += conversationId
+        gate?.await()
+        return conversationResult
+    }
+
+    override suspend fun getOngoingConversations(): AppResult<List<Conversation>> =
+        error("보관함 테스트에서 쓰지 않는다")
+
+    override suspend fun sendMessage(
+        conversationId: Long?,
+        content: String,
+        replyToMessageId: Long?,
+        contextSummary: String?,
+        excludeCharacters: Set<EmotionCharacter>,
+    ): AppResult<SentMessage> = error("보관함 테스트에서 쓰지 않는다")
+
+    override suspend fun updateTitle(conversationId: Long, title: String): AppResult<Unit> =
+        error("보관함 테스트에서 쓰지 않는다")
+
+    override suspend fun endConversation(conversationId: Long): AppResult<Unit> =
+        error("보관함 테스트에서 쓰지 않는다")
+
+    override suspend fun deleteConversation(conversationId: Long): AppResult<Unit> =
+        error("보관함 테스트에서 쓰지 않는다")
+
+    override fun searchChattingRooms(keyword: String): Flow<PagingData<ChattingRoomSummary>> =
         error("보관함 테스트에서 쓰지 않는다")
 }

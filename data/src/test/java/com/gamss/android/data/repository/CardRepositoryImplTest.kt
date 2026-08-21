@@ -2,6 +2,9 @@ package com.gamss.android.data.repository
 
 import com.gamss.android.core.common.AppResult
 import com.gamss.android.core.common.network.ApiException
+import com.gamss.android.data.local.card.CardLocalDataSource
+import com.gamss.android.data.local.card.model.CardEntity
+import com.gamss.android.data.local.card.model.toDomain
 import com.gamss.android.data.remote.card.CardService
 import com.gamss.android.data.remote.card.model.response.CardCalendarResponse
 import com.gamss.android.data.remote.card.model.response.CardDeleteResponse
@@ -14,6 +17,7 @@ import com.gamss.android.domain.emotion.EmotionCharacter
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
+import io.mockk.slot
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -24,15 +28,18 @@ import java.time.YearMonth
 class CardRepositoryImplTest {
 
     private val cardService: CardService = mockk()
-    private val repository = CardRepositoryImpl(cardService)
+    private val cardLocalDataSource: CardLocalDataSource = mockk()
+    private val repository = CardRepositoryImpl(cardService, cardLocalDataSource)
 
     @Test
     fun `날짜를 API 형식으로 조회하고 카드 감정을 캐릭터로 매핑한다`() = runTest {
         val date = LocalDate.of(2026, 8, 15)
+        coEvery { cardLocalDataSource.findByDate(date) } returns emptyList()
         coEvery { cardService.getCardsByDate("2026-08-15") } returns ApiResponse(
             success = true,
             data = listOf(cardResponse(emotion = "ANGER")),
         )
+        coEvery { cardLocalDataSource.upsertAll(any()) } returns Unit
 
         val result = repository.getCardsByDate(date)
 
@@ -43,6 +50,7 @@ class CardRepositoryImplTest {
 
     @Test
     fun `알 수 없는 감정 카드는 제외하고 유효한 카드는 남긴다`() = runTest {
+        coEvery { cardLocalDataSource.findByDate(DATE) } returns emptyList()
         coEvery { cardService.getCardsByDate(any()) } returns ApiResponse(
             success = true,
             data = listOf(
@@ -50,6 +58,7 @@ class CardRepositoryImplTest {
                 cardResponse(emotion = "GRUMPY"),
             ),
         )
+        coEvery { cardLocalDataSource.upsertAll(any()) } returns Unit
 
         val result = repository.getCardsByDate(DATE)
 
@@ -61,6 +70,7 @@ class CardRepositoryImplTest {
 
     @Test
     fun `성공 응답이어도 실패 envelope는 실패로 전한다`() = runTest {
+        coEvery { cardLocalDataSource.findByDate(DATE) } returns emptyList()
         coEvery { cardService.getCardsByDate(any()) } returns ApiResponse(
             success = false,
             error = ApiError(code = "EXPIRED_TOKEN", message = "만료"),
@@ -73,6 +83,7 @@ class CardRepositoryImplTest {
 
     @Test
     fun `카드 데이터가 없으면 실패로 전한다`() = runTest {
+        coEvery { cardLocalDataSource.findByDate(DATE) } returns emptyList()
         coEvery { cardService.getCardsByDate(any()) } returns ApiResponse(success = true)
 
         val result = repository.getCardsByDate(DATE)
@@ -81,13 +92,52 @@ class CardRepositoryImplTest {
     }
 
     @Test
+    fun `그 날짜가 캐시에 있으면 서버를 호출하지 않고 캐시를 그대로 돌려준다`() = runTest {
+        val cached = listOf(cardEntity(id = 7L, indexInDate = 0), cardEntity(id = 8L, indexInDate = 1))
+        coEvery { cardLocalDataSource.findByDate(DATE) } returns cached
+
+        val result = repository.getCardsByDate(DATE)
+
+        assertEquals(cached.map { it.toDomain() }, (result as AppResult.Success).data)
+        coVerify(exactly = 0) { cardService.getCardsByDate(any()) }
+    }
+
+    /**
+     * 월별 응답과 마찬가지로 selectCard 는 유효한 카드만 남긴 목록의 위치로 카드를 집으므로,
+     * 캐시에 적는 indexInDate 도 원본 응답 위치가 아니라 걸러낸 뒤의 위치와 같아야 한다.
+     */
+    @Test
+    fun `캐시가 비어 있으면 서버에서 가져와 유효한 카드만 걸러낸 순서로 캐시에 저장한다`() = runTest {
+        coEvery { cardLocalDataSource.findByDate(DATE) } returns emptyList()
+        coEvery { cardService.getCardsByDate(any()) } returns ApiResponse(
+            success = true,
+            data = listOf(
+                cardResponse(id = 1L, emotion = "UNKNOWN"),
+                cardResponse(id = 2L, emotion = "ANGER"),
+                cardResponse(id = 3L, emotion = "JOY"),
+            ),
+        )
+        val upserted = slot<List<CardEntity>>()
+        coEvery { cardLocalDataSource.upsertAll(capture(upserted)) } returns Unit
+
+        repository.getCardsByDate(DATE)
+
+        assertEquals(
+            listOf(2L to 0, 3L to 1),
+            upserted.captured.map { it.id to it.indexInDate },
+        )
+    }
+
+    @Test
     fun `모든 카드 삭제 요청을 전달한다`() = runTest {
         coEvery { cardService.deleteAllCards() } returns ApiResponse(
             success = true,
             data = CardDeleteResponse(deletedCount = 0),
         )
+        coEvery { cardLocalDataSource.deleteAll() } returns Unit
 
         assertEquals(AppResult.Success(Unit), repository.deleteAllCards())
+        coVerify(exactly = 1) { cardLocalDataSource.deleteAll() }
     }
 
     @Test
@@ -127,24 +177,32 @@ class CardRepositoryImplTest {
     }
 
     @Test
-    fun `카드 한 장 삭제 요청을 전달한다`() = runTest {
+    fun `카드 한 장 삭제 요청을 전달하고 캐시를 비운다`() = runTest {
         coEvery { cardService.deleteCard(1L) } returns ApiResponse(success = true, data = Unit)
+        coEvery { cardLocalDataSource.deleteAll() } returns Unit
 
         assertEquals(AppResult.Success(Unit), repository.deleteCard(1L))
+        coVerify(exactly = 1) { cardLocalDataSource.deleteAll() }
     }
 
+    /**
+     * 카드를 지우면 같은 날짜 뒤 카드들의 indexInDate 가 한 칸씩 당겨지는데, 이 메서드는 지운 카드의
+     * 날짜를 모르기 때문에 그 카드만 골라 지우는 대신 캐시 전체를 비워 다음 조회 때 다시 채운다.
+     */
     @Test
-    fun `이미 삭제된 카드는 성공으로 전달한다`() = runTest {
+    fun `이미 삭제된 카드도 성공으로 전달하며 캐시를 비운다`() = runTest {
         coEvery { cardService.deleteCard(1L) } returns ApiResponse<Unit>(
             success = false,
             error = ApiError(code = "CARD_ALREADY_DELETED", message = "이미 삭제됨"),
         )
+        coEvery { cardLocalDataSource.deleteAll() } returns Unit
 
         assertEquals(AppResult.Success(Unit), repository.deleteCard(1L))
+        coVerify(exactly = 1) { cardLocalDataSource.deleteAll() }
     }
 
     @Test
-    fun `카드 삭제 실패 envelope는 실패로 전달한다`() = runTest {
+    fun `카드 삭제 실패 envelope는 실패로 전달하고 캐시를 건드리지 않는다`() = runTest {
         coEvery { cardService.deleteCard(1L) } returns ApiResponse<Unit>(
             success = false,
             error = ApiError(code = "CARD_NOT_FOUND", message = "존재하지 않음"),
@@ -156,16 +214,19 @@ class CardRepositoryImplTest {
             "CARD_NOT_FOUND",
             ((result as AppResult.Failure).throwable as ApiException).code,
         )
+        coVerify(exactly = 0) { cardLocalDataSource.deleteAll() }
     }
 
     @Test
-    fun `감정별 카드 삭제 요청을 전달한다`() = runTest {
+    fun `감정별 카드 삭제 요청을 전달하고 캐시를 비운다`() = runTest {
         coEvery { cardService.deleteCardsByEmotion("ANGER") } returns ApiResponse(
             success = true,
             data = CardDeleteResponse(deletedCount = 0),
         )
+        coEvery { cardLocalDataSource.deleteAll() } returns Unit
 
         assertEquals(AppResult.Success(Unit), repository.deleteCardsByEmotion(EmotionCharacter.ANGER))
+        coVerify(exactly = 1) { cardLocalDataSource.deleteAll() }
     }
 
     @Test
@@ -190,6 +251,25 @@ class CardRepositoryImplTest {
             "INVALID_INPUT",
             ((result as AppResult.Failure).throwable as ApiException).code,
         )
+    }
+
+    /** 새로 만든 카드가 그 날짜 캐시에 없는 채로 남으면, 그 날은 다시 열어도 계속 예전 목록만 보인다. */
+    @Test
+    fun `카드 생성에 성공하면 캐시를 비운다`() = runTest {
+        coEvery { cardService.createCard(any()) } returns ApiResponse(
+            success = true,
+            data = cardResponse(id = 9L, emotion = "JOY"),
+        )
+        coEvery { cardLocalDataSource.deleteAll() } returns Unit
+
+        val result = repository.createCard(
+            conversationId = 10L,
+            character = EmotionCharacter.JOY,
+            summary = "요약",
+        )
+
+        assertTrue(result is AppResult.Success)
+        coVerify(exactly = 1) { cardLocalDataSource.deleteAll() }
     }
 
     @Test
@@ -251,11 +331,42 @@ class CardRepositoryImplTest {
         )
     }
 
+    @Test
+    fun `캐시를 비울 때 서버에는 아무 요청도 보내지 않는다`() = runTest {
+        coEvery { cardLocalDataSource.deleteAll() } returns Unit
+
+        repository.clearCache()
+
+        coVerify(exactly = 1) { cardLocalDataSource.deleteAll() }
+    }
+
+    /**
+     * 로그아웃 중 세션 정리를 무너뜨리거나, Orbit intent 안에서 전역 예외 핸들러 없이 그대로
+     * 크래시로 번지지 않도록 호출부가 아니라 여기서 막는다.
+     */
+    @Test
+    fun `캐시 삭제가 실패해도 던지지 않는다`() = runTest {
+        coEvery { cardLocalDataSource.deleteAll() } throws IllegalStateException("disk error")
+
+        repository.clearCache()
+    }
+
+    private fun cardEntity(id: Long, indexInDate: Int) = CardEntity(
+        id = id,
+        conversationId = id,
+        emotion = "ANGER",
+        emotionLabel = "분노",
+        summary = "요약",
+        message = "대사",
+        date = "2026-08-15",
+        indexInDate = indexInDate,
+    )
+
     private companion object {
         val DATE: LocalDate = LocalDate.of(2026, 8, 15)
 
-        fun cardResponse(emotion: String) = CardResponse(
-            id = 1L,
+        fun cardResponse(id: Long = 1L, emotion: String) = CardResponse(
+            id = id,
             conversationId = 10L,
             emotion = emotion,
             emotionLabel = "분노",

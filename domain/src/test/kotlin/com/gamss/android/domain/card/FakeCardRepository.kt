@@ -26,4 +26,6 @@ internal open class FakeCardRepository : CardRepository {
 
     override suspend fun deleteCardsByEmotion(character: EmotionCharacter): AppResult<Unit> =
         error("이 테스트에서 쓰지 않는다")
+
+    override suspend fun clearCache(): Unit = error("이 테스트에서 쓰지 않는다")
 }
