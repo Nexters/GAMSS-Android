@@ -68,8 +68,6 @@ internal class CardRepositoryImpl @Inject constructor(
         }
     }
 
-    // YearMonth.toString() 이 서버가 요구하는 yyyy-MM 그대로다.
-    /** 그 감정 칸의 그 달이 캐시에 있으면 캐시를 쓰고, 없거나 캐시 조회에 실패하면 서버에서 받는다. */
     override suspend fun getCardsByMonthAndEmotion(
         character: EmotionCharacter,
         yearMonth: YearMonth,
@@ -105,8 +103,7 @@ internal class CardRepositoryImpl @Inject constructor(
 
             cardLocalDataSource.upsertAll(validCards.map { (raw, _) -> raw.toEntity() })
 
-            // 서버는 최신순으로 준다. 보관함 더미는 목록 순서대로 위에 얹으며 쌓으므로, 뒤집어
-            // 오래된 순으로 돌려줘야 최근 카드가 맨 위에 온다.
+            // 서버는 최신순으로 준다.
             validCards.map { (_, card) -> card }.reversed()
         }
     }

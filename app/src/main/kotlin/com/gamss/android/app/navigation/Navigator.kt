@@ -21,17 +21,12 @@ class Navigator(val state: NavigationState) {
 
     fun consumeDroppedCardId(): Long? = droppedCardId.also { droppedCardId = null }
 
-    /**
-     * 파쇄 화면이 카드를 지웠다는 일회성 신호. 위 날짜와 같은 이유로 key 에 싣지 않는다.
-     */
+    /** 위 카드 id 와 같은 이유로 key 에 싣지 않는다. */
     private var hasShreddedCard = false
 
     fun consumeShreddedCard(): Boolean = hasShreddedCard.also { hasShreddedCard = false }
 
-    /**
-     * 지정한 key로 이동한다.
-     * top-level key인지, 현재 탭인지, 상세 key인지에 따라 stack 갱신 규칙이 달라진다.
-     */
+    /** top-level key인지, 현재 탭인지, 상세 key인지에 따라 stack 갱신 규칙이 달라진다. */
     fun navigate(key: NavKey) {
         when (key) {
             state.currentTopLevelKey -> clearSubStack()
@@ -41,8 +36,6 @@ class Navigator(val state: NavigationState) {
     }
 
     /**
-     * 현재 위치에서 뒤로 이동한다.
-     *
      * 현재 탭의 root 화면에서는 이전에 방문한 탭으로 돌아가고, 상세 화면에서는 현재 탭의
      * sub stack에서 한 단계 pop한다.
      */
@@ -56,7 +49,6 @@ class Navigator(val state: NavigationState) {
         }
     }
 
-    /** 완료된 상세 흐름을 닫고 현재 탭의 첫 화면으로 돌아간다. */
     fun finishCurrentFlow() {
         clearSubStack()
     }
@@ -88,9 +80,6 @@ class Navigator(val state: NavigationState) {
         goToKey(detail)
     }
 
-    /**
-     * 현재 탭의 상세 화면으로 이동한다.
-     */
     private fun goToKey(key: NavKey) {
         state.currentSubStack.apply {
             remove(key)
@@ -98,9 +87,6 @@ class Navigator(val state: NavigationState) {
         }
     }
 
-    /**
-     * 다른 top-level 탭으로 이동한다.
-     */
     private fun goToTopLevel(key: NavKey) {
         state.topLevelStack.apply {
             if (key == state.startKey) {
@@ -112,9 +98,6 @@ class Navigator(val state: NavigationState) {
         }
     }
 
-    /**
-     * 현재 탭을 다시 선택했을 때 root 화면만 남긴다.
-     */
     private fun clearSubStack() {
         state.currentSubStack.run {
             if (size > 1) subList(1, size).clear()

@@ -63,8 +63,7 @@ fun ArchiveDetailScreen(
     val shareChooserTitle = stringResource(R.string.archive_card_share_chooser_title)
     val conversationLoadFailedMessage = stringResource(R.string.archive_conversation_load_error)
 
-    // 파쇄 화면에서 돌아왔을 때도 다시 받아야 한다. 카드를 지우면 같은 날짜 뒤 순번이 한 칸씩
-    // 당겨져, 살아남은 종이가 들고 있던 순번이 서버와 어긋난다.
+    // 파쇄 화면에서 돌아왔을 때도 다시 받아야 한다. 지운 카드가 목록에 그대로 남는다.
     LaunchedEffect(emotion) {
         viewModel.load(emotion, force = droppedCardId != null || hasShreddedCard)
     }
