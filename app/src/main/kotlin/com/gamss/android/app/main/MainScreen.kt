@@ -142,7 +142,6 @@ private fun mainEntryProvider(navigator: Navigator) = entryProvider {
         ArchiveDetailScreen(
             emotion = key.emotion,
             onBackClick = navigator::goBack,
-            onOpenConversation = { conversationId -> navigator.navigate(ChatRoomKey(conversationId)) },
             onNavigateToCardDelete = { navigator.navigate(CardDeleteKey) },
         )
     }

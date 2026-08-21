@@ -7,9 +7,6 @@ import com.gamss.android.domain.card.CardEntry
 import com.gamss.android.domain.card.CardRepository
 import com.gamss.android.domain.card.CreateCardUseCase
 import com.gamss.android.domain.card.CreateConversationCardUseCase
-import com.gamss.android.domain.config.GetRemoteConfigFlagUseCase
-import com.gamss.android.domain.config.RemoteConfigKey
-import com.gamss.android.domain.config.RemoteConfigRepository
 import com.gamss.android.domain.conversation.CommentGenerationStatus
 import com.gamss.android.domain.conversation.Conversation
 import com.gamss.android.domain.conversation.ConversationDetail
@@ -44,7 +41,6 @@ import com.gamss.android.domain.user.UserProfile
 import com.gamss.android.domain.user.UserRepository
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emptyFlow
 import java.time.LocalDate
 import java.time.YearMonth
@@ -61,7 +57,6 @@ internal fun chatRoomViewModel(
     summarizer: DiarySummarizer = PassThroughSummarizer,
     classifier: EmotionClassifier = FlatClassifier,
     tokenUsageRefreshNotifier: TokenUsageRefreshNotifier = RecordingTokenUsageRefreshNotifier(),
-    remoteConfigRepository: RemoteConfigRepository = FakeRemoteConfigRepository(),
     pendingReveal: PendingConversationReveal = PendingConversationReveal(),
     userRepository: UserRepository = FakeUserRepository(),
 ): ChatRoomViewModel = ChatRoomViewModel(
@@ -70,7 +65,6 @@ internal fun chatRoomViewModel(
         repository = NoRiskLexiconRepository,
         matcher = RiskTermMatcher(),
     ),
-    getRemoteConfigFlag = GetRemoteConfigFlagUseCase(remoteConfigRepository),
     getDailyTokenUsageUseCase = GetDailyTokenUsageUseCase(userRepository),
     session = ConversationSession(
         sendMessage = SendMessageUseCase(conversationRepository),
@@ -89,19 +83,6 @@ internal fun chatRoomViewModel(
         pendingReveal = pendingReveal,
     ),
 )
-
-/** 원격 설정 조회 없이 항상 켜진 값을 돌려준다. 값 자체를 검증하는 테스트는 별도로 stub 한다. */
-internal class FakeRemoteConfigRepository(
-    private val flags: Map<RemoteConfigKey, Boolean> = RemoteConfigKey.entries.associateWith { true },
-) : RemoteConfigRepository {
-    override val isReady: Flow<Boolean> = MutableStateFlow(true)
-
-    override suspend fun initialize() = Unit
-
-    override fun getString(key: RemoteConfigKey): String = getBoolean(key).toString()
-
-    override fun getBoolean(key: RemoteConfigKey): Boolean = flags[key] ?: key.defaultValue.toBoolean()
-}
 
 private object NoRiskLexiconRepository : RiskLexiconRepository {
     override suspend fun getLexicon() = RiskLexicon(
