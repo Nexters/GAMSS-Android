@@ -7,4 +7,9 @@
     <string name="emotion_card_title_sadness">오늘 슬~프네</string>
     <string name="emotion_card_title_quirky">오늘 엉~뚱하네</string>
     <string name="emotion_card_title_prickly">오늘 까~칠하네</string>
+
+    <!-- 답장 인용문 라벨. 채팅방과 보관함 카드가 같은 문구를 쓴다. -->
+    <string name="chat_reply_to_character">%1$s에게 답장</string>
+    <string name="chat_reply_to_me">나에게 답장</string>
+    <string name="chat_reply">답장</string>
 </resources>

@@ -147,7 +147,6 @@ private fun mainEntryProvider(navigator: Navigator) = entryProvider {
             droppedCardDate = droppedCardDate,
             hasShreddedCard = hasShreddedCard,
             onBackClick = navigator::goBack,
-            onOpenConversation = { conversationId -> navigator.navigate(ChatRoomKey(conversationId)) },
             onNavigateToCardDelete = { cardId -> navigator.navigate(CardDeleteKey(cardId)) },
         )
     }

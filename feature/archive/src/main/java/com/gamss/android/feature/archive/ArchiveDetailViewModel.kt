@@ -7,6 +7,7 @@ import com.gamss.android.domain.card.CardEntry
 import com.gamss.android.domain.card.ClearCardCacheUseCase
 import com.gamss.android.domain.card.GetCardsByDateUseCase
 import com.gamss.android.domain.card.GetCardsByMonthUseCase
+import com.gamss.android.domain.conversation.GetConversationUseCase
 import com.gamss.android.domain.emotion.EmotionCharacter
 import dagger.hilt.android.lifecycle.HiltViewModel
 import org.orbitmvi.orbit.ContainerHost
@@ -20,6 +21,7 @@ class ArchiveDetailViewModel @Inject constructor(
     private val getCardsByMonth: GetCardsByMonthUseCase,
     private val getCardsByDate: GetCardsByDateUseCase,
     private val clearCardCache: ClearCardCacheUseCase,
+    private val getConversation: GetConversationUseCase,
 ) : ViewModel(), ContainerHost<ArchiveDetailState, ArchiveDetailSideEffect> {
 
     override val container = container<ArchiveDetailState, ArchiveDetailSideEffect>(
@@ -117,10 +119,43 @@ class ArchiveDetailViewModel @Inject constructor(
         postSideEffect(ArchiveDetailSideEffect.OpenCardDelete(cardId = card.id))
     }
 
+    /**
+     * 대화보기는 채팅방으로 나가지 않는다. 이미 종료된 대화라 이어 쓸 수 없어, 같은 자리에서 카드를
+     * 뒤집어 그 대화 기록만 보여 준다.
+     */
     fun viewSelectedConversation() = intent {
-        val conversationId = state.selectedCard?.conversationId ?: return@intent
-        reduce { state.copy(selectedCard = null) }
-        postSideEffect(ArchiveDetailSideEffect.OpenChatRoom(conversationId))
+        val card = state.selectedCard ?: return@intent
+        if (state.isConversationLoading) return@intent
+
+        reduce { state.copy(isConversationLoading = true) }
+        val conversationCard = when (val result = getConversation(card.conversationId)) {
+            is AppResult.Success -> ConversationCard(card = card, messages = result.data.messages)
+            is AppResult.Failure -> null
+        }
+        reduce {
+            // 기다리는 사이 사용자가 카드를 닫거나 다른 카드를 열었으면 이 응답은 지난 요청의 것이다.
+            // 성공이든 실패든 반영하지 않는다.
+            val isStale = state.selectedCard?.id != card.id
+            if (isStale || conversationCard == null) {
+                state.copy(isConversationLoading = false)
+            } else {
+                state.copy(
+                    isConversationLoading = false,
+                    selectedCard = null,
+                    conversationCard = conversationCard,
+                )
+            }
+        }
+
+        // 닫아 버린 카드의 실패를 뒤늦게 알리지 않는다.
+        if (conversationCard == null && state.selectedCard?.id == card.id) {
+            postSideEffect(ArchiveDetailSideEffect.ConversationLoadFailed)
+        }
+    }
+
+    fun dismissConversationCard() = intent {
+        val card = state.conversationCard?.card ?: return@intent
+        reduce { state.copy(conversationCard = null, selectedCard = card) }
     }
 
     /** 월별 응답은 모든 감정을 섞어 주므로 이 화면이 보고 있는 감정만 남긴다. */
