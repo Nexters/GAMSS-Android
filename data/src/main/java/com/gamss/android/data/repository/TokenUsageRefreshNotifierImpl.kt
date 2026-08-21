@@ -40,7 +40,7 @@ internal class TokenUsageRefreshNotifierImpl @Inject constructor(
     private val _isExhausted = MutableStateFlow(false)
     override val isExhausted: StateFlow<Boolean> = _isExhausted.asStateFlow()
 
-    /** 알림은 하루/타입당 정확히 1번만 소비돼야 해서, 재생되는 Channel을 쓴다. */
+    /** 알림은 하루/타입당 정확히 1번만 소비돼야 해서, 재생되지 않는 Channel을 쓴다. */
     private val _alerts = Channel<TokenUsageAlert>(
         capacity = 1,
         onBufferOverflow = BufferOverflow.DROP_OLDEST,
