@@ -129,17 +129,25 @@ class ArchiveDetailViewModel @Inject constructor(
             is AppResult.Success -> ConversationCard(card = card, messages = result.data.messages)
             is AppResult.Failure -> null
         }
-        // 못 불러왔으면 감정 카드를 건드리지 않는다. 기다리는 사이 사용자가 카드를 닫았을 수도 있어
-        // 진입 시점에 잡아 둔 card 로 되살리지 않고 지금 상태를 그대로 둔다.
         reduce {
-            state.copy(
-                isConversationLoading = false,
-                selectedCard = if (conversationCard == null) state.selectedCard else null,
-                conversationCard = conversationCard,
-            )
+            // 기다리는 사이 사용자가 카드를 닫거나 다른 카드를 열었으면 이 응답은 지난 요청의 것이다.
+            // 성공이든 실패든 반영하지 않는다.
+            val isStale = state.selectedCard?.id != card.id
+            if (isStale || conversationCard == null) {
+                state.copy(isConversationLoading = false)
+            } else {
+                state.copy(
+                    isConversationLoading = false,
+                    selectedCard = null,
+                    conversationCard = conversationCard,
+                )
+            }
         }
 
-        if (conversationCard == null) postSideEffect(ArchiveDetailSideEffect.ConversationLoadFailed)
+        // 닫아 버린 카드의 실패를 뒤늦게 알리지 않는다.
+        if (conversationCard == null && state.selectedCard?.id == card.id) {
+            postSideEffect(ArchiveDetailSideEffect.ConversationLoadFailed)
+        }
     }
 
     fun dismissConversationCard() = intent {

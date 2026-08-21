@@ -360,10 +360,50 @@ class ArchiveDetailViewModelTest {
             containerHost.dismissCard()
             expectState { copy(selectedCard = null) }
 
+            // 닫아 버린 카드의 실패를 뒤늦게 토스트로 알리지 않는다.
             conversationGate.complete(Unit)
             testScope.runCurrent()
             expectState { copy(isConversationLoading = false) }
-            expectSideEffect(ArchiveDetailSideEffect.ConversationLoadFailed)
+            expectNoItems()
+        }
+    }
+
+    @Test
+    fun `늦게 온 대화 성공 응답은 이미 닫은 감정 카드를 다시 열지 않는다`() = runTest {
+        val repository = FakeCardRepository(
+            monthResult = AppResult.Success(listOf(angerEntry)),
+            dateResult = AppResult.Success(listOf(firstCardOfDay)),
+        )
+        val conversationGate = CompletableDeferred<Unit>()
+        val viewModel = viewModel(
+            repository,
+            FakeConversationRepository(
+                AppResult.Success(conversationDetail(firstCardOfDay.conversationId)),
+                conversationGate,
+            ),
+        )
+        val testScope = this
+
+        viewModel.test(this) {
+            containerHost.load(EmotionCharacter.ANGER)
+            expectState { copy(emotion = EmotionCharacter.ANGER) }
+            expectState { copy(cards = ArchiveCards.Loaded(listOf(angerEntry))) }
+
+            containerHost.selectCard(angerEntry)
+            expectState { copy(isCardLoading = true) }
+            expectState { copy(isCardLoading = false, selectedCard = firstCardOfDay) }
+
+            containerHost.viewSelectedConversation()
+            expectState { copy(isConversationLoading = true) }
+
+            containerHost.dismissCard()
+            expectState { copy(selectedCard = null) }
+
+            // 요청을 시작한 카드가 이미 닫혔으므로 대화 카드로 전환하지 않는다.
+            conversationGate.complete(Unit)
+            testScope.runCurrent()
+            expectState { copy(isConversationLoading = false) }
+            expectNoItems()
         }
     }
 
