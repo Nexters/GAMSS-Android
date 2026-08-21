@@ -189,7 +189,7 @@ private fun mainEntryProvider(navigator: Navigator) = entryProvider {
     entry<ChatKey> {
         ChattingListScreen(
             onChatClick = { navigator.navigate(ChatRoomKey(it)) },
-            onMenuClick = { navigator.navigate(SettingKey) },
+            onSettingClick = { navigator.navigate(SettingKey) },
         )
     }
     entry<ChatRoomKey>(metadata = detailSlideTransition) { key ->
@@ -217,19 +217,66 @@ private val tabFadeThroughSpec: AnimatedContentTransitionScope<Scene<NavKey>>.()
  * 탭 내부의 상세 화면(Setting/AccountInfo/NicknameChange/ChatRoom/WebView) push·pop 전용
  * 트랜지션. 계층 이동이라는 방향감을 주기 위해 좌우 슬라이드(shared axis X)를 쓴다.
  *
+ * slideIntoContainer/slideOutOfContainer는 initialOffset/targetOffset을 안 주면 화면 폭 전체를
+ * 미는 거리로 슬라이드한다 — Material의 shared axis X는 폭 전체가 아니라 일부만 이동해야 가벼운
+ * 느낌이 나는데, 전체 폭을 밀면 같은 duration이어도 이동 거리가 커서 둔탁하고 느리게 느껴진다.
+ * DETAIL_TRANSITION_SLIDE_FRACTION으로 이동 거리를 줄이고, duration도 같이 낮춘다.
+ *
  * 트리거 경로마다 참조하는 spec이 달라서, 셋 다 지정하지 않으면 모션이 갈립니다.
  */
 private val detailSlideTransition: Map<String, Any> = NavDisplay.transitionSpec {
-    (slideIntoContainer(SlideDirection.Start, tween(300)) + fadeIn(tween(300))) togetherWith
-        (slideOutOfContainer(SlideDirection.Start, tween(300)) + fadeOut(tween(150)))
+    (
+        slideIntoContainer(
+            SlideDirection.Start,
+            tween(DETAIL_TRANSITION_DURATION_MILLIS),
+            initialOffset = { fullWidth -> fullWidth / DETAIL_TRANSITION_SLIDE_FRACTION },
+        ) + fadeIn(tween(DETAIL_TRANSITION_DURATION_MILLIS))
+        ) togetherWith
+        (
+            slideOutOfContainer(
+                SlideDirection.Start,
+                tween(DETAIL_TRANSITION_DURATION_MILLIS),
+                targetOffset = { fullWidth -> fullWidth / DETAIL_TRANSITION_SLIDE_FRACTION },
+            ) + fadeOut(tween(DETAIL_TRANSITION_EXIT_FADE_DURATION_MILLIS))
+            )
 } + NavDisplay.popTransitionSpec {
-    (slideIntoContainer(SlideDirection.End, tween(300)) + fadeIn(tween(300))) togetherWith
-        (slideOutOfContainer(SlideDirection.End, tween(300)) + fadeOut(tween(150)))
+    (
+        slideIntoContainer(
+            SlideDirection.End,
+            tween(DETAIL_TRANSITION_DURATION_MILLIS),
+            initialOffset = { fullWidth -> fullWidth / DETAIL_TRANSITION_SLIDE_FRACTION },
+        ) + fadeIn(tween(DETAIL_TRANSITION_DURATION_MILLIS))
+        ) togetherWith
+        (
+            slideOutOfContainer(
+                SlideDirection.End,
+                tween(DETAIL_TRANSITION_DURATION_MILLIS),
+                targetOffset = { fullWidth -> fullWidth / DETAIL_TRANSITION_SLIDE_FRACTION },
+            ) + fadeOut(tween(DETAIL_TRANSITION_EXIT_FADE_DURATION_MILLIS))
+            )
 } + NavDisplay.predictivePopTransitionSpec { swipeEdge ->
     val towards = if (swipeEdge == NavigationEvent.EDGE_RIGHT) SlideDirection.Start else SlideDirection.End
-    (slideIntoContainer(towards, tween(300)) + fadeIn(tween(300))) togetherWith
-        (slideOutOfContainer(towards, tween(300)) + fadeOut(tween(150)))
+    (
+        slideIntoContainer(
+            towards,
+            tween(DETAIL_TRANSITION_DURATION_MILLIS),
+            initialOffset = { fullWidth -> fullWidth / DETAIL_TRANSITION_SLIDE_FRACTION },
+        ) + fadeIn(tween(DETAIL_TRANSITION_DURATION_MILLIS))
+        ) togetherWith
+        (
+            slideOutOfContainer(
+                towards,
+                tween(DETAIL_TRANSITION_DURATION_MILLIS),
+                targetOffset = { fullWidth -> fullWidth / DETAIL_TRANSITION_SLIDE_FRACTION },
+            ) + fadeOut(tween(DETAIL_TRANSITION_EXIT_FADE_DURATION_MILLIS))
+            )
 }
+
+private const val DETAIL_TRANSITION_DURATION_MILLIS = 240
+private const val DETAIL_TRANSITION_EXIT_FADE_DURATION_MILLIS = 120
+
+// 화면 폭의 1/4만 슬라이드한다(= shared axis X). 폭 전체를 밀지 않아야 가볍게 느껴진다.
+private const val DETAIL_TRANSITION_SLIDE_FRACTION = 4
 
 /**
  * 홈 루트에서는 NavDisplay의 previousEntries가 비어 자체 back handler가 꺼지므로 이 handler가 받습니다.

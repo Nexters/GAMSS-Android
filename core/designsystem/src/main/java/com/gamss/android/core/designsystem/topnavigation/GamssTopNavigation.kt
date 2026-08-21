@@ -40,7 +40,8 @@ enum class GamssTopNavigationIcon(@DrawableRes internal val drawableRes: Int) {
     LeftChevron(R.drawable.ic_left_chevron),
 
     CreateCard(R.drawable.ic_create_card),
-    Menu(R.drawable.ic_menu),
+
+    Setting(R.drawable.ic_setting),
 
     CheckToken(R.drawable.ic_token_check),
 
@@ -300,7 +301,7 @@ private fun TopNavigationPreviewContent() {
         GamssTopNavigation(
             content = GamssTopNavigationContent.Logo,
             rightActions = listOf(
-                GamssTopNavigationIconAction(icon = GamssTopNavigationIcon.Menu, onClick = {}),
+                GamssTopNavigationIconAction(icon = GamssTopNavigationIcon.Setting, onClick = {}),
             ),
         )
         GamssTopNavigation(
@@ -309,7 +310,7 @@ private fun TopNavigationPreviewContent() {
             showLeftIcon = true,
             rightActions = listOf(
                 GamssTopNavigationIconAction(icon = GamssTopNavigationIcon.CreateCard, onClick = {}),
-                GamssTopNavigationIconAction(icon = GamssTopNavigationIcon.Menu, onClick = {}),
+                GamssTopNavigationIconAction(icon = GamssTopNavigationIcon.Setting, onClick = {}),
             ),
         )
         GamssTopNavigation(

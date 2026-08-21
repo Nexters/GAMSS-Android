@@ -48,7 +48,7 @@ import org.orbitmvi.orbit.compose.collectSideEffect
 @Composable
 fun ChattingListScreen(
     onChatClick: (conversationId: Long) -> Unit,
-    onMenuClick: () -> Unit,
+    onSettingClick: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: ChattingListViewModel = hiltViewModel(),
 ) {
@@ -81,7 +81,7 @@ fun ChattingListScreen(
             isSelectionMode = state.isSelectionMode,
             onSelectionCancel = viewModel::onSelectionCancel,
             onSearchClick = viewModel::onSearchModeEnter,
-            onMenuClick = onMenuClick,
+            onSettingClick = onSettingClick,
         )
 
         ChattingSearchContent(

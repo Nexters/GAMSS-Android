@@ -1,7 +1,10 @@
 package com.gamss.android.feature.chat.component
 
 import android.content.res.Configuration
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -14,13 +17,17 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.gamss.android.core.designsystem.card.GamssOutlinedCard
+import com.gamss.android.core.designsystem.R
 import com.gamss.android.core.designsystem.checkbox.GamssCheckbox
+import com.gamss.android.core.designsystem.modifier.noRippleCombinedClickable
 import com.gamss.android.core.designsystem.theme.GamssTheme
 
 /**
@@ -32,6 +39,10 @@ import com.gamss.android.core.designsystem.theme.GamssTheme
  * 높이는 고정이 아니라 최소값입니다. 제목이 한 줄에 안 들어가면 두 줄까지 늘어나고 카드도 함께
  * 커집니다. 콘텐츠 폭이 334dp 라 한 줄로는 20자 남짓만 들어가는데, 선택 모드에서는 체크박스가
  * 32dp 를 더 먹어 그보다 짧아집니다.
+ *
+ * 테두리는 [GamssTextField][com.gamss.android.core.designsystem.textfield.GamssTextField]와
+ * 같은 손그림 시안 `bg_textfield_default` 벡터를 깔고 색만 틴트한다. 이 표현은 채팅 목록에서만
+ * 쓰여 디자인시스템 컴포넌트가 아니라 이 카드에 직접 넣는다.
  */
 @Suppress("LongParameterList")
 @Composable
@@ -44,32 +55,34 @@ internal fun ConversationCard(
     onLongClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    GamssOutlinedCard(
+    Box(
         modifier = modifier
             .fillMaxWidth()
             .heightIn(min = ConversationCardMinHeight)
-            .semantics { if (isSelectionMode) selected = isSelected },
-        onClick = onClick,
-        onLongClick = onLongClick,
-        borderColor = if (isSelectionMode && !isSelected) {
-            GamssTheme.colors.gray200
-        } else {
-            GamssTheme.colors.gray950
-        },
-        contentPadding = ConversationCardPadding,
+            .semantics { if (isSelectionMode) selected = isSelected }
+            .background(color = GamssTheme.colors.background)
+            .noRippleCombinedClickable(onClick = onClick, onLongClick = onLongClick),
     ) {
+        Image(
+            modifier = Modifier.matchParentSize(),
+            painter = painterResource(R.drawable.bg_textfield_default),
+            contentDescription = null,
+            contentScale = ContentScale.FillBounds,
+            colorFilter = ColorFilter.tint(GamssTheme.colors.gray950),
+        )
         // SpaceBetween 은 쓸 수 없다. 제목이 짧으면 남는 폭이 자식 사이로 흩어져, 시각이 없는
         // 행에서 제목이 오른쪽 끝으로 밀려난다.
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .align(Alignment.Center),
+                .align(Alignment.Center)
+                .padding(ConversationCardPadding),
             horizontalArrangement = Arrangement.Start,
             verticalAlignment = Alignment.CenterVertically,
         ) {
             if (isSelectionMode) {
                 GamssCheckbox(checked = isSelected)
-                Spacer(modifier = Modifier.width(GamssTheme.spacing.spacing200))
+                Spacer(modifier = Modifier.width(GamssTheme.spacing.spacing050))
             }
 
             Text(
@@ -82,7 +95,7 @@ internal fun ConversationCard(
             )
 
             if (timeLabel != null) {
-                Spacer(modifier = Modifier.width(GamssTheme.spacing.spacing100))
+                Spacer(modifier = Modifier.width(GamssTheme.spacing.spacing075))
                 Text(
                     text = timeLabel,
                     style = GamssTheme.typography.body6Medium,
@@ -161,4 +174,4 @@ private const val TITLE_MAX_LINES = 2
 
 // 디자인 실측: 카드 366 폭에 내부 334, 좌우 16. 높이 59 는 한 줄일 때의 값이라 최소값으로 둔다.
 private val ConversationCardMinHeight = 59.dp
-private val ConversationCardPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)
+private val ConversationCardPadding = PaddingValues(horizontal = 16.dp, vertical = 19.dp)
