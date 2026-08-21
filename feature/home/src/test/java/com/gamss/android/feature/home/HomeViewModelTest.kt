@@ -14,6 +14,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -79,7 +80,12 @@ class HomeViewModelTest {
 
     @Test
     fun `걱정을 적고 보내면 대화를 만들고 그 방을 연다`() = runTest {
-        viewModel().test(this) {
+        val homeViewModel = viewModel()
+        val openConversation = async(start = CoroutineStart.UNDISPATCHED) {
+            homeViewModel.openConversationEvents.first()
+        }
+
+        homeViewModel.test(this) {
             containerHost.onInputChange(WORRY)
             expectState { copy(input = WORRY) }
 
@@ -89,6 +95,7 @@ class HomeViewModelTest {
             expectState { copy(input = "") }
             expectNoItems()
         }
+        assertEquals(NEW_ROOM_ID, openConversation.await())
         assertEquals(WORRY, repository.sentContent)
         assertNull(repository.sentConversationId)
     }
@@ -339,8 +346,9 @@ class HomeViewModelTest {
     fun `이동 이벤트를 수집하는 화면이 없으면 대화방 이동이 재생되지 않는다`() = runTest {
         val gate = CompletableDeferred<Unit>()
         val gated = RecordingConversationRepository(gate = gate)
+        val homeViewModel = viewModel(gated)
 
-        viewModel(gated).test(this) {
+        homeViewModel.test(this) {
             containerHost.onInputChange(WORRY)
             expectState { copy(input = WORRY) }
 
@@ -353,6 +361,11 @@ class HomeViewModelTest {
             expectState { copy(input = "") }
             expectNoItems()
         }
+
+        val replayedEvent = withTimeoutOrNull(1) {
+            homeViewModel.openConversationEvents.first()
+        }
+        assertNull(replayedEvent)
     }
 
     @Test
