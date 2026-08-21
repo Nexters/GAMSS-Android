@@ -3,7 +3,6 @@ package com.gamss.android.feature.chat
 import android.content.res.Configuration
 import android.widget.Toast
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,17 +14,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
@@ -40,13 +36,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntOffset
@@ -55,7 +49,7 @@ import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.gamss.android.core.common.util.formatConversationDate
-import com.gamss.android.core.designsystem.component.GamssIcons
+import com.gamss.android.core.designsystem.component.GamssScrollToBottomButton
 import com.gamss.android.core.designsystem.component.GamssTokenUsageTooltip
 import com.gamss.android.core.designsystem.modifier.addFocusCleaner
 import com.gamss.android.core.designsystem.modifier.gamssShadow
@@ -66,6 +60,8 @@ import com.gamss.android.core.designsystem.topnavigation.GamssTopNavigationHoriz
 import com.gamss.android.core.designsystem.topnavigation.GamssTopNavigationIcon
 import com.gamss.android.core.designsystem.topnavigation.GamssTopNavigationIconAction
 import com.gamss.android.core.designsystem.topnavigation.GamssTopNavigationTitleAlignment
+import com.gamss.android.core.ui.chat.ChatMessageBubble
+import com.gamss.android.core.ui.chat.rememberReplyQuoteLookup
 import com.gamss.android.domain.card.Card
 import com.gamss.android.domain.conversation.Message
 import com.gamss.android.domain.conversation.MessageSender
@@ -73,11 +69,9 @@ import com.gamss.android.domain.emotion.EmotionCharacter
 import com.gamss.android.domain.repository.TokenUsageAlert
 import com.gamss.android.feature.chat.component.EndConversationDialog
 import com.gamss.android.feature.chat.component.LoadingMessageBubble
-import com.gamss.android.feature.chat.component.MessageBubble
 import com.gamss.android.feature.chat.component.MessageInputBar
 import com.gamss.android.feature.chat.component.NewMessageToast
 import com.gamss.android.feature.chat.component.SupportAgencyDialog
-import com.gamss.android.feature.chat.component.toReplyQuote
 import com.gamss.android.feature.chat.util.AnimatedChatMessage
 import com.gamss.android.feature.chat.util.ChatMessageAnimation
 import com.gamss.android.feature.chat.util.ChatScrollState
@@ -217,7 +211,6 @@ private fun ChatRoomContent(
     onBackClick: () -> Unit,
 ) {
     val listState = rememberLazyListState()
-    val focusManager = LocalFocusManager.current
     val messageAnimationState = rememberChatMessageAnimationState(
         conversationId = state.conversationId,
         isLoading = state.isLoading,
@@ -310,7 +303,6 @@ private fun ChatRoomTopBar(
             onLeftIconClick = onBackClick,
             rightActions = listOfNotNull(
                 when {
-                    !state.useChatEndFeature -> null
                     state.endFlow.isBusy -> GamssTopNavigationIconAction(
                         icon = GamssTopNavigationIcon.CreateCard,
                         onClick = {},
@@ -393,11 +385,7 @@ private fun ChatMessageList(
     showScrollToBottomButton: Boolean,
     modifier: Modifier = Modifier,
 ) {
-    // 리스트 전체(state.messages)를 각 아이템에 그대로 넘기면, 메시지가 하나 추가될 때마다 리스트
-    // 참조가 바뀌어 이미 떠 있던 다른 모든 말풍선까지 재구성 대상이 된다. 답장 대상 조회를 여기서
-    // 한 번에 끝내고 아이템별로는 결과값(replyQuote)만 넘기면, 안 바뀐 아이템은 재구성을 건너뛸 수
-    // 있다. LazyListScope 빌더 본문은 @Composable이 아니라 여기(바깥)서 remember해야 한다.
-    val messagesById = remember(state.messages) { state.messages.associateBy(Message::id) }
+    val replyQuotes = rememberReplyQuoteLookup(state.messages)
 
     Box(modifier = modifier) {
         LazyColumn(
@@ -425,15 +413,13 @@ private fun ChatMessageList(
                 }
             }
             items(state.messages, key = { it.id }) { message ->
-                val replyQuote = message.repliesToMessageId
-                    ?.let { targetId -> messagesById[targetId] }
-                    ?.toReplyQuote()
+                val replyQuote = replyQuotes.quoteFor(message)
                 AnimatedChatMessage(
                     messageId = message.id,
                     shouldAnimate = animationState.shouldAnimate(message.id),
                     listState = listState,
                 ) {
-                    MessageBubble(
+                    ChatMessageBubble(
                         message = message,
                         replyQuote = replyQuote,
                         onCharacterMessageClick = actions.onCharacterMessageClick,
@@ -458,36 +444,14 @@ private fun ChatMessageList(
         }
 
         if (showScrollToBottomButton) {
-            ScrollToBottomButton(
+            GamssScrollToBottomButton(
                 onClick = { scrollState.scrollToBottom(state) },
+                contentDescription = stringResource(R.string.chat_room_scroll_to_bottom),
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
                     .padding(end = 18.dp, bottom = 12.dp),
             )
         }
-    }
-}
-
-@Composable
-private fun ScrollToBottomButton(
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Box(
-        modifier = modifier
-            .size(36.dp)
-            .gamssShadow(shape = CircleShape)
-            .clip(CircleShape)
-            .background(GamssTheme.colors.gray700, CircleShape)
-            .clickable(role = Role.Button, onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(
-            painter = painterResource(GamssIcons.ScrollDown),
-            contentDescription = stringResource(R.string.chat_room_scroll_to_bottom),
-            modifier = Modifier.size(24.dp),
-            tint = GamssTheme.colors.gray025,
-        )
     }
 }
 
@@ -524,7 +488,7 @@ private fun ChatRoomInputSection(
         onInputChange = actions.onInputChange,
         onSendClick = actions.onSendClick,
         onReplyClear = actions.onReplyTargetClear,
-        modifier = modifier,
+        modifier = Modifier,
     )
 }
 
@@ -584,7 +548,6 @@ private fun ChatRoomPreviewContent() {
         conversationId = 1,
         messages = messages,
         input = "",
-        useChatEndFeature = true,
         replyTarget = ReplyTarget(
             messageId = 1,
             characterName = "기쁨",
