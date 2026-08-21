@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
@@ -64,16 +65,26 @@ import kotlin.math.roundToInt
 fun HomeScreen(
     onNavigateToSetting: () -> Unit,
     onOpenConversation: (Long) -> Unit,
+    isActive: Boolean = true,
     modifier: Modifier = Modifier,
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val state by viewModel.collectAsState()
     val context = LocalContext.current
 
+    // 닉네임 변경 화면에서 저장하고 돌아왔을 때 최신 정보를 다시 불러온다.
+    LaunchedEffect(Unit) { viewModel.loadUserInfo() }
+
+    LaunchedEffect(isActive) {
+        if (!isActive) return@LaunchedEffect
+        viewModel.openConversationEvents.collect { conversationId ->
+            onOpenConversation(conversationId)
+        }
+    }
+
     viewModel.collectSideEffect { sideEffect ->
         when (sideEffect) {
             is HomeSideEffect.NavigateToSetting -> onNavigateToSetting()
-            is HomeSideEffect.OpenConversation -> onOpenConversation(sideEffect.conversationId)
             is HomeSideEffect.ShowToast ->
                 Toast.makeText(context, sideEffect.message, Toast.LENGTH_SHORT).show()
         }
