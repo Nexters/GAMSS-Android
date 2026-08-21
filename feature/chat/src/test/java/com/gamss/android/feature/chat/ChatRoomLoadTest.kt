@@ -47,7 +47,6 @@ class ChatRoomLoadTest {
 
         viewModel.test(this) {
             containerHost.start(ROOM_ID)
-            skipItems(1) // useChatEndFeature 반영
             skipItems(1) // isLoading = true
 
             val afterLoad = awaitState()
@@ -80,7 +79,6 @@ class ChatRoomLoadTest {
 
         viewModel.test(this) {
             containerHost.start(ROOM_ID)
-            skipItems(1) // useChatEndFeature 반영
             skipItems(1) // isLoading = true
 
             val afterLoad = awaitState()

@@ -10,6 +10,7 @@ import com.gamss.android.core.designsystem.component.GamssInputBar
 import com.gamss.android.core.designsystem.component.chat.ChatReplyQuote
 import com.gamss.android.feature.chat.R
 import com.gamss.android.feature.chat.ReplyTarget
+import com.gamss.android.core.ui.R as CoreUiR
 
 @Composable
 fun MessageInputBar(
@@ -38,7 +39,7 @@ fun MessageInputBar(
         replyQuote = replyTarget?.let {
             ChatReplyQuote(
                 senderLabel = stringResource(
-                    R.string.chat_room_reply_to_character,
+                    CoreUiR.string.chat_reply_to_character,
                     it.characterName
                 ),
                 message = it.content,

@@ -4,12 +4,6 @@
 
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    <uses-permission
-        android:name="android.permission.FOREGROUND_SERVICE"
-        tools:node="remove"/>
-    <uses-permission
-        android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC"
-        tools:node="remove"/>
 
     <!-- firebase-analytics 가 머지하는 광고 ID 권한. 캠페인 전환 추적을 도입하면 되돌려야 한다. -->
     <uses-permission

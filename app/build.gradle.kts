@@ -120,7 +120,6 @@ dependencies {
     implementation(projects.feature.home)
     implementation(projects.feature.chat)
     implementation(projects.feature.archive)
-    implementation(projects.feature.emotion)
     implementation(projects.feature.login)
     implementation(projects.feature.onboarding)
     implementation(projects.feature.setting)
