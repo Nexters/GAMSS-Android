@@ -285,9 +285,8 @@ private fun ArchiveDetailCards(
         when (cardsState) {
             ArchiveCards.Loading -> CircularProgressIndicator(color = GamssTheme.colors.gray700)
             ArchiveCards.LoadFailed -> EmptyMessage(textRes = R.string.archive_cards_load_failed)
-            is ArchiveCards.Loaded -> if (cardsState.cards.isEmpty()) {
-                EmptyMessage(textRes = R.string.archive_cards_empty)
-            } else {
+            // 카드가 없으면 아무것도 그리지 않는다. 빈 종이판이 그대로 보이는 것이 이 화면의 빈 상태다.
+            is ArchiveCards.Loaded -> if (cardsState.cards.isNotEmpty()) {
                 PaperPile(
                     cards = cardsState.cards,
                     droppedCardId = droppedCardId,
