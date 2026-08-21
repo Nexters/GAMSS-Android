@@ -73,8 +73,12 @@ internal class CardRepositoryImpl @Inject constructor(
             )
             response.throwIfFailed()
 
+            // 서버가 범위를 벗어난 카드를 섞어 보내도 캐시 경로와 답이 갈리지 않게 여기서 한 번
+            // 더 거른다. 캐시는 SQL 로 감정과 달을 걸러 읽으므로, 안 거르면 첫 조회에만 보이고
+            // 다음 조회에서 사라진다. 범위 밖 카드를 캐시에 넣으면 그 달을 반쪽만 채우게도 된다.
             val validCards = checkNotNull(response.data) { "No available card data" }
                 .mapNotNull { raw -> raw.toDomainOrNull()?.let { raw to it } }
+                .filter { (_, card) -> card.character == character && YearMonth.from(card.date) == yearMonth }
 
             cardLocalDataSource.upsertAll(validCards.map { (raw, _) -> raw.toEntity() })
 

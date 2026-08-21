@@ -321,6 +321,27 @@ class CardRepositoryImplTest {
         assertEquals(listOf(1L), (result as AppResult.Success).data.map { it.id })
     }
 
+    /** 안 거르면 첫 조회에만 보이고, 캐시가 답하는 다음 조회에서 사라진다. */
+    @Test
+    fun `서버가 범위를 벗어난 카드를 섞어 보내면 버린다`() = runTest {
+        stubEmptyMonthCache()
+        val upserted = slot<List<CardEntity>>()
+        coEvery { cardLocalDataSource.upsertAll(capture(upserted)) } returns Unit
+        coEvery { cardService.getCardsByMonthAndEmotion(any(), any()) } returns ApiResponse(
+            success = true,
+            data = listOf(
+                cardResponse(id = 1L, emotion = "ANGER"),
+                cardResponse(id = 2L, emotion = "JOY"),
+                cardResponse(id = 3L, emotion = "ANGER").copy(date = "2026-07-31"),
+            ),
+        )
+
+        val result = repository.getCardsByMonthAndEmotion(EmotionCharacter.ANGER, YearMonth.of(2026, 8))
+
+        assertEquals(listOf(1L), (result as AppResult.Success).data.map { it.id })
+        assertEquals(listOf(1L), upserted.captured.map { it.id })
+    }
+
     @Test
     fun `대상이 없는 달은 빈 목록으로 성공한다`() = runTest {
         stubEmptyMonthCache()
