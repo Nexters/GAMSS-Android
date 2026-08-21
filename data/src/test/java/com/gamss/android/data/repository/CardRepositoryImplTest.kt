@@ -1,5 +1,6 @@
 package com.gamss.android.data.repository
 
+import android.util.Log
 import com.gamss.android.core.common.AppResult
 import com.gamss.android.core.common.network.ApiException
 import com.gamss.android.data.local.card.CardLocalDataSource
@@ -14,8 +15,11 @@ import com.gamss.android.domain.auth.SessionExpiredException
 import com.gamss.android.domain.emotion.EmotionCharacter
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.every
 import io.mockk.mockk
+import io.mockk.mockkStatic
 import io.mockk.slot
+import io.mockk.unmockkStatic
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -176,10 +180,7 @@ class CardRepositoryImplTest {
         coVerify(exactly = 1) { cardLocalDataSource.deleteAll() }
     }
 
-    /**
-     * 카드를 지우면 같은 날짜 뒤 카드들의 indexInDate 가 한 칸씩 당겨지는데, 이 메서드는 지운 카드의
-     * 날짜를 모르기 때문에 그 카드만 골라 지우는 대신 캐시 전체를 비워 다음 조회 때 다시 채운다.
-     */
+    /** 지운 카드의 감정도 날짜도 모르므로, 그 한 장만 골라 지우는 대신 캐시 전체를 비운다. */
     @Test
     fun `이미 삭제된 카드도 성공으로 전달하며 캐시를 비운다`() = runTest {
         coEvery { cardService.deleteCard(1L) } returns ApiResponse<Unit>(
@@ -292,7 +293,7 @@ class CardRepositoryImplTest {
     }
 
     @Test
-    fun `감정과 월을 API 형식으로 조회하고 오래된 순으로 뒤집는다`() = runTest {
+    fun `감정과 월을 API 형식으로 조회하고 오래된 순으로 돌려준다`() = runTest {
         stubEmptyMonthCache()
         coEvery { cardService.getCardsByMonthAndEmotion("ANGER", "2026-08") } returns ApiResponse(
             success = true,
@@ -348,6 +349,72 @@ class CardRepositoryImplTest {
         val result = repository.getCardsByMonthAndEmotion(EmotionCharacter.ANGER, YearMonth.of(2026, 8))
 
         assertTrue((result as AppResult.Success).data.isEmpty())
+    }
+
+    /**
+     * 같은 목록인데 캐시에서 왔는지 서버에서 왔는지에 따라 순서가 달라지면 종이 더미가 진입 경로마다
+     * 다르게 쌓인다. 두 경로가 같은 기준으로 정렬하는지 못 박는다.
+     */
+    @Test
+    fun `캐시 경로와 서버 경로가 같은 순서를 돌려준다`() = runTest {
+        stubEmptyMonthCache()
+        coEvery { cardService.getCardsByMonthAndEmotion(any(), any()) } returns ApiResponse(
+            success = true,
+            data = listOf(
+                cardResponse(emotion = "ANGER").copy(id = 3L, date = "2026-08-17"),
+                cardResponse(emotion = "ANGER").copy(id = 2L, date = "2026-08-15"),
+                cardResponse(emotion = "ANGER").copy(id = 1L, date = "2026-08-15"),
+            ),
+        )
+        val fromServer = repository.getCardsByMonthAndEmotion(EmotionCharacter.ANGER, YearMonth.of(2026, 8))
+
+        coEvery {
+            cardLocalDataSource.findByEmotionAndMonth("ANGER", YearMonth.of(2026, 8))
+        } returns listOf(
+            cardEntity(id = 3L, date = "2026-08-17"),
+            cardEntity(id = 2L),
+            cardEntity(id = 1L),
+        )
+        val fromCache = repository.getCardsByMonthAndEmotion(EmotionCharacter.ANGER, YearMonth.of(2026, 8))
+
+        val serverOrder = (fromServer as AppResult.Success).data.map { it.id }
+        assertEquals(listOf(1L, 2L, 3L), serverOrder)
+        assertEquals(serverOrder, (fromCache as AppResult.Success).data.map { it.id })
+    }
+
+    /** 폴백 경로가 경고를 남기므로 Log 를 세워 둔다. 유닛 테스트에서는 mock 이 없어 그대로 던진다. */
+    @Test
+    fun `캐시 조회가 실패하면 서버 조회로 대체한다`() = runTest {
+        mockkStatic(Log::class)
+        every { Log.w(any<String>(), any<String>(), any<Throwable>()) } returns 0
+        try {
+            coEvery {
+                cardLocalDataSource.findByEmotionAndMonth(any(), any())
+            } throws IllegalStateException("db")
+            coEvery { cardLocalDataSource.upsertAll(any()) } returns Unit
+            coEvery { cardService.getCardsByMonthAndEmotion(any(), any()) } returns ApiResponse(
+                success = true,
+                data = listOf(cardResponse(emotion = "ANGER")),
+            )
+
+            val result = repository.getCardsByMonthAndEmotion(EmotionCharacter.ANGER, YearMonth.of(2026, 8))
+
+            assertEquals(listOf(1L), (result as AppResult.Success).data.map { it.id })
+            coVerify(exactly = 1) { cardService.getCardsByMonthAndEmotion(any(), any()) }
+        } finally {
+            unmockkStatic(Log::class)
+        }
+    }
+
+    /** 빈 달은 `data = []` 로 온다는 계약에 기댄다. null 이면 빈 상태가 아니라 오류로 알린다. */
+    @Test
+    fun `월별 감정 응답에 카드 데이터가 없으면 실패로 전한다`() = runTest {
+        stubEmptyMonthCache()
+        coEvery { cardService.getCardsByMonthAndEmotion(any(), any()) } returns ApiResponse(success = true)
+
+        val result = repository.getCardsByMonthAndEmotion(EmotionCharacter.ANGER, YearMonth.of(2026, 8))
+
+        assertTrue((result as AppResult.Failure).throwable is IllegalStateException)
     }
 
     @Test

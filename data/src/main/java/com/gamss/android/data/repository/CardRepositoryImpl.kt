@@ -77,6 +77,7 @@ internal class CardRepositoryImpl @Inject constructor(
             cardLocalDataSource
                 .findByEmotionAndMonth(serverEmotion, yearMonth)
                 .map { it.toDomain() }
+                .sortedOldestFirst()
         }
             .onFailure { throwable ->
                 if (throwable is CancellationException) throw throwable
@@ -103,8 +104,7 @@ internal class CardRepositoryImpl @Inject constructor(
 
             cardLocalDataSource.upsertAll(validCards.map { (raw, _) -> raw.toEntity() })
 
-            // 서버는 최신순으로 준다.
-            validCards.map { (_, card) -> card }.reversed()
+            validCards.map { (_, card) -> card }.sortedOldestFirst()
         }
     }
 
@@ -192,3 +192,10 @@ internal class CardRepositoryImpl @Inject constructor(
             }
     }
 }
+
+/**
+ * 캐시와 서버, 두 경로가 같은 목록에 같은 순서를 내야 한다. 서버 정렬을 가정하지 않고 여기서
+ * 확정한다.
+ */
+private fun List<Card>.sortedOldestFirst(): List<Card> =
+    sortedWith(compareBy({ it.date }, { it.id }))
