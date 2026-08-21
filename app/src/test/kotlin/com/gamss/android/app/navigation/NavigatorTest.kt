@@ -7,6 +7,7 @@ import com.gamss.android.feature.archive.navigation.ArchiveDetailKey
 import com.gamss.android.feature.archive.navigation.ArchiveKey
 import com.gamss.android.feature.carddelete.navigation.CardDeleteKey
 import com.gamss.android.feature.chat.navigation.ChatKey
+import com.gamss.android.feature.chat.navigation.ChatRoomKey
 import com.gamss.android.feature.home.navigation.HomeKey
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -82,6 +83,33 @@ class NavigatorTest {
         assertTrue(navigator.consumeShreddedCard())
     }
 
+    /** 끝난 대화방이 남으면 뒤로 나갔을 때 이어 쓸 수 없는 방으로 돌아간다. */
+    @Test
+    fun 버린_카드를_열면_대화방을_걷어내고_보관함_상세만_올린다() {
+        val navigator = navigator()
+        navigator.navigate(ChatKey)
+        navigator.navigate(ChatRoomKey(CONVERSATION_ID))
+
+        navigator.openDroppedCard(ArchiveKey, ArchiveDetailKey(EMOTION), CARD_ID)
+
+        assertEquals(ArchiveDetailKey(EMOTION), navigator.state.currentKey)
+        assertEquals(
+            listOf(ArchiveKey, ArchiveDetailKey(EMOTION)),
+            navigator.state.currentSubStack.toList(),
+        )
+        assertEquals(listOf(ChatKey), navigator.state.subStacks.getValue(ChatKey).toList())
+    }
+
+    /** 신호를 비우지 않으면 그 칸에 다시 들어올 때마다 같은 종이가 또 떨어진다. */
+    @Test
+    fun 버린_카드_신호는_한_번만_읽힌다() {
+        val navigator = navigator()
+        navigator.openDroppedCard(ArchiveKey, ArchiveDetailKey(EMOTION), CARD_ID)
+
+        assertEquals(CARD_ID, navigator.consumeDroppedCardId())
+        assertEquals(null, navigator.consumeDroppedCardId())
+    }
+
     /** 신호를 비우지 않으면 그 칸에 다시 들어올 때마다 목록을 또 받는다. */
     @Test
     fun 파쇄_신호는_한_번만_읽힌다() {
@@ -97,6 +125,7 @@ class NavigatorTest {
 
     private companion object {
         const val CARD_ID = 7L
+        const val CONVERSATION_ID = 42L
         val EMOTION = EmotionCharacter.ANGER
     }
 }

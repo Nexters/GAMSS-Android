@@ -109,6 +109,42 @@ class ArchiveDetailViewModelTest {
     }
 
     @Test
+    fun `같은 감정으로 다시 들어오면 이미 받은 목록을 그대로 쓴다`() = runTest {
+        val repository = FakeCardRepository(AppResult.Success(listOf(angerCard)))
+        val viewModel = viewModel(repository)
+
+        viewModel.test(this) {
+            containerHost.load(EmotionCharacter.ANGER)
+            expectState { copy(emotion = EmotionCharacter.ANGER) }
+            expectState { copy(cards = ArchiveCards.Loaded(listOf(angerCard))) }
+
+            containerHost.load(EmotionCharacter.ANGER)
+        }
+
+        assertEquals(1, repository.requests.size)
+    }
+
+    /** 파쇄 화면에서 돌아오는 길이 이 스위치에 걸려 있다. 건너뛰면 지운 카드가 목록에 남는다. */
+    @Test
+    fun `force 면 같은 감정이어도 목록을 비우고 다시 받는다`() = runTest {
+        val repository = FakeCardRepository(AppResult.Success(listOf(angerCard)))
+        val viewModel = viewModel(repository)
+
+        viewModel.test(this) {
+            containerHost.load(EmotionCharacter.ANGER)
+            expectState { copy(emotion = EmotionCharacter.ANGER) }
+            expectState { copy(cards = ArchiveCards.Loaded(listOf(angerCard))) }
+
+            containerHost.load(EmotionCharacter.ANGER, force = true)
+            // 다시 받는 동안 지운 종이가 남아 눌리지 않도록 목록을 먼저 비운다.
+            expectState { copy(cards = ArchiveCards.Loading) }
+            expectState { copy(cards = ArchiveCards.Loaded(listOf(angerCard))) }
+        }
+
+        assertEquals(2, repository.requests.size)
+    }
+
+    @Test
     fun `종이를 누르면 조회 없이 그 카드를 상세로 올린다`() = runTest {
         val repository = FakeCardRepository(AppResult.Success(listOf(angerCard, joyCard)))
         val viewModel = viewModel(repository)

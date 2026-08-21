@@ -28,14 +28,14 @@ class ArchiveDetailViewModel @Inject constructor(
     /**
      * 보던 달의 카드를 받아 온다.
      *
-     * @param force 같은 감정이어도 다시 받는다. 방금 버린 카드를 보고 들어왔을 때 쓴다. 이 칸에
-     *  이미 들어와 있던 채로 또 버리면 back stack 이 그대로라 ViewModel 도 살아남는데, 그때
-     *  건너뛰면 방금 만든 카드가 목록에 안 들어온다.
+     * @param force 같은 감정이어도 다시 받는다. 방금 버린 카드를 보고 들어왔을 때와 파쇄 화면에서
+     *  돌아왔을 때 쓴다. 그 칸의 ViewModel 이 back stack 에 살아남아 지운 카드를 그대로 들고 있다.
      */
     fun load(emotion: EmotionCharacter, force: Boolean = false) = intent {
         if (!force && state.emotion == emotion) return@intent
 
-        reduce { state.copy(emotion = emotion) }
+        // 다시 받는 동안 지난 목록을 남겨 두면 이미 지운 종이를 눌러 그 카드로 파쇄까지 들어갈 수 있다.
+        reduce { state.copy(emotion = emotion, cards = ArchiveCards.Loading) }
         loadMonth(emotion, state.yearMonth)
     }
 

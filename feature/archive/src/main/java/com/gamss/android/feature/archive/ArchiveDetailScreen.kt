@@ -17,6 +17,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -63,10 +66,14 @@ fun ArchiveDetailScreen(
     val shareChooserTitle = stringResource(R.string.archive_card_share_chooser_title)
     val conversationLoadFailedMessage = stringResource(R.string.archive_conversation_load_error)
 
-    // 파쇄 화면에서 돌아왔을 때도 다시 받아야 한다. 지운 카드가 목록에 그대로 남는다.
+    // 다시 받지 않으면 파쇄 화면에서 지운 카드가 목록에 그대로 남는다.
     LaunchedEffect(emotion) {
         viewModel.load(emotion, force = droppedCardId != null || hasShreddedCard)
     }
+
+    // Navigator 가 한 번만 내주지만 이 화면은 그 값을 파라미터로 계속 들고 있다. 달을 바꾸면 종이
+    // 더미가 컴포지션에서 빠지므로, 소비 기록은 더미보다 오래 사는 이 자리에 둔다.
+    var pendingDropId by remember { mutableStateOf(droppedCardId) }
 
     viewModel.collectSideEffect { sideEffect ->
         when (sideEffect) {
@@ -80,7 +87,8 @@ fun ArchiveDetailScreen(
     ArchiveDetailFrame(
         emotion = emotion,
         state = state,
-        droppedCardId = droppedCardId,
+        droppedCardId = pendingDropId,
+        onDropConsumed = { pendingDropId = null },
         onBackClick = onBackClick,
         onPaperClick = viewModel::selectCard,
         onMonthClick = viewModel::showMonthPicker,
@@ -108,6 +116,7 @@ private fun ArchiveDetailFrame(
     emotion: EmotionCharacter,
     state: ArchiveDetailState,
     droppedCardId: Long?,
+    onDropConsumed: () -> Unit,
     onBackClick: () -> Unit,
     onPaperClick: (Card) -> Unit,
     onMonthClick: () -> Unit,
@@ -125,8 +134,9 @@ private fun ArchiveDetailFrame(
     ) { innerPadding ->
         Box(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
             ArchiveDetailCards(
-                cards = state.cards,
+                cardsState = state.cards,
                 droppedCardId = droppedCardId,
+                onDropConsumed = onDropConsumed,
                 onPaperClick = onPaperClick,
             )
             // 종이가 쌓일 자리보다 나중에 둔다. 카드가 많아 더미가 위로 넘치면 종이가 셀렉터를
@@ -266,20 +276,22 @@ private fun ArchiveDetailTopBar(
 
 @Composable
 private fun ArchiveDetailCards(
-    cards: ArchiveCards,
+    cardsState: ArchiveCards,
     droppedCardId: Long?,
+    onDropConsumed: () -> Unit,
     onPaperClick: (Card) -> Unit,
 ) {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        when (cards) {
+        when (cardsState) {
             ArchiveCards.Loading -> CircularProgressIndicator(color = GamssTheme.colors.gray700)
             ArchiveCards.LoadFailed -> EmptyMessage(textRes = R.string.archive_cards_load_failed)
-            is ArchiveCards.Loaded -> if (cards.cards.isEmpty()) {
+            is ArchiveCards.Loaded -> if (cardsState.cards.isEmpty()) {
                 EmptyMessage(textRes = R.string.archive_cards_empty)
             } else {
                 PaperPile(
-                    cards = cards.cards,
+                    cards = cardsState.cards,
                     droppedCardId = droppedCardId,
+                    onDropConsumed = onDropConsumed,
                     onPaperClick = onPaperClick,
                 )
             }
@@ -315,6 +327,7 @@ private fun ArchiveDetailPaperPilePreview() {
                 cards = ArchiveCards.Loaded(List(24) { index -> PreviewCard.copy(id = index.toLong()) }),
             ),
             droppedCardId = null,
+            onDropConsumed = {},
             onBackClick = {},
             onPaperClick = {},
             onMonthClick = {},

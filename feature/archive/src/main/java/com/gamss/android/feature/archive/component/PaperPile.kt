@@ -9,10 +9,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
@@ -34,12 +31,15 @@ import com.gamss.android.feature.archive.R
  * 위에서 쏟아져 바닥에 쌓이는 종이 더미. 어디에 어떻게 놓이는지는 [PaperFall] 이 정한다.
  *
  * @param droppedCardId 방금 버려서 이 화면으로 넘어온 카드. 그 한 장만 떨어지고 나머지는 이미
- *  쌓인 채로 시작한다. null 이면 전부 쏟는다. 첫 더미에만 쓰고 버린다.
+ *  쌓인 채로 시작한다. null 이면 전부 쏟는다.
+ * @param onDropConsumed 첫 더미에만 쓰고 비우라고 호출자에게 알린다. 이 컴포저블은 달을 바꾸면
+ *  컴포지션에서 빠져 소비 기록을 스스로 들고 있을 수 없다.
  */
 @Composable
 internal fun PaperPile(
     cards: List<Card>,
     droppedCardId: Long?,
+    onDropConsumed: () -> Unit,
     onPaperClick: (Card) -> Unit,
 ) {
     BoxWithConstraints(
@@ -64,22 +64,18 @@ internal fun PaperPile(
             pileOffsetX = ((maxWidth - designWidth(scale)) / 2).toPx()
         }
 
-        // Navigator 가 한 번만 내주지만 이 화면은 그 값을 파라미터로 계속 들고 있다. 목록이 새로
-        // 만들어질 때마다(카드 삭제, 달 바꿔 돌아오기) 또 한 장만 떨어지지 않게 여기서도 한 번
-        // 쓰고 비운다.
-        var pendingDrop by remember { mutableStateOf(droppedCardId) }
         // 키에 화면 크기를 넣지 않는다. 크기만 바뀌었을 때 이미 쌓인 종이가 다시 쏟아지면 안 된다.
         // 바뀐 칸은 컴포지션이 확정된 뒤에 흘려 넣는다. 버려질 수 있는 컴포지션에서 쓰면 안 된다.
         val fall = remember(cards) {
             PaperFall(
                 count = cards.size,
                 geometry = geometry,
-                droppingIndex = cards.droppedIndex(pendingDrop),
+                droppingIndex = cards.droppedIndex(droppedCardId),
             )
         }
         SideEffect {
             fall.geometry = geometry
-            pendingDrop = null
+            if (droppedCardId != null) onDropConsumed()
         }
 
         LaunchedEffect(fall) { fall.run() }
