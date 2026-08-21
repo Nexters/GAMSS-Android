@@ -1,23 +1,25 @@
 package com.gamss.android.data.repository
 
+import android.util.Log
 import com.gamss.android.core.common.AppResult
 import com.gamss.android.core.common.network.ApiException
 import com.gamss.android.data.local.card.CardLocalDataSource
 import com.gamss.android.data.local.card.model.CardEntity
 import com.gamss.android.data.local.card.model.toDomain
 import com.gamss.android.data.remote.card.CardService
-import com.gamss.android.data.remote.card.model.response.CardCalendarResponse
 import com.gamss.android.data.remote.card.model.response.CardDeleteResponse
 import com.gamss.android.data.remote.card.model.response.CardResponse
 import com.gamss.android.data.remote.model.response.ApiError
 import com.gamss.android.data.remote.model.response.ApiResponse
 import com.gamss.android.domain.auth.SessionExpiredException
-import com.gamss.android.domain.card.CardEntry
 import com.gamss.android.domain.emotion.EmotionCharacter
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.every
 import io.mockk.mockk
+import io.mockk.mockkStatic
 import io.mockk.slot
+import io.mockk.unmockkStatic
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -34,7 +36,6 @@ class CardRepositoryImplTest {
     @Test
     fun `날짜를 API 형식으로 조회하고 카드 감정을 캐릭터로 매핑한다`() = runTest {
         val date = LocalDate.of(2026, 8, 15)
-        coEvery { cardLocalDataSource.findByDate(date) } returns emptyList()
         coEvery { cardService.getCardsByDate("2026-08-15") } returns ApiResponse(
             success = true,
             data = listOf(cardResponse(emotion = "ANGER")),
@@ -50,7 +51,6 @@ class CardRepositoryImplTest {
 
     @Test
     fun `알 수 없는 감정 카드는 제외하고 유효한 카드는 남긴다`() = runTest {
-        coEvery { cardLocalDataSource.findByDate(DATE) } returns emptyList()
         coEvery { cardService.getCardsByDate(any()) } returns ApiResponse(
             success = true,
             data = listOf(
@@ -70,7 +70,6 @@ class CardRepositoryImplTest {
 
     @Test
     fun `성공 응답이어도 실패 envelope는 실패로 전한다`() = runTest {
-        coEvery { cardLocalDataSource.findByDate(DATE) } returns emptyList()
         coEvery { cardService.getCardsByDate(any()) } returns ApiResponse(
             success = false,
             error = ApiError(code = "EXPIRED_TOKEN", message = "만료"),
@@ -83,7 +82,6 @@ class CardRepositoryImplTest {
 
     @Test
     fun `카드 데이터가 없으면 실패로 전한다`() = runTest {
-        coEvery { cardLocalDataSource.findByDate(DATE) } returns emptyList()
         coEvery { cardService.getCardsByDate(any()) } returns ApiResponse(success = true)
 
         val result = repository.getCardsByDate(DATE)
@@ -91,41 +89,21 @@ class CardRepositoryImplTest {
         assertTrue((result as AppResult.Failure).throwable is IllegalStateException)
     }
 
-    @Test
-    fun `그 날짜가 캐시에 있으면 서버를 호출하지 않고 캐시를 그대로 돌려준다`() = runTest {
-        val cached = listOf(cardEntity(id = 7L, indexInDate = 0), cardEntity(id = 8L, indexInDate = 1))
-        coEvery { cardLocalDataSource.findByDate(DATE) } returns cached
-
-        val result = repository.getCardsByDate(DATE)
-
-        assertEquals(cached.map { it.toDomain() }, (result as AppResult.Success).data)
-        coVerify(exactly = 0) { cardService.getCardsByDate(any()) }
-    }
-
     /**
-     * 월별 응답과 마찬가지로 selectCard 는 유효한 카드만 남긴 목록의 위치로 카드를 집으므로,
-     * 캐시에 적는 indexInDate 도 원본 응답 위치가 아니라 걸러낸 뒤의 위치와 같아야 한다.
+     * 캐시는 (감정, 달) 단위로만 채워진다. 날짜로 걸러 읽으면 그 날이 다 들어 있다는 보장이 없어,
+     * 한 장만 있어도 완전하다고 오해하고 서버를 건너뛴다.
      */
     @Test
-    fun `캐시가 비어 있으면 서버에서 가져와 유효한 카드만 걸러낸 순서로 캐시에 저장한다`() = runTest {
-        coEvery { cardLocalDataSource.findByDate(DATE) } returns emptyList()
+    fun `날짜별 조회는 캐시를 읽지도 쓰지도 않는다`() = runTest {
         coEvery { cardService.getCardsByDate(any()) } returns ApiResponse(
             success = true,
-            data = listOf(
-                cardResponse(id = 1L, emotion = "UNKNOWN"),
-                cardResponse(id = 2L, emotion = "ANGER"),
-                cardResponse(id = 3L, emotion = "JOY"),
-            ),
+            data = listOf(cardResponse(emotion = "ANGER")),
         )
-        val upserted = slot<List<CardEntity>>()
-        coEvery { cardLocalDataSource.upsertAll(capture(upserted)) } returns Unit
 
         repository.getCardsByDate(DATE)
 
-        assertEquals(
-            listOf(2L to 0, 3L to 1),
-            upserted.captured.map { it.id to it.indexInDate },
-        )
+        coVerify(exactly = 1) { cardService.getCardsByDate("2026-08-15") }
+        coVerify(exactly = 0) { cardLocalDataSource.upsertAll(any()) }
     }
 
     @Test
@@ -185,10 +163,7 @@ class CardRepositoryImplTest {
         coVerify(exactly = 1) { cardLocalDataSource.deleteAll() }
     }
 
-    /**
-     * 카드를 지우면 같은 날짜 뒤 카드들의 indexInDate 가 한 칸씩 당겨지는데, 이 메서드는 지운 카드의
-     * 날짜를 모르기 때문에 그 카드만 골라 지우는 대신 캐시 전체를 비워 다음 조회 때 다시 채운다.
-     */
+    /** 지운 카드의 감정도 날짜도 모르므로, 그 한 장만 골라 지우는 대신 캐시 전체를 비운다. */
     @Test
     fun `이미 삭제된 카드도 성공으로 전달하며 캐시를 비운다`() = runTest {
         coEvery { cardService.deleteCard(1L) } returns ApiResponse<Unit>(
@@ -273,62 +248,177 @@ class CardRepositoryImplTest {
     }
 
     @Test
-    fun `월을 API 형식으로 조회하고 하루치 감정 목록을 카드 한 건씩으로 펼친다`() = runTest {
-        coEvery { cardService.getCardsByMonth("2026-08") } returns ApiResponse(
-            success = true,
-            data = listOf(
-                CardCalendarResponse(date = "2026-08-15", emotions = listOf("ANGER", "JOY")),
-                CardCalendarResponse(date = "2026-08-16", emotions = listOf("GRUMPY")),
-            ),
-        )
+    fun `그 감정 칸의 그 달이 캐시에 있으면 서버를 호출하지 않는다`() = runTest {
+        val cached = listOf(cardEntity(id = 1L), cardEntity(id = 2L, date = "2026-08-16"))
+        coEvery {
+            cardLocalDataSource.findByEmotionAndMonth("ANGER", YearMonth.of(2026, 8))
+        } returns cached
 
-        val result = repository.getCardsByMonth(YearMonth.of(2026, 8))
+        val result = repository.getCardsByMonthAndEmotion(EmotionCharacter.ANGER, YearMonth.of(2026, 8))
 
-        assertEquals(
-            listOf(
-                CardEntry(LocalDate.of(2026, 8, 15), 0, EmotionCharacter.ANGER),
-                CardEntry(LocalDate.of(2026, 8, 15), 1, EmotionCharacter.JOY),
-                CardEntry(LocalDate.of(2026, 8, 16), 0, EmotionCharacter.PRICKLY),
-            ),
-            (result as AppResult.Success).data,
-        )
-        coVerify(exactly = 1) { cardService.getCardsByMonth("2026-08") }
-    }
-
-    /** 날짜별 조회도 알 수 없는 감정을 버리므로, 순번은 버린 뒤를 기준으로 세야 두 응답이 맞물린다. */
-    @Test
-    fun `날짜를 못 읽는 날은 그 날만 버리고 나머지 달은 살린다`() = runTest {
-        coEvery { cardService.getCardsByMonth(any()) } returns ApiResponse(
-            success = true,
-            data = listOf(
-                CardCalendarResponse(date = "2026-08-99", emotions = listOf("ANGER")),
-                CardCalendarResponse(date = "2026-08-16", emotions = listOf("JOY")),
-            ),
-        )
-
-        val result = repository.getCardsByMonth(YearMonth.of(2026, 8))
-
-        assertEquals(
-            listOf(CardEntry(LocalDate.of(2026, 8, 16), 0, EmotionCharacter.JOY)),
-            (result as AppResult.Success).data,
-        )
+        assertEquals(cached.map { it.toDomain() }, (result as AppResult.Success).data)
+        coVerify(exactly = 0) { cardService.getCardsByMonthAndEmotion(any(), any()) }
     }
 
     @Test
-    fun `알 수 없는 감정을 버린 뒤를 기준으로 그날 순번을 센다`() = runTest {
-        coEvery { cardService.getCardsByMonth(any()) } returns ApiResponse(
+    fun `캐시가 비어 있으면 서버에서 받아 캐시에 저장한다`() = runTest {
+        stubEmptyMonthCache()
+        val upserted = slot<List<CardEntity>>()
+        coEvery { cardLocalDataSource.upsertAll(capture(upserted)) } returns Unit
+        coEvery { cardService.getCardsByMonthAndEmotion(any(), any()) } returns ApiResponse(
+            success = true,
+            data = listOf(cardResponse(id = 2L, emotion = "ANGER"), cardResponse(id = 1L, emotion = "ANGER")),
+        )
+
+        repository.getCardsByMonthAndEmotion(EmotionCharacter.ANGER, YearMonth.of(2026, 8))
+
+        assertEquals(listOf(2L, 1L), upserted.captured.map { it.id })
+    }
+
+    @Test
+    fun `감정과 월을 API 형식으로 조회하고 오래된 순으로 돌려준다`() = runTest {
+        stubEmptyMonthCache()
+        coEvery { cardService.getCardsByMonthAndEmotion("ANGER", "2026-08") } returns ApiResponse(
             success = true,
             data = listOf(
-                CardCalendarResponse(date = "2026-08-15", emotions = listOf("UNKNOWN", "ANGER")),
+                cardResponse(emotion = "ANGER").copy(id = 2L, date = "2026-08-16"),
+                cardResponse(emotion = "ANGER").copy(id = 1L, date = "2026-08-15"),
             ),
         )
 
-        val result = repository.getCardsByMonth(YearMonth.of(2026, 8))
+        val result = repository.getCardsByMonthAndEmotion(EmotionCharacter.ANGER, YearMonth.of(2026, 8))
 
-        assertEquals(
-            listOf(CardEntry(LocalDate.of(2026, 8, 15), 0, EmotionCharacter.ANGER)),
-            (result as AppResult.Success).data,
+        assertEquals(listOf(1L, 2L), (result as AppResult.Success).data.map { it.id })
+        coVerify(exactly = 1) { cardService.getCardsByMonthAndEmotion("ANGER", "2026-08") }
+    }
+
+    @Test
+    fun `캐릭터를 서버 감정 이름으로 바꿔 경로에 넣는다`() = runTest {
+        stubEmptyMonthCache()
+        coEvery { cardService.getCardsByMonthAndEmotion("GRUMPY", any()) } returns ApiResponse(
+            success = true,
+            data = emptyList(),
         )
+
+        repository.getCardsByMonthAndEmotion(EmotionCharacter.PRICKLY, YearMonth.of(2026, 8))
+
+        coVerify(exactly = 1) { cardService.getCardsByMonthAndEmotion("GRUMPY", "2026-08") }
+    }
+
+    @Test
+    fun `못 읽는 카드는 그것만 버리고 나머지 달은 살린다`() = runTest {
+        stubEmptyMonthCache()
+        coEvery { cardService.getCardsByMonthAndEmotion(any(), any()) } returns ApiResponse(
+            success = true,
+            data = listOf(
+                cardResponse(emotion = "ANGER").copy(id = 2L, date = "2026-08-99"),
+                cardResponse(emotion = "ANGER").copy(id = 1L),
+            ),
+        )
+
+        val result = repository.getCardsByMonthAndEmotion(EmotionCharacter.ANGER, YearMonth.of(2026, 8))
+
+        assertEquals(listOf(1L), (result as AppResult.Success).data.map { it.id })
+    }
+
+    /** 안 거르면 첫 조회에만 보이고, 캐시가 답하는 다음 조회에서 사라진다. */
+    @Test
+    fun `서버가 범위를 벗어난 카드를 섞어 보내면 버린다`() = runTest {
+        stubEmptyMonthCache()
+        val upserted = slot<List<CardEntity>>()
+        coEvery { cardLocalDataSource.upsertAll(capture(upserted)) } returns Unit
+        coEvery { cardService.getCardsByMonthAndEmotion(any(), any()) } returns ApiResponse(
+            success = true,
+            data = listOf(
+                cardResponse(id = 1L, emotion = "ANGER"),
+                cardResponse(id = 2L, emotion = "JOY"),
+                cardResponse(id = 3L, emotion = "ANGER").copy(date = "2026-07-31"),
+            ),
+        )
+
+        val result = repository.getCardsByMonthAndEmotion(EmotionCharacter.ANGER, YearMonth.of(2026, 8))
+
+        assertEquals(listOf(1L), (result as AppResult.Success).data.map { it.id })
+        assertEquals(listOf(1L), upserted.captured.map { it.id })
+    }
+
+    @Test
+    fun `대상이 없는 달은 빈 목록으로 성공한다`() = runTest {
+        stubEmptyMonthCache()
+        coEvery { cardService.getCardsByMonthAndEmotion(any(), any()) } returns ApiResponse(
+            success = true,
+            data = emptyList(),
+        )
+
+        val result = repository.getCardsByMonthAndEmotion(EmotionCharacter.ANGER, YearMonth.of(2026, 8))
+
+        assertTrue((result as AppResult.Success).data.isEmpty())
+    }
+
+    /**
+     * 같은 목록인데 캐시에서 왔는지 서버에서 왔는지에 따라 순서가 달라지면 종이 더미가 진입 경로마다
+     * 다르게 쌓인다. 두 경로가 같은 기준으로 정렬하는지 못 박는다.
+     */
+    @Test
+    fun `캐시 경로와 서버 경로가 같은 순서를 돌려준다`() = runTest {
+        stubEmptyMonthCache()
+        coEvery { cardService.getCardsByMonthAndEmotion(any(), any()) } returns ApiResponse(
+            success = true,
+            data = listOf(
+                cardResponse(emotion = "ANGER").copy(id = 3L, date = "2026-08-17"),
+                cardResponse(emotion = "ANGER").copy(id = 2L, date = "2026-08-15"),
+                cardResponse(emotion = "ANGER").copy(id = 1L, date = "2026-08-15"),
+            ),
+        )
+        val fromServer = repository.getCardsByMonthAndEmotion(EmotionCharacter.ANGER, YearMonth.of(2026, 8))
+
+        coEvery {
+            cardLocalDataSource.findByEmotionAndMonth("ANGER", YearMonth.of(2026, 8))
+        } returns listOf(
+            cardEntity(id = 3L, date = "2026-08-17"),
+            cardEntity(id = 2L),
+            cardEntity(id = 1L),
+        )
+        val fromCache = repository.getCardsByMonthAndEmotion(EmotionCharacter.ANGER, YearMonth.of(2026, 8))
+
+        val serverOrder = (fromServer as AppResult.Success).data.map { it.id }
+        assertEquals(listOf(1L, 2L, 3L), serverOrder)
+        assertEquals(serverOrder, (fromCache as AppResult.Success).data.map { it.id })
+    }
+
+    /** 폴백 경로가 경고를 남기므로 Log 를 세워 둔다. 유닛 테스트에서는 mock 이 없어 그대로 던진다. */
+    @Test
+    fun `캐시 조회가 실패하면 서버 조회로 대체한다`() = runTest {
+        mockkStatic(Log::class)
+        every { Log.w(any<String>(), any<String>(), any<Throwable>()) } returns 0
+        try {
+            coEvery {
+                cardLocalDataSource.findByEmotionAndMonth(any(), any())
+            } throws IllegalStateException("db")
+            coEvery { cardLocalDataSource.upsertAll(any()) } returns Unit
+            coEvery { cardService.getCardsByMonthAndEmotion(any(), any()) } returns ApiResponse(
+                success = true,
+                data = listOf(cardResponse(emotion = "ANGER")),
+            )
+
+            val result = repository.getCardsByMonthAndEmotion(EmotionCharacter.ANGER, YearMonth.of(2026, 8))
+
+            assertEquals(listOf(1L), (result as AppResult.Success).data.map { it.id })
+            coVerify(exactly = 1) { cardService.getCardsByMonthAndEmotion(any(), any()) }
+        } finally {
+            unmockkStatic(Log::class)
+        }
+    }
+
+    /** 빈 달은 `data = []` 로 온다는 계약에 기댄다. null 이면 빈 상태가 아니라 오류로 알린다. */
+    @Test
+    fun `월별 감정 응답에 카드 데이터가 없으면 실패로 전한다`() = runTest {
+        stubEmptyMonthCache()
+        coEvery { cardService.getCardsByMonthAndEmotion(any(), any()) } returns ApiResponse(success = true)
+
+        val result = repository.getCardsByMonthAndEmotion(EmotionCharacter.ANGER, YearMonth.of(2026, 8))
+
+        assertTrue((result as AppResult.Failure).throwable is IllegalStateException)
     }
 
     @Test
@@ -351,15 +441,19 @@ class CardRepositoryImplTest {
         repository.clearCache()
     }
 
-    private fun cardEntity(id: Long, indexInDate: Int) = CardEntity(
+    private fun stubEmptyMonthCache() {
+        coEvery { cardLocalDataSource.findByEmotionAndMonth(any(), any()) } returns emptyList()
+        coEvery { cardLocalDataSource.upsertAll(any()) } returns Unit
+    }
+
+    private fun cardEntity(id: Long, emotion: String = "ANGER", date: String = "2026-08-15") = CardEntity(
         id = id,
         conversationId = id,
-        emotion = "ANGER",
+        emotion = emotion,
         emotionLabel = "분노",
         summary = "요약",
         message = "대사",
-        date = "2026-08-15",
-        indexInDate = indexInDate,
+        date = date,
     )
 
     private companion object {

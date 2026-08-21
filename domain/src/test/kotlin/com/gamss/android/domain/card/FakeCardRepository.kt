@@ -11,7 +11,10 @@ internal open class FakeCardRepository : CardRepository {
     override suspend fun getCardsByDate(date: LocalDate): AppResult<List<Card>> =
         error("이 테스트에서 쓰지 않는다")
 
-    override suspend fun getCardsByMonth(yearMonth: YearMonth): AppResult<List<CardEntry>> =
+    override suspend fun getCardsByMonthAndEmotion(
+        character: EmotionCharacter,
+        yearMonth: YearMonth,
+    ): AppResult<List<Card>> =
         error("이 테스트에서 쓰지 않는다")
 
     override suspend fun createCard(

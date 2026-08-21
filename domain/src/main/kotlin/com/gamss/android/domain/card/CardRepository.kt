@@ -13,8 +13,11 @@ interface CardRepository {
      */
     suspend fun getCardsByDate(date: LocalDate): AppResult<List<Card>>
 
-    /** 해당 달(KST)에 생성된 카드를 요약 없이 날짜·순번·감정만 가져온다. */
-    suspend fun getCardsByMonth(yearMonth: YearMonth): AppResult<List<CardEntry>>
+    /** 오래된 순으로 돌려준다. 종이 더미가 목록 순서대로 쌓기 때문이다. */
+    suspend fun getCardsByMonthAndEmotion(
+        character: EmotionCharacter,
+        yearMonth: YearMonth,
+    ): AppResult<List<Card>>
 
     /** 종료된 채팅방에만 만들 수 있고 방당 한 번만 성공한다. */
     suspend fun createCard(
@@ -23,13 +26,13 @@ interface CardRepository {
         summary: String,
     ): AppResult<Card>
 
-    /** 모든 카드와 카드가 나온 채팅방을 함께 삭제한다. 되돌릴 수 없다. */
+    /** 카드가 나온 채팅방까지 함께 지운다. 되돌릴 수 없다. */
     suspend fun deleteAllCards(): AppResult<Unit>
 
-    /** 카드 한 장과 카드가 나온 채팅방을 함께 삭제한다. 되돌릴 수 없다. */
+    /** 카드가 나온 채팅방까지 함께 지운다. 되돌릴 수 없다. */
     suspend fun deleteCard(cardId: Long): AppResult<Unit>
 
-    /** 해당 감정인 카드와 카드가 나온 채팅방을 모두 함께 삭제한다. 되돌릴 수 없다. */
+    /** 카드가 나온 채팅방까지 함께 지운다. 되돌릴 수 없다. */
     suspend fun deleteCardsByEmotion(character: EmotionCharacter): AppResult<Unit>
 
     /**

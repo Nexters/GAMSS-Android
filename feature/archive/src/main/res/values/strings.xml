@@ -25,7 +25,6 @@
     <string name="archive_card_view_conversation">대화보기</string>
     <string name="archive_card_share">공유하기</string>
     <string name="archive_card_share_chooser_title">카드 공유하기</string>
-    <string name="archive_card_load_error">카드를 불러오지 못했어요.</string>
     <string name="archive_conversation_load_error">대화를 불러오지 못했어요.</string>
     <string name="archive_conversation_empty">남아 있는 대화가 없어요.</string>
     <string name="archive_conversation_scroll_to_bottom">마지막 대화로 이동</string>

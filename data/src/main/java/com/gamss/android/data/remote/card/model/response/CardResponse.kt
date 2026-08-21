@@ -8,15 +8,20 @@ import kotlinx.serialization.Serializable
 import java.time.LocalDate
 import java.time.format.DateTimeParseException
 
+/**
+ * 문자열 필드에 기본값을 둔다. gamssJson 의 coerceInputValues 는 선언된 기본값이 있을 때만
+ * null 을 그 값으로 바꾼다. 기본값이 없으면 카드 한 장의 null 하나로 목록 전체가 예외로 죽어,
+ * [toDomainOrNull] 이 약속한 "한 장만 버리고 나머지는 살린다" 가 아예 작동하지 못한다.
+ */
 @Serializable
 internal data class CardResponse(
     val id: Long,
     val conversationId: Long,
-    val emotion: String,
-    val emotionLabel: String,
-    val summary: String,
-    val message: String,
-    val date: String,
+    val emotion: String = "",
+    val emotionLabel: String = "",
+    val summary: String = "",
+    val message: String = "",
+    val date: String = "",
 )
 
 /**
@@ -52,13 +57,8 @@ internal fun CardResponse.toDomainOrNull(): Card? = emotion.toEmotionCharacter()
     }
 }
 
-/**
- * 서버 응답을 그대로 캐시 저장 형태로 옮긴다. 파싱 실패 값도 다음 조회 때 재해석할 수 있게 원문 그대로 둔다.
- *
- * @param indexInDate 같은 날짜 응답 목록에서 유효한 카드만 남긴 뒤의 순번. selectCard 가 CardEntry.indexInDate 로
- * 집는 카드와 캐시에서 복원한 카드가 같은 기준으로 정렬돼야 하므로, 원본 응답의 위치가 아니라 이 값을 저장한다.
- */
-internal fun CardResponse.toEntity(indexInDate: Int): CardEntity =
+/** 감정과 날짜를 서버가 준 원문 그대로 둔다. 캐시를 읽을 때 같은 규칙으로 다시 해석한다. */
+internal fun CardResponse.toEntity(): CardEntity =
     CardEntity(
         id = id,
         conversationId = conversationId,
@@ -67,10 +67,8 @@ internal fun CardResponse.toEntity(indexInDate: Int): CardEntity =
         summary = summary,
         message = message,
         date = date,
-        indexInDate = indexInDate,
     )
 
-/** 날짜별·월별 응답이 같은 기준으로 날짜를 버려야 CardEntry.indexInDate 가 두 응답에서 같은 카드를 가리킨다. */
 internal fun String.toLocalDateOrNull(): LocalDate? = try {
     LocalDate.parse(this)
 } catch (_: DateTimeParseException) {

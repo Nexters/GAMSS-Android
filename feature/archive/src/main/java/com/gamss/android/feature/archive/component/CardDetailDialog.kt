@@ -33,6 +33,8 @@ internal fun CardDetailDialog(
             onPrimaryActionClick = onDiscardClick,
             onSecondaryActionClick = onViewConversationClick,
             onShareClick = onShareClick,
+            // 공유가 아직 동작하지 않아 자리만 남기고 숨긴다.
+            isShareVisible = false,
             topEndAction = { CardCloseButton(onClick = onDismiss) },
         )
     }

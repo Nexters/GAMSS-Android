@@ -37,6 +37,5 @@ class CardEntityTest {
         summary = "요약",
         message = "메시지",
         date = "2026-08-16",
-        indexInDate = 0,
     )
 }

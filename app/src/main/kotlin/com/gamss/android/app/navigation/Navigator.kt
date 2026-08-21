@@ -1,7 +1,6 @@
 package com.gamss.android.app.navigation
 
 import androidx.navigation3.runtime.NavKey
-import java.time.LocalDate
 
 /**
  * NavigationState를 변경하는 앱 전용 navigator.
@@ -18,21 +17,16 @@ class Navigator(val state: NavigationState) {
      * 때마다 방금 버린 것처럼 또 떨어진다. 프로세스가 죽으면 이 값도 사라지는데, 그때는 낙하를
      * 건너뛰는 쪽이 맞다.
      */
-    private var droppedCardDate: LocalDate? = null
+    private var droppedCardId: Long? = null
 
-    fun consumeDroppedCardDate(): LocalDate? = droppedCardDate.also { droppedCardDate = null }
+    fun consumeDroppedCardId(): Long? = droppedCardId.also { droppedCardId = null }
 
-    /**
-     * 파쇄 화면이 카드를 지웠다는 일회성 신호. 위 날짜와 같은 이유로 key 에 싣지 않는다.
-     */
-    private var hasShreddedCard = false
+    /** 위 카드 id 와 같은 이유로 key 에 싣지 않는다. */
+    private var shreddedCardId: Long? = null
 
-    fun consumeShreddedCard(): Boolean = hasShreddedCard.also { hasShreddedCard = false }
+    fun consumeShreddedCardId(): Long? = shreddedCardId.also { shreddedCardId = null }
 
-    /**
-     * 지정한 key로 이동한다.
-     * top-level key인지, 현재 탭인지, 상세 key인지에 따라 stack 갱신 규칙이 달라진다.
-     */
+    /** top-level key인지, 현재 탭인지, 상세 key인지에 따라 stack 갱신 규칙이 달라진다. */
     fun navigate(key: NavKey) {
         when (key) {
             state.currentTopLevelKey -> clearSubStack()
@@ -42,8 +36,6 @@ class Navigator(val state: NavigationState) {
     }
 
     /**
-     * 현재 위치에서 뒤로 이동한다.
-     *
      * 현재 탭의 root 화면에서는 이전에 방문한 탭으로 돌아가고, 상세 화면에서는 현재 탭의
      * sub stack에서 한 단계 pop한다.
      */
@@ -57,7 +49,6 @@ class Navigator(val state: NavigationState) {
         }
     }
 
-    /** 완료된 상세 흐름을 닫고 현재 탭의 첫 화면으로 돌아간다. */
     fun finishCurrentFlow() {
         clearSubStack()
     }
@@ -66,11 +57,12 @@ class Navigator(val state: NavigationState) {
      * 카드 한 장을 파쇄하고 원래 보던 칸으로 돌아간다.
      *
      * 남은 종이는 그대로 보여야 하므로 [finishCurrentFlow] 처럼 보관함 첫 화면까지 걷어내지 않는다.
-     * 대신 그 칸의 ViewModel 이 살아남아 지운 카드를 그대로 들고 있으므로, 목록을 다시 받으라고
-     * 신호를 남긴다.
+     * 대신 그 칸의 ViewModel 이 살아남아 지운 카드를 그대로 들고 있으므로, 어느 카드였는지를
+     * 남긴다. 파쇄가 끝났다는 건 서버에서 이미 지워졌다는 뜻이라, 그 한 장만 빼면 목록이 서버와
+     * 같아진다. 달·감정이 그대로인 목록을 통째로 다시 받을 이유가 없다.
      */
-    fun finishShreddedCard() {
-        hasShreddedCard = true
+    fun finishShreddedCard(cardId: Long) {
+        shreddedCardId = cardId
         goBack()
     }
 
@@ -81,17 +73,14 @@ class Navigator(val state: NavigationState) {
      * currentSubStack 이 옮겨간 탭을 가리켜 손댈 수 없다. 옮겨간 탭도 root 까지 비우고 [detail]
      * 하나만 올린다. 보관함에 다른 감정 칸이 열려 있었다면 뒤로 나갔을 때 그 칸이 다시 뜬다.
      */
-    fun openDroppedCard(topLevel: NavKey, detail: NavKey, droppedCardDate: LocalDate) {
-        this.droppedCardDate = droppedCardDate
+    fun openDroppedCard(topLevel: NavKey, detail: NavKey, droppedCardId: Long) {
+        this.droppedCardId = droppedCardId
         clearSubStack()
         goToTopLevel(topLevel)
         clearSubStack()
         goToKey(detail)
     }
 
-    /**
-     * 현재 탭의 상세 화면으로 이동한다.
-     */
     private fun goToKey(key: NavKey) {
         state.currentSubStack.apply {
             remove(key)
@@ -99,9 +88,6 @@ class Navigator(val state: NavigationState) {
         }
     }
 
-    /**
-     * 다른 top-level 탭으로 이동한다.
-     */
     private fun goToTopLevel(key: NavKey) {
         state.topLevelStack.apply {
             if (key == state.startKey) {
@@ -113,9 +99,6 @@ class Navigator(val state: NavigationState) {
         }
     }
 
-    /**
-     * 현재 탭을 다시 선택했을 때 root 화면만 남긴다.
-     */
     private fun clearSubStack() {
         state.currentSubStack.run {
             if (size > 1) subList(1, size).clear()

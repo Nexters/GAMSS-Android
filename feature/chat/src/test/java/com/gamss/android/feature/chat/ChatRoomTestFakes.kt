@@ -3,7 +3,6 @@ package com.gamss.android.feature.chat
 import androidx.paging.PagingData
 import com.gamss.android.core.common.AppResult
 import com.gamss.android.domain.card.Card
-import com.gamss.android.domain.card.CardEntry
 import com.gamss.android.domain.card.CardRepository
 import com.gamss.android.domain.card.CreateCardUseCase
 import com.gamss.android.domain.card.CreateConversationCardUseCase
@@ -229,7 +228,10 @@ internal class CountingCardRepository(
     var calls = 0
         private set
 
-    override suspend fun getCardsByMonth(yearMonth: YearMonth): AppResult<List<CardEntry>> =
+    override suspend fun getCardsByMonthAndEmotion(
+        character: EmotionCharacter,
+        yearMonth: YearMonth,
+    ): AppResult<List<Card>> =
         error("채팅 테스트에서 쓰지 않는다")
 
     override suspend fun getCardsByDate(date: LocalDate): AppResult<List<Card>> =

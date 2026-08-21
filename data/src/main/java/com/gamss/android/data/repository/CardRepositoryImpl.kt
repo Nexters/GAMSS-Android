@@ -13,7 +13,6 @@ import com.gamss.android.data.remote.emotion.toServerEmotionType
 import com.gamss.android.data.remote.runCatchingApiCall
 import com.gamss.android.data.remote.throwIfFailed
 import com.gamss.android.domain.card.Card
-import com.gamss.android.domain.card.CardEntry
 import com.gamss.android.domain.card.CardNotRetryableException
 import com.gamss.android.domain.card.CardRepository
 import com.gamss.android.domain.emotion.EmotionCharacter
@@ -31,21 +30,35 @@ internal class CardRepositoryImpl @Inject constructor(
     private val cardLocalDataSource: CardLocalDataSource,
 ) : CardRepository {
 
-    /** 그 날짜가 캐시에 있으면 캐시를 그대로 쓰고, 없거나 캐시 조회에 실패하면 서버에서 다시 가져온다. */
-    override suspend fun getCardsByDate(date: LocalDate): AppResult<List<Card>> {
+    /**
+     * 캐시를 읽지도 쓰지도 않는다. 캐시는 (감정, 달) 단위로만 채워지므로, 날짜로 걸러 읽으면 그
+     * 날의 카드가 다 들어 있다는 보장이 없다. 한 장이라도 있으면 완전하다고 오해해 서버를
+     * 건너뛰게 되므로, 이 조회는 늘 서버를 본다.
+     */
+    override suspend fun getCardsByDate(date: LocalDate): AppResult<List<Card>> = runCatchingApiCall {
+        val response = cardService.getCardsByDate(date.toString())
+        response.throwIfFailed()
+        checkNotNull(response.data) { "No available card data" }.mapNotNull { it.toDomainOrNull() }
+    }
+
+    override suspend fun getCardsByMonthAndEmotion(
+        character: EmotionCharacter,
+        yearMonth: YearMonth,
+    ): AppResult<List<Card>> {
+        val serverEmotion = character.toServerEmotionType()
+        // 이 조회만 캐시를 채우므로, 한 행이라도 있으면 그 (감정, 달) 은 통째로 받아 둔 것이다.
         runCatching {
             cardLocalDataSource
-                .findByDate(date)
+                .findByEmotionAndMonth(serverEmotion, yearMonth)
                 .map { it.toDomain() }
+                .sortedOldestFirst()
         }
             .onFailure { throwable ->
-                if (throwable is CancellationException) {
-                    throw throwable
-                }
+                if (throwable is CancellationException) throw throwable
 
                 Log.w(
                     TAG,
-                    "카드 캐시 조회에 실패해 서버 조회로 대체합니다. date=$date",
+                    "카드 캐시 조회에 실패해 서버 조회로 대체합니다. emotion=$serverEmotion, yearMonth=$yearMonth",
                     throwable,
                 )
             }
@@ -54,31 +67,23 @@ internal class CardRepositoryImpl @Inject constructor(
             ?.let { return AppResult.Success(it) }
 
         return runCatchingApiCall {
-            val response = cardService.getCardsByDate(date.toString())
+            val response = cardService.getCardsByMonthAndEmotion(
+                emotion = serverEmotion,
+                yearMonth = yearMonth.toString(),
+            )
             response.throwIfFailed()
 
-            val validCards = checkNotNull(response.data) {
-                "No available card data"
-            }.mapNotNull { raw ->
-                raw.toDomainOrNull()?.let { raw to it }
-            }
+            // 서버가 범위를 벗어난 카드를 섞어 보내도 캐시 경로와 답이 갈리지 않게 여기서 한 번
+            // 더 거른다. 캐시는 SQL 로 감정과 달을 걸러 읽으므로, 안 거르면 첫 조회에만 보이고
+            // 다음 조회에서 사라진다. 범위 밖 카드를 캐시에 넣으면 그 달을 반쪽만 채우게도 된다.
+            val validCards = checkNotNull(response.data) { "No available card data" }
+                .mapNotNull { raw -> raw.toDomainOrNull()?.let { raw to it } }
+                .filter { (_, card) -> card.character == character && YearMonth.from(card.date) == yearMonth }
 
-            cardLocalDataSource.upsertAll(
-                validCards.mapIndexed { index, (raw, _) ->
-                    raw.toEntity(indexInDate = index)
-                },
-            )
+            cardLocalDataSource.upsertAll(validCards.map { (raw, _) -> raw.toEntity() })
 
-            validCards.map { (_, card) -> card }
+            validCards.map { (_, card) -> card }.sortedOldestFirst()
         }
-    }
-
-    // YearMonth.toString() 이 서버가 요구하는 yyyy-MM 그대로다.
-    override suspend fun getCardsByMonth(yearMonth: YearMonth): AppResult<List<CardEntry>> = runCatchingApiCall {
-        val response = cardService.getCardsByMonth(yearMonth.toString())
-        response.throwIfFailed()
-        checkNotNull(response.data) { "No available card data" }
-            .flatMap { it.toDomain() }
     }
 
     override suspend fun createCard(
@@ -122,9 +127,8 @@ internal class CardRepositoryImpl @Inject constructor(
     }
 
     /**
-     * 카드를 지우면 같은 날짜 뒤 카드들의 indexInDate 가 한 칸씩 당겨져 캐시에 남은 순번이 서버와 어긋난다.
-     * 어느 카드가 영향받는지 이 메서드는 날짜를 모르므로, 지운 카드만 골라내는 대신 캐시 전체를 비워
-     * 다음 조회 때 다시 채우게 한다.
+     * 지운 카드가 어느 감정 칸·어느 달에 있었는지 이 메서드는 모른다. 그 칸만 골라 비우는 대신
+     * 캐시 전체를 비워 다음 조회 때 다시 채우게 한다.
      */
     override suspend fun deleteCard(cardId: Long): AppResult<Unit> {
         val result = runCatchingApiCall {
@@ -166,3 +170,10 @@ internal class CardRepositoryImpl @Inject constructor(
             }
     }
 }
+
+/**
+ * 캐시와 서버, 두 경로가 같은 목록에 같은 순서를 내야 한다. 서버 정렬을 가정하지 않고 여기서
+ * 확정한다.
+ */
+private fun List<Card>.sortedOldestFirst(): List<Card> =
+    sortedWith(compareBy({ it.date }, { it.id }))
