@@ -276,6 +276,14 @@ class ChatRoomViewModel @Inject constructor(
         reduce { state.copy(riskDetection = null) }
     }
 
+    fun onCardFoldTap() = intent {
+        reduce {
+            val ready = state.endFlow as? EndFlow.CardReady ?: return@reduce state
+            val next = ready.foldStage.next ?: return@reduce state
+            state.copy(endFlow = ready.copy(foldStage = next))
+        }
+    }
+
     private suspend fun ChatRoomSyntax.runCardCreation() {
         reduce { state.copy(endFlow = EndFlow.CreatingCard) }
 

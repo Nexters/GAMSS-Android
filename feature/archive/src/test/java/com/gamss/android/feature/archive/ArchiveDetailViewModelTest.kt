@@ -7,7 +7,6 @@ import com.gamss.android.domain.card.Card
 import com.gamss.android.domain.card.CardEntry
 import com.gamss.android.domain.card.CardRepository
 import com.gamss.android.domain.card.ClearCardCacheUseCase
-import com.gamss.android.domain.card.DeleteCardUseCase
 import com.gamss.android.domain.card.GetCardsByDateUseCase
 import com.gamss.android.domain.card.GetCardsByMonthUseCase
 import com.gamss.android.domain.conversation.Conversation
@@ -204,7 +203,7 @@ class ArchiveDetailViewModelTest {
     }
 
     @Test
-    fun `카드를 버리면 삭제하고 그 달을 다시 조회한다`() = runTest {
+    fun `카드를 버리면 그 카드를 지우는 파쇄 화면을 연다`() = runTest {
         val repository = FakeCardRepository(
             monthResult = AppResult.Success(listOf(angerEntry)),
             dateResult = AppResult.Success(listOf(firstCardOfDay)),
@@ -220,13 +219,14 @@ class ArchiveDetailViewModelTest {
             expectState { copy(isCardLoading = true) }
             expectState { copy(isCardLoading = false, selectedCard = firstCardOfDay) }
 
+            // 실제 삭제는 파쇄 화면이 맡으므로 여기서는 카드를 지우지 않는다.
             containerHost.discardSelectedCard()
             expectState { copy(selectedCard = null) }
+            expectSideEffect(ArchiveDetailSideEffect.OpenCardDelete(cardId = firstCardOfDay.id))
         }
 
-        // 재조회 결과가 이전과 같은 상태라 emission 이 더 없다. 다시 받아 왔는지는 호출로 확인한다.
-        assertEquals(listOf(firstCardOfDay.id), repository.deletedCardIds)
-        assertEquals(2, repository.requestedMonths.size)
+        // 다시 받아 오는 일은 파쇄 화면에서 돌아올 때 force load 가 맡는다.
+        assertEquals(1, repository.requestedMonths.size)
     }
 
     @Test
@@ -459,7 +459,7 @@ class ArchiveDetailViewModelTest {
             // 실제 삭제는 파쇄 화면이 맡으므로 여기서는 카드를 지우지 않는다.
             containerHost.confirmClear()
             expectState { copy(isClearDialogVisible = false) }
-            expectSideEffect(ArchiveDetailSideEffect.OpenCardDelete)
+            expectSideEffect(ArchiveDetailSideEffect.OpenCardDelete(cardId = null))
         }
     }
 
@@ -469,7 +469,6 @@ class ArchiveDetailViewModelTest {
     ) = ArchiveDetailViewModel(
         getCardsByMonth = GetCardsByMonthUseCase(repository),
         getCardsByDate = GetCardsByDateUseCase(repository),
-        deleteCard = DeleteCardUseCase(repository),
         clearCardCache = ClearCardCacheUseCase(repository),
         getConversation = GetConversationUseCase(conversationRepository),
     )
@@ -529,7 +528,6 @@ private class FakeCardRepository(
 
     val requestedMonths = mutableListOf<YearMonth>()
     val requestedDates = mutableListOf<LocalDate>()
-    val deletedCardIds = mutableListOf<Long>()
     var clearCacheCallCount = 0
         private set
 
@@ -553,10 +551,8 @@ private class FakeCardRepository(
     override suspend fun deleteAllCards(): AppResult<Unit> =
         error("보관함 테스트에서 쓰지 않는다")
 
-    override suspend fun deleteCard(cardId: Long): AppResult<Unit> {
-        deletedCardIds += cardId
-        return AppResult.Success(Unit)
-    }
+    override suspend fun deleteCard(cardId: Long): AppResult<Unit> =
+        error("실제 삭제는 파쇄 화면이 맡는다")
 
     override suspend fun deleteCardsByEmotion(character: EmotionCharacter): AppResult<Unit> =
         error("보관함 테스트에서 쓰지 않는다")

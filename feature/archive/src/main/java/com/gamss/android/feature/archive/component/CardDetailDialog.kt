@@ -4,6 +4,7 @@ import android.content.res.Configuration
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
+import com.gamss.android.core.common.util.formatCardDate
 import com.gamss.android.core.designsystem.card.GamssEmotionCard
 import com.gamss.android.core.designsystem.card.GamssEmotionCardCharacter
 import com.gamss.android.core.designsystem.theme.GamssTheme
@@ -22,7 +23,7 @@ internal fun CardDetailDialog(
 ) {
     CardDialogScaffold(onDismiss = onDismiss) {
         GamssEmotionCard(
-            date = card.date.format(CardDateFormatter),
+            date = formatCardDate(card.date),
             character = card.character.toGamssEmotionCardCharacter(),
             title = stringResource(card.character.cardTitleRes()),
             description = card.summary,

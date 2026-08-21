@@ -1,6 +1,7 @@
 package com.gamss.android.app.navigation
 
 import androidx.navigation3.runtime.NavKey
+import java.time.LocalDate
 
 /**
  * NavigationState를 변경하는 앱 전용 navigator.
@@ -11,6 +12,22 @@ import androidx.navigation3.runtime.NavKey
  * - 상세 화면은 현재 탭의 sub stack에 쌓되, 같은 key가 이미 있으면 마지막으로 이동
  */
 class Navigator(val state: NavigationState) {
+
+    /**
+     * key 에 실어 보내지 않는다. key 는 화면의 정체성이라 인자가 남으면 그 화면에 다시 들어올
+     * 때마다 방금 버린 것처럼 또 떨어진다. 프로세스가 죽으면 이 값도 사라지는데, 그때는 낙하를
+     * 건너뛰는 쪽이 맞다.
+     */
+    private var droppedCardDate: LocalDate? = null
+
+    fun consumeDroppedCardDate(): LocalDate? = droppedCardDate.also { droppedCardDate = null }
+
+    /**
+     * 파쇄 화면이 카드를 지웠다는 일회성 신호. 위 날짜와 같은 이유로 key 에 싣지 않는다.
+     */
+    private var hasShreddedCard = false
+
+    fun consumeShreddedCard(): Boolean = hasShreddedCard.also { hasShreddedCard = false }
 
     /**
      * 지정한 key로 이동한다.
@@ -43,6 +60,33 @@ class Navigator(val state: NavigationState) {
     /** 완료된 상세 흐름을 닫고 현재 탭의 첫 화면으로 돌아간다. */
     fun finishCurrentFlow() {
         clearSubStack()
+    }
+
+    /**
+     * 카드 한 장을 파쇄하고 원래 보던 칸으로 돌아간다.
+     *
+     * 남은 종이는 그대로 보여야 하므로 [finishCurrentFlow] 처럼 보관함 첫 화면까지 걷어내지 않는다.
+     * 대신 그 칸의 ViewModel 이 살아남아 지운 카드를 그대로 들고 있으므로, 목록을 다시 받으라고
+     * 신호를 남긴다.
+     */
+    fun finishShreddedCard() {
+        hasShreddedCard = true
+        goBack()
+    }
+
+    /**
+     * 방금 버린 카드를 보관함 상세로 데려간다.
+     *
+     * 순서가 정해져 있다. 현재 탭을 먼저 비워야 끝난 대화방이 남지 않는데, 탭을 옮긴 뒤에는
+     * currentSubStack 이 옮겨간 탭을 가리켜 손댈 수 없다. 옮겨간 탭도 root 까지 비우고 [detail]
+     * 하나만 올린다. 보관함에 다른 감정 칸이 열려 있었다면 뒤로 나갔을 때 그 칸이 다시 뜬다.
+     */
+    fun openDroppedCard(topLevel: NavKey, detail: NavKey, droppedCardDate: LocalDate) {
+        this.droppedCardDate = droppedCardDate
+        clearSubStack()
+        goToTopLevel(topLevel)
+        clearSubStack()
+        goToKey(detail)
     }
 
     /**
