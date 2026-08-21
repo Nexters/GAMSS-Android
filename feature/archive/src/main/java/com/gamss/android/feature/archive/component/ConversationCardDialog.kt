@@ -49,7 +49,6 @@ internal fun ConversationCardDialog(
     }
 }
 
-/** 카드 높이가 고정이라 넘치는 만큼은 세로 스크롤로 넘긴다. */
 @Composable
 private fun ConversationMessages(
     messages: List<Message>,

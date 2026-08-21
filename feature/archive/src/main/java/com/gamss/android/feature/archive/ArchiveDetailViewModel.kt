@@ -142,7 +142,6 @@ class ArchiveDetailViewModel @Inject constructor(
         if (conversationCard == null) postSideEffect(ArchiveDetailSideEffect.ConversationLoadFailed)
     }
 
-    /** 카드를 뒤집어 놓은 상태라, 닫으면 종이 더미가 아니라 원래 보던 감정 카드로 돌아온다. */
     fun dismissConversationCard() = intent {
         val card = state.conversationCard?.card ?: return@intent
         reduce { state.copy(conversationCard = null, selectedCard = card) }

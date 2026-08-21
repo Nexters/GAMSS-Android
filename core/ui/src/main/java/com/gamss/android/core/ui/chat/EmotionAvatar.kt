@@ -10,7 +10,6 @@ import androidx.compose.ui.res.painterResource
 import com.gamss.android.domain.emotion.EmotionCharacter
 import com.gamss.android.core.designsystem.R as DesignSystemR
 
-/** [EmotionCharacter] 6종 각각에 대응하는 core:designsystem 아바타 아이콘. */
 val EmotionCharacter.avatarIconRes: Int
     @DrawableRes get() = when (this) {
         EmotionCharacter.JOY -> DesignSystemR.drawable.ic_avatar_joy
