@@ -13,7 +13,7 @@ interface CardRepository {
      */
     suspend fun getCardsByDate(date: LocalDate): AppResult<List<Card>>
 
-    /** 해당 달(KST)에 생성된 그 감정의 카드를 내용까지 가져온다. 오래된 순이다. */
+    /** 오래된 순으로 돌려준다. 종이 더미가 목록 순서대로 쌓기 때문이다. */
     suspend fun getCardsByMonthAndEmotion(
         character: EmotionCharacter,
         yearMonth: YearMonth,

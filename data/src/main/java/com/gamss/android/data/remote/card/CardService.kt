@@ -16,7 +16,7 @@ internal interface CardService {
     @GET("/api/cards")
     suspend fun getCardsByDate(@Query("date") date: String): ApiResponse<List<CardResponse>>
 
-    /** 그 달(KST) 그 감정의 카드를 내용까지 담아 최신순으로 준다. 페이지네이션이 없다. */
+    /** 최신순이고 페이지네이션이 없다. 한 달 한 감정 분량을 한 번에 준다. */
     @GET("/api/cards/monthly/emotions/{emotion}")
     suspend fun getCardsByMonthAndEmotion(
         @Path("emotion") emotion: String,
