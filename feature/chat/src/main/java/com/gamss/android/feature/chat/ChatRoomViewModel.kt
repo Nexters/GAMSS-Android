@@ -82,11 +82,6 @@ class ChatRoomViewModel @Inject constructor(
         }
     }
 
-    private fun loadChatEndFeatureFlag() = intent {
-        val useChatEndFeature = getRemoteConfigFlag(RemoteConfigKey.UseChatEndFeature)
-        reduce { state.copy(useChatEndFeature = useChatEndFeature) }
-    }
-
     private fun loadMessages(conversationId: Long) = intent {
         reduce { state.copy(conversationId = conversationId, isLoading = true) }
 
