@@ -23,6 +23,13 @@ class Navigator(val state: NavigationState) {
     fun consumeDroppedCardDate(): LocalDate? = droppedCardDate.also { droppedCardDate = null }
 
     /**
+     * 파쇄 화면이 카드를 지웠다는 일회성 신호. 위 날짜와 같은 이유로 key 에 싣지 않는다.
+     */
+    private var hasShreddedCard = false
+
+    fun consumeShreddedCard(): Boolean = hasShreddedCard.also { hasShreddedCard = false }
+
+    /**
      * 지정한 key로 이동한다.
      * top-level key인지, 현재 탭인지, 상세 key인지에 따라 stack 갱신 규칙이 달라진다.
      */
@@ -53,6 +60,18 @@ class Navigator(val state: NavigationState) {
     /** 완료된 상세 흐름을 닫고 현재 탭의 첫 화면으로 돌아간다. */
     fun finishCurrentFlow() {
         clearSubStack()
+    }
+
+    /**
+     * 카드 한 장을 파쇄하고 원래 보던 칸으로 돌아간다.
+     *
+     * 남은 종이는 그대로 보여야 하므로 [finishCurrentFlow] 처럼 보관함 첫 화면까지 걷어내지 않는다.
+     * 대신 그 칸의 ViewModel 이 살아남아 지운 카드를 그대로 들고 있으므로, 목록을 다시 받으라고
+     * 신호를 남긴다.
+     */
+    fun finishShreddedCard() {
+        hasShreddedCard = true
+        goBack()
     }
 
     /**

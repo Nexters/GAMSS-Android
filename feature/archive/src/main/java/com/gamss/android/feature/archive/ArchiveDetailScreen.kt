@@ -53,31 +53,30 @@ import com.gamss.android.core.designsystem.R as DesignSystemR
 fun ArchiveDetailScreen(
     emotion: EmotionCharacter,
     droppedCardDate: LocalDate?,
+    hasShreddedCard: Boolean,
     onBackClick: () -> Unit,
     onOpenConversation: (Long) -> Unit,
-    onNavigateToCardDelete: () -> Unit,
+    onNavigateToCardDelete: (Long?) -> Unit,
     viewModel: ArchiveDetailViewModel = hiltViewModel(),
 ) {
     val state by viewModel.collectAsState()
     val context = LocalContext.current
     val shareChooserTitle = stringResource(R.string.archive_card_share_chooser_title)
     val cardLoadFailedMessage = stringResource(R.string.archive_card_load_error)
-    val discardFailedMessage = stringResource(R.string.archive_card_discard_failure)
 
+    // 파쇄 화면에서 돌아왔을 때도 다시 받아야 한다. 카드를 지우면 같은 날짜 뒤 순번이 한 칸씩
+    // 당겨져, 살아남은 종이가 들고 있던 순번이 서버와 어긋난다.
     LaunchedEffect(emotion) {
-        viewModel.load(emotion, force = droppedCardDate != null)
+        viewModel.load(emotion, force = droppedCardDate != null || hasShreddedCard)
     }
 
     viewModel.collectSideEffect { sideEffect ->
         when (sideEffect) {
             is ArchiveDetailSideEffect.OpenChatRoom -> onOpenConversation(sideEffect.conversationId)
-            ArchiveDetailSideEffect.OpenCardDelete -> onNavigateToCardDelete()
+            is ArchiveDetailSideEffect.OpenCardDelete -> onNavigateToCardDelete(sideEffect.cardId)
 
             ArchiveDetailSideEffect.CardLoadFailed ->
                 Toast.makeText(context, cardLoadFailedMessage, Toast.LENGTH_SHORT).show()
-
-            ArchiveDetailSideEffect.CardDiscardFailed ->
-                Toast.makeText(context, discardFailedMessage, Toast.LENGTH_SHORT).show()
         }
     }
 

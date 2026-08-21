@@ -141,12 +141,14 @@ private fun mainEntryProvider(navigator: Navigator) = entryProvider {
     entry<ArchiveDetailKey>(metadata = detailSlideTransition) { key ->
         // 대화방에 들렀다 돌아오면 이 컴포지션이 다시 만들어진다. 그때는 이미 비어 있어야 한다.
         val droppedCardDate = remember { navigator.consumeDroppedCardDate() }
+        val hasShreddedCard = remember { navigator.consumeShreddedCard() }
         ArchiveDetailScreen(
             emotion = key.emotion,
             droppedCardDate = droppedCardDate,
+            hasShreddedCard = hasShreddedCard,
             onBackClick = navigator::goBack,
             onOpenConversation = { conversationId -> navigator.navigate(ChatRoomKey(conversationId)) },
-            onNavigateToCardDelete = { navigator.navigate(CardDeleteKey) },
+            onNavigateToCardDelete = { cardId -> navigator.navigate(CardDeleteKey(cardId)) },
         )
     }
     entry<SettingKey>(metadata = detailSlideTransition) {
@@ -157,10 +159,16 @@ private fun mainEntryProvider(navigator: Navigator) = entryProvider {
             onPrivacyPolicyClick = { navigator.navigate(WebViewKey(GamssWebPage.PrivacyPolicy)) },
         )
     }
-    entry<CardDeleteKey>(metadata = detailSlideTransition) {
+    entry<CardDeleteKey>(metadata = detailSlideTransition) { key ->
         CardDeleteScreen(
+            cardId = key.cardId,
             onBackClick = navigator::goBack,
-            onDeleteComplete = navigator::finishCurrentFlow,
+            // 전체를 비웠으면 돌아갈 칸이 비어 있으니 보관함 첫 화면까지 걷어낸다.
+            onDeleteComplete = if (key.cardId == null) {
+                navigator::finishCurrentFlow
+            } else {
+                navigator::finishShreddedCard
+            },
         )
     }
     entry<AccountInfoKey>(metadata = detailSlideTransition) {

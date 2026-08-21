@@ -27,5 +27,4 @@
     <string name="archive_card_share">공유하기</string>
     <string name="archive_card_share_chooser_title">카드 공유하기</string>
     <string name="archive_card_load_error">카드를 불러오지 못했어요.</string>
-    <string name="archive_card_discard_failure">기록을 버리지 못했어요. 다시 시도해주세요</string>
 </resources>

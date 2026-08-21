@@ -27,8 +27,10 @@ import com.gamss.android.feature.carddelete.component.ShredStrips
 import org.orbitmvi.orbit.compose.collectAsState
 import org.orbitmvi.orbit.compose.collectSideEffect
 
+/** @param cardId 파쇄할 카드. null 이면 보관함 전체를 파쇄한다. */
 @Composable
 fun CardDeleteScreen(
+    cardId: Long?,
     onBackClick: () -> Unit,
     onDeleteComplete: () -> Unit,
     modifier: Modifier = Modifier,
@@ -53,7 +55,7 @@ fun CardDeleteScreen(
             else -> onBackClick
         },
         onDeleteComplete = onDeleteComplete,
-        onShredTap = viewModel::onShredTap,
+        onShredTap = { viewModel.onShredTap(cardId) },
         modifier = modifier,
     )
 }
