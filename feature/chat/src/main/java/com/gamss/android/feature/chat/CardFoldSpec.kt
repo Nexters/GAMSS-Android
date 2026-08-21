@@ -11,7 +11,7 @@ import androidx.compose.ui.unit.dp
 internal const val CARD_FOLD_DISCARD_SINK_MS = 200
 
 /** 통과 안내, 화살표가 각각 배어 나오는 시간. */
-internal const val CARD_FOLD_HINT_FADE_MS = 400
+internal const val CARD_FOLD_HINT_FADE_MS = 250
 
 // 다 접히면 쪽지 → 통 → 안내 문구 → 화살표 순으로 하나씩 나온다. 한꺼번에 나오면 접힌 모양을
 // 볼 새가 없고, 무엇부터 봐야 하는지도 안 읽힌다. 아래는 마지막으로 접은 시점부터의 시간이다.
