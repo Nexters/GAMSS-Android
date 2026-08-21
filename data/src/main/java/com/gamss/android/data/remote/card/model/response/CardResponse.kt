@@ -52,7 +52,7 @@ internal fun CardResponse.toDomainOrNull(): Card? = emotion.toEmotionCharacter()
     }
 }
 
-/** 서버 응답을 그대로 캐시 저장 형태로 옮긴다. 파싱 실패 값도 다음 조회 때 재해석할 수 있게 원문 그대로 둔다. */
+/** 감정과 날짜를 서버가 준 원문 그대로 둔다. 캐시를 읽을 때 같은 규칙으로 다시 해석한다. */
 internal fun CardResponse.toEntity(): CardEntity =
     CardEntity(
         id = id,

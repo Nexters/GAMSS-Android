@@ -26,13 +26,13 @@ interface CardRepository {
         summary: String,
     ): AppResult<Card>
 
-    /** 되돌릴 수 없다. */
+    /** 카드가 나온 채팅방까지 함께 지운다. 되돌릴 수 없다. */
     suspend fun deleteAllCards(): AppResult<Unit>
 
-    /** 되돌릴 수 없다. */
+    /** 카드가 나온 채팅방까지 함께 지운다. 되돌릴 수 없다. */
     suspend fun deleteCard(cardId: Long): AppResult<Unit>
 
-    /** 되돌릴 수 없다. */
+    /** 카드가 나온 채팅방까지 함께 지운다. 되돌릴 수 없다. */
     suspend fun deleteCardsByEmotion(character: EmotionCharacter): AppResult<Unit>
 
     /**
