@@ -62,8 +62,8 @@ import com.gamss.android.core.ui.chat.rememberReplyQuoteLookup
 import com.gamss.android.domain.conversation.Message
 import com.gamss.android.domain.conversation.MessageSender
 import com.gamss.android.domain.emotion.EmotionCharacter
-import com.gamss.android.feature.chat.component.CardFoldOverlay
 import com.gamss.android.domain.repository.TokenUsageAlert
+import com.gamss.android.feature.chat.component.CardFoldOverlay
 import com.gamss.android.feature.chat.component.EndConversationDialog
 import com.gamss.android.feature.chat.component.LoadingMessageBubble
 import com.gamss.android.feature.chat.component.MessageInputBar
@@ -80,8 +80,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import org.orbitmvi.orbit.compose.collectAsState
 import org.orbitmvi.orbit.compose.collectSideEffect
-import kotlin.coroutines.cancellation.CancellationException
 import java.time.LocalDate
+import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * 두 콜백 모두 이 화면을 실제로 벗어나야 한다. 머무르면 카드 단계가 그대로라 접기 연출이 다시 열린다.
