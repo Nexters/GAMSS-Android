@@ -44,11 +44,13 @@ class ChatRoomViewModel @Inject constructor(
     @Volatile
     private var revealJob: Job? = null
 
+    @Volatile
+    private var tokenAlertJob: Job? = null
+
     fun start(conversationId: Long) {
         if (started) return
         started = true
         loadMessages(conversationId)
-        observeTokenUsageAlerts()
         observeTokenExhausted()
         // 방에 들어오자마자 소진 여부를 알아야 전송 버튼을 처음부터 올바르게 잠글 수 있다 —
         // 이전에 이미 소진된 채로 재입장한 경우, 한 번도 안 보내봤어도 버튼이 바로 잠겨야 한다.
@@ -59,21 +61,26 @@ class ChatRoomViewModel @Inject constructor(
     }
 
     /**
-     * [tokenUsageRefreshNotifier]가 전역으로 흘려보내는 알림을 그대로 토스트로 옮긴다. LOW(10%
-     * 미만 남음)·EXHAUSTED(전부 소진) 모두 하루 1회만 오므로, 여러 채팅방을 오가거나 같은 방에
-     * 재진입해도 중복으로 뜨지 않는다 — 소진시킨 그 전송 시점에 딱 한 번만 보인다.
+     * [tokenUsageRefreshNotifier]의 알림(LOW/EXHAUSTED)을 토스트로 옮긴다. EXHAUSTED를 여기서
+     * 다루는 이유: [CommentGenerationStatus.LIMIT_EXCEEDED]는 "이미 소진된 채로 보냈다"는
+     * 신호라 막 소진된 순간을 놓친다 — 실측(exceeded)을 보는 이 스트림이 유일한 소스다(아래
+     * [onSend] 참고).
      *
-     * EXHAUSTED를 여기서만 다루는 이유: [CommentGenerationStatus.LIMIT_EXCEEDED]는 "이미 소진된
-     * 상태에서 보냈다"는 신호라, 정작 이번 전송으로 막 소진된 순간(댓글 자체는 정상 생성되고 그
-     * 직후 조회에서 exceeded=true로 확인되는 경우)에는 오지 않는다. 실측(exceeded)을 직접 보는
-     * 이 스트림을 유일한 소스로 쓴다(아래 [onSend] 참고). 이후 다른 채팅방에 들어가 다시
-     * `isTokenExhausted`가 반영되는 건 [observeTokenExhausted]가 맡고, 그건 알림이 아니라
-     * 입력창 잠금용 상태라 몇 번이든 다시 반영돼도 된다.
+     * alerts는 Channel이라 값을 그 순간 receive() 중인 구독자 한 곳에만 준다. 백스택에 남은
+     * 다른 채팅방이 먼저 가로채지 않도록, [start]가 아니라 화면이 RESUMED일 때만 구독한다.
      */
-    private fun observeTokenUsageAlerts() = intent {
-        tokenUsageRefreshNotifier.alerts.collect { alert ->
-            postSideEffect(ChatRoomSideEffect.ShowTokenUsageAlert(alert))
+    fun onScreenResumed() {
+        if (tokenAlertJob?.isActive == true) return
+        tokenAlertJob = intent {
+            tokenUsageRefreshNotifier.alerts.collect { alert ->
+                postSideEffect(ChatRoomSideEffect.ShowTokenUsageAlert(alert))
+            }
         }
+    }
+
+    fun onScreenPaused() {
+        tokenAlertJob?.cancel()
+        tokenAlertJob = null
     }
 
     private fun observeTokenExhausted() = intent {

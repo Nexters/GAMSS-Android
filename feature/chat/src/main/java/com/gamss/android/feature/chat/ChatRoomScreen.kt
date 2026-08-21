@@ -47,6 +47,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import com.gamss.android.core.common.util.formatConversationDate
 import com.gamss.android.core.designsystem.component.GamssScrollToBottomButton
 import com.gamss.android.core.designsystem.component.GamssTokenUsageTooltip
@@ -99,6 +100,15 @@ fun ChatRoomScreen(
     val context = LocalContext.current
 
     LaunchedEffect(conversationId) { viewModel.start(conversationId) }
+
+    // 토큰 알림은 화면이 보이는 동안만 구독해야 다른 채팅방이 가로채지 않는다. Nav3의
+    // SinglePaneSceneStrategy는 다른 방으로 넘어가면 이 컴포저블을 ON_PAUSE 이벤트 없이 그냥
+    // 컴포지션에서 제거한다 — LifecycleEventEffect(ON_PAUSE)는 이 경우 못 잡아서(dispose 시
+    // 콜백을 안 부른다), dispose 시에도 정리 콜백이 보장되는 LifecycleResumeEffect를 쓴다.
+    LifecycleResumeEffect(conversationId) {
+        viewModel.onScreenResumed()
+        onPauseOrDispose { viewModel.onScreenPaused() }
+    }
 
     val tokenUsageLowMessage = stringResource(R.string.chat_room_token_usage_low_toast)
     val tokenUsageExhaustedMessage = stringResource(R.string.chat_room_token_usage_exhausted_toast)

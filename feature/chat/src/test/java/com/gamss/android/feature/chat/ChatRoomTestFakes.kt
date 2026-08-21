@@ -28,6 +28,7 @@ import com.gamss.android.domain.emotion.EmotionCharacter
 import com.gamss.android.domain.emotion.EmotionClassifier
 import com.gamss.android.domain.emotion.EmotionLabel
 import com.gamss.android.domain.model.DailyTokenUsage
+import com.gamss.android.domain.repository.TokenUsageAlert
 import com.gamss.android.domain.repository.TokenUsageRefreshNotifier
 import com.gamss.android.domain.safety.DetectRiskInTextUseCase
 import com.gamss.android.domain.safety.RiskLexicon

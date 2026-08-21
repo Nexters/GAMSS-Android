@@ -111,7 +111,8 @@ class TokenUsageRefreshNotifierImplTest {
         TokenUsageRefreshNotifierImpl(userRepository, CoroutineScope(UnconfinedTestDispatcher(testScheduler)))
 
     /**
-     * [notifier.alerts]는 replay 없는 SharedFlow라, 구독이 emit보다 늦으면 그 알림을 영영 놓친다.
+     * [notifier.alerts]는 Channel 기반이라, 값이 정확히 한 번만 그 순간 receive() 중인 구독자에게
+     * 간다 — 구독이 emit보다 늦으면(그리고 그 사이 다른 구독자가 먼저 받아가면) 놓친다.
      * 구독을 `UnconfinedTestDispatcher`로 돌려 subscribe든 emit 이후의 재개든 모두 즉시(같은
      * 스레드에서) 일어나게 한다 — `backgroundScope`의 기본 `StandardTestDispatcher`로 구독을
      * 걸면, 최초 구독(UNDISPATCHED 덕에 즉시 실행)까지는 되지만 emit으로 깨어난 뒤의 "재개"는

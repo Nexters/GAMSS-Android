@@ -8,12 +8,14 @@ import com.gamss.android.domain.repository.TokenUsageRefreshNotifier
 import com.gamss.android.domain.user.UserRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -38,9 +40,12 @@ internal class TokenUsageRefreshNotifierImpl @Inject constructor(
     private val _isExhausted = MutableStateFlow(false)
     override val isExhausted: StateFlow<Boolean> = _isExhausted.asStateFlow()
 
-    /** 구독이 늦게 시작돼도 막 emit된 알림 하나는 놓치지 않도록 버퍼 1개만 둔다. */
-    private val _alerts = MutableSharedFlow<TokenUsageAlert>(extraBufferCapacity = 1)
-    override val alerts: Flow<TokenUsageAlert> = _alerts.asSharedFlow()
+    /** 알림은 하루/타입당 정확히 1번만 소비돼야 해서, 재생되는 Channel을 쓴다. */
+    private val _alerts = Channel<TokenUsageAlert>(
+        capacity = 1,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST,
+    )
+    override val alerts: Flow<TokenUsageAlert> = _alerts.receiveAsFlow()
 
     // 화면(ViewModel)을 나갔다 들어오거나 다른 채팅방에 진입해도 중복으로 안 뜨도록, "이미
     // 알렸는지"는 프로세스가 사는 동안 여기 싱글턴에만 기억한다. isExhausted는 이 플래그와
@@ -85,11 +90,11 @@ internal class TokenUsageRefreshNotifierImpl @Inject constructor(
             usage.exceeded && !hasAlertedExhausted -> {
                 hasAlertedExhausted = true
                 hasAlertedLow = true
-                _alerts.tryEmit(TokenUsageAlert.EXHAUSTED)
+                _alerts.trySend(TokenUsageAlert.EXHAUSTED)
             }
             percent != null && percent >= LOW_USAGE_THRESHOLD_PERCENT && !hasAlertedLow -> {
                 hasAlertedLow = true
-                _alerts.tryEmit(TokenUsageAlert.LOW)
+                _alerts.trySend(TokenUsageAlert.LOW)
             }
         }
     }
