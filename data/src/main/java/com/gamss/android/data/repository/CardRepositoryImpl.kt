@@ -30,42 +30,15 @@ internal class CardRepositoryImpl @Inject constructor(
     private val cardLocalDataSource: CardLocalDataSource,
 ) : CardRepository {
 
-    /** 그 날짜가 캐시에 있으면 캐시를 그대로 쓰고, 없거나 캐시 조회에 실패하면 서버에서 다시 가져온다. */
-    override suspend fun getCardsByDate(date: LocalDate): AppResult<List<Card>> {
-        runCatching {
-            cardLocalDataSource
-                .findByDate(date)
-                .map { it.toDomain() }
-        }
-            .onFailure { throwable ->
-                if (throwable is CancellationException) {
-                    throw throwable
-                }
-
-                Log.w(
-                    TAG,
-                    "카드 캐시 조회에 실패해 서버 조회로 대체합니다. date=$date",
-                    throwable,
-                )
-            }
-            .getOrNull()
-            ?.takeIf { it.isNotEmpty() }
-            ?.let { return AppResult.Success(it) }
-
-        return runCatchingApiCall {
-            val response = cardService.getCardsByDate(date.toString())
-            response.throwIfFailed()
-
-            val validCards = checkNotNull(response.data) {
-                "No available card data"
-            }.mapNotNull { raw ->
-                raw.toDomainOrNull()?.let { raw to it }
-            }
-
-            cardLocalDataSource.upsertAll(validCards.map { (raw, _) -> raw.toEntity() })
-
-            validCards.map { (_, card) -> card }
-        }
+    /**
+     * 캐시를 읽지도 쓰지도 않는다. 캐시는 (감정, 달) 단위로만 채워지므로, 날짜로 걸러 읽으면 그
+     * 날의 카드가 다 들어 있다는 보장이 없다. 한 장이라도 있으면 완전하다고 오해해 서버를
+     * 건너뛰게 되므로, 이 조회는 늘 서버를 본다.
+     */
+    override suspend fun getCardsByDate(date: LocalDate): AppResult<List<Card>> = runCatchingApiCall {
+        val response = cardService.getCardsByDate(date.toString())
+        response.throwIfFailed()
+        checkNotNull(response.data) { "No available card data" }.mapNotNull { it.toDomainOrNull() }
     }
 
     override suspend fun getCardsByMonthAndEmotion(
@@ -73,6 +46,7 @@ internal class CardRepositoryImpl @Inject constructor(
         yearMonth: YearMonth,
     ): AppResult<List<Card>> {
         val serverEmotion = character.toServerEmotionType()
+        // 이 조회만 캐시를 채우므로, 한 행이라도 있으면 그 (감정, 달) 은 통째로 받아 둔 것이다.
         runCatching {
             cardLocalDataSource
                 .findByEmotionAndMonth(serverEmotion, yearMonth)

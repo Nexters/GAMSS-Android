@@ -8,15 +8,20 @@ import kotlinx.serialization.Serializable
 import java.time.LocalDate
 import java.time.format.DateTimeParseException
 
+/**
+ * 문자열 필드에 기본값을 둔다. gamssJson 의 coerceInputValues 는 선언된 기본값이 있을 때만
+ * null 을 그 값으로 바꾼다. 기본값이 없으면 카드 한 장의 null 하나로 목록 전체가 예외로 죽어,
+ * [toDomainOrNull] 이 약속한 "한 장만 버리고 나머지는 살린다" 가 아예 작동하지 못한다.
+ */
 @Serializable
 internal data class CardResponse(
     val id: Long,
     val conversationId: Long,
-    val emotion: String,
-    val emotionLabel: String,
-    val summary: String,
-    val message: String,
-    val date: String,
+    val emotion: String = "",
+    val emotionLabel: String = "",
+    val summary: String = "",
+    val message: String = "",
+    val date: String = "",
 )
 
 /**

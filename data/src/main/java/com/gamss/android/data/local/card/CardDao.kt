@@ -9,9 +9,6 @@ import com.gamss.android.data.local.card.model.CardEntity
 @Dao
 internal interface CardDao {
 
-    @Query("SELECT * FROM cards WHERE date = :date ORDER BY id ASC")
-    suspend fun findByDate(date: String): List<CardEntity>
-
     /** 날짜를 `yyyy-MM-dd` 문자열로 담으므로 `yyyy-MM` 접두사로 그 달을 고른다. */
     @Query(
         "SELECT * FROM cards WHERE emotion = :emotion AND date LIKE :yearMonthPrefix || '%' " +

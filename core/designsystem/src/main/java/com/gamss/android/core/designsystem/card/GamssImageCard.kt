@@ -25,6 +25,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.PathEffect
@@ -133,6 +134,8 @@ private fun GamssImageCardEmotionDarkPreview() {
  *
  * 카드의 고정 구조와 감정별 캐릭터 선택은 이 컴포넌트가 맡고, 문구와 사용자 동작만 호출부가 제공한다.
  * 따라서 화면마다 [GamssImageCard]의 간격과 텍스트 스타일을 다시 조합할 필요가 없다.
+ *
+ * @param isShareVisible 공유 줄을 보일지. 끄면 자리만 남기고 투명하게 두어 카드 안 간격이 바뀌지 않는다.
  */
 @Composable
 @Suppress("LongParameterList")
@@ -149,6 +152,7 @@ fun GamssEmotionCard(
     onShareClick: () -> Unit,
     modifier: Modifier = Modifier,
     shape: Shape = RectangleShape,
+    isShareVisible: Boolean = true,
     topEndAction: @Composable BoxScope.() -> Unit = {},
 ) {
     GamssImageCard(
@@ -195,10 +199,12 @@ fun GamssEmotionCard(
                 )
             }
             Spacer(modifier = Modifier.height(GamssTheme.spacing.spacing200))
+            // 숨겨도 자리는 남긴다. 빼 버리면 카드 안 다른 요소가 아래로 밀려 시안과 어긋난다.
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .noRippleClickableIfNotNull(onShareClick),
+                    .alpha(if (isShareVisible) 1f else 0f)
+                    .noRippleClickableIfNotNull(onShareClick.takeIf { isShareVisible }),
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
