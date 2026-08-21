@@ -39,7 +39,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -52,7 +51,6 @@ import com.gamss.android.core.common.util.formatConversationDate
 import com.gamss.android.core.designsystem.component.GamssScrollToBottomButton
 import com.gamss.android.core.designsystem.component.GamssTokenUsageTooltip
 import com.gamss.android.core.designsystem.modifier.addFocusCleaner
-import com.gamss.android.core.designsystem.modifier.gamssShadow
 import com.gamss.android.core.designsystem.theme.GamssTheme
 import com.gamss.android.core.designsystem.topnavigation.GamssTopNavigation
 import com.gamss.android.core.designsystem.topnavigation.GamssTopNavigationHeight
@@ -78,9 +76,12 @@ import com.gamss.android.feature.chat.util.ChatScrollState
 import com.gamss.android.feature.chat.util.dialOrNotify
 import com.gamss.android.feature.chat.util.rememberChatMessageAnimationState
 import com.gamss.android.feature.chat.util.rememberChatScrollState
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import org.orbitmvi.orbit.compose.collectAsState
 import org.orbitmvi.orbit.compose.collectSideEffect
+import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * @param onCardClose 카드 시트를 닫을 때 호출한다. 이 화면을 실제로 벗어나야 한다.
@@ -211,6 +212,7 @@ private fun ChatRoomContent(
     onBackClick: () -> Unit,
 ) {
     val listState = rememberLazyListState()
+    val focusManager = LocalFocusManager.current
     val messageAnimationState = rememberChatMessageAnimationState(
         conversationId = state.conversationId,
         isLoading = state.isLoading,
@@ -234,7 +236,11 @@ private fun ChatRoomContent(
             val delta = current - previous
             previous = current
             if (delta != 0) {
-                listState.scrollBy(delta.toFloat())
+                try {
+                    listState.scrollBy(delta.toFloat())
+                } catch (_: CancellationException) {
+                    currentCoroutineContext().ensureActive()
+                }
             }
         }
     }
