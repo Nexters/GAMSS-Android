@@ -6,6 +6,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
@@ -25,7 +26,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.PathEffect
@@ -36,6 +36,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.gamss.android.core.designsystem.R
@@ -44,63 +45,87 @@ import com.gamss.android.core.designsystem.component.chat.ChatSender
 import com.gamss.android.core.designsystem.component.chat.GamssChatBubbleDefaults
 import com.gamss.android.core.designsystem.component.chat.GamssReceivedChatBubble
 import com.gamss.android.core.designsystem.component.chat.GamssSentChatBubble
-import com.gamss.android.core.designsystem.modifier.noRippleClickableIfNotNull
+import com.gamss.android.core.designsystem.modifier.noRippleClickable
 import com.gamss.android.core.designsystem.theme.GamssTheme
 import com.gamss.android.core.designsystem.theme.LightGamssColors
 import com.gamss.android.core.designsystem.theme.LocalGamssColors
 
+/**
+ * 손그림 종이 카드입니다.
+ *
+ * 카드 높이는 폭에 비례해 줄어들므로 안쪽 여백과 그림도 같은 배율([cardScale])로 줄여야 합니다.
+ * 고정 dp 로 두면 좁은 기기에서 아래쪽 요소가 카드 밖으로 밀립니다. 그래서 [content] 에도 배율을
+ * 넘깁니다. 글자 크기에는 배율을 적용하지 않습니다.
+ */
 @Composable
 fun GamssImageCard(
     date: String,
     modifier: Modifier = Modifier,
     shape: Shape = RectangleShape,
     topEndAction: @Composable BoxScope.() -> Unit = {},
-    content: @Composable ColumnScope.() -> Unit,
+    content: @Composable ColumnScope.(scale: Float) -> Unit,
 ) {
     CompositionLocalProvider(LocalGamssColors provides LightGamssColors) {
-        Box(
+        BoxWithConstraints(
             modifier = modifier
                 .widthIn(max = CardWidth)
-                .fillMaxWidth()
-                .aspectRatio(CardAspectRatio)
-                .clip(shape),
+                .fillMaxWidth(),
         ) {
-            Image(
-                painter = painterResource(R.drawable.bg_card),
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize(),
-            )
-
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(
-                        start = GamssTheme.spacing.spacing800,
-                        end = GamssTheme.spacing.spacing800,
-                        top = GamssTheme.spacing.spacing700,
-                    ),
-            ) {
-                Text(
-                    text = date,
-                    modifier = Modifier.fillMaxWidth(),
-                    style = GamssTheme.typography.subtitle3,
-                    color = GamssTheme.colors.gray900,
-                    textAlign = TextAlign.Center,
-                )
-                content()
-            }
-
+            val scale = cardScale(maxWidth)
             Box(
                 modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(top = GamssTheme.spacing.spacing550, end = GamssTheme.spacing.spacing550),
+                    .fillMaxWidth()
+                    .aspectRatio(CardAspectRatio)
+                    .clip(shape),
             ) {
-                topEndAction()
+                Image(
+                    painter = painterResource(R.drawable.bg_card),
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize(),
+                )
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(
+                            start = GamssTheme.spacing.spacing800 * scale,
+                            end = GamssTheme.spacing.spacing800 * scale,
+                            top = GamssTheme.spacing.spacing700 * scale,
+                        ),
+                ) {
+                    Text(
+                        text = date,
+                        modifier = Modifier.fillMaxWidth(),
+                        style = GamssTheme.typography.subtitle3,
+                        color = GamssTheme.colors.gray900,
+                        textAlign = TextAlign.Center,
+                    )
+                    content(scale)
+                }
+
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(
+                            top = GamssTheme.spacing.spacing550 * scale,
+                            end = GamssTheme.spacing.spacing550 * scale,
+                        ),
+                ) {
+                    topEndAction()
+                }
             }
         }
     }
 }
+
+/**
+ * 카드가 시안 폭보다 좁아진 비율입니다.
+ *
+ * 화면 폭을 쓰는 [com.gamss.android.core.designsystem.theme.designScale] 과 기준이 다릅니다. 카드는
+ * 화면 좌우 여백을 뺀 자리에 놓여, 시안에서도 화면(402)보다 좁은 [CardWidth] 위에서 값이 정해졌습니다.
+ */
+private fun cardScale(cardWidth: Dp): Float = (cardWidth / CardWidth).coerceAtMost(1f)
 
 @Preview(name = "Emotion - Light", showBackground = true)
 @Suppress("UnusedPrivateMember")
@@ -130,12 +155,37 @@ private fun GamssImageCardEmotionDarkPreview() {
 }
 
 /**
+ * 카드가 좁아지는 기기에서 본문 3줄이 들어가는지 보는 프리뷰입니다. 366 폭 프리뷰만 두면 좁은
+ * 기기에서 버튼이 종이 밖으로 밀리는 것을 못 잡습니다.
+ *
+ * 공유 줄은 화면과 같이 끕니다(`isShareVisible = false`). 켜 두면 이 프리뷰만 30dp 를 더 써서
+ * 화면에서는 나지 않는 잘림이 보입니다.
+ */
+@Preview(name = "Emotion - 360dp", showBackground = true, widthDp = 360, heightDp = 520)
+@Preview(name = "Emotion - 320dp", showBackground = true, widthDp = 320, heightDp = 470)
+@Suppress("UnusedPrivateMember")
+@Composable
+private fun GamssImageCardEmotionNarrowPreview() {
+    GamssTheme(darkTheme = false) {
+        Box(modifier = Modifier.padding(GamssTheme.spacing.spacing300)) {
+            EmotionCardPreviewContent(
+                description = "설느닛람햄을 긱에자네에 신손 겅투히오의 흐랸비의 수매해으는 하어이 " +
+                    "머츠니가 도랴흐로 뎌슨하다",
+                isShareVisible = false,
+            )
+        }
+    }
+}
+
+/**
  * 감정 캐릭터와 대화 요약을 보여 주는 이미지 카드 퍼사드.
  *
  * 카드의 고정 구조와 감정별 캐릭터 선택은 이 컴포넌트가 맡고, 문구와 사용자 동작만 호출부가 제공한다.
  * 따라서 화면마다 [GamssImageCard]의 간격과 텍스트 스타일을 다시 조합할 필요가 없다.
  *
- * @param isShareVisible 공유 줄을 보일지. 끄면 자리만 남기고 투명하게 두어 카드 안 간격이 바뀌지 않는다.
+ * @param isShareVisible 공유 줄을 보일지 정합니다. 공유 줄은 카드 맨 아래라 끄고 그리지 않아도
+ *  위쪽 간격은 그대로입니다. 반대로 자리를 남겨 두면 좁은 기기에서 그 높이만큼 버튼이 카드 밖으로
+ *  밀립니다.
  */
 @Composable
 @Suppress("LongParameterList")
@@ -160,8 +210,8 @@ fun GamssEmotionCard(
         modifier = modifier,
         shape = shape,
         topEndAction = topEndAction,
-    ) {
-        GamssEmotionCardContent(character = character, showDivider = true) {
+    ) { scale ->
+        GamssEmotionCardContent(character = character, scale = scale, showDivider = true) {
             Text(
                 text = title,
                 modifier = Modifier.fillMaxWidth(),
@@ -169,7 +219,7 @@ fun GamssEmotionCard(
                 color = GamssTheme.colors.gray950,
                 textAlign = TextAlign.Center,
             )
-            Spacer(modifier = Modifier.height(GamssTheme.spacing.spacing200))
+            Spacer(modifier = Modifier.height(GamssTheme.spacing.spacing200 * scale))
             Text(
                 text = description,
                 modifier = Modifier.fillMaxWidth(),
@@ -180,46 +230,48 @@ fun GamssEmotionCard(
                 maxLines = DESCRIPTION_MAX_LINES,
                 overflow = TextOverflow.Ellipsis,
             )
-            Spacer(modifier = Modifier.height(DividerToContentGap))
+            Spacer(modifier = Modifier.height(DividerToContentGap * scale))
             GamssCardDashedDivider()
-            Spacer(modifier = Modifier.height(DividerToContentGap))
+            Spacer(modifier = Modifier.height(DividerToContentGap * scale))
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(GamssTheme.spacing.spacing100),
+                horizontalArrangement = Arrangement.spacedBy(GamssTheme.spacing.spacing100 * scale),
             ) {
                 CardOutlinedButton(
                     text = primaryActionLabel,
                     onClick = onPrimaryActionClick,
+                    scale = scale,
                     modifier = Modifier.weight(1f),
                 )
                 CardOutlinedButton(
                     text = secondaryActionLabel,
                     onClick = onSecondaryActionClick,
+                    scale = scale,
                     modifier = Modifier.weight(1f),
                 )
             }
-            Spacer(modifier = Modifier.height(GamssTheme.spacing.spacing200))
-            // 숨겨도 자리는 남긴다. 빼 버리면 카드 안 다른 요소가 아래로 밀려 시안과 어긋난다.
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .alpha(if (isShareVisible) 1f else 0f)
-                    .noRippleClickableIfNotNull(onShareClick.takeIf { isShareVisible }),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = shareActionLabel,
-                    style = GamssTheme.typography.body5Medium,
-                    color = GamssTheme.colors.gray600,
-                )
-                Spacer(modifier = Modifier.width(GamssTheme.spacing.spacing025))
-                Icon(
-                    painter = painterResource(GamssIcons.RightChevron),
-                    contentDescription = null,
-                    tint = GamssTheme.colors.gray600,
-                    modifier = Modifier.size(GamssTheme.spacing.spacing300),
-                )
+            if (isShareVisible) {
+                Spacer(modifier = Modifier.height(GamssTheme.spacing.spacing200 * scale))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .noRippleClickable(onClick = onShareClick),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = shareActionLabel,
+                        style = GamssTheme.typography.body5Medium,
+                        color = GamssTheme.colors.gray600,
+                    )
+                    Spacer(modifier = Modifier.width(GamssTheme.spacing.spacing025 * scale))
+                    Icon(
+                        painter = painterResource(GamssIcons.RightChevron),
+                        contentDescription = null,
+                        tint = GamssTheme.colors.gray600,
+                        modifier = Modifier.size(GamssTheme.spacing.spacing300 * scale),
+                    )
+                }
             }
         }
     }
@@ -230,27 +282,31 @@ fun GamssEmotionCard(
  *
  * [showDivider] 를 켜면 캐릭터와 콘텐츠 사이에 점선을 넣는다. 카드 목록처럼 점선이 없는
  * 시안도 같은 캐릭터 영역을 쓰므로 기본값은 꺼짐이다.
+ *
+ * @param scale [GamssImageCard] 가 넘겨 준 카드 배율입니다. 캐릭터 그림과 간격이 카드와 함께
+ *  줄어야 합니다.
  */
 @Composable
 fun ColumnScope.GamssEmotionCardContent(
     character: GamssEmotionCardCharacter,
+    scale: Float,
     showDivider: Boolean = false,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    Spacer(modifier = Modifier.height(DateToCharacterGap))
+    Spacer(modifier = Modifier.height(DateToCharacterGap * scale))
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(CharacterImageHeight),
+            .height(CharacterImageHeight * scale),
     ) {
         GamssEmotionCardCharacterImage(character = character)
     }
     if (showDivider) {
-        Spacer(modifier = Modifier.height(CharacterToDividerGap))
+        Spacer(modifier = Modifier.height(CharacterToDividerGap * scale))
         GamssCardDashedDivider()
-        Spacer(modifier = Modifier.height(DividerToContentGap))
+        Spacer(modifier = Modifier.height(DividerToContentGap * scale))
     } else {
-        Spacer(modifier = Modifier.height(CharacterToTitleGap))
+        Spacer(modifier = Modifier.height(CharacterToTitleGap * scale))
     }
     content()
 }
@@ -297,30 +353,34 @@ fun GamssChattingCard(
         modifier = modifier,
         shape = shape,
         topEndAction = topEndAction,
-    ) {
-        Spacer(modifier = Modifier.height(DateToChattingGap))
+    ) { scale ->
+        Spacer(modifier = Modifier.height(DateToChattingGap * scale))
         Column(
             modifier = Modifier
                 .weight(1f)
-                .padding(bottom = GamssTheme.spacing.spacing700),
+                .padding(bottom = GamssTheme.spacing.spacing700 * scale),
             content = content,
         )
     }
 }
 
 @Composable
-private fun EmotionCardPreviewContent() {
+private fun EmotionCardPreviewContent(
+    description: String = "설느닛람햄을 긱에자네에 신손 겅투히오의 흐랸비의 수매해으는 하어이",
+    isShareVisible: Boolean = true,
+) {
     GamssEmotionCard(
         date = "26.08.03",
         character = GamssEmotionCardCharacter.ANGER,
         title = "오늘 화~나네",
-        description = "설느닛람햄을 긱에자네에 신손 겅투히오의 흐랸비의 수매해으는 하어이",
+        description = description,
         primaryActionLabel = "기록 버리기",
         secondaryActionLabel = "대화보기",
         shareActionLabel = "공유하기",
         onPrimaryActionClick = {},
         onSecondaryActionClick = {},
         onShareClick = {},
+        isShareVisible = isShareVisible,
         topEndAction = { CloseIconPlaceholder() },
     )
 }
@@ -341,13 +401,14 @@ private fun CloseIconPlaceholder(modifier: Modifier = Modifier) {
 private fun CardOutlinedButton(
     text: String,
     onClick: () -> Unit,
+    scale: Float,
     modifier: Modifier = Modifier,
 ) {
     GamssOutlinedCard(
         modifier = modifier,
         onClick = onClick,
         borderColor = GamssTheme.colors.gray900,
-        contentPadding = PaddingValues(vertical = GamssTheme.spacing.spacing200),
+        contentPadding = PaddingValues(vertical = GamssTheme.spacing.spacing200 * scale),
     ) {
         Text(
             text = text,
