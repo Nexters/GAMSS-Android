@@ -94,16 +94,15 @@ private fun Context.createStoryImageUri(bitmap: Bitmap, @ColorInt backgroundColo
 
 /**
  * 9:16 캔버스 가운데에 원본 비율을 유지한 카드를 놓고 나머지를 [backgroundColor] 로 채운다.
- * 카드 크기가 0 이면 그릴 자리를 정할 수 없어 `null`.
+ * 카드 크기가 0 이거나 소프트웨어 비트맵으로 바꾸지 못하면 그릴 수 없어 `null`.
  */
 private fun Bitmap.toStoryCanvas(@ColorInt backgroundColor: Int): Bitmap? {
     val bounds = storyCardBounds(width, height) ?: return null
+    val source = toSoftwareBitmap() ?: return null
 
     val story = createBitmap(STORY_WIDTH, STORY_HEIGHT)
     val canvas = Canvas(story)
     canvas.drawColor(backgroundColor)
-
-    val source = toSoftwareBitmap()
     canvas.drawBitmap(
         source,
         null,
@@ -117,14 +116,16 @@ private fun Bitmap.toStoryCanvas(@ColorInt backgroundColor: Int): Bitmap? {
 }
 
 /**
- * 소프트웨어 [Canvas] 에 그릴 수 있는 비트맵으로 바꾼다.
+ * 소프트웨어 [Canvas] 에 그릴 수 있는 비트맵으로 바꾼다. 변환에 실패하면(메모리 부족 등) `null`.
  *
  * Compose 의 GraphicsLayer 캡처는 [Bitmap.Config.HARDWARE] 비트맵을 주는데, 이건 GPU 메모리에만
  * 있어서 소프트웨어 캔버스에 그리면 예외가 난다. PNG 압축만 할 때는 문제가 없어 이 변환이 필요 없었다.
+ * [Bitmap.copy] 는 실패하면 원본을 되돌려주지 않고 `null` 을 주므로, 여기서도 그대로 `null` 을
+ * 돌려준다. 원본(HARDWARE)을 그대로 반환하면 호출부가 소프트웨어 캔버스에 그리려다 죽는다.
  */
-private fun Bitmap.toSoftwareBitmap(): Bitmap =
+private fun Bitmap.toSoftwareBitmap(): Bitmap? =
     if (config == Bitmap.Config.HARDWARE) {
-        copy(Bitmap.Config.ARGB_8888, false) ?: this
+        copy(Bitmap.Config.ARGB_8888, false)
     } else {
         this
     }
