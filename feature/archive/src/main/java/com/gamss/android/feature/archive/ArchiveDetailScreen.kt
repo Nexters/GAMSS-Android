@@ -1,7 +1,5 @@
 package com.gamss.android.feature.archive
 
-import android.content.Context
-import android.content.Intent
 import android.widget.Toast
 import androidx.annotation.StringRes
 import androidx.compose.foundation.clickable
@@ -63,7 +61,6 @@ fun ArchiveDetailScreen(
 ) {
     val state by viewModel.collectAsState()
     val context = LocalContext.current
-    val shareChooserTitle = stringResource(R.string.archive_card_share_chooser_title)
     val conversationLoadFailedMessage = stringResource(R.string.archive_conversation_load_error)
 
     // 방금 버린 카드는 목록에 아직 없어 다시 받아야 한다. 파쇄한 카드는 서버에서 이미 지워진
@@ -107,7 +104,6 @@ fun ArchiveDetailScreen(
         onCardDismiss = viewModel::dismissCard,
         onCardDiscard = viewModel::discardSelectedCard,
         onCardConversationClick = viewModel::viewSelectedConversation,
-        onCardShare = { card -> shareCard(context, card, shareChooserTitle) },
         onConversationCardDismiss = viewModel::dismissConversationCard,
     )
 }
@@ -164,7 +160,6 @@ private fun ArchiveDetailOverlays(
     onCardDismiss: () -> Unit,
     onCardDiscard: () -> Unit,
     onCardConversationClick: () -> Unit,
-    onCardShare: (Card) -> Unit,
     onConversationCardDismiss: () -> Unit,
 ) {
     if (state.isMonthPickerVisible) {
@@ -189,7 +184,6 @@ private fun ArchiveDetailOverlays(
             onDismiss = onCardDismiss,
             onDiscardClick = onCardDiscard,
             onViewConversationClick = onCardConversationClick,
-            onShareClick = { onCardShare(card) },
         )
     }
 
@@ -200,14 +194,6 @@ private fun ArchiveDetailOverlays(
             onDismiss = onConversationCardDismiss,
         )
     }
-}
-
-private fun shareCard(context: Context, card: Card, chooserTitle: String) {
-    val sendIntent = Intent(Intent.ACTION_SEND).apply {
-        type = "text/plain"
-        putExtra(Intent.EXTRA_TEXT, "${card.summary}\n\n${card.message}")
-    }
-    context.startActivity(Intent.createChooser(sendIntent, chooserTitle))
 }
 
 /** 되돌릴 수 없는 삭제라 파쇄 화면으로 넘기기 전에 확인을 한 번 받는다. */
