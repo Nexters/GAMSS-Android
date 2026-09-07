@@ -33,6 +33,7 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -44,7 +45,7 @@ import com.gamss.android.core.designsystem.component.chat.ChatSender
 import com.gamss.android.core.designsystem.component.chat.GamssChatBubbleDefaults
 import com.gamss.android.core.designsystem.component.chat.GamssReceivedChatBubble
 import com.gamss.android.core.designsystem.component.chat.GamssSentChatBubble
-import com.gamss.android.core.designsystem.modifier.noRippleClickableIfNotNull
+import com.gamss.android.core.designsystem.modifier.noRippleClickable
 import com.gamss.android.core.designsystem.theme.GamssTheme
 import com.gamss.android.core.designsystem.theme.LightGamssColors
 import com.gamss.android.core.designsystem.theme.LocalGamssColors
@@ -234,7 +235,7 @@ private fun CardActionsFooter(actions: GamssEmotionCardFooter.Actions) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .noRippleClickableIfNotNull(actions.onShareClick),
+            .noRippleClickable(role = Role.Button, onClick = actions.onShareClick),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
     ) {

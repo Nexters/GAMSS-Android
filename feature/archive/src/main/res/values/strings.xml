@@ -28,7 +28,7 @@
     <string name="archive_card_share_sheet_close">공유 시트 닫기</string>
     <string name="archive_card_share_target_kakaotalk">카카오톡</string>
     <string name="archive_card_share_target_instagram_story">인스타그램 스토리</string>
-    <!-- 카카오톡으로 보내는 한 줄. %1$s 는 카드 문구, %2$s 는 카드 링크. -->
+    <!-- 카카오톡으로 보내는 한 줄. %1$s 는 카드 제목(캐릭터별 고정 문구), %2$s 는 카드 링크. -->
     <string name="archive_card_share_kakaotalk_text">%1$s\n%2$s</string>
     <string name="archive_card_share_instagram_unavailable">인스타그램이 설치되어 있지 않아요</string>
     <string name="archive_card_share_kakaotalk_unavailable">카카오톡이 설치되어 있지 않아요</string>
