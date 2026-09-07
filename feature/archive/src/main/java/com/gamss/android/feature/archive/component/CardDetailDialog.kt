@@ -87,8 +87,15 @@ internal fun CardDetailDialog(
         ShareTargetSheet(
             onKakaoTalkClick = {
                 isShareSheetVisible = false
-                if (!context.shareTextToKakaoTalk(kakaoTalkText)) {
-                    Toast.makeText(context, kakaoTalkUnavailableMessage, Toast.LENGTH_LONG).show()
+                // 시트가 닫히는 애니메이션 도중 행이 두 번 눌리는 걸 막는다. 카카오톡 호출은
+                // 동기라 인스타그램처럼 코루틴으로 감쌀 필요는 없지만, 같은 isSharing 으로
+                // 재진입을 막아 공유 실행 창을 하나로 유지한다.
+                if (!isSharing) {
+                    isSharing = true
+                    if (!context.shareTextToKakaoTalk(kakaoTalkText)) {
+                        Toast.makeText(context, kakaoTalkUnavailableMessage, Toast.LENGTH_LONG).show()
+                    }
+                    isSharing = false
                 }
             },
             onInstagramStoryClick = {

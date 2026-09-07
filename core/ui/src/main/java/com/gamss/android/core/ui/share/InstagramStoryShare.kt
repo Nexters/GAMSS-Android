@@ -24,7 +24,6 @@ private const val INSTAGRAM_PACKAGE = "com.instagram.android"
 private const val ADD_TO_STORY_ACTION = "com.instagram.share.ADD_TO_STORY"
 private const val PNG_MIME_TYPE = "image/png"
 
-/** PNG 는 무손실이라 이 값이 파일 크기에만 영향을 준다. */
 private const val PNG_QUALITY = 100
 
 private const val SHARE_CACHE_DIR = "shared_images"
@@ -98,21 +97,21 @@ private fun Context.createStoryImageUri(bitmap: Bitmap, @ColorInt backgroundColo
  */
 private fun Bitmap.toStoryCanvas(@ColorInt backgroundColor: Int): Bitmap? {
     val bounds = storyCardBounds(width, height) ?: return null
-    val source = toSoftwareBitmap() ?: return null
 
-    val story = createBitmap(STORY_WIDTH, STORY_HEIGHT)
-    val canvas = Canvas(story)
-    canvas.drawColor(backgroundColor)
-    canvas.drawBitmap(
-        source,
-        null,
-        RectF(bounds.left, bounds.top, bounds.right, bounds.bottom),
-        Paint(Paint.FILTER_BITMAP_FLAG),
-    )
-    // 변환 때문에 새로 만든 복사본만 해제한다. 원본은 호출부 소유다.
-    if (source !== this) source.recycle()
-
-    return story
+    return toSoftwareBitmap()?.let { source ->
+        val story = createBitmap(STORY_WIDTH, STORY_HEIGHT)
+        val canvas = Canvas(story)
+        canvas.drawColor(backgroundColor)
+        canvas.drawBitmap(
+            source,
+            null,
+            RectF(bounds.left, bounds.top, bounds.right, bounds.bottom),
+            Paint(Paint.FILTER_BITMAP_FLAG),
+        )
+        // 변환 때문에 새로 만든 복사본만 해제한다. 원본은 호출부 소유다.
+        if (source !== this) source.recycle()
+        story
+    }
 }
 
 /**
@@ -151,11 +150,7 @@ private fun Bitmap.saveToShareCache(context: Context): Uri? {
         val compressed = FileOutputStream(file).use { out ->
             compress(Bitmap.CompressFormat.PNG, PNG_QUALITY, out)
         }
-        if (!compressed) {
-            Log.i(TAG, "공유 이미지를 PNG로 압축하지 못했다")
-            file.delete()
-            return null
-        }
+        check(compressed) { "공유 이미지를 PNG로 압축하지 못했다" }
         FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
     } catch (e: IOException) {
         Log.i(TAG, "공유 이미지를 캐시에 쓰지 못했다", e)
@@ -163,6 +158,10 @@ private fun Bitmap.saveToShareCache(context: Context): Uri? {
         null
     } catch (e: IllegalArgumentException) {
         Log.i(TAG, "공유 이미지의 FileProvider URI를 만들지 못했다", e)
+        file?.delete()
+        null
+    } catch (e: IllegalStateException) {
+        Log.i(TAG, e.message.orEmpty())
         file?.delete()
         null
     } catch (e: SecurityException) {

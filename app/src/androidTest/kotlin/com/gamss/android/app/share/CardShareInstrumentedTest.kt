@@ -1,5 +1,6 @@
 package com.gamss.android.app.share
 
+import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.ContextWrapper
 import android.content.Intent
@@ -14,6 +15,7 @@ import java.io.File
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -39,7 +41,14 @@ class CardShareInstrumentedTest {
 
     @Test
     fun 카카오톡_공유가_보안_예외로_막히면_false를_반환한다() {
-        val context = SecurityFailureContext(applicationContext)
+        val context = ThrowingContext(applicationContext, SecurityException("test"))
+
+        assertFalse(context.shareTextToKakaoTalk("공유 문구"))
+    }
+
+    @Test
+    fun 카카오톡이_없으면_false를_반환한다() {
+        val context = ThrowingContext(applicationContext, ActivityNotFoundException("test"))
 
         assertFalse(context.shareTextToKakaoTalk("공유 문구"))
     }
@@ -84,6 +93,41 @@ class CardShareInstrumentedTest {
         assertFalse(expired.exists())
     }
 
+    @Test
+    fun 인스타그램이_없으면_InstagramUnavailable을_반환한다() {
+        val context = ThrowingContext(applicationContext, ActivityNotFoundException("test"))
+        val bitmap = createBitmap(width = 20, height = 30)
+
+        val result = try {
+            context.shareBitmapToInstagramStory(bitmap)
+        } finally {
+            bitmap.recycle()
+        }
+
+        assertEquals(StoryShareResult.InstagramUnavailable, result)
+    }
+
+    @Test
+    fun 공유_캐시_디렉터리_자리에_파일이_있으면_ImageUnavailable을_반환한다() {
+        // shared_images 자리를 디렉터리가 아닌 일반 파일로 선점해, 캐시 쓰기가 실제로
+        // 실패하는 경로(IOException)를 재현한다.
+        val shareDirPath = File(applicationContext.cacheDir, "shared_images")
+        shareDirPath.deleteRecursively()
+        check(shareDirPath.createNewFile()) { "테스트 전제 조건: $shareDirPath 를 파일로 선점하지 못했다" }
+        val context = RecordingContext(applicationContext)
+        val bitmap = createBitmap(width = 20, height = 30)
+
+        val result = try {
+            context.shareBitmapToInstagramStory(bitmap)
+        } finally {
+            bitmap.recycle()
+            shareDirPath.delete()
+        }
+
+        assertEquals(StoryShareResult.ImageUnavailable, result)
+        assertNull(context.startedIntent)
+    }
+
     private class RecordingContext(base: Context) : ContextWrapper(base) {
         var startedIntent: Intent? = null
 
@@ -92,9 +136,10 @@ class CardShareInstrumentedTest {
         }
     }
 
-    private class SecurityFailureContext(base: Context) : ContextWrapper(base) {
+    /** [startActivity] 를 호출하면 [exception] 을 던진다. 공유 대상 앱이 없거나 권한이 없는 상황을 흉내낸다. */
+    private class ThrowingContext(base: Context, private val exception: RuntimeException) : ContextWrapper(base) {
         override fun startActivity(intent: Intent) {
-            throw SecurityException("test")
+            throw exception
         }
     }
 }
