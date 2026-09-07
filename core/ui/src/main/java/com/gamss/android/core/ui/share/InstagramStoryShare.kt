@@ -76,7 +76,7 @@ fun Context.shareBitmapToInstagramStory(
         Log.i(TAG, "인스타그램 스토리 공유를 받을 액티비티가 없다", e)
         StoryShareResult.InstagramUnavailable
     } catch (e: SecurityException) {
-        Log.w(TAG, "인스타그램 스토리 공유 액티비티를 실행할 권한이 없다", e)
+        Log.i(TAG, "인스타그램 스토리 공유 액티비티를 실행할 권한이 없다", e)
         StoryShareResult.InstagramUnavailable
     }
 }
@@ -140,7 +140,7 @@ private fun Bitmap.toSoftwareBitmap(): Bitmap? =
 private fun Bitmap.saveToShareCache(context: Context): Uri? {
     val dir = File(context.cacheDir, SHARE_CACHE_DIR)
     if (!dir.exists() && !dir.mkdirs()) {
-        Log.w(TAG, "공유 캐시 디렉터리를 만들지 못했다: $dir")
+        Log.i(TAG, "공유 캐시 디렉터리를 만들지 못했다: $dir")
         return null
     }
     dir.deleteFilesOlderThan(SHARE_FILE_TTL_MILLIS)
@@ -152,21 +152,21 @@ private fun Bitmap.saveToShareCache(context: Context): Uri? {
             compress(Bitmap.CompressFormat.PNG, PNG_QUALITY, out)
         }
         if (!compressed) {
-            Log.w(TAG, "공유 이미지를 PNG로 압축하지 못했다")
+            Log.i(TAG, "공유 이미지를 PNG로 압축하지 못했다")
             file.delete()
             return null
         }
         FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
     } catch (e: IOException) {
-        Log.w(TAG, "공유 이미지를 캐시에 쓰지 못했다", e)
+        Log.i(TAG, "공유 이미지를 캐시에 쓰지 못했다", e)
         file?.delete()
         null
     } catch (e: IllegalArgumentException) {
-        Log.w(TAG, "공유 이미지의 FileProvider URI를 만들지 못했다", e)
+        Log.i(TAG, "공유 이미지의 FileProvider URI를 만들지 못했다", e)
         file?.delete()
         null
     } catch (e: SecurityException) {
-        Log.w(TAG, "공유 이미지 캐시에 접근할 권한이 없다", e)
+        Log.i(TAG, "공유 이미지 캐시에 접근할 권한이 없다", e)
         file?.delete()
         null
     }
@@ -176,7 +176,7 @@ private fun File.deleteFilesOlderThan(ageMillis: Long) {
     val threshold = System.currentTimeMillis() - ageMillis
     listFiles()?.forEach { file ->
         if (file.lastModified() < threshold && !file.delete()) {
-            Log.w(TAG, "지난 공유 이미지를 지우지 못했다: $file")
+            Log.i(TAG, "지난 공유 이미지를 지우지 못했다: $file")
         }
     }
 }

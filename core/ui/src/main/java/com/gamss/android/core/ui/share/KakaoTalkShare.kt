@@ -32,7 +32,7 @@ fun Context.shareTextToKakaoTalk(text: String): Boolean {
         Log.i(TAG, "카카오톡 공유를 받을 액티비티가 없다", e)
         false
     } catch (e: SecurityException) {
-        Log.w(TAG, "카카오톡 공유 액티비티를 실행할 권한이 없다", e)
+        Log.i(TAG, "카카오톡 공유 액티비티를 실행할 권한이 없다", e)
         false
     }
 }
