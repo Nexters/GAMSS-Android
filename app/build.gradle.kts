@@ -7,6 +7,7 @@ plugins {
     alias(libs.plugins.kotlinSerialization)
     alias(libs.plugins.googleServices)
     alias(libs.plugins.firebaseCrashlytics)
+    alias(libs.plugins.androidxBaselineProfile)
 }
 
 android {
@@ -79,6 +80,13 @@ android {
             }
         }
 
+        // 플러그인이 release 를 복제해 만드는 buildType 은 로컬 설치가 필요해 debug 키로 서명한다.
+        configureEach {
+            if (name.startsWith("nonMinified") || name.startsWith("benchmark")) {
+                signingConfig = signingConfigs.getByName("debug")
+            }
+        }
+
         // Firebase App Distribution 전용 buildType. Play Store 를 거치지 않는 설치 경로라 온디바이스
         // 모델을 PAD 대신 APK 에 그대로 번들한다 — data/build.gradle.kts 의 `internal` buildType/
         // sourceSet 참고.
@@ -95,6 +103,12 @@ android {
             matchingFallbacks += listOf("release")
         }
     }
+}
+
+baselineProfile {
+    mergeIntoMain = true
+    // 일반 빌드가 기기를 찾으면 안 된다. 갱신은 :app:generateBaselineProfile 로 직접 돌린다.
+    automaticGenerationDuringBuild = false
 }
 
 dependencies {
@@ -137,6 +151,9 @@ dependencies {
     implementation(libs.firebase.messaging)
 
     implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.core.splashscreen)
+    implementation(libs.androidx.profileinstaller)
+    baselineProfile(projects.baselineprofile)
 
     testImplementation(libs.junit)
 

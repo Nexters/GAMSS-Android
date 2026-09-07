@@ -7,12 +7,11 @@
 
     <string name="archive_back_description">뒤로 가기</string>
     <string name="archive_paper_description">%1$d월 %2$d일 카드</string>
-    <string name="archive_cards_empty">아직 남겨둔 이야기가 없어요.</string>
     <string name="archive_cards_load_failed">이야기를 불러오지 못했어요.</string>
 
     <string name="archive_clear">비우기</string>
-    <string name="archive_clear_dialog_title">대화 전체 비우기</string>
-    <string name="archive_clear_dialog_description">모든 대화 기록이 삭제돼요. 삭제한 내용은 다시 복구할 수 없어요.</string>
+    <string name="archive_clear_dialog_title">%1$s 기록 비우기</string>
+    <string name="archive_clear_dialog_description">%1$s 기록이 모두 삭제돼요. 삭제한 내용은 다시 복구할 수 없어요.</string>
     <string name="archive_clear_dialog_cancel">취소</string>
 
     <string name="archive_select_month_description">월 선택</string>
@@ -25,15 +24,8 @@
     <string name="archive_card_discard">기록 버리기</string>
     <string name="archive_card_view_conversation">대화보기</string>
     <string name="archive_card_share">공유하기</string>
-    <string name="archive_card_share_sheet_title">공유하기</string>
-    <string name="archive_card_share_sheet_close">공유 시트 닫기</string>
-    <string name="archive_card_share_target_kakaotalk">카카오톡</string>
-    <string name="archive_card_share_target_instagram_story">인스타그램 스토리</string>
-    <!-- 카카오톡으로 보내는 한 줄. %1$s 는 카드 문구, %2$s 는 카드 링크. -->
-    <string name="archive_card_share_kakaotalk_text">%1$s\n%2$s</string>
-    <string name="archive_card_share_instagram_unavailable">인스타그램이 설치되어 있지 않아요</string>
-    <string name="archive_card_share_kakaotalk_unavailable">카카오톡이 설치되어 있지 않아요</string>
-    <string name="archive_card_share_image_failed">공유 이미지를 만들지 못했어요. 다시 시도해주세요</string>
-    <string name="archive_card_load_error">카드를 불러오지 못했어요.</string>
-    <string name="archive_card_discard_failure">기록을 버리지 못했어요. 다시 시도해주세요</string>
+    <string name="archive_card_share_chooser_title">카드 공유하기</string>
+    <string name="archive_conversation_load_error">대화를 불러오지 못했어요.</string>
+    <string name="archive_conversation_empty">남아 있는 대화가 없어요.</string>
+    <string name="archive_conversation_scroll_to_bottom">마지막 대화로 이동</string>
 </resources>

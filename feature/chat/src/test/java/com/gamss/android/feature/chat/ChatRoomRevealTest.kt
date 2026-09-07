@@ -203,6 +203,44 @@ class ChatRoomRevealTest {
     }
 
     @Test
+    fun 전송_버튼을_누르면_응답을_기다리지_않고_입력칸이_바로_비워진다() = runTest {
+        val viewModel = viewModel(commentCount = 1)
+
+        viewModel.test(this) {
+            containerHost.onInputChange(INPUT)
+            skipItems(1) // input 반영
+            containerHost.onSend()
+
+            val afterSendPressed = awaitState()
+            assertTrue(afterSendPressed.isSending)
+            assertEquals("", afterSendPressed.input)
+
+            cancelAndIgnoreRemainingItems()
+        }
+    }
+
+    @Test
+    fun 전송이_실패하면_입력칸에_보낸_내용이_복구된다() = runTest {
+        val repository = FakeConversationRepository(commentCount = 1, failing = true)
+        val viewModel = viewModel(repository)
+
+        viewModel.test(this) {
+            containerHost.onInputChange(INPUT)
+            awaitState()
+            containerHost.onSend()
+
+            val afterSendPressed = awaitState()
+            assertEquals("", afterSendPressed.input)
+
+            val afterFailure = awaitState()
+            expectSideEffect(ChatRoomSideEffect.ShowToast(SEND_FAILED_MESSAGE))
+
+            assertFalse(afterFailure.isSending)
+            assertEquals(INPUT, afterFailure.input)
+        }
+    }
+
+    @Test
     fun 전송이_실패하면_토큰_사용량_갱신을_요청하지_않는다() = runTest {
         val notifier = RecordingTokenUsageRefreshNotifier()
         val viewModel = chatRoomViewModel(

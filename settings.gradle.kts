@@ -21,6 +21,9 @@ rootProject.name = "GAMSS-Android"
 
 include(":app")
 
+// 콜드스타트 Baseline Profile 을 실기기에서 수집하는 계측 모듈. 앱에 실리지 않는다.
+include(":baselineprofile")
+
 include(":domain")
 include(":data")
 

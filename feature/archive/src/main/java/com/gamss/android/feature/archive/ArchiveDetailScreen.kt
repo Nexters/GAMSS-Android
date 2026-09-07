@@ -1,5 +1,7 @@
 package com.gamss.android.feature.archive
 
+import android.content.Context
+import android.content.Intent
 import android.widget.Toast
 import androidx.annotation.StringRes
 import androidx.compose.foundation.clickable
@@ -15,6 +17,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -30,9 +35,10 @@ import com.gamss.android.core.designsystem.component.GamssTopBar
 import com.gamss.android.core.designsystem.dialog.GamssDialog
 import com.gamss.android.core.designsystem.dialog.GamssDialogAction
 import com.gamss.android.core.designsystem.theme.GamssTheme
-import com.gamss.android.domain.card.CardEntry
+import com.gamss.android.domain.card.Card
 import com.gamss.android.domain.emotion.EmotionCharacter
 import com.gamss.android.feature.archive.component.CardDetailDialog
+import com.gamss.android.feature.archive.component.ConversationCardDialog
 import com.gamss.android.feature.archive.component.MonthSelector
 import com.gamss.android.feature.archive.component.PaperPile
 import com.gamss.android.feature.archive.component.YearMonthPickerSheet
@@ -49,34 +55,42 @@ import com.gamss.android.core.designsystem.R as DesignSystemR
 @Composable
 fun ArchiveDetailScreen(
     emotion: EmotionCharacter,
+    droppedCardId: Long?,
+    shreddedCardId: Long?,
     onBackClick: () -> Unit,
-    onOpenConversation: (Long) -> Unit,
-    onNavigateToCardDelete: () -> Unit,
+    onNavigateToCardDelete: (Long?) -> Unit,
     viewModel: ArchiveDetailViewModel = hiltViewModel(),
 ) {
     val state by viewModel.collectAsState()
     val context = LocalContext.current
-    val cardLoadFailedMessage = stringResource(R.string.archive_card_load_error)
-    val discardFailedMessage = stringResource(R.string.archive_card_discard_failure)
+    val shareChooserTitle = stringResource(R.string.archive_card_share_chooser_title)
+    val conversationLoadFailedMessage = stringResource(R.string.archive_conversation_load_error)
 
-    LaunchedEffect(emotion) { viewModel.load(emotion) }
+    // 방금 버린 카드는 목록에 아직 없어 다시 받아야 한다. 파쇄한 카드는 서버에서 이미 지워진
+    // 뒤라, 남은 목록을 그대로 두고 그 한 장만 뺀다.
+    LaunchedEffect(emotion) {
+        viewModel.load(emotion, force = droppedCardId != null)
+        if (shreddedCardId != null) viewModel.removeCard(shreddedCardId)
+    }
+
+    // Navigator 가 한 번만 내주지만 이 화면은 그 값을 파라미터로 계속 들고 있다. 달을 바꾸면 종이
+    // 더미가 컴포지션에서 빠지므로, 소비 기록은 더미보다 오래 사는 이 자리에 둔다.
+    var pendingDropId by remember { mutableStateOf(droppedCardId) }
 
     viewModel.collectSideEffect { sideEffect ->
         when (sideEffect) {
-            is ArchiveDetailSideEffect.OpenChatRoom -> onOpenConversation(sideEffect.conversationId)
-            ArchiveDetailSideEffect.OpenCardDelete -> onNavigateToCardDelete()
+            is ArchiveDetailSideEffect.OpenCardDelete -> onNavigateToCardDelete(sideEffect.cardId)
 
-            ArchiveDetailSideEffect.CardLoadFailed ->
-                Toast.makeText(context, cardLoadFailedMessage, Toast.LENGTH_SHORT).show()
-
-            ArchiveDetailSideEffect.CardDiscardFailed ->
-                Toast.makeText(context, discardFailedMessage, Toast.LENGTH_SHORT).show()
+            ArchiveDetailSideEffect.ConversationLoadFailed ->
+                Toast.makeText(context, conversationLoadFailedMessage, Toast.LENGTH_SHORT).show()
         }
     }
 
     ArchiveDetailFrame(
         emotion = emotion,
         state = state,
+        droppedCardId = pendingDropId,
+        onDropConsumed = { pendingDropId = null },
         onBackClick = onBackClick,
         onPaperClick = viewModel::selectCard,
         onMonthClick = viewModel::showMonthPicker,
@@ -84,6 +98,7 @@ fun ArchiveDetailScreen(
     )
 
     ArchiveDetailOverlays(
+        emotion = emotion,
         state = state,
         onMonthSelect = viewModel::selectMonth,
         onMonthPickerDismiss = viewModel::dismissMonthPicker,
@@ -92,6 +107,8 @@ fun ArchiveDetailScreen(
         onCardDismiss = viewModel::dismissCard,
         onCardDiscard = viewModel::discardSelectedCard,
         onCardConversationClick = viewModel::viewSelectedConversation,
+        onCardShare = { card -> shareCard(context, card, shareChooserTitle) },
+        onConversationCardDismiss = viewModel::dismissConversationCard,
     )
 }
 
@@ -100,8 +117,10 @@ fun ArchiveDetailScreen(
 private fun ArchiveDetailFrame(
     emotion: EmotionCharacter,
     state: ArchiveDetailState,
+    droppedCardId: Long?,
+    onDropConsumed: () -> Unit,
     onBackClick: () -> Unit,
-    onPaperClick: (CardEntry) -> Unit,
+    onPaperClick: (Card) -> Unit,
     onMonthClick: () -> Unit,
     onClearClick: () -> Unit,
 ) {
@@ -116,7 +135,12 @@ private fun ArchiveDetailFrame(
         },
     ) { innerPadding ->
         Box(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
-            ArchiveDetailCards(cards = state.cards, onPaperClick = onPaperClick)
+            ArchiveDetailCards(
+                cardsState = state.cards,
+                droppedCardId = droppedCardId,
+                onDropConsumed = onDropConsumed,
+                onPaperClick = onPaperClick,
+            )
             // 종이가 쌓일 자리보다 나중에 둔다. 카드가 많아 더미가 위로 넘치면 종이가 셀렉터를
             // 가리고 탭까지 먹어 달을 못 바꾸게 된다.
             MonthSelector(
@@ -128,9 +152,10 @@ private fun ArchiveDetailFrame(
     }
 }
 
-/** 셋 다 아무것도 안 뜬 상태가 기본이라, 프레임과 떼어 여기서만 켜고 끈다. */
+/** 넷 다 아무것도 안 뜬 상태가 기본이라, 프레임과 떼어 여기서만 켜고 끈다. */
 @Composable
 private fun ArchiveDetailOverlays(
+    emotion: EmotionCharacter,
     state: ArchiveDetailState,
     onMonthSelect: (YearMonth) -> Unit,
     onMonthPickerDismiss: () -> Unit,
@@ -139,6 +164,8 @@ private fun ArchiveDetailOverlays(
     onCardDismiss: () -> Unit,
     onCardDiscard: () -> Unit,
     onCardConversationClick: () -> Unit,
+    onCardShare: (Card) -> Unit,
+    onConversationCardDismiss: () -> Unit,
 ) {
     if (state.isMonthPickerVisible) {
         YearMonthPickerSheet(
@@ -149,7 +176,11 @@ private fun ArchiveDetailOverlays(
     }
 
     if (state.isClearDialogVisible) {
-        ClearConfirmDialog(onConfirm = onClearConfirm, onDismiss = onClearDismiss)
+        ClearConfirmDialog(
+            emotionName = emotion.displayName,
+            onConfirm = onClearConfirm,
+            onDismiss = onClearDismiss,
+        )
     }
 
     state.selectedCard?.let { card ->
@@ -158,19 +189,37 @@ private fun ArchiveDetailOverlays(
             onDismiss = onCardDismiss,
             onDiscardClick = onCardDiscard,
             onViewConversationClick = onCardConversationClick,
+            onShareClick = { onCardShare(card) },
         )
     }
+
+    // 감정 카드와 같은 자리를 쓰지만 둘이 함께 뜨는 일은 없다.
+    state.conversationCard?.let { conversationCard ->
+        ConversationCardDialog(
+            conversationCard = conversationCard,
+            onDismiss = onConversationCardDismiss,
+        )
+    }
+}
+
+private fun shareCard(context: Context, card: Card, chooserTitle: String) {
+    val sendIntent = Intent(Intent.ACTION_SEND).apply {
+        type = "text/plain"
+        putExtra(Intent.EXTRA_TEXT, "${card.summary}\n\n${card.message}")
+    }
+    context.startActivity(Intent.createChooser(sendIntent, chooserTitle))
 }
 
 /** 되돌릴 수 없는 삭제라 파쇄 화면으로 넘기기 전에 확인을 한 번 받는다. */
 @Composable
 private fun ClearConfirmDialog(
+    emotionName: String,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     GamssDialog(
-        title = stringResource(R.string.archive_clear_dialog_title),
-        subtitle = stringResource(R.string.archive_clear_dialog_description),
+        title = stringResource(R.string.archive_clear_dialog_title, emotionName),
+        subtitle = stringResource(R.string.archive_clear_dialog_description, emotionName),
         primaryAction = GamssDialogAction(
             label = stringResource(R.string.archive_clear),
             onClick = onConfirm,
@@ -229,17 +278,23 @@ private fun ArchiveDetailTopBar(
 
 @Composable
 private fun ArchiveDetailCards(
-    cards: ArchiveCards,
-    onPaperClick: (CardEntry) -> Unit,
+    cardsState: ArchiveCards,
+    droppedCardId: Long?,
+    onDropConsumed: () -> Unit,
+    onPaperClick: (Card) -> Unit,
 ) {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        when (cards) {
+        when (cardsState) {
             ArchiveCards.Loading -> CircularProgressIndicator(color = GamssTheme.colors.gray700)
             ArchiveCards.LoadFailed -> EmptyMessage(textRes = R.string.archive_cards_load_failed)
-            is ArchiveCards.Loaded -> if (cards.entries.isEmpty()) {
-                EmptyMessage(textRes = R.string.archive_cards_empty)
-            } else {
-                PaperPile(cards = cards.entries, onPaperClick = onPaperClick)
+            // 카드가 없으면 아무것도 그리지 않는다. 빈 종이판이 그대로 보이는 것이 이 화면의 빈 상태다.
+            is ArchiveCards.Loaded -> if (cardsState.cards.isNotEmpty()) {
+                PaperPile(
+                    cards = cardsState.cards,
+                    droppedCardId = droppedCardId,
+                    onDropConsumed = onDropConsumed,
+                    onPaperClick = onPaperClick,
+                )
             }
         }
     }
@@ -270,8 +325,10 @@ private fun ArchiveDetailPaperPilePreview() {
             state = ArchiveDetailState(
                 emotion = EmotionCharacter.QUIRKY,
                 yearMonth = YearMonth.of(2026, 7),
-                cards = ArchiveCards.Loaded(List(24) { index -> PreviewCard.copy(indexInDate = index) }),
+                cards = ArchiveCards.Loaded(List(24) { index -> PreviewCard.copy(id = index.toLong()) }),
             ),
+            droppedCardId = null,
+            onDropConsumed = {},
             onBackClick = {},
             onPaperClick = {},
             onMonthClick = {},
@@ -280,8 +337,12 @@ private fun ArchiveDetailPaperPilePreview() {
     }
 }
 
-private val PreviewCard = CardEntry(
-    date = LocalDate.of(2026, 7, 23),
-    indexInDate = 0,
+private val PreviewCard = Card(
+    id = 0L,
+    conversationId = 0L,
     character = EmotionCharacter.QUIRKY,
+    emotionLabel = "엉뚱",
+    summary = "오늘은 좀 엉뚱한 하루였어요.",
+    message = "그런 날도 있죠.",
+    date = LocalDate.of(2026, 7, 23),
 )

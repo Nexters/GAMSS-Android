@@ -8,8 +8,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -29,6 +27,7 @@ import androidx.navigation3.ui.NavDisplay
 import com.gamss.android.app.R
 import com.gamss.android.app.main.MainScreen
 import com.gamss.android.app.main.MainViewModel
+import com.gamss.android.core.designsystem.component.GamssPaperBackground
 import com.gamss.android.domain.auth.SessionState
 import com.gamss.android.feature.login.LoginScreen
 import com.gamss.android.feature.login.navigation.LoginKey
@@ -48,13 +47,9 @@ fun GamssRootNavHost(
     }
 
     when (state.sessionState) {
-        SessionState.Loading -> {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center,
-            ) {
-                CircularProgressIndicator()
-            }
+        // 스플래시 윈도우 배경과 같은 색을 깔아 넘어올 때 색이 튀지 않게 한다.
+        SessionState.Loading -> GamssPaperBackground {
+            CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
         }
 
         else -> RootNavDisplay(

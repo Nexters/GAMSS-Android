@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- designsystem 의 gray025 와 같은 값이어야 한다. -->
+    <color name="splash_background">#FDFEFF</color>
+</resources>

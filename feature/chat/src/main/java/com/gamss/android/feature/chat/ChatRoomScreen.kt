@@ -3,7 +3,6 @@ package com.gamss.android.feature.chat
 import android.content.res.Configuration
 import android.widget.Toast
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,37 +14,30 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntOffset
@@ -53,10 +45,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import com.gamss.android.core.common.util.formatConversationDate
-import com.gamss.android.core.designsystem.component.GamssIcons
+import com.gamss.android.core.designsystem.component.GamssScrollToBottomButton
 import com.gamss.android.core.designsystem.component.GamssTokenUsageTooltip
-import com.gamss.android.core.designsystem.modifier.gamssShadow
+import com.gamss.android.core.designsystem.modifier.addFocusCleaner
 import com.gamss.android.core.designsystem.theme.GamssTheme
 import com.gamss.android.core.designsystem.topnavigation.GamssTopNavigation
 import com.gamss.android.core.designsystem.topnavigation.GamssTopNavigationHeight
@@ -64,35 +57,44 @@ import com.gamss.android.core.designsystem.topnavigation.GamssTopNavigationHoriz
 import com.gamss.android.core.designsystem.topnavigation.GamssTopNavigationIcon
 import com.gamss.android.core.designsystem.topnavigation.GamssTopNavigationIconAction
 import com.gamss.android.core.designsystem.topnavigation.GamssTopNavigationTitleAlignment
-import com.gamss.android.domain.card.Card
+import com.gamss.android.core.ui.chat.ChatMessageBubble
+import com.gamss.android.core.ui.chat.rememberReplyQuoteLookup
 import com.gamss.android.domain.conversation.Message
 import com.gamss.android.domain.conversation.MessageSender
 import com.gamss.android.domain.emotion.EmotionCharacter
+import com.gamss.android.domain.repository.TokenUsageAlert
+import com.gamss.android.feature.chat.component.CardFoldOverlay
 import com.gamss.android.feature.chat.component.EndConversationDialog
 import com.gamss.android.feature.chat.component.LoadingMessageBubble
-import com.gamss.android.feature.chat.component.MessageBubble
 import com.gamss.android.feature.chat.component.MessageInputBar
 import com.gamss.android.feature.chat.component.NewMessageToast
 import com.gamss.android.feature.chat.component.SupportAgencyDialog
-import com.gamss.android.feature.chat.component.toReplyQuote
 import com.gamss.android.feature.chat.util.AnimatedChatMessage
 import com.gamss.android.feature.chat.util.ChatMessageAnimation
 import com.gamss.android.feature.chat.util.ChatScrollState
 import com.gamss.android.feature.chat.util.dialOrNotify
 import com.gamss.android.feature.chat.util.rememberChatMessageAnimationState
 import com.gamss.android.feature.chat.util.rememberChatScrollState
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import org.orbitmvi.orbit.compose.collectAsState
 import org.orbitmvi.orbit.compose.collectSideEffect
+import kotlin.coroutines.cancellation.CancellationException
 
 /**
- * @param onCardClose 카드 시트를 닫을 때 호출한다. 이 화면을 실제로 벗어나야 한다.
- *  머무르면 카드 단계가 그대로라 시트가 다시 열린다.
+ * 두 콜백 모두 이 화면을 실제로 벗어나야 한다. 머무르면 카드 단계가 그대로라 접기 연출이 다시 열린다.
+ *
+ * @param onCardDiscard 접은 카드를 통에 버린 뒤 호출한다. 버린 카드가 쌓인 보관함 칸으로 보내려면
+ *  어느 감정 칸인지, 그중 어느 카드인지 알아야 하므로 함께 넘긴다.
+ * @param onCardSkip 연출을 건너뛴 뒤 호출한다. 카드는 이미 기록에 남아 결과는 같지만, 버리는
+ *  동작을 하지 않았으니 보관함까지 데려가지 않는다.
  */
 @Composable
 fun ChatRoomScreen(
     conversationId: Long,
-    onCardClose: () -> Unit,
+    onCardDiscard: (EmotionCharacter, Long) -> Unit,
+    onCardSkip: () -> Unit,
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: ChatRoomViewModel = hiltViewModel(),
@@ -102,10 +104,30 @@ fun ChatRoomScreen(
 
     LaunchedEffect(conversationId) { viewModel.start(conversationId) }
 
+    // 토큰 알림은 화면이 보이는 동안만 구독해야 다른 채팅방이 가로채지 않는다. Nav3의
+    // SinglePaneSceneStrategy는 다른 방으로 넘어가면 이 컴포저블을 ON_PAUSE 이벤트 없이 그냥
+    // 컴포지션에서 제거한다 — LifecycleEventEffect(ON_PAUSE)는 이 경우 못 잡아서(dispose 시
+    // 콜백을 안 부른다), dispose 시에도 정리 콜백이 보장되는 LifecycleResumeEffect를 쓴다.
+    LifecycleResumeEffect(conversationId) {
+        viewModel.onScreenResumed()
+        onPauseOrDispose { viewModel.onScreenPaused() }
+    }
+
+    val tokenUsageLowMessage = stringResource(R.string.chat_room_token_usage_low_toast)
+    val tokenUsageExhaustedMessage = stringResource(R.string.chat_room_token_usage_exhausted_toast)
+
     viewModel.collectSideEffect { sideEffect ->
         when (sideEffect) {
             is ChatRoomSideEffect.ShowToast ->
                 Toast.makeText(context, sideEffect.message, Toast.LENGTH_SHORT).show()
+
+            is ChatRoomSideEffect.ShowTokenUsageAlert -> {
+                val message = when (sideEffect.alert) {
+                    TokenUsageAlert.LOW -> tokenUsageLowMessage
+                    TokenUsageAlert.EXHAUSTED -> tokenUsageExhaustedMessage
+                }
+                Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+            }
         }
     }
 
@@ -137,50 +159,47 @@ fun ChatRoomScreen(
         )
     }
 
+    ChatRoomEndFlowHost(
+        endFlow = state.endFlow,
+        onEndConfirm = viewModel::onEndConfirm,
+        onEndCancel = viewModel::onEndCancel,
+        onFoldTap = viewModel::onCardFoldTap,
+        onCardSkip = onCardSkip,
+        onCardDiscard = onCardDiscard,
+    )
+}
+
+/** 대화 종료 단계마다 위에 얹히는 창. 카드가 어느 보관함 칸으로 가는지도 여기서 뽑아낸다. */
+@Composable
+private fun ChatRoomEndFlowHost(
+    endFlow: EndFlow,
+    onEndConfirm: () -> Unit,
+    onEndCancel: () -> Unit,
+    onFoldTap: () -> Unit,
+    onCardSkip: () -> Unit,
+    onCardDiscard: (EmotionCharacter, Long) -> Unit,
+) {
     // else 를 두지 않아야 단계를 추가할 때 화면이 컴파일 에러로 알려준다.
-    when (val endFlow = state.endFlow) {
+    when (endFlow) {
         EndFlow.Confirming -> EndConversationDialog(
-            onConfirm = viewModel::onEndConfirm,
-            onDismiss = viewModel::onEndCancel,
+            onConfirm = onEndConfirm,
+            onDismiss = onEndCancel,
         )
 
-        is EndFlow.CardReady -> CardBottomSheet(card = endFlow.card, onDismiss = onCardClose)
+        is EndFlow.CardReady -> CardFoldOverlay(
+            card = endFlow.card,
+            foldStage = endFlow.foldStage,
+            onFoldTap = onFoldTap,
+            onSkip = onCardSkip,
+            onDiscard = { onCardDiscard(endFlow.card.character, endFlow.card.id) },
+        )
+
         EndFlow.NotStarted,
         EndFlow.Ending,
         EndFlow.CreatingCard,
         EndFlow.CardFailedRetryable,
         EndFlow.CardFailedFinal,
         -> Unit
-    }
-}
-
-// 카드생성 bottomsheet
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun CardBottomSheet(
-    card: Card,
-    onDismiss: () -> Unit,
-) {
-    ModalBottomSheet(onDismissRequest = onDismiss) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 24.dp)
-                .padding(bottom = 32.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Text(
-                text = card.character.displayName,
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.primary,
-            )
-            Text(text = card.summary, style = MaterialTheme.typography.titleMedium)
-            Text(
-                text = card.message,
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
     }
 }
 
@@ -203,6 +222,7 @@ private fun ChatRoomContent(
     onBackClick: () -> Unit,
 ) {
     val listState = rememberLazyListState()
+    val focusManager = LocalFocusManager.current
     val messageAnimationState = rememberChatMessageAnimationState(
         conversationId = state.conversationId,
         isLoading = state.isLoading,
@@ -210,13 +230,25 @@ private fun ChatRoomContent(
     )
     val chatScrollState = rememberChatScrollState(state = state, listState = listState)
 
-    val imeBottomPx = WindowInsets.ime.getBottom(LocalDensity.current)
-    var previousImeBottomPx by remember { mutableIntStateOf(imeBottomPx) }
-    LaunchedEffect(imeBottomPx) {
-        val delta = imeBottomPx - previousImeBottomPx
-        previousImeBottomPx = imeBottomPx
-        if (delta != 0) {
-            listState.scrollBy(delta.toFloat())
+    // WindowInsets.ime 게터 자체가 @Composable이라 LaunchedEffect(코루틴) 안에서 직접 부를 수
+    // 없다. 여기서 객체 참조만 한 번 얻어두면, 이후 getBottom() 호출은 일반 함수 호출이라 코루틴
+    // 안에서도 매번 최신 값을 읽을 수 있다.
+    val imeInsets = WindowInsets.ime
+    val imeDensity = LocalDensity.current
+    val imeBottomPx = imeInsets.getBottom(imeDensity)
+
+    LaunchedEffect(listState, imeInsets, imeDensity) {
+        var previous = imeInsets.getBottom(imeDensity)
+        snapshotFlow { imeInsets.getBottom(imeDensity) }.collect { current ->
+            val delta = current - previous
+            previous = current
+            if (delta != 0) {
+                try {
+                    listState.scrollBy(delta.toFloat())
+                } catch (_: CancellationException) {
+                    currentCoroutineContext().ensureActive()
+                }
+            }
         }
     }
 
@@ -233,7 +265,7 @@ private fun ChatRoomContent(
     }
 
     Scaffold(
-        modifier = modifier,
+        modifier = modifier.addFocusCleaner(focusManager),
         topBar = { ChatRoomTopBar(state = state, actions = actions, onBackClick = onBackClick) },
         // 상위 Scaffold 가 인셋을 이미 적용해, imePadding 을 그대로 쓰면 이중 적용된다.
         contentWindowInsets = WindowInsets(0),
@@ -262,6 +294,7 @@ private fun ChatRoomContent(
                 input = state.input,
                 isInputEnabled = !state.isLoading && state.endFlow == EndFlow.NotStarted,
                 isSending = state.isSending,
+                isTokenExhausted = state.isTokenExhausted,
                 replyTarget = state.replyTarget,
                 actions = actions,
             )
@@ -283,7 +316,6 @@ private fun ChatRoomTopBar(
             onLeftIconClick = onBackClick,
             rightActions = listOfNotNull(
                 when {
-                    !state.useChatEndFeature -> null
                     state.endFlow.isBusy -> GamssTopNavigationIconAction(
                         icon = GamssTopNavigationIcon.CreateCard,
                         onClick = {},
@@ -366,11 +398,7 @@ private fun ChatMessageList(
     showScrollToBottomButton: Boolean,
     modifier: Modifier = Modifier,
 ) {
-    // 리스트 전체(state.messages)를 각 아이템에 그대로 넘기면, 메시지가 하나 추가될 때마다 리스트
-    // 참조가 바뀌어 이미 떠 있던 다른 모든 말풍선까지 재구성 대상이 된다. 답장 대상 조회를 여기서
-    // 한 번에 끝내고 아이템별로는 결과값(replyQuote)만 넘기면, 안 바뀐 아이템은 재구성을 건너뛸 수
-    // 있다. LazyListScope 빌더 본문은 @Composable이 아니라 여기(바깥)서 remember해야 한다.
-    val messagesById = remember(state.messages) { state.messages.associateBy(Message::id) }
+    val replyQuotes = rememberReplyQuoteLookup(state.messages)
 
     Box(modifier = modifier) {
         LazyColumn(
@@ -398,15 +426,13 @@ private fun ChatMessageList(
                 }
             }
             items(state.messages, key = { it.id }) { message ->
-                val replyQuote = message.repliesToMessageId
-                    ?.let { targetId -> messagesById[targetId] }
-                    ?.toReplyQuote()
+                val replyQuote = replyQuotes.quoteFor(message)
                 AnimatedChatMessage(
                     messageId = message.id,
                     shouldAnimate = animationState.shouldAnimate(message.id),
                     listState = listState,
                 ) {
-                    MessageBubble(
+                    ChatMessageBubble(
                         message = message,
                         replyQuote = replyQuote,
                         onCharacterMessageClick = actions.onCharacterMessageClick,
@@ -431,8 +457,9 @@ private fun ChatMessageList(
         }
 
         if (showScrollToBottomButton) {
-            ScrollToBottomButton(
+            GamssScrollToBottomButton(
                 onClick = { scrollState.scrollToBottom(state) },
+                contentDescription = stringResource(R.string.chat_room_scroll_to_bottom),
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
                     .padding(end = 18.dp, bottom = 12.dp),
@@ -442,36 +469,15 @@ private fun ChatMessageList(
 }
 
 @Composable
-private fun ScrollToBottomButton(
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Box(
-        modifier = modifier
-            .size(36.dp)
-            .gamssShadow(shape = CircleShape)
-            .clip(CircleShape)
-            .background(GamssTheme.colors.gray700, CircleShape)
-            .clickable(role = Role.Button, onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(
-            painter = painterResource(GamssIcons.ScrollDown),
-            contentDescription = stringResource(R.string.chat_room_scroll_to_bottom),
-            modifier = Modifier.size(24.dp),
-            tint = GamssTheme.colors.gray025,
-        )
-    }
-}
-
-@Composable
 private fun ChatRoomInputSection(
     endFlow: EndFlow,
     input: String,
     isInputEnabled: Boolean,
     isSending: Boolean,
+    isTokenExhausted: Boolean,
     replyTarget: ReplyTarget?,
     actions: ChatRoomActions,
+    modifier: Modifier = Modifier,
 ) {
     if (endFlow is EndFlow.Ended) {
         Text(
@@ -479,7 +485,7 @@ private fun ChatRoomInputSection(
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
-            modifier = Modifier
+            modifier = modifier
                 .fillMaxWidth()
                 .padding(16.dp),
         )
@@ -490,10 +496,12 @@ private fun ChatRoomInputSection(
         input = input,
         enabled = isInputEnabled,
         isSending = isSending,
+        isTokenExhausted = isTokenExhausted,
         replyTarget = replyTarget,
         onInputChange = actions.onInputChange,
         onSendClick = actions.onSendClick,
         onReplyClear = actions.onReplyTargetClear,
+        modifier = Modifier,
     )
 }
 
@@ -553,7 +561,6 @@ private fun ChatRoomPreviewContent() {
         conversationId = 1,
         messages = messages,
         input = "",
-        useChatEndFeature = true,
         replyTarget = ReplyTarget(
             messageId = 1,
             characterName = "기쁨",
@@ -569,5 +576,9 @@ private fun ChatRoomPreviewContent() {
         onTokenUsageToggle = {},
         onTokenUsageRetry = {}
     )
-    ChatRoomContent(state = state, actions = actions, onBackClick = {})
+    ChatRoomContent(
+        state = state,
+        actions = actions,
+        onBackClick = {},
+    )
 }
