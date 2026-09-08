@@ -175,9 +175,10 @@ private fun UnfoldedPaper(card: Card, onSkip: () -> Unit) {
     GamssImageCard(
         date = formatCardDate(card.date),
         topEndAction = { FoldSkipButton(onClick = onSkip) },
-    ) {
+    ) { scale ->
         GamssEmotionCardContent(
             character = card.character.toGamssEmotionCardCharacter(),
+            scale = scale,
             showDivider = true,
         ) {
             Text(
@@ -187,17 +188,14 @@ private fun UnfoldedPaper(card: Card, onSkip: () -> Unit) {
                 color = GamssTheme.colors.gray950,
                 textAlign = TextAlign.Center,
             )
-            Spacer(modifier = Modifier.height(GamssTheme.spacing.spacing200))
+            Spacer(modifier = Modifier.height(GamssTheme.spacing.spacing200 * scale))
             CardSummaryText(summary = card.summary, modifier = Modifier.weight(1f, fill = false))
-            FoldPromptFooter()
+            FoldPromptFooter(scale = scale)
         }
     }
 }
 
-/**
- * 카드 높이는 폭에 비례해 줄어드는데 안쪽 여백과 캐릭터 그림은 절대 dp 라, 좁은 기기에서 세 줄을
- * 다 쓰면 아래 점선과 안내가 카드 밖으로 밀려 잘린다. 밀리는 쪽이 아니라 요약이 양보해야 한다.
- */
+/** 세로가 모자랄 때 밀리는 쪽은 아래 점선과 안내가 아니라 요약이어야 합니다. */
 @Composable
 private fun CardSummaryText(summary: String, modifier: Modifier = Modifier) {
     Text(
@@ -213,10 +211,10 @@ private fun CardSummaryText(summary: String, modifier: Modifier = Modifier) {
 
 /** 카드 밑에 겹쳐 놓지 않고 흐름에 넣어야 본문 길이가 달라져도 시안의 간격이 유지된다. */
 @Composable
-private fun ColumnScope.FoldPromptFooter() {
-    Spacer(modifier = Modifier.height(CardFoldSummaryToDividerGap))
+private fun ColumnScope.FoldPromptFooter(scale: Float) {
+    Spacer(modifier = Modifier.height(CardFoldSummaryToDividerGap * scale))
     GamssCardDashedDivider()
-    Spacer(modifier = Modifier.height(CardFoldDividerToQuestionGap))
+    Spacer(modifier = Modifier.height(CardFoldDividerToQuestionGap * scale))
     Text(
         text = stringResource(R.string.chat_room_card_fold_discard_question),
         modifier = Modifier.fillMaxWidth(),
@@ -226,13 +224,13 @@ private fun ColumnScope.FoldPromptFooter() {
         color = GamssTheme.colors.gray800,
         textAlign = TextAlign.Center,
     )
-    Spacer(modifier = Modifier.height(CardFoldQuestionToTapGuideGap))
+    Spacer(modifier = Modifier.height(CardFoldQuestionToTapGuideGap * scale))
     Image(
         painter = painterResource(DesignSystemR.drawable.img_paper_fold_guide),
         contentDescription = stringResource(R.string.chat_room_card_fold_guide),
         modifier = Modifier
             .align(Alignment.CenterHorizontally)
-            .size(CardFoldTapGuideSize),
+            .size(CardFoldTapGuideSize * scale),
     )
 }
 
@@ -333,7 +331,14 @@ private val Opaque: () -> Float = { 1f }
 @Preview(showBackground = true, widthDp = 402, heightDp = 874)
 private annotation class CardFoldFramePreview
 
+/** 펼친 종이가 세로로 가장 빡빡합니다. 좁은 폭과 폰트 확대를 각각 눌러 봅니다. */
+@Preview(name = "좁은 폭", showBackground = true, widthDp = 360, heightDp = 800)
+@Preview(name = "폰트 2.0", showBackground = true, widthDp = 402, heightDp = 874, fontScale = 2f)
+@Preview(name = "좁은 폭 + 폰트 2.0", showBackground = true, widthDp = 360, heightDp = 800, fontScale = 2f)
+private annotation class CardFoldUnfoldedTightPreview
+
 @CardFoldFramePreview
+@CardFoldUnfoldedTightPreview
 @Suppress("UnusedPrivateMember")
 @Composable
 private fun CardFoldUnfoldedPreview() = CardFoldPreview(CardFoldStage.Unfolded)
@@ -372,7 +377,8 @@ private val PreviewCard = Card(
     conversationId = 1L,
     character = EmotionCharacter.ANGER,
     emotionLabel = "분노",
-    summary = "오늘은 유난히 화가 많이 났던 하루였어요.",
+    // 짧게 두면 세로가 빡빡한 조건이 프리뷰에서 안 보입니다.
+    summary = "오늘은 유난히 화가 많이 났던 하루였어요. 별일 아닌 걸로 자꾸 짜증이 났고 마음이 가라앉지 않았어요.",
     message = "그럴 수 있어요.",
     date = LocalDate.of(2026, 8, 19),
 )
