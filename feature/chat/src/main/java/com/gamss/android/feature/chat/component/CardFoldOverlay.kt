@@ -195,11 +195,7 @@ private fun UnfoldedPaper(card: Card, onSkip: () -> Unit) {
     }
 }
 
-/**
- * 요약은 카드 안에서 마지막으로 자리를 받습니다. 안쪽 여백과 캐릭터 그림이 카드 배율로 함께
- * 줄어들어도, 글자 크기는 배율을 타지 않아 폰트 확대 설정에서는 세 줄이 남는 높이를 넘을 수
- * 있습니다. 그때 밀려 잘리는 쪽은 아래 점선과 안내가 아니라 요약이어야 합니다.
- */
+/** 세로가 모자랄 때 밀리는 쪽은 아래 점선과 안내가 아니라 요약이어야 합니다. */
 @Composable
 private fun CardSummaryText(summary: String, modifier: Modifier = Modifier) {
     Text(
@@ -335,7 +331,14 @@ private val Opaque: () -> Float = { 1f }
 @Preview(showBackground = true, widthDp = 402, heightDp = 874)
 private annotation class CardFoldFramePreview
 
+/** 펼친 종이가 세로로 가장 빡빡합니다. 좁은 폭과 폰트 확대를 각각 눌러 봅니다. */
+@Preview(name = "좁은 폭", showBackground = true, widthDp = 360, heightDp = 800)
+@Preview(name = "폰트 2.0", showBackground = true, widthDp = 402, heightDp = 874, fontScale = 2f)
+@Preview(name = "좁은 폭 + 폰트 2.0", showBackground = true, widthDp = 360, heightDp = 800, fontScale = 2f)
+private annotation class CardFoldUnfoldedTightPreview
+
 @CardFoldFramePreview
+@CardFoldUnfoldedTightPreview
 @Suppress("UnusedPrivateMember")
 @Composable
 private fun CardFoldUnfoldedPreview() = CardFoldPreview(CardFoldStage.Unfolded)
@@ -374,7 +377,8 @@ private val PreviewCard = Card(
     conversationId = 1L,
     character = EmotionCharacter.ANGER,
     emotionLabel = "분노",
-    summary = "오늘은 유난히 화가 많이 났던 하루였어요.",
+    // 짧게 두면 세로가 빡빡한 조건이 프리뷰에서 안 보입니다.
+    summary = "오늘은 유난히 화가 많이 났던 하루였어요. 별일 아닌 걸로 자꾸 짜증이 났고 마음이 가라앉지 않았어요.",
     message = "그럴 수 있어요.",
     date = LocalDate.of(2026, 8, 19),
 )

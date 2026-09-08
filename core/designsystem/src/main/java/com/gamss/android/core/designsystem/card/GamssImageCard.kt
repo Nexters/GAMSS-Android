@@ -24,6 +24,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -32,10 +33,12 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -53,15 +56,17 @@ import com.gamss.android.core.designsystem.theme.LocalGamssColors
 /**
  * 손그림 종이 카드입니다.
  *
- * 카드 높이는 폭에 비례해 줄어들므로 안쪽 여백과 그림도 같은 배율([cardScale])로 줄여야 합니다.
- * 고정 dp 로 두면 좁은 기기에서 아래쪽 요소가 카드 밖으로 밀립니다. 그래서 [content] 에도 배율을
- * 넘깁니다. 글자 크기에는 배율을 적용하지 않습니다.
+ * 종이 비율이 고정이라 늘거나 스크롤할 수 없습니다. 그래서 안쪽 여백과 그림은 카드 배율([cardScale])로
+ * 함께 줄이고, 폰트 확대는 [cardFontScale] 상한까지만 반영합니다.
+ *
+ * @param capFontScale 내용이 카드 안에서 스크롤되는 카드는 넘칠 일이 없어 상한을 끕니다.
  */
 @Composable
 fun GamssImageCard(
     date: String,
     modifier: Modifier = Modifier,
     shape: Shape = RectangleShape,
+    capFontScale: Boolean = true,
     topEndAction: @Composable BoxScope.() -> Unit = {},
     content: @Composable ColumnScope.(scale: Float) -> Unit,
 ) {
@@ -72,60 +77,73 @@ fun GamssImageCard(
                 .fillMaxWidth(),
         ) {
             val scale = cardScale(maxWidth)
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(CardAspectRatio)
-                    .clip(shape),
-            ) {
-                Image(
-                    painter = painterResource(R.drawable.bg_card),
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize(),
-                )
-
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(
-                            start = GamssTheme.spacing.spacing800 * scale,
-                            end = GamssTheme.spacing.spacing800 * scale,
-                            top = GamssTheme.spacing.spacing700 * scale,
-                        ),
-                ) {
-                    Text(
-                        text = date,
-                        modifier = Modifier.fillMaxWidth(),
-                        style = GamssTheme.typography.subtitle3,
-                        color = GamssTheme.colors.gray900,
-                        textAlign = TextAlign.Center,
-                    )
-                    content(scale)
+            val density = LocalDensity.current
+            val cardDensity = remember(density, scale, capFontScale) {
+                if (capFontScale) {
+                    Density(density.density, cardFontScale(density.fontScale, scale))
+                } else {
+                    density
                 }
-
+            }
+            CompositionLocalProvider(LocalDensity provides cardDensity) {
                 Box(
                     modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(
-                            top = GamssTheme.spacing.spacing550 * scale,
-                            end = GamssTheme.spacing.spacing550 * scale,
-                        ),
+                        .fillMaxWidth()
+                        .aspectRatio(CardAspectRatio)
+                        .clip(shape),
                 ) {
-                    topEndAction()
+                    Image(
+                        painter = painterResource(R.drawable.bg_card),
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(
+                                start = GamssTheme.spacing.spacing800 * scale,
+                                end = GamssTheme.spacing.spacing800 * scale,
+                                top = GamssTheme.spacing.spacing700 * scale,
+                                bottom = CardBorderInset * scale,
+                            ),
+                    ) {
+                        Text(
+                            text = date,
+                            modifier = Modifier.fillMaxWidth(),
+                            style = GamssTheme.typography.subtitle3,
+                            color = GamssTheme.colors.gray900,
+                            textAlign = TextAlign.Center,
+                        )
+                        content(scale)
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(
+                                top = GamssTheme.spacing.spacing550 * scale,
+                                end = GamssTheme.spacing.spacing550 * scale,
+                            ),
+                    ) {
+                        topEndAction()
+                    }
                 }
             }
         }
     }
 }
 
-/**
- * 카드가 시안 폭보다 좁아진 비율입니다.
- *
- * 화면 폭을 쓰는 [com.gamss.android.core.designsystem.theme.designScale] 과 기준이 다릅니다. 카드는
- * 화면 좌우 여백을 뺀 자리에 놓여, 시안에서도 화면(402)보다 좁은 [CardWidth] 위에서 값이 정해졌습니다.
- */
+/** 카드가 [CardWidth] 보다 좁아진 비율입니다. 화면 폭을 쓰는 `designScale` 과 기준이 다릅니다. */
 private fun cardScale(cardWidth: Dp): Float = (cardWidth / CardWidth).coerceAtMost(1f)
+
+/**
+ * 상한이 카드 배율을 함께 타는 이유는 카드가 작아진 만큼 글자가 커질 폭도 좁아지기 때문입니다.
+ * 상한은 1 아래로 내려가지 않습니다. 그 아래는 상한이 아니라 축소입니다.
+ */
+private fun cardFontScale(systemFontScale: Float, scale: Float): Float =
+    systemFontScale.coerceAtMost((MaxFontScaleAtDesignWidth * scale).coerceAtLeast(1f))
 
 @Preview(name = "Emotion - Light", showBackground = true)
 @Suppress("UnusedPrivateMember")
@@ -154,15 +172,23 @@ private fun GamssImageCardEmotionDarkPreview() {
     }
 }
 
-/**
- * 카드가 좁아지는 기기에서 본문 3줄이 들어가는지 보는 프리뷰입니다. 366 폭 프리뷰만 두면 좁은
- * 기기에서 버튼이 종이 밖으로 밀리는 것을 못 잡습니다.
- *
- * 공유 줄은 화면과 같이 끕니다(`isShareVisible = false`). 켜 두면 이 프리뷰만 30dp 를 더 써서
- * 화면에서는 나지 않는 잘림이 보입니다.
- */
+/** 좁은 폭과 폰트 확대가 각각 세로 예산을 깎으므로 둘 다 둡니다. 공유 줄은 화면과 같이 끕니다. */
 @Preview(name = "Emotion - 360dp", showBackground = true, widthDp = 360, heightDp = 520)
 @Preview(name = "Emotion - 320dp", showBackground = true, widthDp = 320, heightDp = 470)
+@Preview(
+    name = "Emotion - 폰트 2.0",
+    showBackground = true,
+    widthDp = 412,
+    heightDp = 580,
+    fontScale = 2f,
+)
+@Preview(
+    name = "Emotion - 360dp + 폰트 2.0",
+    showBackground = true,
+    widthDp = 360,
+    heightDp = 520,
+    fontScale = 2f,
+)
 @Suppress("UnusedPrivateMember")
 @Composable
 private fun GamssImageCardEmotionNarrowPreview() {
@@ -183,9 +209,7 @@ private fun GamssImageCardEmotionNarrowPreview() {
  * 카드의 고정 구조와 감정별 캐릭터 선택은 이 컴포넌트가 맡고, 문구와 사용자 동작만 호출부가 제공한다.
  * 따라서 화면마다 [GamssImageCard]의 간격과 텍스트 스타일을 다시 조합할 필요가 없다.
  *
- * @param isShareVisible 공유 줄을 보일지 정합니다. 공유 줄은 카드 맨 아래라 끄고 그리지 않아도
- *  위쪽 간격은 그대로입니다. 반대로 자리를 남겨 두면 좁은 기기에서 그 높이만큼 버튼이 카드 밖으로
- *  밀립니다.
+ * @param isShareVisible 공유 줄을 보일지 정합니다. 끄면 자리까지 비웁니다.
  */
 @Composable
 @Suppress("LongParameterList")
@@ -282,9 +306,6 @@ fun GamssEmotionCard(
  *
  * [showDivider] 를 켜면 캐릭터와 콘텐츠 사이에 점선을 넣는다. 카드 목록처럼 점선이 없는
  * 시안도 같은 캐릭터 영역을 쓰므로 기본값은 꺼짐이다.
- *
- * @param scale [GamssImageCard] 가 넘겨 준 카드 배율입니다. 캐릭터 그림과 간격이 카드와 함께
- *  줄어야 합니다.
  */
 @Composable
 fun ColumnScope.GamssEmotionCardContent(
@@ -339,6 +360,8 @@ fun GamssCardDashedDivider(modifier: Modifier = Modifier) {
 /**
  * 이미지 카드 안에 대화 로그를 배치하는 카드 퍼사드. 카드가 고정 크기라 [content] 에 날짜 아래 남은
  * 높이를 모두 넘긴다. 호출부는 그 안에서 스크롤만 붙이면 된다.
+ *
+ * 대화 로그는 카드 안에서 스크롤되어 넘칠 일이 없으므로 폰트 확대 상한을 두지 않습니다.
  */
 @Composable
 fun GamssChattingCard(
@@ -352,13 +375,15 @@ fun GamssChattingCard(
         date = date,
         modifier = modifier,
         shape = shape,
+        capFontScale = false,
         topEndAction = topEndAction,
     ) { scale ->
         Spacer(modifier = Modifier.height(DateToChattingGap * scale))
         Column(
             modifier = Modifier
                 .weight(1f)
-                .padding(bottom = GamssTheme.spacing.spacing700 * scale),
+                // 카드가 아래쪽 테두리 여백을 이미 두므로 시안 40 에서 그만큼 뺍니다.
+                .padding(bottom = (GamssTheme.spacing.spacing700 - CardBorderInset) * scale),
             content = content,
         )
     }
@@ -479,6 +504,12 @@ private fun ChattingCardPreviewContent() {
 private val CardWidth = 366.dp
 private val CardHeight = 528.dp
 private val CardAspectRatio = CardWidth.value / CardHeight.value
+
+/** 세로가 가장 빡빡한 채팅 접기 화면이 정한 값입니다. 공유 줄을 켜면 다시 재야 합니다. */
+private const val MaxFontScaleAtDesignWidth = 1.3f
+
+/** 손그림 테두리가 카드 박스 안쪽 약 13dp 에 그려져 있어 아래쪽은 이만큼 비웁니다. */
+private val CardBorderInset = 13.dp
 
 private val DateToCharacterGap = 18.dp
 
