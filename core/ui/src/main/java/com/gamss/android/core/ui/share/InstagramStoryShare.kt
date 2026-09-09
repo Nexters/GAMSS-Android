@@ -9,7 +9,6 @@ import android.graphics.Paint
 import android.graphics.RectF
 import android.net.Uri
 import android.util.Log
-import androidx.annotation.ColorInt
 import androidx.compose.ui.graphics.toArgb
 import androidx.core.content.FileProvider
 import androidx.core.graphics.createBitmap
@@ -61,7 +60,7 @@ suspend fun Context.shareBitmapToInstagramStory(
     bitmap: Bitmap,
 ): StoryShareResult {
     val uri = withContext(Dispatchers.IO) {
-        createStoryImageUri(bitmap, GamssCardExportBackground.toArgb())
+        createStoryImageUri(bitmap)
     } ?: return StoryShareResult.ImageUnavailable
 
     val intent = Intent(ADD_TO_STORY_ACTION).apply {
@@ -76,16 +75,18 @@ suspend fun Context.shareBitmapToInstagramStory(
         StoryShareResult.Shared
     } catch (e: ActivityNotFoundException) {
         Log.i(TAG, "인스타그램 스토리 공유를 받을 액티비티가 없다", e)
+        withContext(Dispatchers.IO) { contentResolver.delete(uri, null, null) }
         StoryShareResult.InstagramUnavailable
     } catch (e: SecurityException) {
         Log.i(TAG, "인스타그램 스토리 공유 액티비티를 실행할 권한이 없다", e)
+        withContext(Dispatchers.IO) { contentResolver.delete(uri, null, null) }
         StoryShareResult.InstagramUnavailable
     }
 }
 
 /** 공유용 9:16 이미지를 만들어 캐시에 쓰고 URI 를 준다. 만들지 못하면 `null`. */
-private fun Context.createStoryImageUri(bitmap: Bitmap, @ColorInt backgroundColor: Int): Uri? {
-    val story = bitmap.toStoryCanvas(backgroundColor) ?: return null
+private fun Context.createStoryImageUri(bitmap: Bitmap): Uri? {
+    val story = bitmap.toStoryCanvas() ?: return null
     return try {
         story.saveToShareCache(this)
     } finally {
@@ -95,16 +96,16 @@ private fun Context.createStoryImageUri(bitmap: Bitmap, @ColorInt backgroundColo
 }
 
 /**
- * 9:16 캔버스 가운데에 원본 비율을 유지한 카드를 놓고 나머지를 [backgroundColor] 로 채운다.
+ * 9:16 캔버스 가운데에 원본 비율을 유지한 카드를 놓고 나머지를 [GamssCardExportBackground] 로 채운다.
  * 카드 크기가 0 이거나 소프트웨어 비트맵으로 바꾸지 못하면 그릴 수 없어 `null`.
  */
-private fun Bitmap.toStoryCanvas(@ColorInt backgroundColor: Int): Bitmap? {
+private fun Bitmap.toStoryCanvas(): Bitmap? {
     val bounds = storyCardBounds(width, height) ?: return null
 
     return toSoftwareBitmap()?.let { source ->
         val story = createBitmap(STORY_WIDTH, STORY_HEIGHT)
         val canvas = Canvas(story)
-        canvas.drawColor(backgroundColor)
+        canvas.drawColor(GamssCardExportBackground.toArgb())
         canvas.drawBitmap(
             source,
             null,
