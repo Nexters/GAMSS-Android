@@ -7,6 +7,7 @@ import com.gamss.android.domain.card.Card
 import com.gamss.android.domain.card.GetCardsByMonthAndEmotionUseCase
 import com.gamss.android.domain.card.MonthlyEmotionQuery
 import com.gamss.android.domain.conversation.GetConversationUseCase
+import com.gamss.android.core.ui.share.StoryShareResult
 import com.gamss.android.domain.emotion.EmotionCharacter
 import dagger.hilt.android.lifecycle.HiltViewModel
 import org.orbitmvi.orbit.ContainerHost
@@ -155,6 +156,23 @@ class ArchiveDetailViewModel @Inject constructor(
     fun dismissConversationCard() = intent {
         val card = state.conversationCard?.card ?: return@intent
         reduce { state.copy(conversationCard = null, selectedCard = card) }
+    }
+
+    fun showShareSheet() = intent {
+        reduce { state.copy(isShareSheetVisible = true) }
+    }
+
+    fun dismissShareSheet() = intent {
+        reduce { state.copy(isShareSheetVisible = false) }
+    }
+
+    /** [result] 는 항상 실패인 경우만 넘어온다. 호출부가 성공(Shared)까지 올리지 않는다. */
+    fun reportInstagramShareFailure(result: StoryShareResult) = intent {
+        postSideEffect(ArchiveDetailSideEffect.CardShareFailed(result))
+    }
+
+    fun reportKakaoTalkShareFailure() = intent {
+        postSideEffect(ArchiveDetailSideEffect.KakaoTalkShareFailed)
     }
 
     private suspend fun Syntax<ArchiveDetailState, ArchiveDetailSideEffect>.loadMonth(

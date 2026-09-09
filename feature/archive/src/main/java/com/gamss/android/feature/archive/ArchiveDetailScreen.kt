@@ -33,6 +33,7 @@ import com.gamss.android.core.designsystem.component.GamssTopBar
 import com.gamss.android.core.designsystem.dialog.GamssDialog
 import com.gamss.android.core.designsystem.dialog.GamssDialogAction
 import com.gamss.android.core.designsystem.theme.GamssTheme
+import com.gamss.android.core.ui.share.StoryShareResult
 import com.gamss.android.domain.card.Card
 import com.gamss.android.domain.emotion.EmotionCharacter
 import com.gamss.android.feature.archive.component.CardDetailDialog
@@ -62,6 +63,9 @@ fun ArchiveDetailScreen(
     val state by viewModel.collectAsState()
     val context = LocalContext.current
     val conversationLoadFailedMessage = stringResource(R.string.archive_conversation_load_error)
+    val instagramUnavailableMessage = stringResource(R.string.archive_card_share_instagram_unavailable)
+    val imageUnavailableMessage = stringResource(R.string.archive_card_share_image_failed)
+    val kakaoTalkUnavailableMessage = stringResource(R.string.archive_card_share_kakaotalk_unavailable)
 
     // 방금 버린 카드는 목록에 아직 없어 다시 받아야 한다. 파쇄한 카드는 서버에서 이미 지워진
     // 뒤라, 남은 목록을 그대로 두고 그 한 장만 뺀다.
@@ -80,6 +84,19 @@ fun ArchiveDetailScreen(
 
             ArchiveDetailSideEffect.ConversationLoadFailed ->
                 Toast.makeText(context, conversationLoadFailedMessage, Toast.LENGTH_SHORT).show()
+
+            is ArchiveDetailSideEffect.CardShareFailed -> {
+                val message = when (sideEffect.result) {
+                    StoryShareResult.InstagramUnavailable -> instagramUnavailableMessage
+                    StoryShareResult.ImageUnavailable -> imageUnavailableMessage
+                    // 호출부가 성공(Shared)까지 올리지 않으므로 여기 닿을 일이 없다.
+                    StoryShareResult.Shared -> return@collectSideEffect
+                }
+                Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+            }
+
+            ArchiveDetailSideEffect.KakaoTalkShareFailed ->
+                Toast.makeText(context, kakaoTalkUnavailableMessage, Toast.LENGTH_LONG).show()
         }
     }
 
@@ -105,6 +122,10 @@ fun ArchiveDetailScreen(
         onCardDiscard = viewModel::discardSelectedCard,
         onCardConversationClick = viewModel::viewSelectedConversation,
         onConversationCardDismiss = viewModel::dismissConversationCard,
+        onCardShareClick = viewModel::showShareSheet,
+        onCardShareSheetDismiss = viewModel::dismissShareSheet,
+        onCardInstagramShareFailed = viewModel::reportInstagramShareFailure,
+        onCardKakaoTalkShareFailed = viewModel::reportKakaoTalkShareFailure,
     )
 }
 
@@ -161,6 +182,10 @@ private fun ArchiveDetailOverlays(
     onCardDiscard: () -> Unit,
     onCardConversationClick: () -> Unit,
     onConversationCardDismiss: () -> Unit,
+    onCardShareClick: () -> Unit,
+    onCardShareSheetDismiss: () -> Unit,
+    onCardInstagramShareFailed: (StoryShareResult) -> Unit,
+    onCardKakaoTalkShareFailed: () -> Unit,
 ) {
     if (state.isMonthPickerVisible) {
         YearMonthPickerSheet(
@@ -181,9 +206,14 @@ private fun ArchiveDetailOverlays(
     state.selectedCard?.let { card ->
         CardDetailDialog(
             card = card,
+            isShareSheetVisible = state.isShareSheetVisible,
             onDismiss = onCardDismiss,
             onDiscardClick = onCardDiscard,
             onViewConversationClick = onCardConversationClick,
+            onShareClick = onCardShareClick,
+            onShareSheetDismiss = onCardShareSheetDismiss,
+            onInstagramShareFailed = onCardInstagramShareFailed,
+            onKakaoTalkShareFailed = onCardKakaoTalkShareFailed,
         )
     }
 

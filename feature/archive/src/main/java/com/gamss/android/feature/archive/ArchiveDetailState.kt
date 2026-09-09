@@ -11,6 +11,7 @@ data class ArchiveDetailState(
     val cards: ArchiveCards = ArchiveCards.Loading,
     val isMonthPickerVisible: Boolean = false,
     val isClearDialogVisible: Boolean = false,
+    val isShareSheetVisible: Boolean = false,
     val selectedCard: Card? = null,
     val conversationCard: ConversationCard? = null,
     val isConversationLoading: Boolean = false,

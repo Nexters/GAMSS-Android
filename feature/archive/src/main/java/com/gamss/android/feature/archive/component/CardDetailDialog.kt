@@ -2,7 +2,6 @@ package com.gamss.android.feature.archive.component
 
 import android.content.Context
 import android.content.res.Configuration
-import android.widget.Toast
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -34,16 +33,18 @@ import kotlinx.coroutines.launch
 @Composable
 internal fun CardDetailDialog(
     card: Card,
+    isShareSheetVisible: Boolean,
     onDismiss: () -> Unit,
     onDiscardClick: () -> Unit,
     onViewConversationClick: () -> Unit,
+    onShareClick: () -> Unit,
+    onShareSheetDismiss: () -> Unit,
+    onInstagramShareFailed: (StoryShareResult) -> Unit,
+    onKakaoTalkShareFailed: () -> Unit,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val capture = rememberComposeCapture()
-    val instagramUnavailableMessage = stringResource(R.string.archive_card_share_instagram_unavailable)
-    val imageUnavailableMessage = stringResource(R.string.archive_card_share_image_failed)
-    val kakaoTalkUnavailableMessage = stringResource(R.string.archive_card_share_kakaotalk_unavailable)
     val kakaoTalkText = stringResource(
         R.string.archive_card_share_kakaotalk_text,
         stringResource(card.character.cardTitleRes()),
@@ -53,7 +54,8 @@ internal fun CardDetailDialog(
     // 공유 이미지에는 누를 수 없는 버튼과 닫기 아이콘을 남기지 않는다. 감추는 동안만 켜 두고,
     // 그 상태가 실제로 그려진 뒤에 캡처한다.
     var isCapturing by remember { mutableStateOf(false) }
-    var isShareSheetVisible by remember { mutableStateOf(false) }
+    // 인스타그램 공유는 캡처가 끝날 때까지 비동기로 이어지므로, 그 사이 재진입해 캡처를 중복
+    // 시작하지 않도록 막는다.
     var isSharing by remember { mutableStateOf(false) }
 
     CardDialogScaffold(onDismiss = onDismiss) {
@@ -73,7 +75,7 @@ internal fun CardDetailDialog(
                     shareLabel = stringResource(R.string.archive_card_share),
                     onPrimaryClick = onDiscardClick,
                     onSecondaryClick = onViewConversationClick,
-                    onShareClick = { isShareSheetVisible = true },
+                    onShareClick = onShareClick,
                 )
             },
             modifier = Modifier.captureTo(capture, isCapturing = isCapturing),
@@ -86,20 +88,13 @@ internal fun CardDetailDialog(
     if (isShareSheetVisible) {
         ShareTargetSheet(
             onKakaoTalkClick = {
-                isShareSheetVisible = false
-                // 시트가 닫히는 애니메이션 도중 행이 두 번 눌리는 걸 막는다. 카카오톡 호출은
-                // 동기라 인스타그램처럼 코루틴으로 감쌀 필요는 없지만, 같은 isSharing 으로
-                // 재진입을 막아 공유 실행 창을 하나로 유지한다.
-                if (!isSharing) {
-                    isSharing = true
-                    if (!context.shareTextToKakaoTalk(kakaoTalkText)) {
-                        Toast.makeText(context, kakaoTalkUnavailableMessage, Toast.LENGTH_LONG).show()
-                    }
-                    isSharing = false
+                onShareSheetDismiss()
+                if (!context.shareTextToKakaoTalk(kakaoTalkText)) {
+                    onKakaoTalkShareFailed()
                 }
             },
             onInstagramStoryClick = {
-                isShareSheetVisible = false
+                onShareSheetDismiss()
                 if (!isSharing) {
                     isSharing = true
                     scope.launch {
@@ -109,13 +104,8 @@ internal fun CardDetailDialog(
                                 capture = capture,
                                 setCapturing = { isCapturing = it },
                             )
-                            val errorMessage = when (result) {
-                                StoryShareResult.InstagramUnavailable -> instagramUnavailableMessage
-                                StoryShareResult.ImageUnavailable -> imageUnavailableMessage
-                                StoryShareResult.Shared -> null
-                            }
-                            errorMessage?.let { message ->
-                                Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                            if (result != StoryShareResult.Shared) {
+                                onInstagramShareFailed(result)
                             }
                         } finally {
                             isSharing = false
@@ -123,7 +113,7 @@ internal fun CardDetailDialog(
                     }
                 }
             },
-            onDismiss = { isShareSheetVisible = false },
+            onDismiss = onShareSheetDismiss,
         )
     }
 }
