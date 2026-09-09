@@ -104,14 +104,17 @@ internal fun CardDetailDialog(
                     isSharing = true
                     scope.launch {
                         try {
-                            val failure = shareCardToStory(
+                            val result = shareCardToStory(
                                 context = context,
                                 capture = capture,
-                                instagramUnavailableMessage = instagramUnavailableMessage,
-                                imageUnavailableMessage = imageUnavailableMessage,
                                 setCapturing = { isCapturing = it },
                             )
-                            failure?.let { message ->
+                            val errorMessage = when (result) {
+                                StoryShareResult.InstagramUnavailable -> instagramUnavailableMessage
+                                StoryShareResult.ImageUnavailable -> imageUnavailableMessage
+                                StoryShareResult.Shared -> null
+                            }
+                            errorMessage?.let { message ->
                                 Toast.makeText(context, message, Toast.LENGTH_LONG).show()
                             }
                         } finally {
@@ -126,7 +129,7 @@ internal fun CardDetailDialog(
 }
 
 /**
- * 카드를 캡처해 인스타그램 스토리로 넘긴다. 실패하면 사용자에게 보일 말을, 성공하면 `null` 을 준다.
+ * 카드를 캡처해 인스타그램 스토리로 넘기고 공유 결과를 돌려준다.
  *
  * [setCapturing] 은 try/finally 로 되돌린다. 캡처가 예외나 시간 초과로 끊겨도 버튼과 닫기
  * 아이콘이 사라진 카드만 남는 상태를 만들지 않으려는 것이다.
@@ -134,24 +137,18 @@ internal fun CardDetailDialog(
 private suspend fun shareCardToStory(
     context: Context,
     capture: ComposeCapture,
-    instagramUnavailableMessage: String,
-    imageUnavailableMessage: String,
     setCapturing: (Boolean) -> Unit,
-): String? {
+): StoryShareResult {
     val bitmap = try {
         setCapturing(true)
         capture.captureAfterNextDraw()
     } finally {
         setCapturing(false)
     }
-    if (bitmap == null) return imageUnavailableMessage
+    if (bitmap == null) return StoryShareResult.ImageUnavailable
 
     return try {
-        when (context.shareBitmapToInstagramStory(bitmap)) {
-            StoryShareResult.Shared -> null
-            StoryShareResult.InstagramUnavailable -> instagramUnavailableMessage
-            StoryShareResult.ImageUnavailable -> imageUnavailableMessage
-        }
+        context.shareBitmapToInstagramStory(bitmap)
     } finally {
         bitmap.recycle()
     }

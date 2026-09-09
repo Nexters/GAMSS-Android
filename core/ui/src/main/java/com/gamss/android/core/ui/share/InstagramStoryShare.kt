@@ -176,7 +176,7 @@ private fun Bitmap.saveToShareCache(context: Context): Uri? {
 
 private fun File.deleteFilesOlderThan(ageMillis: Long) {
     val threshold = System.currentTimeMillis() - ageMillis
-    listFiles()?.forEach { file ->
+    listFiles { file -> file.name.startsWith(SHARE_FILE_PREFIX) }?.forEach { file ->
         if (file.lastModified() < threshold && !file.delete()) {
             Log.i(TAG, "지난 공유 이미지를 지우지 못했다: $file")
         }
