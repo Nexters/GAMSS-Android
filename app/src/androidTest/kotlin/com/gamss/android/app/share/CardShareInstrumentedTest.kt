@@ -12,6 +12,7 @@ import com.gamss.android.core.ui.share.StoryShareResult
 import com.gamss.android.core.ui.share.shareBitmapToInstagramStory
 import com.gamss.android.core.ui.share.shareTextToKakaoTalk
 import java.io.File
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -54,7 +55,7 @@ class CardShareInstrumentedTest {
     }
 
     @Test
-    fun 인스타그램_공유_인텐트에_FileProvider_Uri와_읽기_권한을_담는다() {
+    fun 인스타그램_공유_인텐트에_FileProvider_Uri와_읽기_권한을_담는다() = runBlocking {
         val context = RecordingContext(applicationContext)
         val bitmap = createBitmap(width = 20, height = 30)
 
@@ -75,7 +76,7 @@ class CardShareInstrumentedTest {
     }
 
     @Test
-    fun 새_스토리_이미지를_만들기_전에_한시간_지난_캐시를_지운다() {
+    fun 새_스토리_이미지를_만들기_전에_한시간_지난_캐시를_지운다() = runBlocking {
         val shareDir = File(applicationContext.cacheDir, "shared_images").apply { mkdirs() }
         val expired = File(shareDir, "expired.png").apply {
             writeBytes(byteArrayOf(1))
@@ -94,7 +95,7 @@ class CardShareInstrumentedTest {
     }
 
     @Test
-    fun 인스타그램이_없으면_InstagramUnavailable을_반환한다() {
+    fun 인스타그램이_없으면_InstagramUnavailable을_반환한다() = runBlocking {
         val context = ThrowingContext(applicationContext, ActivityNotFoundException("test"))
         val bitmap = createBitmap(width = 20, height = 30)
 
@@ -108,7 +109,7 @@ class CardShareInstrumentedTest {
     }
 
     @Test
-    fun 공유_캐시_디렉터리_자리에_파일이_있으면_ImageUnavailable을_반환한다() {
+    fun 공유_캐시_디렉터리_자리에_파일이_있으면_ImageUnavailable을_반환한다() = runBlocking {
         // shared_images 자리를 디렉터리가 아닌 일반 파일로 선점해, 캐시 쓰기가 실제로
         // 실패하는 경로(IOException)를 재현한다.
         val shareDirPath = File(applicationContext.cacheDir, "shared_images")

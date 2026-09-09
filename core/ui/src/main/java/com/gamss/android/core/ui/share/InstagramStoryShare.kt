@@ -14,6 +14,8 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.core.content.FileProvider
 import androidx.core.graphics.createBitmap
 import com.gamss.android.core.designsystem.theme.GamssCardExportBackground
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
@@ -51,15 +53,16 @@ sealed interface StoryShareResult {
  *
  * 인스타그램은 넘겨받은 배경 이미지를 9:16 캔버스에 꽉 채우므로, 카드를 그대로 보내면 비율이
  * 맞지 않아 잘리고 여백도 사라진다. 그래서 미리 9:16 캔버스 가운데에 카드를 놓고 남는 곳을
- * [backgroundColor] 로 채운 이미지를 만들어 보낸다.
+ * 공유용 카드 배경색으로 채운 이미지를 만들어 보낸다.
  *
  * [bitmap] 은 여기서 해제하지 않는다. 호출부가 계속 들고 있을 수 있으므로 소유권을 넘기지 않는다.
  */
-fun Context.shareBitmapToInstagramStory(
+suspend fun Context.shareBitmapToInstagramStory(
     bitmap: Bitmap,
-    @ColorInt backgroundColor: Int = GamssCardExportBackground.toArgb(),
 ): StoryShareResult {
-    val uri = createStoryImageUri(bitmap, backgroundColor) ?: return StoryShareResult.ImageUnavailable
+    val uri = withContext(Dispatchers.IO) {
+        createStoryImageUri(bitmap, GamssCardExportBackground.toArgb())
+    } ?: return StoryShareResult.ImageUnavailable
 
     val intent = Intent(ADD_TO_STORY_ACTION).apply {
         setDataAndType(uri, PNG_MIME_TYPE)
