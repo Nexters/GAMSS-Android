@@ -24,6 +24,15 @@ internal val GrayLight800 = Color(0xFF474951)
 internal val GrayLight900 = Color(0xFF303136)
 internal val GrayLight950 = Color(0xFF1E1F22)
 
+/**
+ * 카드를 이미지로 내보낼 때 카드 바깥 여백에 깔 색.
+ *
+ * `GamssImageCard` 가 카드 안쪽을 [LightGamssColors] 로 고정하므로 이 색도 테마에 따라 반전하면
+ * 안 된다. `GamssTheme.colors.gray950` 을 쓰면 다크에서 밝은 색으로 뒤집혀 밝은 카드 뒤에
+ * 밝은 배경이 깔린다. 그래서 라이트 톤을 그대로 노출한다.
+ */
+val GamssCardExportBackground: Color = GrayLight950
+
 // Gray - Dark
 internal val GrayDark025 = Color(0xFF1E1F22)
 internal val GrayDark050 = Color(0xFF24262B)
