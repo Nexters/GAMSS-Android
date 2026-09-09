@@ -78,7 +78,7 @@ class CardShareInstrumentedTest {
     @Test
     fun 새_스토리_이미지를_만들기_전에_한시간_지난_캐시를_지운다() = runBlocking {
         val shareDir = File(applicationContext.cacheDir, "shared_images").apply { mkdirs() }
-        val expired = File(shareDir, "expired.png").apply {
+        val expired = File(shareDir, "story_share_expired.png").apply {
             writeBytes(byteArrayOf(1))
             setLastModified(System.currentTimeMillis() - 2 * 60 * 60 * 1_000L)
         }
