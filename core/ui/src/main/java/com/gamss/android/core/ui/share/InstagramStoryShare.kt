@@ -103,18 +103,20 @@ private fun Bitmap.toStoryCanvas(): Bitmap? {
     val bounds = storyCardBounds(width, height) ?: return null
 
     return toSoftwareBitmap()?.let { source ->
-        val story = createBitmap(STORY_WIDTH, STORY_HEIGHT)
-        val canvas = Canvas(story)
-        canvas.drawColor(GamssCardExportBackground.toArgb())
-        canvas.drawBitmap(
-            source,
-            null,
-            RectF(bounds.left, bounds.top, bounds.right, bounds.bottom),
-            Paint(Paint.FILTER_BITMAP_FLAG),
-        )
-        // 변환 때문에 새로 만든 복사본만 해제한다. 원본은 호출부 소유다.
-        if (source !== this) source.recycle()
-        story
+        try {
+            val story = createBitmap(STORY_WIDTH, STORY_HEIGHT)
+            val canvas = Canvas(story)
+            canvas.drawColor(GamssCardExportBackground.toArgb())
+            canvas.drawBitmap(
+                source,
+                null,
+                RectF(bounds.left, bounds.top, bounds.right, bounds.bottom),
+                Paint(Paint.FILTER_BITMAP_FLAG),
+            )
+            story
+        } finally {
+            if (source !== this) source.recycle()
+        }
     }
 }
 

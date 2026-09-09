@@ -76,7 +76,7 @@ internal fun CardDetailDialog(
                     onShareClick = { isShareSheetVisible = true },
                 )
             },
-            modifier = Modifier.captureTo(capture),
+            modifier = Modifier.captureTo(capture, isCapturing = isCapturing),
             topEndAction = { if (!isCapturing) CardCloseButton(onClick = onDismiss) },
         )
     }
@@ -131,21 +131,15 @@ internal fun CardDetailDialog(
 /**
  * 카드를 캡처해 인스타그램 스토리로 넘기고 공유 결과를 돌려준다.
  *
- * [setCapturing] 은 try/finally 로 되돌린다. 캡처가 예외나 시간 초과로 끊겨도 버튼과 닫기
- * 아이콘이 사라진 카드만 남는 상태를 만들지 않으려는 것이다.
+ * [setCapturing] 을 켜고 끄는 순서는 [ComposeCapture.captureWith] 가 스스로 지킨다. 캡처가
+ * 예외나 시간 초과로 끊겨도 버튼과 닫기 아이콘이 사라진 카드만 남는 상태를 만들지 않는다.
  */
 private suspend fun shareCardToStory(
     context: Context,
     capture: ComposeCapture,
     setCapturing: (Boolean) -> Unit,
 ): StoryShareResult {
-    val bitmap = try {
-        setCapturing(true)
-        capture.captureAfterNextDraw()
-    } finally {
-        setCapturing(false)
-    }
-    if (bitmap == null) return StoryShareResult.ImageUnavailable
+    val bitmap = capture.captureWith(setCapturing) ?: return StoryShareResult.ImageUnavailable
 
     return try {
         context.shareBitmapToInstagramStory(bitmap)
