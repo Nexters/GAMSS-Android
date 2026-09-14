@@ -73,17 +73,16 @@ fun GamssImageCard(
     CompositionLocalProvider(LocalGamssColors provides LightGamssColors) {
         BoxWithConstraints(
             modifier = modifier
-                .widthIn(max = CardWidth)
+                .widthIn(max = GamssCardDefaults.Width)
                 .fillMaxWidth(),
         ) {
             val scale = cardScale(maxWidth)
             val density = LocalDensity.current
-            val cardDensity = remember(density, scale, capFontScale) {
-                if (capFontScale) {
-                    Density(density.density, cardFontScale(density.fontScale, scale))
-                } else {
-                    density
-                }
+            val fontScale =
+                if (capFontScale) cardFontScale(density.fontScale, scale) else density.fontScale
+            // 상한이 걸리지 않으면 원본을 그대로 넘깁니다. 새 Density 는 폰트 변환 캐시를 잃습니다.
+            val cardDensity = remember(density, fontScale) {
+                if (fontScale == density.fontScale) density else Density(density.density, fontScale)
             }
             CompositionLocalProvider(LocalDensity provides cardDensity) {
                 Box(
@@ -135,8 +134,18 @@ fun GamssImageCard(
     }
 }
 
-/** 카드가 [CardWidth] 보다 좁아진 비율입니다. 화면 폭을 쓰는 `designScale` 과 기준이 다릅니다. */
-private fun cardScale(cardWidth: Dp): Float = (cardWidth / CardWidth).coerceAtMost(1f)
+/** 채팅의 접기 연출이 펼친 종이 칸을 이 크기로 잡습니다. 어긋나면 종이 비율이 깨집니다. */
+object GamssCardDefaults {
+    val Width: Dp = 366.dp
+    val Height: Dp = 528.dp
+
+    /** Figma Description 은 높이 60 / lineHeight 20 으로 3줄까지 담습니다. */
+    const val DescriptionMaxLines = 3
+}
+
+/** 기준이 화면 폭인 `designScale` 과 다릅니다. 카드는 화면보다 좁은 자리에 놓입니다. */
+private fun cardScale(cardWidth: Dp): Float =
+    (cardWidth / GamssCardDefaults.Width).coerceAtMost(1f)
 
 /**
  * 상한이 카드 배율을 함께 타는 이유는 카드가 작아진 만큼 글자가 커질 폭도 좁아지기 때문입니다.
@@ -172,7 +181,19 @@ private fun GamssImageCardEmotionDarkPreview() {
     }
 }
 
-/** 좁은 폭과 폰트 확대가 각각 세로 예산을 깎으므로 둘 다 둡니다. 공유 줄은 화면과 같이 끕니다. */
+/** 공유 줄은 아직 화면에서 꺼져 있어, 되살릴 때 쓸 배치를 프리뷰로만 남깁니다. */
+@Preview(name = "Emotion - 공유 켬", showBackground = true)
+@Suppress("UnusedPrivateMember")
+@Composable
+private fun GamssImageCardEmotionShareVisiblePreview() {
+    GamssTheme(darkTheme = false) {
+        Box(modifier = Modifier.padding(GamssTheme.spacing.spacing300)) {
+            EmotionCardPreviewContent(isShareVisible = true)
+        }
+    }
+}
+
+/** 좁은 폭과 폰트 확대가 각각 세로 예산을 깎으므로 둘 다 둡니다. */
 @Preview(name = "Emotion - 360dp", showBackground = true, widthDp = 360, heightDp = 520)
 @Preview(name = "Emotion - 320dp", showBackground = true, widthDp = 320, heightDp = 470)
 @Preview(
@@ -226,7 +247,7 @@ fun GamssEmotionCard(
     onShareClick: () -> Unit,
     modifier: Modifier = Modifier,
     shape: Shape = RectangleShape,
-    isShareVisible: Boolean = true,
+    isShareVisible: Boolean = false,
     topEndAction: @Composable BoxScope.() -> Unit = {},
 ) {
     GamssImageCard(
@@ -235,7 +256,7 @@ fun GamssEmotionCard(
         shape = shape,
         topEndAction = topEndAction,
     ) { scale ->
-        GamssEmotionCardContent(character = character, scale = scale, showDivider = true) {
+        GamssEmotionCardContent(character = character, scale = scale) {
             Text(
                 text = title,
                 modifier = Modifier.fillMaxWidth(),
@@ -250,8 +271,7 @@ fun GamssEmotionCard(
                 style = GamssTheme.typography.body4Regular,
                 color = GamssTheme.colors.gray800,
                 textAlign = TextAlign.Center,
-                // Figma Description 은 높이 60 / lineHeight 20 으로 3줄까지 담는다.
-                maxLines = DESCRIPTION_MAX_LINES,
+                maxLines = GamssCardDefaults.DescriptionMaxLines,
                 overflow = TextOverflow.Ellipsis,
             )
             Spacer(modifier = Modifier.height(DividerToContentGap * scale))
@@ -301,17 +321,10 @@ fun GamssEmotionCard(
     }
 }
 
-/**
- * 감정 카드의 캐릭터 영역과 그 아래 콘텐츠 간격을 재사용한다.
- *
- * [showDivider] 를 켜면 캐릭터와 콘텐츠 사이에 점선을 넣는다. 카드 목록처럼 점선이 없는
- * 시안도 같은 캐릭터 영역을 쓰므로 기본값은 꺼짐이다.
- */
 @Composable
 fun ColumnScope.GamssEmotionCardContent(
     character: GamssEmotionCardCharacter,
     scale: Float,
-    showDivider: Boolean = false,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     Spacer(modifier = Modifier.height(DateToCharacterGap * scale))
@@ -322,13 +335,9 @@ fun ColumnScope.GamssEmotionCardContent(
     ) {
         GamssEmotionCardCharacterImage(character = character)
     }
-    if (showDivider) {
-        Spacer(modifier = Modifier.height(CharacterToDividerGap * scale))
-        GamssCardDashedDivider()
-        Spacer(modifier = Modifier.height(DividerToContentGap * scale))
-    } else {
-        Spacer(modifier = Modifier.height(CharacterToTitleGap * scale))
-    }
+    Spacer(modifier = Modifier.height(CharacterToDividerGap * scale))
+    GamssCardDashedDivider()
+    Spacer(modifier = Modifier.height(DividerToContentGap * scale))
     content()
 }
 
@@ -392,7 +401,7 @@ fun GamssChattingCard(
 @Composable
 private fun EmotionCardPreviewContent(
     description: String = "설느닛람햄을 긱에자네에 신손 겅투히오의 흐랸비의 수매해으는 하어이",
-    isShareVisible: Boolean = true,
+    isShareVisible: Boolean = false,
 ) {
     GamssEmotionCard(
         date = "26.08.03",
@@ -501,9 +510,7 @@ private fun ChattingCardPreviewContent() {
     }
 }
 
-private val CardWidth = 366.dp
-private val CardHeight = 528.dp
-private val CardAspectRatio = CardWidth.value / CardHeight.value
+private val CardAspectRatio = GamssCardDefaults.Width / GamssCardDefaults.Height
 
 /** 세로가 가장 빡빡한 채팅 접기 화면이 정한 값입니다. 공유 줄을 켜면 다시 재야 합니다. */
 private const val MAX_FONT_SCALE_AT_DESIGN_WIDTH = 1.3f
@@ -516,7 +523,6 @@ private val DateToCharacterGap = 18.dp
 /** Figma Card_Chatting 가이드(3264:7548)의 Date - chat 간격. */
 private val DateToChattingGap = 24.dp
 private val CharacterImageHeight = 156.dp
-private val CharacterToTitleGap = 42.dp
 
 // 점선 관련 값은 Figma Card(3557:5286)의 Divider 기준이다. 점선은 콘텐츠 열 전체 폭(270)을
 // 쓰고 위아래 22 씩 띄우며, 캐릭터 이미지와는 16 만 띄운다.
@@ -525,4 +531,3 @@ private val DividerToContentGap = 22.dp
 private val CardDividerThickness = 1.3.dp
 private val CardDividerDashLength = 6.dp
 private val CardDividerDashGap = 4.dp
-private const val DESCRIPTION_MAX_LINES = 3

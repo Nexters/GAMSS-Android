@@ -7,6 +7,7 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
+import com.gamss.android.core.designsystem.card.GamssCardDefaults
 
 internal const val CARD_FOLD_DISCARD_SINK_MS = 200
 
@@ -53,7 +54,7 @@ internal const val CARD_FOLD_DISCARD_HOLD_MS = 60L
  */
 internal val CardFoldStage.paperSize: DpSize
     get() = when (this) {
-        CardFoldStage.Unfolded -> DpSize(366.dp, 528.dp)
+        CardFoldStage.Unfolded -> DpSize(GamssCardDefaults.Width, GamssCardDefaults.Height)
         CardFoldStage.FoldedOnce -> DpSize(366.dp, 268.dp)
         CardFoldStage.FoldedTwice -> DpSize(255.dp, 268.dp)
     }
@@ -99,9 +100,6 @@ internal val CardFoldSinkSpec: AnimationSpec<Float> =
 /** 튕기면 버리다 만 것처럼 보여 감쇠를 걸어 둔다. */
 internal val CardFoldReturnSpec: AnimationSpec<Float> =
     spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMedium)
-
-/** [com.gamss.android.core.designsystem.card.GamssEmotionCard] 의 본문 상한과 같은 값이다. */
-internal const val CARD_FOLD_SUMMARY_MAX_LINES = 3
 
 /**
  * 카드가 액션 슬롯을 Figma 값(우상단 28dp)에 맞춰 두므로 아이콘은 슬롯 좌상단에 딱 붙어야 한다.

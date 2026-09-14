@@ -34,6 +34,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.gamss.android.core.common.util.formatCardDate
 import com.gamss.android.core.designsystem.card.GamssCardDashedDivider
+import com.gamss.android.core.designsystem.card.GamssCardDefaults
 import com.gamss.android.core.designsystem.card.GamssEmotionCardContent
 import com.gamss.android.core.designsystem.card.GamssImageCard
 import com.gamss.android.core.designsystem.component.GamssIcons
@@ -46,7 +47,6 @@ import com.gamss.android.domain.emotion.EmotionCharacter
 import com.gamss.android.feature.chat.CARD_FOLD_ARROW_DELAY_MS
 import com.gamss.android.feature.chat.CARD_FOLD_BIN_DELAY_MS
 import com.gamss.android.feature.chat.CARD_FOLD_GUIDE_DELAY_MS
-import com.gamss.android.feature.chat.CARD_FOLD_SUMMARY_MAX_LINES
 import com.gamss.android.feature.chat.CardFoldArrowBinGap
 import com.gamss.android.feature.chat.CardFoldArrowSize
 import com.gamss.android.feature.chat.CardFoldDividerToQuestionGap
@@ -179,7 +179,6 @@ private fun UnfoldedPaper(card: Card, onSkip: () -> Unit) {
         GamssEmotionCardContent(
             character = card.character.toGamssEmotionCardCharacter(),
             scale = scale,
-            showDivider = true,
         ) {
             Text(
                 text = stringResource(card.character.cardTitleRes()),
@@ -204,7 +203,7 @@ private fun CardSummaryText(summary: String, modifier: Modifier = Modifier) {
         style = GamssTheme.typography.body4Regular,
         color = GamssTheme.colors.gray800,
         textAlign = TextAlign.Center,
-        maxLines = CARD_FOLD_SUMMARY_MAX_LINES,
+        maxLines = GamssCardDefaults.DescriptionMaxLines,
         overflow = TextOverflow.Ellipsis,
     )
 }
