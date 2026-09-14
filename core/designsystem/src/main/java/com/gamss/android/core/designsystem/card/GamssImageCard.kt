@@ -143,7 +143,7 @@ private fun cardScale(cardWidth: Dp): Float = (cardWidth / CardWidth).coerceAtMo
  * 상한은 1 아래로 내려가지 않습니다. 그 아래는 상한이 아니라 축소입니다.
  */
 private fun cardFontScale(systemFontScale: Float, scale: Float): Float =
-    systemFontScale.coerceAtMost((MaxFontScaleAtDesignWidth * scale).coerceAtLeast(1f))
+    systemFontScale.coerceAtMost((MAX_FONT_SCALE_AT_DESIGN_WIDTH * scale).coerceAtLeast(1f))
 
 @Preview(name = "Emotion - Light", showBackground = true)
 @Suppress("UnusedPrivateMember")
@@ -506,7 +506,7 @@ private val CardHeight = 528.dp
 private val CardAspectRatio = CardWidth.value / CardHeight.value
 
 /** 세로가 가장 빡빡한 채팅 접기 화면이 정한 값입니다. 공유 줄을 켜면 다시 재야 합니다. */
-private const val MaxFontScaleAtDesignWidth = 1.3f
+private const val MAX_FONT_SCALE_AT_DESIGN_WIDTH = 1.3f
 
 /** 손그림 테두리가 카드 박스 안쪽 약 13dp 에 그려져 있어 아래쪽은 이만큼 비웁니다. */
 private val CardBorderInset = 13.dp
