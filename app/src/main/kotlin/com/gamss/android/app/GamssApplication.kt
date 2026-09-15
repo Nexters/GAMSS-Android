@@ -6,7 +6,6 @@ import android.app.NotificationManager
 import android.os.Build
 import android.util.Log
 import androidx.core.content.getSystemService
-import com.gamss.android.core.ui.share.clearStaleInstagramStoryShareCache
 import com.gamss.android.domain.config.InitializeRemoteConfigUseCase
 import com.gamss.android.domain.safety.RefreshRiskLexiconUseCase
 import dagger.hilt.android.HiltAndroidApp
@@ -40,7 +39,6 @@ class GamssApplication : Application() {
         createNotificationChannel()
         applicationScope.launch { refreshRiskLexicon() }
         applicationScope.launch { initializeRemoteConfig() }
-        applicationScope.launch { clearStaleInstagramStoryShareCache() }
     }
 
     private fun createNotificationChannel() {

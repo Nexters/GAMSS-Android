@@ -87,7 +87,8 @@ suspend fun Context.shareBitmapToInstagramStory(
 /**
  * 지난 공유 이미지를 지운다.
  *
- * 앱을 시작할 때 한 번 이 함수를 불러 오래된 캐시가 다음 공유 전까지 남아있지 않게 한다.
+ * 화면이 다시 보일 때마다(앱 시작 포함) 이 함수를 불러 오래된 캐시가 다음 공유 전까지
+ * 남아있지 않게 한다.
  */
 fun Context.clearStaleInstagramStoryShareCache() {
     val dir = File(cacheDir, SHARE_CACHE_DIR)
