@@ -2,13 +2,17 @@ package com.gamss.android.feature.archive.component
 
 import android.content.Context
 import android.content.res.Configuration
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
@@ -59,28 +63,39 @@ internal fun CardDetailDialog(
     var isSharing by remember { mutableStateOf(false) }
 
     CardDialogScaffold(onDismiss = onDismiss) {
-        GamssEmotionCard(
-            date = formatCardDate(card.date),
-            character = card.character.toGamssEmotionCardCharacter(),
-            title = stringResource(card.character.cardTitleRes()),
-            description = card.summary,
-            // 캡처하는 동안에는 액션 대신 워드마크를 넣는다. 누를 수 없는 버튼이 그림에
-            // 남지 않고, 시안(Figma 4243:18230)의 공유용 카드와 같아진다.
-            footer = if (isCapturing) {
-                GamssEmotionCardFooter.Brand
-            } else {
-                GamssEmotionCardFooter.Actions(
-                    primaryLabel = stringResource(R.string.archive_card_discard),
-                    secondaryLabel = stringResource(R.string.archive_card_view_conversation),
-                    shareLabel = stringResource(R.string.archive_card_share),
-                    onPrimaryClick = onDiscardClick,
-                    onSecondaryClick = onViewConversationClick,
-                    onShareClick = onShareClick,
+        Box(contentAlignment = Alignment.Center) {
+            GamssEmotionCard(
+                date = formatCardDate(card.date),
+                character = card.character.toGamssEmotionCardCharacter(),
+                title = stringResource(card.character.cardTitleRes()),
+                description = card.summary,
+                // 캡처하는 동안에는 액션 대신 워드마크를 넣는다. 누를 수 없는 버튼이 그림에
+                // 남지 않고, 시안(Figma 4243:18230)의 공유용 카드와 같아진다.
+                footer = if (isCapturing) {
+                    GamssEmotionCardFooter.Brand
+                } else {
+                    GamssEmotionCardFooter.Actions(
+                        primaryLabel = stringResource(R.string.archive_card_discard),
+                        secondaryLabel = stringResource(R.string.archive_card_view_conversation),
+                        shareLabel = stringResource(R.string.archive_card_share),
+                        onPrimaryClick = onDiscardClick,
+                        onSecondaryClick = onViewConversationClick,
+                        onShareClick = onShareClick,
+                    )
+                },
+                modifier = Modifier.captureTo(capture, isCapturing = isCapturing),
+                topEndAction = { if (!isCapturing) CardCloseButton(onClick = onDismiss) },
+            )
+            // 캡처 중에는 실제 카드가 워드마크뿐인 상태로 화면에 그대로 그려진다. 그 전환이
+            // 사용자 눈에 보이지 않도록, 캡처가 끝날 때까지 카드 위를 짧게 덮어 가린다.
+            if (isCapturing) {
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .background(CaptureOverlayColor),
                 )
-            },
-            modifier = Modifier.captureTo(capture, isCapturing = isCapturing),
-            topEndAction = { if (!isCapturing) CardCloseButton(onClick = onDismiss) },
-        )
+            }
+        }
     }
 
     // 시트는 카드와 다른 창에 뜨므로 캡처한 그림에 섞이지 않는다. 그래도 공유를 시작하면
@@ -137,6 +152,9 @@ private suspend fun shareCardToStory(
         bitmap.recycle()
     }
 }
+
+/** 캡처 구간 동안 카드를 가리는 반투명 스크림. */
+private val CaptureOverlayColor = Color.Black.copy(alpha = 0.32f)
 
 @Preview(name = "Light", showBackground = true)
 @Suppress("UnusedPrivateMember")
