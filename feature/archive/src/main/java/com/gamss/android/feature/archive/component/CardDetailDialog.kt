@@ -2,6 +2,7 @@ package com.gamss.android.feature.archive.component
 
 import android.content.Context
 import android.content.res.Configuration
+import android.os.SystemClock
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
@@ -58,9 +59,18 @@ internal fun CardDetailDialog(
     // 공유 이미지에는 누를 수 없는 버튼과 닫기 아이콘을 남기지 않는다. 감추는 동안만 켜 두고,
     // 그 상태가 실제로 그려진 뒤에 캡처한다.
     var isCapturing by remember { mutableStateOf(false) }
-    // 인스타그램 공유는 캡처가 끝날 때까지 비동기로 이어지므로, 그 사이 재진입해 캡처를 중복
-    // 시작하지 않도록 막는다.
-    var isSharing by remember { mutableStateOf(false) }
+    // 인스타그램 공유는 캡처가 끝날 때까지 비동기로 이어지므로 isSharingInstagramStory 로
+    // 재진입을 막는다. 카카오톡은 호출이 동기라 이런 플래그가 열려 있는 구간이 없어 이 방식으로는
+    // 막히지 않으므로, 마지막 탭 시각을 따로 기억해 뒀다가 SHARE_TAP_DEBOUNCE_MILLIS 안의
+    // 재탭은 대상과 무관하게 걸러낸다.
+    var isSharingInstagramStory by remember { mutableStateOf(false) }
+    var lastShareTapAtMillis by remember { mutableStateOf(0L) }
+    fun consumeShareTap(): Boolean {
+        val now = SystemClock.elapsedRealtime()
+        if (now - lastShareTapAtMillis < SHARE_TAP_DEBOUNCE_MILLIS) return false
+        lastShareTapAtMillis = now
+        return true
+    }
 
     CardDialogScaffold(onDismiss = onDismiss) {
         Box(contentAlignment = Alignment.Center) {
@@ -104,14 +114,14 @@ internal fun CardDetailDialog(
         ShareTargetSheet(
             onKakaoTalkClick = {
                 onShareSheetDismiss()
-                if (!context.shareTextToKakaoTalk(kakaoTalkText)) {
+                if (consumeShareTap() && !context.shareTextToKakaoTalk(kakaoTalkText)) {
                     onKakaoTalkShareFailed()
                 }
             },
             onInstagramStoryClick = {
                 onShareSheetDismiss()
-                if (!isSharing) {
-                    isSharing = true
+                if (consumeShareTap() && !isSharingInstagramStory) {
+                    isSharingInstagramStory = true
                     scope.launch {
                         try {
                             val result = shareCardToStory(
@@ -123,7 +133,7 @@ internal fun CardDetailDialog(
                                 onInstagramShareFailed(result)
                             }
                         } finally {
-                            isSharing = false
+                            isSharingInstagramStory = false
                         }
                     }
                 }
@@ -155,6 +165,9 @@ private suspend fun shareCardToStory(
 
 /** 캡처 구간 동안 카드를 가리는 반투명 스크림. */
 private val CaptureOverlayColor = Color.Black.copy(alpha = 0.32f)
+
+/** 이 시간 안에 다시 들어온 공유 탭은 같은 대상이든 다른 대상이든 무시한다. */
+private const val SHARE_TAP_DEBOUNCE_MILLIS = 500L
 
 @Preview(name = "Light", showBackground = true)
 @Suppress("UnusedPrivateMember")

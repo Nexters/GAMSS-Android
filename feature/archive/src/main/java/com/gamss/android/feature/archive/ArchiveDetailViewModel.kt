@@ -86,7 +86,7 @@ class ArchiveDetailViewModel @Inject constructor(
     }
 
     fun dismissCard() = intent {
-        reduce { state.copy(selectedCard = null) }
+        reduce { state.copy(selectedCard = null, isShareSheetVisible = false) }
     }
 
     /**
@@ -95,7 +95,7 @@ class ArchiveDetailViewModel @Inject constructor(
      */
     fun discardSelectedCard() = intent {
         val card = state.selectedCard ?: return@intent
-        reduce { state.copy(selectedCard = null) }
+        reduce { state.copy(selectedCard = null, isShareSheetVisible = false) }
         postSideEffect(ArchiveDetailSideEffect.OpenCardDelete(cardId = card.id))
     }
 
@@ -142,6 +142,7 @@ class ArchiveDetailViewModel @Inject constructor(
                 state.copy(
                     isConversationLoading = false,
                     selectedCard = null,
+                    isShareSheetVisible = false,
                     conversationCard = conversationCard,
                 )
             }
