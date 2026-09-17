@@ -29,12 +29,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -181,18 +183,6 @@ private fun GamssImageCardEmotionDarkPreview() {
     }
 }
 
-/** 공유 줄은 아직 화면에서 꺼져 있어, 되살릴 때 쓸 배치를 프리뷰로만 남깁니다. */
-@Preview(name = "Emotion - 공유 켬", showBackground = true)
-@Suppress("UnusedPrivateMember")
-@Composable
-private fun GamssImageCardEmotionShareVisiblePreview() {
-    GamssTheme(darkTheme = false) {
-        Box(modifier = Modifier.padding(GamssTheme.spacing.spacing300)) {
-            EmotionCardPreviewContent(isShareVisible = true)
-        }
-    }
-}
-
 /** 좁은 폭과 폰트 확대가 각각 세로 예산을 깎으므로 둘 다 둡니다. */
 @Preview(name = "Emotion - 360dp", showBackground = true, widthDp = 360, heightDp = 520)
 @Preview(name = "Emotion - 320dp", showBackground = true, widthDp = 320, heightDp = 470)
@@ -218,10 +208,37 @@ private fun GamssImageCardEmotionNarrowPreview() {
             EmotionCardPreviewContent(
                 description = "설느닛람햄을 긱에자네에 신손 겅투히오의 흐랸비의 수매해으는 하어이 " +
                     "머츠니가 도랴흐로 뎌슨하다",
-                isShareVisible = false,
             )
         }
     }
+}
+
+/**
+ * 카드 아래쪽 점선 밑에 들어가는 것. 시안이 상세 팝업과 공유 이미지 두 가지만 두므로 그대로 나눈다.
+ */
+sealed interface GamssEmotionCardFooter {
+
+    /**
+     * 카드 상세에서 쓰는 버튼 두 개와 공유 행.
+     *
+     * 여섯 값이 늘 함께 쓰이고 함께 사라지므로 한 덩어리로 받는다.
+     */
+    data class Actions(
+        val primaryLabel: String,
+        val secondaryLabel: String,
+        val shareLabel: String,
+        val onPrimaryClick: () -> Unit,
+        val onSecondaryClick: () -> Unit,
+        val onShareClick: () -> Unit,
+    ) : GamssEmotionCardFooter
+
+    /**
+     * 공유 이미지에서 쓰는 GAMSS 워드마크.
+     *
+     * 그림에는 누를 수 없는 버튼 대신 브랜드를 남긴다. 이 상태를 넘기면 액션 문구와 콜백을 함께
+     * 넘길 수 없으므로, 눌리지 않는 버튼이 그려지는 경우를 만들 수 없다.
+     */
+    data object Brand : GamssEmotionCardFooter
 }
 
 /**
@@ -230,24 +247,17 @@ private fun GamssImageCardEmotionNarrowPreview() {
  * 카드의 고정 구조와 감정별 캐릭터 선택은 이 컴포넌트가 맡고, 문구와 사용자 동작만 호출부가 제공한다.
  * 따라서 화면마다 [GamssImageCard]의 간격과 텍스트 스타일을 다시 조합할 필요가 없다.
  *
- * @param isShareVisible 공유 줄을 보일지 정합니다. 끄면 자리까지 비웁니다.
+ * 아래쪽 점선까지는 두 시안이 같고, 그 밑에 무엇이 오는지만 [footer] 가 정한다.
  */
 @Composable
-@Suppress("LongParameterList")
 fun GamssEmotionCard(
     date: String,
     character: GamssEmotionCardCharacter,
     title: String,
     description: String,
-    primaryActionLabel: String,
-    secondaryActionLabel: String,
-    shareActionLabel: String,
-    onPrimaryActionClick: () -> Unit,
-    onSecondaryActionClick: () -> Unit,
-    onShareClick: () -> Unit,
+    footer: GamssEmotionCardFooter,
     modifier: Modifier = Modifier,
     shape: Shape = RectangleShape,
-    isShareVisible: Boolean = false,
     topEndAction: @Composable BoxScope.() -> Unit = {},
 ) {
     GamssImageCard(
@@ -277,48 +287,73 @@ fun GamssEmotionCard(
             Spacer(modifier = Modifier.height(DividerToContentGap * scale))
             GamssCardDashedDivider()
             Spacer(modifier = Modifier.height(DividerToContentGap * scale))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(GamssTheme.spacing.spacing100 * scale),
-            ) {
-                CardOutlinedButton(
-                    text = primaryActionLabel,
-                    onClick = onPrimaryActionClick,
-                    scale = scale,
-                    modifier = Modifier.weight(1f),
-                )
-                CardOutlinedButton(
-                    text = secondaryActionLabel,
-                    onClick = onSecondaryActionClick,
-                    scale = scale,
-                    modifier = Modifier.weight(1f),
-                )
-            }
-            if (isShareVisible) {
-                Spacer(modifier = Modifier.height(GamssTheme.spacing.spacing200 * scale))
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .noRippleClickable(onClick = onShareClick),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        text = shareActionLabel,
-                        style = GamssTheme.typography.body5Medium,
-                        color = GamssTheme.colors.gray600,
-                    )
-                    Spacer(modifier = Modifier.width(GamssTheme.spacing.spacing025 * scale))
-                    Icon(
-                        painter = painterResource(GamssIcons.RightChevron),
-                        contentDescription = null,
-                        tint = GamssTheme.colors.gray600,
-                        modifier = Modifier.size(GamssTheme.spacing.spacing300 * scale),
-                    )
-                }
+            when (footer) {
+                is GamssEmotionCardFooter.Actions -> CardActionsFooter(footer, scale)
+                GamssEmotionCardFooter.Brand -> CardBrandFooter()
             }
         }
     }
+}
+
+/** 상세 팝업 아래쪽. 버튼 두 개와 그 밑 공유 행. */
+@Composable
+private fun CardActionsFooter(actions: GamssEmotionCardFooter.Actions, scale: Float) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(GamssTheme.spacing.spacing100 * scale),
+    ) {
+        CardOutlinedButton(
+            text = actions.primaryLabel,
+            onClick = actions.onPrimaryClick,
+            scale = scale,
+            modifier = Modifier.weight(1f),
+        )
+        CardOutlinedButton(
+            text = actions.secondaryLabel,
+            onClick = actions.onSecondaryClick,
+            scale = scale,
+            modifier = Modifier.weight(1f),
+        )
+    }
+    Spacer(modifier = Modifier.height(GamssTheme.spacing.spacing200 * scale))
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .noRippleClickable(role = Role.Button, onClick = actions.onShareClick),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = actions.shareLabel,
+            style = GamssTheme.typography.body5Medium,
+            color = GamssTheme.colors.gray600,
+        )
+        Spacer(modifier = Modifier.width(GamssTheme.spacing.spacing025 * scale))
+        Icon(
+            painter = painterResource(GamssIcons.RightChevron),
+            contentDescription = null,
+            tint = GamssTheme.colors.gray600,
+            modifier = Modifier.size(GamssTheme.spacing.spacing300 * scale),
+        )
+    }
+}
+
+/**
+ * 공유 이미지 아래쪽. 시안(Figma 4243:18230)대로 버튼이 있던 자리에 GAMSS 워드마크를 둔다.
+ *
+ * 카드 안은 [LightGamssColors] 로 고정이라 여기서 읽는 보라도 라이트 값으로 정해진다.
+ */
+@Composable
+private fun ColumnScope.CardBrandFooter() {
+    Image(
+        painter = painterResource(R.drawable.ic_gamss_logo),
+        contentDescription = null,
+        contentScale = ContentScale.Fit,
+        colorFilter = ColorFilter.tint(GamssTheme.colors.purple),
+        modifier = Modifier
+            .align(Alignment.CenterHorizontally)
+            .size(width = BrandLogoWidth, height = BrandLogoHeight),
+    )
 }
 
 @Composable
@@ -401,20 +436,20 @@ fun GamssChattingCard(
 @Composable
 private fun EmotionCardPreviewContent(
     description: String = "설느닛람햄을 긱에자네에 신손 겅투히오의 흐랸비의 수매해으는 하어이",
-    isShareVisible: Boolean = false,
 ) {
     GamssEmotionCard(
         date = "26.08.03",
         character = GamssEmotionCardCharacter.ANGER,
         title = "오늘 화~나네",
         description = description,
-        primaryActionLabel = "기록 버리기",
-        secondaryActionLabel = "대화보기",
-        shareActionLabel = "공유하기",
-        onPrimaryActionClick = {},
-        onSecondaryActionClick = {},
-        onShareClick = {},
-        isShareVisible = isShareVisible,
+        footer = GamssEmotionCardFooter.Actions(
+            primaryLabel = "기록 버리기",
+            secondaryLabel = "대화보기",
+            shareLabel = "공유하기",
+            onPrimaryClick = {},
+            onSecondaryClick = {},
+            onShareClick = {},
+        ),
         topEndAction = { CloseIconPlaceholder() },
     )
 }
@@ -528,6 +563,10 @@ private val CharacterImageHeight = 156.dp
 // 쓰고 위아래 22 씩 띄우며, 캐릭터 이미지와는 16 만 띄운다.
 private val CharacterToDividerGap = 16.dp
 private val DividerToContentGap = 22.dp
+
+/** 공유 이미지 워드마크 크기. 시안 94x28. */
+private val BrandLogoWidth = 94.dp
+private val BrandLogoHeight = 28.dp
 private val CardDividerThickness = 1.3.dp
 private val CardDividerDashLength = 6.dp
 private val CardDividerDashGap = 4.dp

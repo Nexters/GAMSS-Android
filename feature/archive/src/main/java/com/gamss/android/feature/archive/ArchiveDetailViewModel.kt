@@ -3,6 +3,7 @@ package com.gamss.android.feature.archive
 import androidx.lifecycle.ViewModel
 import com.gamss.android.core.common.AppResult
 import com.gamss.android.core.common.util.KoreanTimeZone
+import com.gamss.android.core.ui.share.StoryShareResult
 import com.gamss.android.domain.card.Card
 import com.gamss.android.domain.card.GetCardsByMonthAndEmotionUseCase
 import com.gamss.android.domain.card.MonthlyEmotionQuery
@@ -85,7 +86,7 @@ class ArchiveDetailViewModel @Inject constructor(
     }
 
     fun dismissCard() = intent {
-        reduce { state.copy(selectedCard = null) }
+        reduce { state.copy(selectedCard = null, isShareSheetVisible = false) }
     }
 
     /**
@@ -94,7 +95,7 @@ class ArchiveDetailViewModel @Inject constructor(
      */
     fun discardSelectedCard() = intent {
         val card = state.selectedCard ?: return@intent
-        reduce { state.copy(selectedCard = null) }
+        reduce { state.copy(selectedCard = null, isShareSheetVisible = false) }
         postSideEffect(ArchiveDetailSideEffect.OpenCardDelete(cardId = card.id))
     }
 
@@ -141,6 +142,7 @@ class ArchiveDetailViewModel @Inject constructor(
                 state.copy(
                     isConversationLoading = false,
                     selectedCard = null,
+                    isShareSheetVisible = false,
                     conversationCard = conversationCard,
                 )
             }
@@ -155,6 +157,23 @@ class ArchiveDetailViewModel @Inject constructor(
     fun dismissConversationCard() = intent {
         val card = state.conversationCard?.card ?: return@intent
         reduce { state.copy(conversationCard = null, selectedCard = card) }
+    }
+
+    fun showShareSheet() = intent {
+        reduce { state.copy(isShareSheetVisible = true) }
+    }
+
+    fun dismissShareSheet() = intent {
+        reduce { state.copy(isShareSheetVisible = false) }
+    }
+
+    /** [result] 는 항상 실패인 경우만 넘어온다. 호출부가 성공(Shared)까지 올리지 않는다. */
+    fun reportInstagramShareFailure(result: StoryShareResult) = intent {
+        postSideEffect(ArchiveDetailSideEffect.CardShareFailed(result))
+    }
+
+    fun reportKakaoTalkShareFailure() = intent {
+        postSideEffect(ArchiveDetailSideEffect.KakaoTalkShareFailed)
     }
 
     private suspend fun Syntax<ArchiveDetailState, ArchiveDetailSideEffect>.loadMonth(

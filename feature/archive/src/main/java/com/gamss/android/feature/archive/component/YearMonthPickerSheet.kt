@@ -2,16 +2,13 @@ package com.gamss.android.feature.archive.component
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
@@ -35,11 +32,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.gamss.android.core.common.util.KoreanTimeZone
-import com.gamss.android.core.designsystem.component.GamssIconButton
-import com.gamss.android.core.designsystem.component.GamssIcons
 import com.gamss.android.core.designsystem.theme.GamssTheme
 import com.gamss.android.feature.archive.R
 import java.time.YearMonth
@@ -73,7 +67,10 @@ internal fun YearMonthPickerSheet(
         contentWindowInsets = { WindowInsets(0) },
     ) {
         Column(modifier = Modifier.padding(bottom = sheetBottomPadding())) {
-            CloseButton(onClick = onDismiss)
+            SheetCloseButton(
+                contentDescription = stringResource(R.string.archive_month_picker_close),
+                onClick = onDismiss,
+            )
             YearMonthWheels(
                 years = years,
                 months = months,
@@ -84,35 +81,6 @@ internal fun YearMonthPickerSheet(
             )
             ConfirmButton(onClick = { onSelect(YearMonth.of(pendingYear, pendingMonth)) })
         }
-    }
-}
-
-/**
- * 제스처 바(24dp)는 디자인의 홈 인디케이터처럼 여백 위에 겹쳐도 된다. 3버튼 내비처럼 인셋이 디자인
- * 여백보다 크면 버튼이 내비바에 붙으므로, 그때는 인셋 위로 최소 간격만큼 띄운다.
- */
-@Composable
-private fun sheetBottomPadding(): Dp {
-    val systemBarInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-    return SheetBottomPadding.coerceAtLeast(systemBarInset + MinGapAboveSystemBar)
-}
-
-@Composable
-private fun CloseButton(onClick: () -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            // hitPadding 만큼 당겨, 아이콘 자체가 디자인 위치에 오게 한다.
-            .padding(top = SheetTopPadding - HitPadding, end = SheetHorizontalPadding - HitPadding),
-        horizontalArrangement = Arrangement.End,
-    ) {
-        GamssIconButton(
-            iconRes = GamssIcons.Close,
-            contentDescription = stringResource(R.string.archive_month_picker_close),
-            onClick = onClick,
-            hitPadding = HitPadding,
-            tint = GamssTheme.colors.gray400,
-        )
     }
 }
 
@@ -132,7 +100,7 @@ private fun YearMonthWheels(
                 start = SheetHorizontalPadding,
                 end = SheetHorizontalPadding,
                 // 위 Row 가 아이콘 아래에도 hitPadding 을 물고 있어 그만큼 뺀다.
-                top = WheelTopGap - HitPadding,
+                top = WheelTopGap - SheetHitPadding,
             )
             .fillMaxWidth(),
         contentAlignment = Alignment.Center,
@@ -246,12 +214,6 @@ private const val YEAR_RANGE_SIZE = 5
 private const val MONTHS_IN_YEAR = 12
 private const val WHEEL_VISIBLE_ROWS = 5
 
-private val SheetCornerRadius = 20.dp
-private val SheetTopPadding = 24.dp
-private val SheetBottomPadding = 32.dp
-private val MinGapAboveSystemBar = 8.dp
-private val SheetHorizontalPadding = 20.dp
-private val HitPadding = 12.dp
 private val WheelTopGap = 24.dp
 private val WheelRowHeight = 40.dp
 private val WheelHighlightRadius = 12.dp
