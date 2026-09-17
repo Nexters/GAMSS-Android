@@ -6,6 +6,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
@@ -23,6 +24,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -32,11 +34,14 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.gamss.android.core.designsystem.R
@@ -50,58 +55,106 @@ import com.gamss.android.core.designsystem.theme.GamssTheme
 import com.gamss.android.core.designsystem.theme.LightGamssColors
 import com.gamss.android.core.designsystem.theme.LocalGamssColors
 
+/**
+ * 손그림 종이 카드입니다.
+ *
+ * 종이 비율이 고정이라 늘거나 스크롤할 수 없습니다. 그래서 안쪽 여백과 그림은 카드 배율([cardScale])로
+ * 함께 줄이고, 폰트 확대는 [cardFontScale] 상한까지만 반영합니다.
+ *
+ * @param capFontScale 내용이 카드 안에서 스크롤되는 카드는 넘칠 일이 없어 상한을 끕니다.
+ */
 @Composable
 fun GamssImageCard(
     date: String,
     modifier: Modifier = Modifier,
     shape: Shape = RectangleShape,
+    capFontScale: Boolean = true,
     topEndAction: @Composable BoxScope.() -> Unit = {},
-    content: @Composable ColumnScope.() -> Unit,
+    content: @Composable ColumnScope.(scale: Float) -> Unit,
 ) {
     CompositionLocalProvider(LocalGamssColors provides LightGamssColors) {
-        Box(
+        BoxWithConstraints(
             modifier = modifier
-                .widthIn(max = CardWidth)
-                .fillMaxWidth()
-                .aspectRatio(CardAspectRatio)
-                .clip(shape),
+                .widthIn(max = GamssCardDefaults.Width)
+                .fillMaxWidth(),
         ) {
-            Image(
-                painter = painterResource(R.drawable.bg_card),
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize(),
-            )
-
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(
-                        start = GamssTheme.spacing.spacing800,
-                        end = GamssTheme.spacing.spacing800,
-                        top = GamssTheme.spacing.spacing700,
-                    ),
-            ) {
-                Text(
-                    text = date,
-                    modifier = Modifier.fillMaxWidth(),
-                    style = GamssTheme.typography.subtitle3,
-                    color = GamssTheme.colors.gray900,
-                    textAlign = TextAlign.Center,
-                )
-                content()
+            val scale = cardScale(maxWidth)
+            val density = LocalDensity.current
+            val fontScale =
+                if (capFontScale) cardFontScale(density.fontScale, scale) else density.fontScale
+            // 상한이 걸리지 않으면 원본을 그대로 넘깁니다. 새 Density 는 폰트 변환 캐시를 잃습니다.
+            val cardDensity = remember(density, fontScale) {
+                if (fontScale == density.fontScale) density else Density(density.density, fontScale)
             }
+            CompositionLocalProvider(LocalDensity provides cardDensity) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(CardAspectRatio)
+                        .clip(shape),
+                ) {
+                    Image(
+                        painter = painterResource(R.drawable.bg_card),
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize(),
+                    )
 
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(top = GamssTheme.spacing.spacing550, end = GamssTheme.spacing.spacing550),
-            ) {
-                topEndAction()
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(
+                                start = GamssTheme.spacing.spacing800 * scale,
+                                end = GamssTheme.spacing.spacing800 * scale,
+                                top = GamssTheme.spacing.spacing700 * scale,
+                                bottom = CardBorderInset * scale,
+                            ),
+                    ) {
+                        Text(
+                            text = date,
+                            modifier = Modifier.fillMaxWidth(),
+                            style = GamssTheme.typography.subtitle3,
+                            color = GamssTheme.colors.gray900,
+                            textAlign = TextAlign.Center,
+                        )
+                        content(scale)
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(
+                                top = GamssTheme.spacing.spacing550 * scale,
+                                end = GamssTheme.spacing.spacing550 * scale,
+                            ),
+                    ) {
+                        topEndAction()
+                    }
+                }
             }
         }
     }
 }
+
+/** 채팅의 접기 연출이 펼친 종이 칸을 이 크기로 잡습니다. 어긋나면 종이 비율이 깨집니다. */
+object GamssCardDefaults {
+    val Width: Dp = 366.dp
+    val Height: Dp = 528.dp
+
+    /** Figma Description 은 높이 60 / lineHeight 20 으로 3줄까지 담습니다. */
+    const val DescriptionMaxLines = 3
+}
+
+/** 기준이 화면 폭인 `designScale` 과 다릅니다. 카드는 화면보다 좁은 자리에 놓입니다. */
+private fun cardScale(cardWidth: Dp): Float =
+    (cardWidth / GamssCardDefaults.Width).coerceAtMost(1f)
+
+/**
+ * 상한이 카드 배율을 함께 타는 이유는 카드가 작아진 만큼 글자가 커질 폭도 좁아지기 때문입니다.
+ * 상한은 1 아래로 내려가지 않습니다. 그 아래는 상한이 아니라 축소입니다.
+ */
+private fun cardFontScale(systemFontScale: Float, scale: Float): Float =
+    systemFontScale.coerceAtMost((MAX_FONT_SCALE_AT_DESIGN_WIDTH * scale).coerceAtLeast(1f))
 
 @Preview(name = "Emotion - Light", showBackground = true)
 @Suppress("UnusedPrivateMember")
@@ -126,6 +179,36 @@ private fun GamssImageCardEmotionDarkPreview() {
     GamssTheme(darkTheme = true) {
         Box(modifier = Modifier.padding(GamssTheme.spacing.spacing300)) {
             EmotionCardPreviewContent()
+        }
+    }
+}
+
+/** 좁은 폭과 폰트 확대가 각각 세로 예산을 깎으므로 둘 다 둡니다. */
+@Preview(name = "Emotion - 360dp", showBackground = true, widthDp = 360, heightDp = 520)
+@Preview(name = "Emotion - 320dp", showBackground = true, widthDp = 320, heightDp = 470)
+@Preview(
+    name = "Emotion - 폰트 2.0",
+    showBackground = true,
+    widthDp = 412,
+    heightDp = 580,
+    fontScale = 2f,
+)
+@Preview(
+    name = "Emotion - 360dp + 폰트 2.0",
+    showBackground = true,
+    widthDp = 360,
+    heightDp = 520,
+    fontScale = 2f,
+)
+@Suppress("UnusedPrivateMember")
+@Composable
+private fun GamssImageCardEmotionNarrowPreview() {
+    GamssTheme(darkTheme = false) {
+        Box(modifier = Modifier.padding(GamssTheme.spacing.spacing300)) {
+            EmotionCardPreviewContent(
+                description = "설느닛람햄을 긱에자네에 신손 겅투히오의 흐랸비의 수매해으는 하어이 " +
+                    "머츠니가 도랴흐로 뎌슨하다",
+            )
         }
     }
 }
@@ -182,8 +265,8 @@ fun GamssEmotionCard(
         modifier = modifier,
         shape = shape,
         topEndAction = topEndAction,
-    ) {
-        GamssEmotionCardContent(character = character, showDivider = true) {
+    ) { scale ->
+        GamssEmotionCardContent(character = character, scale = scale) {
             Text(
                 text = title,
                 modifier = Modifier.fillMaxWidth(),
@@ -191,22 +274,21 @@ fun GamssEmotionCard(
                 color = GamssTheme.colors.gray950,
                 textAlign = TextAlign.Center,
             )
-            Spacer(modifier = Modifier.height(GamssTheme.spacing.spacing200))
+            Spacer(modifier = Modifier.height(GamssTheme.spacing.spacing200 * scale))
             Text(
                 text = description,
                 modifier = Modifier.fillMaxWidth(),
                 style = GamssTheme.typography.body4Regular,
                 color = GamssTheme.colors.gray800,
                 textAlign = TextAlign.Center,
-                // Figma Description 은 높이 60 / lineHeight 20 으로 3줄까지 담는다.
-                maxLines = DESCRIPTION_MAX_LINES,
+                maxLines = GamssCardDefaults.DescriptionMaxLines,
                 overflow = TextOverflow.Ellipsis,
             )
-            Spacer(modifier = Modifier.height(DividerToContentGap))
+            Spacer(modifier = Modifier.height(DividerToContentGap * scale))
             GamssCardDashedDivider()
-            Spacer(modifier = Modifier.height(DividerToContentGap))
+            Spacer(modifier = Modifier.height(DividerToContentGap * scale))
             when (footer) {
-                is GamssEmotionCardFooter.Actions -> CardActionsFooter(footer)
+                is GamssEmotionCardFooter.Actions -> CardActionsFooter(footer, scale)
                 GamssEmotionCardFooter.Brand -> CardBrandFooter()
             }
         }
@@ -215,23 +297,25 @@ fun GamssEmotionCard(
 
 /** 상세 팝업 아래쪽. 버튼 두 개와 그 밑 공유 행. */
 @Composable
-private fun CardActionsFooter(actions: GamssEmotionCardFooter.Actions) {
+private fun CardActionsFooter(actions: GamssEmotionCardFooter.Actions, scale: Float) {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(GamssTheme.spacing.spacing100),
+        horizontalArrangement = Arrangement.spacedBy(GamssTheme.spacing.spacing100 * scale),
     ) {
         CardOutlinedButton(
             text = actions.primaryLabel,
             onClick = actions.onPrimaryClick,
+            scale = scale,
             modifier = Modifier.weight(1f),
         )
         CardOutlinedButton(
             text = actions.secondaryLabel,
             onClick = actions.onSecondaryClick,
+            scale = scale,
             modifier = Modifier.weight(1f),
         )
     }
-    Spacer(modifier = Modifier.height(GamssTheme.spacing.spacing200))
+    Spacer(modifier = Modifier.height(GamssTheme.spacing.spacing200 * scale))
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -244,12 +328,12 @@ private fun CardActionsFooter(actions: GamssEmotionCardFooter.Actions) {
             style = GamssTheme.typography.body5Medium,
             color = GamssTheme.colors.gray600,
         )
-        Spacer(modifier = Modifier.width(GamssTheme.spacing.spacing025))
+        Spacer(modifier = Modifier.width(GamssTheme.spacing.spacing025 * scale))
         Icon(
             painter = painterResource(GamssIcons.RightChevron),
             contentDescription = null,
             tint = GamssTheme.colors.gray600,
-            modifier = Modifier.size(GamssTheme.spacing.spacing300),
+            modifier = Modifier.size(GamssTheme.spacing.spacing300 * scale),
         )
     }
 }
@@ -272,33 +356,23 @@ private fun ColumnScope.CardBrandFooter() {
     )
 }
 
-/**
- * 감정 카드의 캐릭터 영역과 그 아래 콘텐츠 간격을 재사용한다.
- *
- * [showDivider] 를 켜면 캐릭터와 콘텐츠 사이에 점선을 넣는다. 카드 목록처럼 점선이 없는
- * 시안도 같은 캐릭터 영역을 쓰므로 기본값은 꺼짐이다.
- */
 @Composable
 fun ColumnScope.GamssEmotionCardContent(
     character: GamssEmotionCardCharacter,
-    showDivider: Boolean = false,
+    scale: Float,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    Spacer(modifier = Modifier.height(DateToCharacterGap))
+    Spacer(modifier = Modifier.height(DateToCharacterGap * scale))
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(CharacterImageHeight),
+            .height(CharacterImageHeight * scale),
     ) {
         GamssEmotionCardCharacterImage(character = character)
     }
-    if (showDivider) {
-        Spacer(modifier = Modifier.height(CharacterToDividerGap))
-        GamssCardDashedDivider()
-        Spacer(modifier = Modifier.height(DividerToContentGap))
-    } else {
-        Spacer(modifier = Modifier.height(CharacterToTitleGap))
-    }
+    Spacer(modifier = Modifier.height(CharacterToDividerGap * scale))
+    GamssCardDashedDivider()
+    Spacer(modifier = Modifier.height(DividerToContentGap * scale))
     content()
 }
 
@@ -330,6 +404,8 @@ fun GamssCardDashedDivider(modifier: Modifier = Modifier) {
 /**
  * 이미지 카드 안에 대화 로그를 배치하는 카드 퍼사드. 카드가 고정 크기라 [content] 에 날짜 아래 남은
  * 높이를 모두 넘긴다. 호출부는 그 안에서 스크롤만 붙이면 된다.
+ *
+ * 대화 로그는 카드 안에서 스크롤되어 넘칠 일이 없으므로 폰트 확대 상한을 두지 않습니다.
  */
 @Composable
 fun GamssChattingCard(
@@ -343,25 +419,29 @@ fun GamssChattingCard(
         date = date,
         modifier = modifier,
         shape = shape,
+        capFontScale = false,
         topEndAction = topEndAction,
-    ) {
-        Spacer(modifier = Modifier.height(DateToChattingGap))
+    ) { scale ->
+        Spacer(modifier = Modifier.height(DateToChattingGap * scale))
         Column(
             modifier = Modifier
                 .weight(1f)
-                .padding(bottom = GamssTheme.spacing.spacing700),
+                // 카드가 아래쪽 테두리 여백을 이미 두므로 시안 40 에서 그만큼 뺍니다.
+                .padding(bottom = (GamssTheme.spacing.spacing700 - CardBorderInset) * scale),
             content = content,
         )
     }
 }
 
 @Composable
-private fun EmotionCardPreviewContent() {
+private fun EmotionCardPreviewContent(
+    description: String = "설느닛람햄을 긱에자네에 신손 겅투히오의 흐랸비의 수매해으는 하어이",
+) {
     GamssEmotionCard(
         date = "26.08.03",
         character = GamssEmotionCardCharacter.ANGER,
         title = "오늘 화~나네",
-        description = "설느닛람햄을 긱에자네에 신손 겅투히오의 흐랸비의 수매해으는 하어이",
+        description = description,
         footer = GamssEmotionCardFooter.Actions(
             primaryLabel = "기록 버리기",
             secondaryLabel = "대화보기",
@@ -390,13 +470,14 @@ private fun CloseIconPlaceholder(modifier: Modifier = Modifier) {
 private fun CardOutlinedButton(
     text: String,
     onClick: () -> Unit,
+    scale: Float,
     modifier: Modifier = Modifier,
 ) {
     GamssOutlinedCard(
         modifier = modifier,
         onClick = onClick,
         borderColor = GamssTheme.colors.gray900,
-        contentPadding = PaddingValues(vertical = GamssTheme.spacing.spacing200),
+        contentPadding = PaddingValues(vertical = GamssTheme.spacing.spacing200 * scale),
     ) {
         Text(
             text = text,
@@ -464,16 +545,19 @@ private fun ChattingCardPreviewContent() {
     }
 }
 
-private val CardWidth = 366.dp
-private val CardHeight = 528.dp
-private val CardAspectRatio = CardWidth.value / CardHeight.value
+private val CardAspectRatio = GamssCardDefaults.Width / GamssCardDefaults.Height
+
+/** 세로가 가장 빡빡한 채팅 접기 화면이 정한 값입니다. 공유 줄을 켜면 다시 재야 합니다. */
+private const val MAX_FONT_SCALE_AT_DESIGN_WIDTH = 1.3f
+
+/** 손그림 테두리가 카드 박스 안쪽 약 13dp 에 그려져 있어 아래쪽은 이만큼 비웁니다. */
+private val CardBorderInset = 13.dp
 
 private val DateToCharacterGap = 18.dp
 
 /** Figma Card_Chatting 가이드(3264:7548)의 Date - chat 간격. */
 private val DateToChattingGap = 24.dp
 private val CharacterImageHeight = 156.dp
-private val CharacterToTitleGap = 42.dp
 
 // 점선 관련 값은 Figma Card(3557:5286)의 Divider 기준이다. 점선은 콘텐츠 열 전체 폭(270)을
 // 쓰고 위아래 22 씩 띄우며, 캐릭터 이미지와는 16 만 띄운다.
@@ -486,4 +570,3 @@ private val BrandLogoHeight = 28.dp
 private val CardDividerThickness = 1.3.dp
 private val CardDividerDashLength = 6.dp
 private val CardDividerDashGap = 4.dp
-private const val DESCRIPTION_MAX_LINES = 3
