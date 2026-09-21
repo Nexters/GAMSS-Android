@@ -7,6 +7,7 @@ import com.gamss.android.domain.conversation.ConversationSession
 import com.gamss.android.domain.conversation.MAX_MESSAGE_LENGTH
 import com.gamss.android.domain.conversation.takeWithinMessageLimit
 import com.gamss.android.domain.emotion.EmotionCharacter
+import com.gamss.android.domain.safety.DetectRiskInTextUseCase
 import com.gamss.android.domain.user.GetUserInfoUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -25,6 +26,7 @@ internal val MESSAGE_LENGTH_EXCEEDED = "메시지는 ${MAX_MESSAGE_LENGTH}자까
 class HomeViewModel @Inject constructor(
     private val getUserInfoUseCase: GetUserInfoUseCase,
     private val session: ConversationSession,
+    private val detectRiskInText: DetectRiskInTextUseCase,
 ) : ViewModel(), ContainerHost<HomeState, HomeSideEffect> {
 
     private val _openConversationEvents = MutableSharedFlow<Long>(replay = 0)
@@ -51,6 +53,10 @@ class HomeViewModel @Inject constructor(
         reduce { state.copy(input = limited) }
 
         if (crossedLimit) postSideEffect(HomeSideEffect.ShowToast(MESSAGE_LENGTH_EXCEEDED))
+    }
+
+    fun onRiskDialogDismiss() = intent {
+        reduce { state.copy(riskDetection = null) }
     }
 
     fun onEmotionPickerToggle() = intent {
@@ -92,6 +98,14 @@ class HomeViewModel @Inject constructor(
             if (pending == null) state else state.copy(isSending = true, isEmotionPickerExpanded = false)
         }
         val message = pending ?: return@intent
+
+        // 대화가 만들어지기 전에 검사한다. CRITICAL 이면 서버로 보내지 않고 입력도 남겨 둔다.
+        // WARNING 은 그대로 보내고, 안내는 첫 메시지를 처음 보여 주는 대화방이 띄운다(홈은 곧 사라진다).
+        val detection = detectRiskInText(message)
+        if (detection.shouldBlock) {
+            reduce { state.copy(isSending = false, riskDetection = detection) }
+            return@intent
+        }
 
         val result = session.send(
             conversationId = null,

@@ -26,6 +26,11 @@ import com.gamss.android.domain.emotion.ConversationEmotionAccumulator
 import com.gamss.android.domain.emotion.EmotionCharacter
 import com.gamss.android.domain.emotion.EmotionClassifier
 import com.gamss.android.domain.emotion.EmotionLabel
+import com.gamss.android.domain.safety.DetectRiskInTextUseCase
+import com.gamss.android.domain.safety.RiskLexicon
+import com.gamss.android.domain.safety.RiskLexiconRepository
+import com.gamss.android.domain.safety.RiskTerm
+import com.gamss.android.domain.safety.RiskTermMatcher
 import com.gamss.android.domain.summary.DiarySummarizer
 import com.gamss.android.domain.summary.SummarizeDiaryUseCase
 import com.gamss.android.domain.summary.UtteranceTokenCounter
@@ -35,6 +40,20 @@ import java.time.LocalDate
 import java.time.YearMonth
 
 internal const val NEW_ROOM_ID = 42L
+
+internal fun riskDetector(vararg terms: RiskTerm) = DetectRiskInTextUseCase(
+    repository = object : RiskLexiconRepository {
+        override suspend fun getLexicon() = RiskLexicon(
+            version = 0,
+            terms = terms.toList(),
+            safePhrases = emptyList(),
+            agencies = emptyList(),
+        )
+
+        override suspend fun refresh() = Unit
+    },
+    matcher = RiskTermMatcher(),
+)
 
 internal fun conversationSession(repository: ConversationRepository) = ConversationSession(
     sendMessage = SendMessageUseCase(repository),

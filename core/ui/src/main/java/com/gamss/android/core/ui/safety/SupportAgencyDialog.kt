@@ -1,4 +1,4 @@
-package com.gamss.android.feature.chat.component
+package com.gamss.android.core.ui.safety
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -24,6 +24,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -41,14 +42,31 @@ import com.gamss.android.core.designsystem.button.GamssButton
 import com.gamss.android.core.designsystem.component.GamssIcons
 import com.gamss.android.core.designsystem.theme.GamssTheme
 import com.gamss.android.domain.safety.SupportAgency
-import com.gamss.android.feature.chat.R
+import com.gamss.android.core.ui.R
 
 private val DialogShape = RoundedCornerShape(16.dp)
 private val SupportPanelShape = RoundedCornerShape(20.dp)
 private val ActionShape = RoundedCornerShape(12.dp)
 
+private const val EMERGENCY_PHONE_NUMBER = "119"
+
+/** 위험 신호가 감지됐을 때 보여 주는 상담 기관 안내. 전화 연결까지 이 안에서 처리한다. */
 @Composable
-internal fun SupportAgencyDialog(
+fun SupportAgencyDialog(
+    agencies: List<SupportAgency>,
+    onDismiss: () -> Unit,
+) {
+    val context = LocalContext.current
+    SupportAgencyDialog(
+        agencies = agencies,
+        onCallClick = { agency -> context.dialOrNotify(agency.phoneNumber) },
+        onEmergencyCallClick = { context.dialOrNotify(EMERGENCY_PHONE_NUMBER) },
+        onDismiss = onDismiss,
+    )
+}
+
+@Composable
+private fun SupportAgencyDialog(
     agencies: List<SupportAgency>,
     onCallClick: (SupportAgency) -> Unit,
     onEmergencyCallClick: () -> Unit,
@@ -234,7 +252,7 @@ private fun AdditionalInfo() {
 @Composable
 private fun CallIcon(tint: Color) {
     Icon(
-        painter = painterResource(R.drawable.ic_call),
+        painter = painterResource(R.drawable.ic_safety_call),
         contentDescription = null,
         tint = tint,
         modifier = Modifier.size(18.dp),

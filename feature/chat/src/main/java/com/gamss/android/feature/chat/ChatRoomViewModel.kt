@@ -99,12 +99,15 @@ class ChatRoomViewModel @Inject constructor(
 
         val pending = session.consumePendingReveal(conversationId)
         if (pending != null) {
+            // 홈에서 이미 전송된 첫 메시지다. CRITICAL 은 홈이 전송 전에 막았으므로 여기서는 안내만 띄운다.
+            val detection = detectRiskInText(pending.sent.message.content)
             reduce {
                 state.copy(
                     isLoading = false,
                     conversationCreatedAt = pending.createdAt,
                     messages = listOf(pending.sent.message),
                     pendingComments = pending.sent.comments,
+                    riskDetection = detection.takeIf { it.level != RiskLevel.NONE },
                 )
             }
             launchCommentReveal()
