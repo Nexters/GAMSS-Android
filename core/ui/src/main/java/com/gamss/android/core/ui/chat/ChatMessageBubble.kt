@@ -11,7 +11,7 @@ import com.gamss.android.core.designsystem.component.chat.ChatSender
 import com.gamss.android.core.designsystem.component.chat.GamssChatBubbleDefaults
 import com.gamss.android.core.designsystem.component.chat.GamssReceivedChatBubble
 import com.gamss.android.core.designsystem.component.chat.GamssSentChatBubble
-import com.gamss.android.core.designsystem.modifier.noRippleClickableIfNotNull
+import com.gamss.android.core.designsystem.modifier.noRippleCombinedClickable
 import com.gamss.android.domain.conversation.Message
 import com.gamss.android.domain.conversation.MessageSender
 
@@ -22,7 +22,7 @@ import com.gamss.android.domain.conversation.MessageSender
  * @param replyQuote 호출부(리스트)가 [rememberReplyQuoteLookup] 으로 미리 찾아 넘긴다. 이 버블은
  *  메시지 목록 전체를 몰라도 되고, 목록이 커져도 이 값이 그대로면 재구성을 건너뛴다.
  * @param oppositeWallGap 폭이 좁은 카드 안에서는 [GamssChatBubbleDefaults.CardOppositeWallGap] 을 넘긴다.
- * @param onCharacterMessageClick 넘기지 않으면 말풍선이 눌리지 않는다.
+ * @param onCharacterMessageClick 넘기지 않으면 말풍선이 눌리지 않는다. 길게 눌렀을 때 호출된다.
  */
 @Composable
 fun ChatMessageBubble(
@@ -55,8 +55,9 @@ fun ChatMessageBubble(
                 oppositeWallGap = oppositeWallGap,
                 modifier = Modifier
                     .align(Alignment.CenterStart)
-                    .noRippleClickableIfNotNull(
-                        onCharacterMessageClick?.let { onClick -> { onClick(message) } },
+                    .noRippleCombinedClickable(
+                        onClick = null,
+                        onLongClick = onCharacterMessageClick?.let { onClick -> { onClick(message) } },
                     ),
             )
 
