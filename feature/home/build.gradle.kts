@@ -8,6 +8,7 @@ android {
 
 dependencies {
     implementation(projects.core.common)
+    implementation(projects.core.ui)
     implementation(projects.domain)
 
     // 캐릭터 패널을 뒤로가기로 닫기 위한 BackHandler. compose-ui 에는 없는 API 다.

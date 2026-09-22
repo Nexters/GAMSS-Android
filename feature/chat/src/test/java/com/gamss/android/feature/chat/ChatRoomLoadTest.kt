@@ -10,6 +10,8 @@ import com.gamss.android.domain.conversation.PendingConversationReveal
 import com.gamss.android.domain.conversation.SendMessageUseCase
 import com.gamss.android.domain.conversation.UpdateConversationTitleUseCase
 import com.gamss.android.domain.emotion.ConversationEmotionAccumulator
+import com.gamss.android.domain.safety.RiskLevel
+import com.gamss.android.domain.safety.RiskTerm
 import com.gamss.android.domain.summary.SummarizeDiaryUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -67,6 +69,51 @@ class ChatRoomLoadTest {
             val thirdReveal = awaitState()
             assertEquals(COMMENT_ID_BASE + 2, thirdReveal.messages.last().id)
             assertTrue(thirdReveal.pendingComments.isEmpty())
+
+            cancelAndIgnoreRemainingItems()
+        }
+    }
+
+    @Test
+    fun 홈에서_보낸_첫_메시지에_위험_신호가_있으면_진입시_안내를_띄운다() = runTest {
+        val repository = FakeConversationRepository(commentCount = 1)
+        val reveal = PendingConversationReveal()
+        homeSession(repository, reveal).send(conversationId = null, content = "요즘 너무 힘들어서 우울해", replyToMessageId = null)
+        val viewModel = chatRoomViewModel(
+            conversationRepository = repository,
+            pendingReveal = reveal,
+            riskLexicon = EmptyRiskLexicon.copy(terms = listOf(RiskTerm("우울", RiskLevel.WARNING))),
+        )
+
+        viewModel.test(this) {
+            containerHost.start(ROOM_ID)
+            skipItems(1) // isLoading = true
+
+            val afterLoad = awaitState()
+            assertEquals(RiskLevel.WARNING, afterLoad.riskDetection?.level)
+            // 이미 전송된 메시지라 막지 않는다. 그대로 노출된다.
+            assertEquals(listOf(USER_ID), afterLoad.messages.map { it.id })
+
+            cancelAndIgnoreRemainingItems()
+        }
+    }
+
+    @Test
+    fun 홈에서_보낸_첫_메시지에_위험_신호가_없으면_안내를_띄우지_않는다() = runTest {
+        val repository = FakeConversationRepository(commentCount = 1)
+        val reveal = PendingConversationReveal()
+        homeSession(repository, reveal).send(conversationId = null, content = INPUT, replyToMessageId = null)
+        val viewModel = chatRoomViewModel(
+            conversationRepository = repository,
+            pendingReveal = reveal,
+            riskLexicon = EmptyRiskLexicon.copy(terms = listOf(RiskTerm("우울", RiskLevel.WARNING))),
+        )
+
+        viewModel.test(this) {
+            containerHost.start(ROOM_ID)
+            skipItems(1) // isLoading = true
+
+            assertEquals(null, awaitState().riskDetection)
 
             cancelAndIgnoreRemainingItems()
         }

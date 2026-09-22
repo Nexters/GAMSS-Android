@@ -1,13 +1,13 @@
-package com.gamss.android.feature.chat.util
+package com.gamss.android.core.ui.safety
 
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
-import com.gamss.android.feature.chat.R
+import com.gamss.android.core.ui.R
 
-fun Context.dialOrNotify(phoneNumber: String?) {
+internal fun Context.dialOrNotify(phoneNumber: String?) {
     if (phoneNumber == null) return
     if (!dial(phoneNumber)) {
         Toast.makeText(
