@@ -11,7 +11,6 @@ import com.gamss.android.domain.conversation.SendMessageUseCase
 import com.gamss.android.domain.conversation.UpdateConversationTitleUseCase
 import com.gamss.android.domain.emotion.ConversationEmotionAccumulator
 import com.gamss.android.domain.safety.RiskLevel
-import com.gamss.android.domain.safety.RiskLexicon
 import com.gamss.android.domain.safety.RiskTerm
 import com.gamss.android.domain.summary.SummarizeDiaryUseCase
 import kotlinx.coroutines.Dispatchers
