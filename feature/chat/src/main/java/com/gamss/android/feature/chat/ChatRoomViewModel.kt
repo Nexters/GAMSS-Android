@@ -3,6 +3,7 @@ package com.gamss.android.feature.chat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gamss.android.core.common.AppResult
+import com.gamss.android.core.common.util.formatKoreanTime
 import com.gamss.android.domain.card.CardNotRetryableException
 import com.gamss.android.domain.conversation.CommentGenerationStatus
 import com.gamss.android.domain.conversation.ConversationSession
@@ -23,6 +24,8 @@ import org.orbitmvi.orbit.ContainerHost
 import org.orbitmvi.orbit.blockingIntent
 import org.orbitmvi.orbit.syntax.Syntax
 import org.orbitmvi.orbit.viewmodel.container
+import java.time.LocalDateTime
+import java.util.concurrent.atomic.AtomicLong
 import javax.inject.Inject
 
 private typealias ChatRoomSyntax = Syntax<ChatRoomState, ChatRoomSideEffect>
@@ -46,6 +49,12 @@ class ChatRoomViewModel @Inject constructor(
 
     @Volatile
     private var tokenAlertJob: Job? = null
+
+    /**
+     * 서버 응답 전에 화면에 먼저 그리는 내 메시지에 붙이는 임시 id. 서버 id는 항상 양수라
+     * 음수를 쓰면 실제 메시지와 절대 부딪히지 않는다. 성공하면 서버가 내려준 진짜 id로 바뀐다.
+     */
+    private val localMessageIdCounter = AtomicLong(-1)
 
     fun start(conversationId: Long) {
         if (started) return
@@ -204,15 +213,26 @@ class ChatRoomViewModel @Inject constructor(
         flushPendingComments()
 
         var pending: PendingSend? = null
+        var localId = 0L
         reduce {
             pending = if (state.canSend) {
                 PendingSend(content = state.input, replyToMessageId = state.replyTarget?.messageId)
             } else {
                 null
             }
-            // 서버 왕복이 끝날 때까지 기다리지 않고 버튼을 누른 즉시 입력칸을 비운다. 아래
-            // 위험 신호 차단·전송 실패 분기에서 되돌리지 않는 한 이 상태로 남는다.
-            if (pending == null) state else state.copy(isSending = true, input = "")
+            val sending = pending
+            // 서버 왕복이 끝날 때까지 기다리지 않고 버튼을 누른 즉시 입력칸을 비우고, 내 메시지
+            // 말풍선도 먼저 그린다. 아래 위험 신호 차단 분기에서 되돌리지 않는 한 이 상태로 남는다.
+            if (sending == null) {
+                state
+            } else {
+                localId = localMessageIdCounter.getAndDecrement()
+                state.copy(
+                    isSending = true,
+                    input = "",
+                    messages = state.messages + state.buildOptimisticMessage(sending, localId),
+                )
+            }
         }
         val sending = pending ?: return@intent
 
@@ -222,11 +242,13 @@ class ChatRoomViewModel @Inject constructor(
             reduce {
                 state.copy(
                     riskDetection = detection,
-                    // CRITICAL이면 전송을 중단하므로 다시 전송 가능한 상태로 복구
-                    isSending = if (detection.shouldBlock) {
-                        false
+                    // CRITICAL이면 전송을 중단하므로 다시 전송 가능한 상태로 복구하고, 먼저 그려둔
+                    // 말풍선도 지운다 — 실제로는 보내지 않았으니 화면에 남아 있으면 안 된다.
+                    isSending = if (detection.shouldBlock) false else state.isSending,
+                    messages = if (detection.shouldBlock) {
+                        state.messages.filterNot { it.id == localId }
                     } else {
-                        state.isSending
+                        state.messages
                     },
                     // 방금 비운 입력칸을 되돌린다. 그 사이 사용자가 새로 타이핑했다면 덮어쓰지 않는다.
                     input = if (detection.shouldBlock && state.input.isEmpty()) sending.content else state.input,
@@ -238,6 +260,43 @@ class ChatRoomViewModel @Inject constructor(
             }
         }
 
+        awaitSendResult(sending, localId)
+    }
+
+    /**
+     * 재전송(임시 UI). 실패 상태로 남아있던 말풍선을 지우고 새 임시 id로 다시 붙여 넣는다 —
+     * 서버 id는 성공해야만 받을 수 있어 실패했던 id를 그대로 재사용할 수 없다. 위험 신호 검사는
+     * [onSend]에서 이미 통과한 내용이라 다시 하지 않는다.
+     */
+    fun onRetrySend(message: Message) = intent {
+        if (state.isSending) return@intent
+        val sending = PendingSend(content = message.content, replyToMessageId = message.repliesToMessageId)
+        val localId = localMessageIdCounter.getAndDecrement()
+        reduce {
+            state.copy(
+                isSending = true,
+                failedMessageIds = state.failedMessageIds - message.id,
+                messages = state.messages.filterNot { it.id == message.id } +
+                    state.buildOptimisticMessage(sending, localId),
+            )
+        }
+        awaitSendResult(sending, localId)
+    }
+
+    private fun ChatRoomState.buildOptimisticMessage(sending: PendingSend, localId: Long): Message = Message(
+        id = localId,
+        conversationId = conversationId ?: UNASSIGNED_CONVERSATION_ID,
+        sender = MessageSender.User,
+        content = sending.content,
+        repliesToMessageId = sending.replyToMessageId,
+        createdTime = formatKoreanTime(LocalDateTime.now()),
+    )
+
+    /**
+     * [onSend]/[onRetrySend]가 이미 그려 둔 내 메시지 말풍선을 기준으로 실제 전송 결과를
+     * 반영한다. 실패하면 지우지 않고 그 자리에 재전송 버튼(임시 UI)을 붙인다.
+     */
+    private suspend fun ChatRoomSyntax.awaitSendResult(sending: PendingSend, localId: Long) {
         val result = session.send(
             conversationId = state.conversationId,
             content = sending.content,
@@ -252,7 +311,7 @@ class ChatRoomViewModel @Inject constructor(
                     state.copy(
                         isSending = false,
                         conversationId = sent.message.conversationId,
-                        messages = state.messages + sent.message,
+                        messages = state.messages.map { if (it.id == localId) sent.message else it },
                         pendingComments = sent.comments,
                         replyTarget = state.replyTarget.takeIf { it?.messageId != sending.replyToMessageId },
                     )
@@ -266,8 +325,7 @@ class ChatRoomViewModel @Inject constructor(
                 reduce {
                     state.copy(
                         isSending = false,
-                        // 방금 비운 입력칸을 되돌린다. 그 사이 사용자가 새로 타이핑했다면 덮어쓰지 않는다.
-                        input = if (state.input.isEmpty()) sending.content else state.input,
+                        failedMessageIds = state.failedMessageIds + localId,
                     )
                 }
                 postSideEffect(ChatRoomSideEffect.ShowToast(SEND_FAILED))
@@ -407,6 +465,9 @@ class ChatRoomViewModel @Inject constructor(
     )
 
     private companion object {
+        // 대화를 여는 첫 메시지는 성공해야 서버가 conversationId 를 내려준다. 그 전까지 임시
+        // 말풍선에 채워 둘 자리표시자로, 실제 서버 id와 겹치지 않는다.
+        const val UNASSIGNED_CONVERSATION_ID = -1L
         const val LOAD_FAILED = "대화를 불러오지 못했어요"
         const val SEND_FAILED = "메시지를 보내지 못했어요"
         const val END_FAILED = "대화를 끝내지 못했어요"

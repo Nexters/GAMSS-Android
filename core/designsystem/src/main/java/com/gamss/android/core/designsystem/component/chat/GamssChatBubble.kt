@@ -44,6 +44,7 @@ import com.airbnb.lottie.compose.LottieConstants
 import com.airbnb.lottie.compose.animateLottieCompositionAsState
 import com.airbnb.lottie.compose.rememberLottieComposition
 import com.gamss.android.core.designsystem.R
+import com.gamss.android.core.designsystem.modifier.noRippleClickable
 import com.gamss.android.core.designsystem.theme.GamssTheme
 import kotlin.math.roundToInt
 
@@ -101,6 +102,8 @@ private val LoadingBubbleVerticalPadding = 2.dp
  * 내가 보낸 채팅 메시지 말풍선. 시간이 왼쪽, 말풍선이 오른쪽에 정렬된다.
  *
  * @param oppositeWallGap 말풍선이 최대로 늘어났을 때 왼쪽 벽까지 남길 여백.
+ * @param onRetryClick 넘기면 시간 자리에 재전송 버튼이 대신 뜬다(임시 UI). 전송 실패한
+ *  메시지에서만 넘긴다.
  */
 @Composable
 fun GamssSentChatBubble(
@@ -109,6 +112,7 @@ fun GamssSentChatBubble(
     modifier: Modifier = Modifier,
     replyQuote: ChatReplyQuote? = null,
     oppositeWallGap: Dp = GamssChatBubbleDefaults.OppositeWallGap,
+    onRetryClick: (() -> Unit)? = null,
 ) {
     BoxWithConstraints(modifier = modifier) {
         val bubbleMaxWidth = (maxWidth - oppositeWallGap).coerceAtLeast(0.dp)
@@ -116,7 +120,9 @@ fun GamssSentChatBubble(
             horizontalArrangement = Arrangement.spacedBy(GamssTheme.spacing.spacing100),
             verticalAlignment = Alignment.Bottom,
         ) {
-            if (time != null) {
+            if (onRetryClick != null) {
+                ChatRetryButton(onClick = onRetryClick)
+            } else if (time != null) {
                 ChatTimeText(time = time)
             }
             ChatBubbleSurface(
@@ -338,6 +344,17 @@ private fun ChatTimeText(time: String, modifier: Modifier = Modifier) {
     )
 }
 
+/** 전송 실패한 내 메시지 옆에 뜨는 임시 재전송 버튼. 정식 디자인이 나오기 전까지의 자리 표시자다. */
+@Composable
+private fun ChatRetryButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
+    Text(
+        text = "재전송",
+        style = GamssTheme.typography.body6Regular,
+        color = GamssTheme.colors.red,
+        modifier = modifier.noRippleClickable(onClick = onClick),
+    )
+}
+
 @Composable
 private fun ChatAvatar(
     avatar: (@Composable () -> Unit)?,
@@ -376,6 +393,11 @@ private fun GamssSentChatBubblePreview() {
                 message = "설느닛람햄을 긱에자네에 신손 겅투",
                 time = "오후 1:39",
                 replyQuote = ChatReplyQuote(senderLabel = "불안이에게 답장", message = "안녕하세용"),
+            )
+            GamssSentChatBubble(
+                message = "전송 실패한 메시지예요",
+                time = "오후 1:40",
+                onRetryClick = {},
             )
         }
     }

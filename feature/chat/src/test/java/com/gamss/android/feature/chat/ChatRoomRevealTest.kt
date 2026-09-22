@@ -152,7 +152,10 @@ class ChatRoomRevealTest {
             awaitState()
             expectSideEffect(ChatRoomSideEffect.ShowToast(SEND_FAILED_MESSAGE))
 
-            containerHost.onSend()
+            // 입력칸을 되돌리지 않으므로(실패한 말풍선의 재전송 버튼으로 대신한다),
+            // 두 번째 시도는 그 실패한 말풍선을 재전송하는 경로로 검증한다.
+            val failedMessage = containerHost.container.stateFlow.value.messages.last()
+            containerHost.onRetrySend(failedMessage)
             awaitState()
             awaitState()
             expectSideEffect(ChatRoomSideEffect.ShowToast(SEND_FAILED_MESSAGE))
@@ -220,7 +223,7 @@ class ChatRoomRevealTest {
     }
 
     @Test
-    fun 전송이_실패하면_입력칸에_보낸_내용이_복구된다() = runTest {
+    fun 전송이_실패하면_말풍선은_남고_재전송_대상으로_표시된다() = runTest {
         val repository = FakeConversationRepository(commentCount = 1, failing = true)
         val viewModel = viewModel(repository)
 
@@ -231,12 +234,16 @@ class ChatRoomRevealTest {
 
             val afterSendPressed = awaitState()
             assertEquals("", afterSendPressed.input)
+            assertEquals(listOf(INPUT), afterSendPressed.messages.map { it.content })
 
             val afterFailure = awaitState()
             expectSideEffect(ChatRoomSideEffect.ShowToast(SEND_FAILED_MESSAGE))
 
             assertFalse(afterFailure.isSending)
-            assertEquals(INPUT, afterFailure.input)
+            // 입력칸을 되돌리지 않는다 — 방금 그린 말풍선의 재전송 버튼(임시 UI)으로 다시 보낸다.
+            assertEquals("", afterFailure.input)
+            assertEquals(listOf(INPUT), afterFailure.messages.map { it.content })
+            assertEquals(afterFailure.messages.single().id, afterFailure.failedMessageIds.single())
         }
     }
 
