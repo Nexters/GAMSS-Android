@@ -41,8 +41,8 @@ import androidx.compose.ui.window.DialogProperties
 import com.gamss.android.core.designsystem.button.GamssButton
 import com.gamss.android.core.designsystem.component.GamssIcons
 import com.gamss.android.core.designsystem.theme.GamssTheme
-import com.gamss.android.domain.safety.SupportAgency
 import com.gamss.android.core.ui.R
+import com.gamss.android.domain.safety.SupportAgency
 
 private val DialogShape = RoundedCornerShape(16.dp)
 private val SupportPanelShape = RoundedCornerShape(20.dp)
