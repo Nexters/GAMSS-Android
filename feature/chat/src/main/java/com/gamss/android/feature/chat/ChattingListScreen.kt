@@ -84,22 +84,24 @@ fun ChattingListScreen(
             onSettingClick = onSettingClick,
         )
 
-        ChattingSearchContent(
-            state = state,
-            chattingRooms = chattingRooms,
-            actions = actions,
-            onKeywordChanged = viewModel::onSearchKeywordChanged,
-            onSearch = viewModel::search,
-            onCancel = viewModel::onSearchCancel,
-            idleContent = {
-                ChattingListBody(
-                    state = state,
-                    actions = actions,
-                    modifier = Modifier.fillMaxSize(),
-                )
-            },
-            modifier = Modifier.weight(1f),
-        )
+        // 검색 모드와 목록 모드는 서로 다른 화면이다. 검색 모드에서는 진행 중인 목록을 그리지 않는다.
+        if (state.search.isActive) {
+            ChattingSearchContent(
+                state = state,
+                chattingRooms = chattingRooms,
+                actions = actions,
+                onKeywordChanged = viewModel::onSearchKeywordChanged,
+                onSearch = viewModel::search,
+                onCancel = viewModel::onSearchCancel,
+                modifier = Modifier.weight(1f),
+            )
+        } else {
+            ChattingListBody(
+                state = state,
+                actions = actions,
+                modifier = Modifier.weight(1f),
+            )
+        }
 
         if (state.isSelectionMode) {
             DeleteButton(enabled = state.canDelete, onClick = viewModel::onDeleteRequest)

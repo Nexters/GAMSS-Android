@@ -1,11 +1,6 @@
 package com.gamss.android.feature.chat.component
 
 import androidx.annotation.StringRes
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -59,6 +54,12 @@ import com.gamss.android.feature.chat.R
 import com.gamss.android.feature.chat.SearchFailureReason
 import com.gamss.android.feature.chat.toSearchFailureReason
 
+/**
+ * 검색 모드 화면. 검색어 입력창과 검색 결과만 그린다.
+ *
+ * 진행 중인 대화 목록은 여기서 그리지 않는다. 검색 모드에 들어온 직후에는 검색어가 없으므로
+ * 결과 영역을 비워 두고, 검색을 실행한 뒤에만 결과를 보여준다.
+ */
 @Composable
 internal fun ChattingSearchContent(
     state: ChattingListState,
@@ -67,7 +68,6 @@ internal fun ChattingSearchContent(
     onKeywordChanged: (TextFieldValue) -> Unit,
     onSearch: () -> Unit,
     onCancel: () -> Unit,
-    idleContent: @Composable () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val listState = rememberLazyListState()
@@ -81,25 +81,19 @@ internal fun ChattingSearchContent(
     }
 
     Column(modifier = modifier.fillMaxSize()) {
-        AnimatedVisibility(
-            visible = state.search.isActive,
-            enter = expandVertically(expandFrom = Alignment.Top) + fadeIn(),
-            exit = shrinkVertically(shrinkTowards = Alignment.Top) + fadeOut(),
-        ) {
-            SearchInput(
-                keyword = state.search.keyword,
-                onKeywordChanged = onKeywordChanged,
-                onSearch = onSearch,
-                onCancel = onCancel,
-            )
-        }
+        SearchInput(
+            keyword = state.search.keyword,
+            onKeywordChanged = onKeywordChanged,
+            onSearch = onSearch,
+            onCancel = onCancel,
+        )
 
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f),
         ) {
-            if (state.search.isActive && state.search.hasSearched) {
+            if (state.search.hasSearched) {
                 SearchResultContent(
                     chattingRooms = chattingRooms,
                     state = state,
@@ -107,8 +101,6 @@ internal fun ChattingSearchContent(
                     listState = listState,
                     onRetry = onSearch,
                 )
-            } else {
-                idleContent()
             }
         }
     }
