@@ -50,7 +50,7 @@ internal fun ChatListSearchInputField(
     BasicTextField(
         value = keyword,
         onValueChange = onKeywordChanged,
-        modifier = modifier.defaultMinSize(minHeight = TextFieldDefaults.MinHeight),
+        modifier = modifier.defaultMinSize(minHeight = SearchInputMinHeight),
         textStyle = GamssTheme.typography.body4Medium.copy(color = GamssTheme.colors.gray950),
         cursorBrush = SolidColor(GamssTheme.colors.gray950),
         singleLine = true,
@@ -103,6 +103,12 @@ internal fun ChatListSearchInputField(
 }
 
 private val SearchInputVerticalPadding = 11.dp
+
+/**
+ * body4Medium(lineHeight 20sp) + 상하 11.dp 패딩 기준 콘텐츠 높이(42.dp)에 맞춘 최소 높이.
+ * TextFieldDefaults.MinHeight(56.dp)를 그대로 쓰면 패딩을 줄여도 바닥값에 가려 반영되지 않는다.
+ */
+private val SearchInputMinHeight = 42.dp
 
 @Preview(name = "Placeholder", showBackground = true)
 @Suppress("UnusedPrivateMember")
