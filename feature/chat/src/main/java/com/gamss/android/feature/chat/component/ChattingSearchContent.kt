@@ -31,6 +31,7 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.paging.LoadState
@@ -187,12 +188,14 @@ private fun SearchEmptyResult() {
             Text(
                 modifier = Modifier.padding(top = 24.dp),
                 text = stringResource(R.string.chatting_list_search_empty),
-                style = GamssTheme.typography.subtitle2.copy(color = GamssTheme.colors.gray900)
+                style = GamssTheme.typography.subtitle2.copy(color = GamssTheme.colors.gray900),
+                textAlign = TextAlign.Center
             )
             Text(
                 modifier = Modifier.padding(top = 8.dp),
                 text = stringResource(R.string.chatting_list_search_empty_subTitle),
-                style = GamssTheme.typography.body4Regular.copy(color = GamssTheme.colors.gray600)
+                style = GamssTheme.typography.body4Regular.copy(color = GamssTheme.colors.gray600),
+                textAlign = TextAlign.Center
             )
         }
     }
