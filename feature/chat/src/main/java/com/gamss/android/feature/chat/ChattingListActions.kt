@@ -13,4 +13,5 @@ internal data class ChattingListActions(
     val onCardClick: (Long) -> Unit,
     val onCardLongClick: (Long) -> Unit,
     val onDeleteActionClick: () -> Unit,
+    val onRefresh: () -> Unit,
 )
