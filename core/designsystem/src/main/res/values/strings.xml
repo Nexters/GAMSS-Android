@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="gamss_network_error_title">네트워크에 접속할 수 없습니다.</string>
+    <string name="gamss_network_error_description">네트워크 연결 상태를 확인해주세요.</string>
+    <string name="gamss_network_error_refresh">재시도</string>
+</resources>
