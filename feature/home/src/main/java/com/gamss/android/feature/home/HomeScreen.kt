@@ -50,6 +50,7 @@ import com.gamss.android.core.designsystem.component.GamssIconButton
 import com.gamss.android.core.designsystem.component.GamssIcons
 import com.gamss.android.core.designsystem.component.GamssLogo
 import com.gamss.android.core.designsystem.component.GamssMarkerHighlight
+import com.gamss.android.core.designsystem.component.GamssNetworkErrorContent
 import com.gamss.android.core.designsystem.component.GamssPaperSlip
 import com.gamss.android.core.designsystem.component.GamssStickyNote
 import com.gamss.android.core.designsystem.component.GamssTape
@@ -98,6 +99,7 @@ fun HomeScreen(
             onEmotionPickerToggle = viewModel::onEmotionPickerToggle,
             onEmotionPickerDismiss = viewModel::onEmotionPickerDismiss,
             onEmotionToggle = viewModel::onEmotionToggle,
+            onRefresh = viewModel::loadUserInfo,
         )
     }
 
@@ -115,6 +117,7 @@ private data class HomeActions(
     val onEmotionPickerToggle: () -> Unit,
     val onEmotionPickerDismiss: () -> Unit,
     val onEmotionToggle: (EmotionCharacter) -> Unit,
+    val onRefresh: () -> Unit,
 )
 
 @Composable
@@ -141,7 +144,8 @@ private fun HomeContent(
                 rootTopInWindow = bounds.top
             },
     ) {
-        HomeDecorations()
+        val isNetworkError = state.userInfo is UserInfoState.NetworkError
+        if (!isNetworkError) HomeDecorations()
 
         Column(modifier = Modifier.fillMaxSize()) {
             GamssTopBar(
@@ -156,26 +160,35 @@ private fun HomeContent(
                 },
             )
 
-            Spacer(modifier = Modifier.weight(GREETING_TOP_WEIGHT))
+            if (isNetworkError) {
+                GamssNetworkErrorContent(
+                    onRefresh = actions.onRefresh,
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth(),
+                )
+            } else {
+                Spacer(modifier = Modifier.weight(GREETING_TOP_WEIGHT))
 
-            HomeGreeting(
-                nickname = state.nickname,
-                modifier = Modifier
-                    .padding(start = GreetingStartPadding)
-                    // 닉네임이 도착하기 전에 먼저 그리면 문구가 옆으로 밀린다. 자리만 잡아 두고 감춘다.
-                    .alpha(if (state.isLoading) 0f else 1f),
-            )
+                HomeGreeting(
+                    nickname = (state.userInfo as? UserInfoState.Loaded)?.nickname,
+                    modifier = Modifier
+                        .padding(start = GreetingStartPadding)
+                        // 닉네임이 도착하기 전에 먼저 그리면 문구가 옆으로 밀린다. 자리만 잡아 두고 감춘다.
+                        .alpha(if (state.userInfo is UserInfoState.Loading) 0f else 1f),
+                )
 
-            Spacer(modifier = Modifier.height(GreetingToInputGap))
+                Spacer(modifier = Modifier.height(GreetingToInputGap))
 
-            HomeInputSection(
-                state = state,
-                actions = actions,
-                onToggleLeftChange = { toggleLeftInWindow = it },
-                onInputBarBottomChange = { inputBarBottomInWindow = it },
-            )
+                HomeInputSection(
+                    state = state,
+                    actions = actions,
+                    onToggleLeftChange = { toggleLeftInWindow = it },
+                    onInputBarBottomChange = { inputBarBottomInWindow = it },
+                )
 
-            Spacer(modifier = Modifier.weight(GREETING_BOTTOM_WEIGHT))
+                Spacer(modifier = Modifier.weight(GREETING_BOTTOM_WEIGHT))
+            }
         }
 
         // 같은 화면 안에 얹어야 탭 전환 페이드에 함께 사라진다. Popup 은 별도 창이라 나가는 화면의
@@ -373,13 +386,22 @@ private fun HomeContentDarkPreview() {
 private fun HomeContentWithoutNicknamePreview() {
     GamssTheme {
         HomeContent(
-            state = HomeState(isLoading = false, nickname = null, input = "오늘 발표가 너무 떨려요"),
+            state = HomeState(userInfo = UserInfoState.Loaded(nickname = null), input = "오늘 발표가 너무 떨려요"),
             actions = previewActions(),
         )
     }
 }
 
-private fun previewState() = HomeState(isLoading = false, nickname = "이소연")
+@Preview(name = "Home - Network error", showBackground = true, widthDp = 402, heightDp = 720)
+@Composable
+@Suppress("UnusedPrivateMember")
+private fun HomeContentNetworkErrorPreview() {
+    GamssTheme {
+        HomeContent(state = HomeState(userInfo = UserInfoState.NetworkError), actions = previewActions())
+    }
+}
+
+private fun previewState() = HomeState(userInfo = UserInfoState.Loaded(nickname = "이소연"))
 
 private fun previewActions() = HomeActions(
     onSettingClick = {},
@@ -388,4 +410,5 @@ private fun previewActions() = HomeActions(
     onEmotionPickerToggle = {},
     onEmotionPickerDismiss = {},
     onEmotionToggle = {},
+    onRefresh = {},
 )

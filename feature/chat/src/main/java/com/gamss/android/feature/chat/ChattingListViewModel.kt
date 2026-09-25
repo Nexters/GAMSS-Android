@@ -47,7 +47,7 @@ class ChattingListViewModel @Inject constructor(
         .cachedIn(viewModelScope)
 
     fun load() = intent {
-        // 회전이나 재진입으로 다시 불린다. 목록을 보는 중이 아니면 단계를 건드리지 않는다.
+        // 회전이나 재진입으로 다시 불린다. 선택·삭제 흐름 중이면 단계를 건드리지 않는다.
         if (state.phase is ChattingListPhase.Selecting ||
             state.phase is ChattingListPhase.Confirming ||
             state.phase is ChattingListPhase.Deleting
@@ -55,8 +55,10 @@ class ChattingListViewModel @Inject constructor(
             return@intent
         }
 
+        val neverLoaded = state.phase is ChattingListPhase.Loading || state.isNetworkError
+
         // 이미 채워진 목록에는 스피너를 다시 띄우지 않는다. 화면이 번쩍인다.
-        if (state.groups.isEmpty()) {
+        if (state.groups.isEmpty() && !state.isNetworkError) {
             reduce { state.copy(phase = ChattingListPhase.Loading) }
         }
         when (val result = getOngoingConversations()) {
@@ -67,7 +69,9 @@ class ChattingListViewModel @Inject constructor(
                 )
             }
 
-            is AppResult.Failure -> {
+            is AppResult.Failure -> if (neverLoaded && result.throwable is ApiException.Network) {
+                reduce { state.copy(phase = ChattingListPhase.NetworkError) }
+            } else {
                 reduce { state.copy(phase = ChattingListPhase.Browsing) }
                 postSideEffect(ChattingListSideEffect.ShowLoadFailed)
             }
@@ -121,8 +125,9 @@ class ChattingListViewModel @Inject constructor(
 
     fun onCardClick(conversationId: Long) = intent {
         when (val current = state.phase) {
-            is ChattingListPhase.Browsing ->
-                postSideEffect(ChattingListSideEffect.OpenChatRoom(conversationId))
+            is ChattingListPhase.Browsing,
+            is ChattingListPhase.NetworkError,
+            -> postSideEffect(ChattingListSideEffect.OpenChatRoom(conversationId))
 
             is ChattingListPhase.Selecting -> reduce {
                 state.copy(phase = ChattingListPhase.Selecting(current.selectedIds.toggle(conversationId)))
@@ -150,6 +155,7 @@ class ChattingListViewModel @Inject constructor(
             }
 
             is ChattingListPhase.Loading,
+            is ChattingListPhase.NetworkError,
             is ChattingListPhase.Confirming,
             is ChattingListPhase.Deleting,
             -> Unit

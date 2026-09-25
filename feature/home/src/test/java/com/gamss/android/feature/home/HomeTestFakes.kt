@@ -59,7 +59,7 @@ internal fun conversationSession(repository: ConversationRepository) = Conversat
  * [gate] 를 주면 응답을 그때까지 붙든다. 전송 중 상태를 실제로 만들어야 입력 잠금을 볼 수 있다.
  */
 internal class RecordingConversationRepository(
-    private val failing: Boolean = false,
+    private val sendFailure: Throwable? = null,
     private val gate: CompletableDeferred<Unit>? = null,
 ) : ConversationRepository {
     var sentContent: String? = null
@@ -87,7 +87,7 @@ internal class RecordingConversationRepository(
         sentExcludeCharacters = excludeCharacters
         sentContextSummaries += contextSummary
         gate?.await()
-        if (failing) return AppResult.Failure(IllegalStateException("send failed"))
+        sendFailure?.let { return AppResult.Failure(it) }
         return AppResult.Success(
             SentMessage(
                 message = Message(

@@ -3,6 +3,7 @@ package com.gamss.android.feature.home
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gamss.android.core.common.AppResult
+import com.gamss.android.core.common.network.ApiException
 import com.gamss.android.domain.conversation.ConversationSession
 import com.gamss.android.domain.conversation.MAX_MESSAGE_LENGTH
 import com.gamss.android.domain.conversation.takeWithinMessageLimit
@@ -19,6 +20,7 @@ import javax.inject.Inject
 
 internal const val LAST_CHARACTER_BLOCKED = "한 명은 남겨 주세요"
 internal const val SEND_FAILED = "보내지 못했어요. 잠시 후 다시 시도해 주세요."
+internal const val SEND_NETWORK_FAILED = "네트워크 연결을 확인해 주세요"
 internal val MESSAGE_LENGTH_EXCEEDED = "메시지는 ${MAX_MESSAGE_LENGTH}자까지 입력할 수 있어요."
 
 @HiltViewModel
@@ -33,10 +35,19 @@ class HomeViewModel @Inject constructor(
     override val container = container<HomeState, HomeSideEffect>(HomeState())
 
     fun loadUserInfo() = intent {
-        // 실패해도 기존 닉네임은 지우지 않는다. 갱신 시도가 화면에 이미 보이던 값을 날리면 안 된다.
         when (val result = getUserInfoUseCase()) {
-            is AppResult.Success -> reduce { state.copy(isLoading = false, nickname = result.data.nickname) }
-            is AppResult.Failure -> reduce { state.copy(isLoading = false) }
+            is AppResult.Success -> reduce { state.copy(userInfo = UserInfoState.Loaded(result.data.nickname)) }
+            is AppResult.Failure -> reduce {
+                when {
+                    // 실패해도 기존 닉네임은 지우지 않는다. 갱신 시도가 화면에 이미 보이던 값을 날리면 안 된다.
+                    state.userInfo is UserInfoState.Loaded -> state
+                    result.throwable is ApiException.Network -> state.copy(
+                        userInfo = UserInfoState.NetworkError,
+                        isEmotionPickerExpanded = false,
+                    )
+                    else -> state.copy(userInfo = UserInfoState.Loaded(nickname = null))
+                }
+            }
         }
     }
 
@@ -110,7 +121,11 @@ class HomeViewModel @Inject constructor(
                 _openConversationEvents.emit(result.data.message.conversationId)
             }
             // 입력은 남겨 둔다. 실패한 문구를 다시 치게 하면 안 된다.
-            is AppResult.Failure -> postSideEffect(HomeSideEffect.ShowToast(SEND_FAILED))
+            is AppResult.Failure -> postSideEffect(
+                HomeSideEffect.ShowToast(
+                    if (result.throwable is ApiException.Network) SEND_NETWORK_FAILED else SEND_FAILED,
+                ),
+            )
         }
     }
 }

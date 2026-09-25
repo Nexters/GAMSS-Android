@@ -4,9 +4,16 @@ import com.gamss.android.domain.emotion.EmotionCharacter
 
 private val AllCharacters: Set<EmotionCharacter> = EmotionCharacter.entries.toSet()
 
+sealed interface UserInfoState {
+    data object Loading : UserInfoState
+
+    data class Loaded(val nickname: String?) : UserInfoState
+
+    data object NetworkError : UserInfoState
+}
+
 data class HomeState(
-    val isLoading: Boolean = true,
-    val nickname: String? = null,
+    val userInfo: UserInfoState = UserInfoState.Loading,
     val input: String = "",
     /** 전송 API 가 캐릭터 댓글 생성까지 동기로 처리해 수 초 걸린다. 그동안 입력바를 잠근다. */
     val isSending: Boolean = false,

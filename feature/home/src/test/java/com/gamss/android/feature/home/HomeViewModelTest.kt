@@ -1,6 +1,7 @@
 package com.gamss.android.feature.home
 
 import com.gamss.android.core.common.AppResult
+import com.gamss.android.core.common.network.ApiException
 import com.gamss.android.domain.conversation.ConversationRepository
 import com.gamss.android.domain.conversation.MAX_MESSAGE_LENGTH
 import com.gamss.android.domain.emotion.EmotionCharacter
@@ -19,6 +20,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 import org.orbitmvi.orbit.test.test
+import java.io.IOException
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class HomeViewModelTest {
@@ -35,7 +37,7 @@ class HomeViewModelTest {
 
         viewModel().test(this) {
             containerHost.loadUserInfo()
-            expectState { copy(isLoading = false, nickname = "이소연") }
+            expectState { copy(userInfo = UserInfoState.Loaded("이소연")) }
         }
     }
 
@@ -45,7 +47,7 @@ class HomeViewModelTest {
 
         viewModel().test(this) {
             containerHost.loadUserInfo()
-            expectState { copy(isLoading = false, nickname = null) }
+            expectState { copy(userInfo = UserInfoState.Loaded(nickname = null)) }
         }
     }
 
@@ -56,11 +58,11 @@ class HomeViewModelTest {
 
         viewModel().test(this) {
             containerHost.loadUserInfo()
-            expectState { copy(isLoading = false, nickname = "이소연") }
+            expectState { copy(userInfo = UserInfoState.Loaded("이소연")) }
 
             givenUserInfo(nickname = "소연이")
             containerHost.loadUserInfo()
-            expectState { copy(nickname = "소연이") }
+            expectState { copy(userInfo = UserInfoState.Loaded("소연이")) }
         }
     }
 
@@ -70,11 +72,75 @@ class HomeViewModelTest {
 
         viewModel().test(this) {
             containerHost.loadUserInfo()
-            expectState { copy(isLoading = false, nickname = "이소연") }
+            expectState { copy(userInfo = UserInfoState.Loaded("이소연")) }
 
             coEvery { getUserInfoUseCase() } returns AppResult.Failure(IllegalStateException("boom"))
             containerHost.loadUserInfo()
             expectNoItems()
+        }
+    }
+
+    @Test
+    fun `처음 불러오기가 네트워크로 실패하면 네트워크 에러 상태가 된다`() = runTest {
+        givenNetworkFailure()
+
+        viewModel().test(this) {
+            containerHost.loadUserInfo()
+            expectState { copy(userInfo = UserInfoState.NetworkError) }
+        }
+    }
+
+    @Test
+    fun `닉네임이 보이는 중에 다시 불러오다 네트워크로 실패해도 화면을 유지한다`() = runTest {
+        givenUserInfo(nickname = "이소연")
+
+        viewModel().test(this) {
+            containerHost.loadUserInfo()
+            expectState { copy(userInfo = UserInfoState.Loaded("이소연")) }
+
+            givenNetworkFailure()
+            containerHost.loadUserInfo()
+            expectNoItems()
+        }
+    }
+
+    @Test
+    fun `네트워크 에러에서 다시 불러오면 에러 화면에서 바로 닉네임을 채운다`() = runTest {
+        givenNetworkFailure()
+
+        viewModel().test(this) {
+            containerHost.loadUserInfo()
+            expectState { copy(userInfo = UserInfoState.NetworkError) }
+
+            givenUserInfo(nickname = "이소연")
+            containerHost.loadUserInfo()
+            expectState { copy(userInfo = UserInfoState.Loaded("이소연")) }
+        }
+    }
+
+    @Test
+    fun `다시 불러와도 네트워크로 실패하면 에러 화면을 그대로 둔다`() = runTest {
+        givenNetworkFailure()
+
+        viewModel().test(this) {
+            containerHost.loadUserInfo()
+            expectState { copy(userInfo = UserInfoState.NetworkError) }
+
+            containerHost.loadUserInfo()
+            expectNoItems()
+        }
+    }
+
+    @Test
+    fun `로딩 중에 열어 둔 캐릭터 피커는 네트워크 에러가 되면 닫힌다`() = runTest {
+        givenNetworkFailure()
+
+        viewModel().test(this) {
+            containerHost.onEmotionPickerToggle()
+            expectState { copy(isEmotionPickerExpanded = true) }
+
+            containerHost.loadUserInfo()
+            expectState { copy(userInfo = UserInfoState.NetworkError, isEmotionPickerExpanded = false) }
         }
     }
 
@@ -102,7 +168,7 @@ class HomeViewModelTest {
 
     @Test
     fun `전송에 실패하면 입력을 남기고 안내만 띄운다`() = runTest {
-        val failing = RecordingConversationRepository(failing = true)
+        val failing = RecordingConversationRepository(sendFailure = IllegalStateException("send failed"))
         viewModel(failing).test(this) {
             containerHost.onInputChange(WORRY)
             expectState { copy(input = WORRY) }
@@ -111,6 +177,20 @@ class HomeViewModelTest {
             expectState { copy(isSending = true) }
             expectState { copy(isSending = false) }
             expectSideEffect(HomeSideEffect.ShowToast(SEND_FAILED))
+        }
+    }
+
+    @Test
+    fun `네트워크로 전송에 실패하면 입력을 남기고 연결 확인 안내를 띄운다`() = runTest {
+        val failing = RecordingConversationRepository(sendFailure = ApiException.Network(IOException("offline")))
+        viewModel(failing).test(this) {
+            containerHost.onInputChange(WORRY)
+            expectState { copy(input = WORRY) }
+
+            containerHost.onSubmit()
+            expectState { copy(isSending = true) }
+            expectState { copy(isSending = false) }
+            expectSideEffect(HomeSideEffect.ShowToast(SEND_NETWORK_FAILED))
         }
     }
 
@@ -374,6 +454,10 @@ class HomeViewModelTest {
             containerHost.navigateToSetting()
             expectSideEffect(HomeSideEffect.NavigateToSetting)
         }
+    }
+
+    private fun givenNetworkFailure() {
+        coEvery { getUserInfoUseCase() } returns AppResult.Failure(ApiException.Network(IOException("offline")))
     }
 
     private fun givenUserInfo(nickname: String?) {
