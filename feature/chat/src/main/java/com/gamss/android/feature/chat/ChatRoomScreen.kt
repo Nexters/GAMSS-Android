@@ -228,7 +228,7 @@ private fun ChatRoomContent(
     val messageAnimationState = rememberChatMessageAnimationState(
         conversationId = state.conversationId,
         isLoading = state.isLoading,
-        messageIds = state.messages.map(Message::id),
+        messages = state.messages,
     )
     val chatScrollState = rememberChatScrollState(state = state, listState = listState)
 

@@ -10,6 +10,7 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.remember
+import com.gamss.android.domain.conversation.Message
 
 /**
  * 진입시 표시되는 메시지는 그대로 표시하고, 그 이후 목록에 추가된 메시지만 진입 애니메이션 대상으로 관리한다.
@@ -18,10 +19,16 @@ internal class ChatMessageAnimation {
     private val displayedMessageIds = mutableSetOf<Long>()
     private var hasCapturedInitialMessages = false
 
+    // markDisplayed()는 SideEffect로 리컴포지션마다 불린다 — 입력칸 타이핑처럼 메시지 목록과
+    // 무관한 리컴포지션에서도 매번 호출되므로, 직전과 같은 목록이면(참조 동일) 다시 훑지 않는다.
+    private var lastMarkedMessageIds: List<Long>? = null
+
     fun shouldAnimate(messageId: Long): Boolean =
         hasCapturedInitialMessages && messageId !in displayedMessageIds
 
     fun markDisplayed(messageIds: List<Long>) {
+        if (messageIds === lastMarkedMessageIds) return
+        lastMarkedMessageIds = messageIds
         displayedMessageIds += messageIds
         hasCapturedInitialMessages = true
     }
@@ -31,9 +38,12 @@ internal class ChatMessageAnimation {
 internal fun rememberChatMessageAnimationState(
     conversationId: Long?,
     isLoading: Boolean,
-    messageIds: List<Long>,
+    messages: List<Message>,
 ): ChatMessageAnimation {
     val animationState = remember(conversationId) { ChatMessageAnimation() }
+    // messages 참조가 그대로면(메시지와 무관한 리컴포지션) 새로 매핑하지 않는다 — 위 참조
+    // 비교와 짝을 이뤄야 하므로, 매핑 결과도 messages가 바뀔 때만 새 리스트가 된다.
+    val messageIds = remember(messages) { messages.map(Message::id) }
 
     SideEffect {
         if (conversationId != null && !isLoading) {
