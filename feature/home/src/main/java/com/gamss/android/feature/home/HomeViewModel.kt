@@ -3,6 +3,7 @@ package com.gamss.android.feature.home
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gamss.android.core.common.AppResult
+import com.gamss.android.core.common.network.ApiException
 import com.gamss.android.domain.conversation.ConversationSession
 import com.gamss.android.domain.conversation.MAX_MESSAGE_LENGTH
 import com.gamss.android.domain.conversation.takeWithinMessageLimit
@@ -33,10 +34,19 @@ class HomeViewModel @Inject constructor(
     override val container = container<HomeState, HomeSideEffect>(HomeState())
 
     fun loadUserInfo() = intent {
-        // 실패해도 기존 닉네임은 지우지 않는다. 갱신 시도가 화면에 이미 보이던 값을 날리면 안 된다.
         when (val result = getUserInfoUseCase()) {
-            is AppResult.Success -> reduce { state.copy(isLoading = false, nickname = result.data.nickname) }
-            is AppResult.Failure -> reduce { state.copy(isLoading = false) }
+            is AppResult.Success -> reduce { state.copy(userInfo = UserInfoState.Loaded(result.data.nickname)) }
+            is AppResult.Failure -> reduce {
+                when {
+                    // 실패해도 기존 닉네임은 지우지 않는다. 갱신 시도가 화면에 이미 보이던 값을 날리면 안 된다.
+                    state.userInfo is UserInfoState.Loaded -> state
+                    result.throwable is ApiException.Network -> state.copy(
+                        userInfo = UserInfoState.NetworkError,
+                        isEmotionPickerExpanded = false,
+                    )
+                    else -> state.copy(userInfo = UserInfoState.Loaded(nickname = null))
+                }
+            }
         }
     }
 
