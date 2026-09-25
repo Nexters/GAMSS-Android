@@ -168,7 +168,7 @@ class HomeViewModelTest {
 
     @Test
     fun `전송에 실패하면 입력을 남기고 안내만 띄운다`() = runTest {
-        val failing = RecordingConversationRepository(failing = true)
+        val failing = RecordingConversationRepository(sendFailure = IllegalStateException("send failed"))
         viewModel(failing).test(this) {
             containerHost.onInputChange(WORRY)
             expectState { copy(input = WORRY) }
@@ -177,6 +177,20 @@ class HomeViewModelTest {
             expectState { copy(isSending = true) }
             expectState { copy(isSending = false) }
             expectSideEffect(HomeSideEffect.ShowToast(SEND_FAILED))
+        }
+    }
+
+    @Test
+    fun `네트워크로 전송에 실패하면 입력을 남기고 연결 확인 안내를 띄운다`() = runTest {
+        val failing = RecordingConversationRepository(sendFailure = ApiException.Network(IOException("offline")))
+        viewModel(failing).test(this) {
+            containerHost.onInputChange(WORRY)
+            expectState { copy(input = WORRY) }
+
+            containerHost.onSubmit()
+            expectState { copy(isSending = true) }
+            expectState { copy(isSending = false) }
+            expectSideEffect(HomeSideEffect.ShowToast(SEND_NETWORK_FAILED))
         }
     }
 
