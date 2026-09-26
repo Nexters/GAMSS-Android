@@ -1,18 +1,18 @@
 package com.gamss.android.feature.chat.component
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.RectangleShape
@@ -22,7 +22,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.TextFieldValue
-import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.gamss.android.core.designsystem.component.GamssIcons
@@ -39,76 +38,63 @@ internal fun ChatListSearchInputField(
     onSearch: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val colors = TextFieldDefaults.colors(
-        focusedContainerColor = GamssTheme.colors.gray075,
-        unfocusedContainerColor = GamssTheme.colors.gray075,
-        focusedIndicatorColor = GamssTheme.colors.gray075,
-        unfocusedIndicatorColor = GamssTheme.colors.gray075,
-    )
-
-    BasicTextField(
-        value = keyword,
-        onValueChange = onKeywordChanged,
-        modifier = modifier.defaultMinSize(minHeight = SearchInputMinHeight),
-        textStyle = GamssTheme.typography.body4Medium.copy(color = GamssTheme.colors.gray950),
-        cursorBrush = SolidColor(GamssTheme.colors.gray950),
-        singleLine = true,
-        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-        keyboardActions = KeyboardActions(onSearch = { onSearch() }),
-        interactionSource = interactionSource,
-    ) { innerTextField ->
-        TextFieldDefaults.DecorationBox(
-            value = keyword.text,
-            innerTextField = innerTextField,
-            enabled = true,
+    Row(
+        modifier = modifier
+            .background(GamssTheme.colors.gray075, RectangleShape)
+            .padding(
+                horizontal = SearchInputHorizontalPadding,
+                vertical = SearchInputVerticalPadding,
+            ),
+        horizontalArrangement = Arrangement.spacedBy(SearchInputIconGap),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        BasicTextField(
+            value = keyword,
+            onValueChange = onKeywordChanged,
+            modifier = Modifier.weight(1f),
+            textStyle = GamssTheme.typography.body4Medium.copy(color = GamssTheme.colors.gray950),
+            cursorBrush = SolidColor(GamssTheme.colors.gray950),
             singleLine = true,
-            visualTransformation = VisualTransformation.None,
-            interactionSource = interactionSource,
-            placeholder = {
-                Text(
-                    stringResource(R.string.chatting_list_search_placeholder),
-                    style = GamssTheme.typography.body4Medium.copy(color = GamssTheme.colors.gray400),
-                )
-            },
-            trailingIcon = {
-                if (keyword.text.isNotEmpty()) {
-                    Box(
-                        modifier = Modifier
-                            .size(20.dp)
-                            .clickable(
-                                role = Role.Button,
-                                onClick = { onKeywordChanged(TextFieldValue()) },
-                            ),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Image(
-                            painter = painterResource(GamssIcons.ClearButton),
-                            contentDescription = stringResource(
-                                R.string.chatting_list_search_clear_content_description,
-                            ),
-                            modifier = Modifier.size(20.dp),
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+            keyboardActions = KeyboardActions(onSearch = { onSearch() }),
+            decorationBox = { innerTextField ->
+                Box(contentAlignment = Alignment.CenterStart) {
+                    if (keyword.text.isEmpty()) {
+                        Text(
+                            stringResource(R.string.chatting_list_search_placeholder),
+                            style = GamssTheme.typography.body4Medium.copy(color = GamssTheme.colors.gray400),
                         )
                     }
+                    innerTextField()
                 }
             },
-            shape = RectangleShape,
-            colors = colors,
-            contentPadding = TextFieldDefaults.contentPaddingWithoutLabel(
-                top = SearchInputVerticalPadding,
-                bottom = SearchInputVerticalPadding,
-            ),
         )
+        if (keyword.text.isNotEmpty()) {
+            Box(
+                modifier = Modifier
+                    .size(SearchInputClearIconSize)
+                    .clickable(
+                        role = Role.Button,
+                        onClick = { onKeywordChanged(TextFieldValue()) },
+                    ),
+                contentAlignment = Alignment.Center,
+            ) {
+                Image(
+                    painter = painterResource(GamssIcons.ClearButton),
+                    contentDescription = stringResource(
+                        R.string.chatting_list_search_clear_content_description,
+                    ),
+                    modifier = Modifier.size(SearchInputClearIconSize),
+                )
+            }
+        }
     }
 }
 
+private val SearchInputHorizontalPadding = 16.dp
 private val SearchInputVerticalPadding = 11.dp
-
-/**
- * body4Medium(lineHeight 20sp) + 상하 11.dp 패딩 기준 콘텐츠 높이(42.dp)에 맞춘 최소 높이.
- * TextFieldDefaults.MinHeight(56.dp)를 그대로 쓰면 패딩을 줄여도 바닥값에 가려 반영되지 않는다.
- */
-private val SearchInputMinHeight = 42.dp
+private val SearchInputIconGap = 8.dp
+private val SearchInputClearIconSize = 20.dp
 
 @Preview(name = "Placeholder", showBackground = true)
 @Suppress("UnusedPrivateMember")
