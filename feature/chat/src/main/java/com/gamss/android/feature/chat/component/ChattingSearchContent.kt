@@ -1,13 +1,7 @@
 package com.gamss.android.feature.chat.component
 
 import androidx.annotation.StringRes
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,17 +10,11 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -38,18 +26,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.paging.LoadState
 import androidx.paging.compose.LazyPagingItems
 import com.gamss.android.core.designsystem.button.GamssButton
-import com.gamss.android.core.designsystem.component.GamssIcons
 import com.gamss.android.core.designsystem.modifier.noRippleCombinedClickable
 import com.gamss.android.core.designsystem.theme.GamssTheme
 import com.gamss.android.domain.conversation.chattingsearch.ChattingRoomSummary
@@ -59,6 +46,12 @@ import com.gamss.android.feature.chat.R
 import com.gamss.android.feature.chat.SearchFailureReason
 import com.gamss.android.feature.chat.toSearchFailureReason
 
+/**
+ * 검색 모드 화면. 검색어 입력창과 검색 결과만 그린다.
+ *
+ * 진행 중인 대화 목록은 여기서 그리지 않는다. 검색 모드에 들어온 직후에는 검색어가 없으므로
+ * 결과 영역을 비워 두고, 검색을 실행한 뒤에만 결과를 보여준다.
+ */
 @Composable
 internal fun ChattingSearchContent(
     state: ChattingListState,
@@ -67,7 +60,6 @@ internal fun ChattingSearchContent(
     onKeywordChanged: (TextFieldValue) -> Unit,
     onSearch: () -> Unit,
     onCancel: () -> Unit,
-    idleContent: @Composable () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val listState = rememberLazyListState()
@@ -81,25 +73,19 @@ internal fun ChattingSearchContent(
     }
 
     Column(modifier = modifier.fillMaxSize()) {
-        AnimatedVisibility(
-            visible = state.search.isActive,
-            enter = expandVertically(expandFrom = Alignment.Top) + fadeIn(),
-            exit = shrinkVertically(shrinkTowards = Alignment.Top) + fadeOut(),
-        ) {
-            SearchInput(
-                keyword = state.search.keyword,
-                onKeywordChanged = onKeywordChanged,
-                onSearch = onSearch,
-                onCancel = onCancel,
-            )
-        }
+        SearchInput(
+            keyword = state.search.keyword,
+            onKeywordChanged = onKeywordChanged,
+            onSearch = onSearch,
+            onCancel = onCancel,
+        )
 
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f),
         ) {
-            if (state.search.isActive && state.search.hasSearched) {
+            if (state.search.hasSearched) {
                 SearchResultContent(
                     chattingRooms = chattingRooms,
                     state = state,
@@ -107,8 +93,6 @@ internal fun ChattingSearchContent(
                     listState = listState,
                     onRetry = onSearch,
                 )
-            } else {
-                idleContent()
             }
         }
     }
@@ -136,51 +120,13 @@ private fun SearchInput(
         horizontalArrangement = Arrangement.spacedBy(16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        TextField(
-            value = keyword,
-            onValueChange = onKeywordChanged,
+        ChatListSearchInputField(
+            keyword = keyword,
+            onKeywordChanged = onKeywordChanged,
+            onSearch = onSearch,
             modifier = Modifier
                 .weight(1f)
                 .focusRequester(focusRequester),
-            placeholder = {
-                Text(
-                    stringResource(R.string.chatting_list_search_placeholder),
-                    style = GamssTheme.typography.body4Medium.copy(color = GamssTheme.colors.gray400)
-                )
-            },
-            singleLine = true,
-            shape = RectangleShape,
-            colors = TextFieldDefaults.colors(
-                focusedContainerColor = GamssTheme.colors.gray075,
-                unfocusedContainerColor = GamssTheme.colors.gray075,
-                focusedIndicatorColor = GamssTheme.colors.gray075,
-                unfocusedIndicatorColor = GamssTheme.colors.gray075,
-                cursorColor = GamssTheme.colors.gray900
-            ),
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-            keyboardActions = KeyboardActions(onSearch = { onSearch() }),
-            trailingIcon = {
-                if (keyword.text.isNotEmpty()) {
-                    Box(
-                        modifier = Modifier
-                            .size(20.dp)
-                            .clickable(
-                                role = Role.Button,
-                                onClick = { onKeywordChanged(TextFieldValue()) },
-                            ),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Image(
-                            painter = painterResource(GamssIcons.ClearButton),
-
-                            contentDescription = stringResource(
-                                R.string.chatting_list_search_clear_content_description,
-                            ),
-                            modifier = Modifier.size(20.dp),
-                        )
-                    }
-                }
-            },
         )
         Text(
             text = stringResource(R.string.chatting_list_search_cancel),
@@ -213,7 +159,7 @@ private fun SearchResultContent(
         )
 
         is LoadState.NotLoading -> if (chattingRooms.itemCount == 0) {
-            MessageContent(messageRes = R.string.chatting_list_search_empty)
+            SearchEmptyResult()
         } else {
             SearchResultList(
                 chattingRooms = chattingRooms,
@@ -222,6 +168,45 @@ private fun SearchResultContent(
                 actions = actions,
             )
         }
+    }
+}
+
+@Composable
+private fun SearchEmptyResult() {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(24.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Image(
+                painter = painterResource(R.drawable.image_search_result_empty),
+                contentDescription = stringResource(R.string.chatting_list_search_empty),
+                contentScale = ContentScale.Fit,
+            )
+            Text(
+                modifier = Modifier.padding(top = 24.dp),
+                text = stringResource(R.string.chatting_list_search_empty),
+                style = GamssTheme.typography.subtitle2.copy(color = GamssTheme.colors.gray900),
+                textAlign = TextAlign.Center
+            )
+            Text(
+                modifier = Modifier.padding(top = 8.dp),
+                text = stringResource(R.string.chatting_list_search_empty_subTitle),
+                style = GamssTheme.typography.body4Regular.copy(color = GamssTheme.colors.gray600),
+                textAlign = TextAlign.Center
+            )
+        }
+    }
+}
+
+@Preview(name = "Search Empty", showBackground = true)
+@Suppress("UnusedPrivateMember")
+@Composable
+private fun SearchEmptyResultPreview() {
+    GamssTheme(darkTheme = false) {
+        SearchEmptyResult()
     }
 }
 
@@ -290,18 +275,6 @@ private fun AppendErrorItem(
 private fun LoadingContent() {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         CircularProgressIndicator()
-    }
-}
-
-@Composable
-private fun MessageContent(@StringRes messageRes: Int) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(text = stringResource(messageRes), style = MaterialTheme.typography.bodyLarge)
     }
 }
 
