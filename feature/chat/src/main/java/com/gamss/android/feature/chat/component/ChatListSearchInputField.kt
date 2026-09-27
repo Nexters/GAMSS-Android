@@ -38,27 +38,30 @@ internal fun ChatListSearchInputField(
     onSearch: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Row(
-        modifier = modifier
-            .background(GamssTheme.colors.gray075, RectangleShape)
-            .padding(
-                horizontal = SearchInputHorizontalPadding,
-                vertical = SearchInputVerticalPadding,
-            ),
-        horizontalArrangement = Arrangement.spacedBy(SearchInputIconGap),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        BasicTextField(
-            value = keyword,
-            onValueChange = onKeywordChanged,
-            modifier = Modifier.weight(1f),
-            textStyle = GamssTheme.typography.body4Medium.copy(color = GamssTheme.colors.gray950),
-            cursorBrush = SolidColor(GamssTheme.colors.gray950),
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-            keyboardActions = KeyboardActions(onSearch = { onSearch() }),
-            decorationBox = { innerTextField ->
-                Box(contentAlignment = Alignment.CenterStart) {
+    BasicTextField(
+        value = keyword,
+        onValueChange = onKeywordChanged,
+        modifier = modifier,
+        textStyle = GamssTheme.typography.body4Medium.copy(color = GamssTheme.colors.gray950),
+        cursorBrush = SolidColor(GamssTheme.colors.gray950),
+        singleLine = true,
+        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+        keyboardActions = KeyboardActions(onSearch = { onSearch() }),
+        decorationBox = { innerTextField ->
+            Row(
+                modifier = Modifier
+                    .background(GamssTheme.colors.gray075, RectangleShape)
+                    .padding(
+                        horizontal = SearchInputHorizontalPadding,
+                        vertical = SearchInputVerticalPadding,
+                    ),
+                horizontalArrangement = Arrangement.spacedBy(SearchInputIconGap),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(
+                    modifier = Modifier.weight(1f),
+                    contentAlignment = Alignment.CenterStart,
+                ) {
                     if (keyword.text.isEmpty()) {
                         Text(
                             stringResource(R.string.chatting_list_search_placeholder),
@@ -67,28 +70,28 @@ internal fun ChatListSearchInputField(
                     }
                     innerTextField()
                 }
-            },
-        )
-        if (keyword.text.isNotEmpty()) {
-            Box(
-                modifier = Modifier
-                    .size(SearchInputClearIconSize)
-                    .clickable(
-                        role = Role.Button,
-                        onClick = { onKeywordChanged(TextFieldValue()) },
-                    ),
-                contentAlignment = Alignment.Center,
-            ) {
-                Image(
-                    painter = painterResource(GamssIcons.ClearButton),
-                    contentDescription = stringResource(
-                        R.string.chatting_list_search_clear_content_description,
-                    ),
-                    modifier = Modifier.size(SearchInputClearIconSize),
-                )
+                if (keyword.text.isNotEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .size(SearchInputClearIconSize)
+                            .clickable(
+                                role = Role.Button,
+                                onClick = { onKeywordChanged(TextFieldValue()) },
+                            ),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Image(
+                            painter = painterResource(GamssIcons.ClearButton),
+                            contentDescription = stringResource(
+                                R.string.chatting_list_search_clear_content_description,
+                            ),
+                            modifier = Modifier.size(SearchInputClearIconSize),
+                        )
+                    }
+                }
             }
-        }
-    }
+        },
+    )
 }
 
 private val SearchInputHorizontalPadding = 16.dp
