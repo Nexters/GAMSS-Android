@@ -70,8 +70,8 @@ import com.gamss.android.feature.chat.component.MessageInputBar
 import com.gamss.android.feature.chat.component.NewMessageToast
 import com.gamss.android.feature.chat.component.SupportAgencyDialog
 import com.gamss.android.feature.chat.util.AnimatedChatMessage
-import com.gamss.android.feature.chat.util.ChatMessageAnimation
 import com.gamss.android.feature.chat.util.ChatScrollState
+import com.gamss.android.feature.chat.util.chatMessageItemAnimation
 import com.gamss.android.feature.chat.util.dialOrNotify
 import com.gamss.android.feature.chat.util.rememberChatMessageAnimationState
 import com.gamss.android.feature.chat.util.rememberChatScrollState
@@ -225,11 +225,6 @@ private fun ChatRoomContent(
 ) {
     val listState = rememberLazyListState()
     val focusManager = LocalFocusManager.current
-    val messageAnimationState = rememberChatMessageAnimationState(
-        conversationId = state.conversationId,
-        isLoading = state.isLoading,
-        messages = state.messages,
-    )
     val chatScrollState = rememberChatScrollState(state = state, listState = listState)
 
     // WindowInsets.ime 게터 자체가 @Composable이라 LaunchedEffect(코루틴) 안에서 직접 부를 수
@@ -283,7 +278,6 @@ private fun ChatRoomContent(
                 state = state,
                 actions = actions,
                 listState = listState,
-                animationState = messageAnimationState,
                 scrollState = chatScrollState,
                 showScrollToBottomButton = chatScrollState.showScrollToBottomButton && !isImeInTransition,
                 modifier = Modifier
@@ -395,12 +389,24 @@ private fun ChatMessageList(
     state: ChatRoomState,
     actions: ChatRoomActions,
     listState: LazyListState,
-    animationState: ChatMessageAnimation,
     scrollState: ChatScrollState,
     showScrollToBottomButton: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val replyQuotes = rememberReplyQuoteLookup(state.messages)
+
+    // 다음 캐릭터 답장은 딜레이가 끝나 state.messages로 옮겨지기 전에도, 로딩 표시를 같은 id로
+    // 목록에 먼저 끼워 넣는다. 그래야 딜레이가 끝나는 순간 LazyColumn이 같은 아이템으로 인식해
+    // 프로필/말풍선 자리 자체가 통째로 사라졌다 다시 나타나지 않고, 내용만(로딩 → 실제 글자)
+    // 제자리에서 바뀐다.
+    val loadingPlaceholder = state.pendingComments.firstOrNull()
+    val displayMessages = remember(state.messages, loadingPlaceholder) {
+        if (loadingPlaceholder != null) state.messages + loadingPlaceholder else state.messages
+    }
+    val animationState = rememberChatMessageAnimationState(
+        conversationId = state.conversationId,
+        isLoading = state.isLoading,
+    )
 
     Box(modifier = modifier) {
         LazyColumn(
@@ -427,26 +433,25 @@ private fun ChatMessageList(
                     }
                 }
             }
-            items(state.messages, key = { it.id }) { message ->
-                val replyQuote = replyQuotes.quoteFor(message)
+            items(displayMessages, key = { it.id }) { message ->
                 AnimatedChatMessage(
                     messageId = message.id,
-                    shouldAnimate = animationState.shouldAnimate(message.id),
-                    listState = listState,
+                    animationState = animationState,
+                    modifier = chatMessageItemAnimation(),
                 ) {
-                    ChatMessageBubble(
-                        message = message,
-                        replyQuote = replyQuote,
-                        onCharacterMessageClick = actions.onCharacterMessageClick,
-                        onRetryClick = { actions.onRetrySendClick(message) }
-                            .takeIf { message.id in state.failedMessageIds },
-                    )
+                    if (message.id == loadingPlaceholder?.id) {
+                        val character = (message.sender as? MessageSender.Character)?.character
+                        LoadingMessageBubble(character = character)
+                    } else {
+                        ChatMessageBubble(
+                            message = message,
+                            replyQuote = replyQuotes.quoteFor(message),
+                            onCharacterMessageClick = actions.onCharacterMessageClick,
+                            onRetryClick = { actions.onRetrySendClick(message) }
+                                .takeIf { message.id in state.failedMessageIds },
+                        )
+                    }
                 }
-            }
-            if (state.isAwaitingComments) {
-                val nextCharacter = (state.pendingComments.firstOrNull()?.sender as? MessageSender.Character)
-                    ?.character
-                item { LoadingMessageBubble(character = nextCharacter) }
             }
         }
 
