@@ -135,7 +135,6 @@ fun ChatRoomScreen(
             onInputChange = viewModel::onInputChange,
             onSendClick = viewModel::onSend,
             onCharacterMessageClick = viewModel::onReplyTargetSelect,
-            onRetrySendClick = viewModel::onRetrySend,
             onReplyTargetClear = viewModel::onReplyTargetClear,
             onEndClick = viewModel::onEndRequest,
             onTokenUsageToggle = viewModel::onTokenUsageToggle,
@@ -208,7 +207,6 @@ private data class ChatRoomActions(
     val onInputChange: (String) -> Unit,
     val onSendClick: () -> Unit,
     val onCharacterMessageClick: (Message) -> Unit,
-    val onRetrySendClick: (Message) -> Unit,
     val onReplyTargetClear: () -> Unit,
     val onEndClick: () -> Unit,
     val onTokenUsageToggle: () -> Unit,
@@ -439,8 +437,6 @@ private fun ChatMessageList(
                             message = message,
                             replyQuote = replyQuotes.quoteFor(message),
                             onCharacterMessageClick = actions.onCharacterMessageClick,
-                            onRetryClick = { actions.onRetrySendClick(message) }
-                                .takeIf { message.id in state.failedMessageIds },
                         )
                     }
                 }
@@ -572,7 +568,6 @@ private fun ChatRoomPreviewContent() {
         onInputChange = {},
         onSendClick = {},
         onCharacterMessageClick = {},
-        onRetrySendClick = {},
         onReplyTargetClear = {},
         onEndClick = {},
         onTokenUsageToggle = {},

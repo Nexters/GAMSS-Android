@@ -218,7 +218,7 @@ class ChatRoomViewModel @Inject constructor(
                 null
             }
             val sending = pending
-            // 서버 응답을 기다리지 않고 입력칸을 비우고 말풍선을 먼저 그린다. 위험 신호로 차단되면 되돌린다.
+            // 서버 응답을 기다리지 않고 입력칸을 비우고 말풍선을 먼저 그린다. 차단·실패하면 되돌린다.
             if (sending == null) {
                 state
             } else {
@@ -235,18 +235,9 @@ class ChatRoomViewModel @Inject constructor(
         val detection = detectRiskInText(sending.content)
         if (detection.level != RiskLevel.NONE) {
             reduce {
-                state.copy(
-                    riskDetection = detection,
-                    // CRITICAL이면 전송을 중단하므로 전송 가능 상태로 되돌리고 먼저 그려둔 말풍선도 지운다.
-                    isSending = if (detection.shouldBlock) false else state.isSending,
-                    messages = if (detection.shouldBlock) {
-                        state.messages.filterNot { it.id == localId }
-                    } else {
-                        state.messages
-                    },
-                    // 방금 비운 입력칸을 되돌린다. 그 사이 사용자가 새로 타이핑했다면 덮어쓰지 않는다.
-                    input = if (detection.shouldBlock && state.input.isEmpty()) sending.content else state.input,
-                )
+                // CRITICAL이면 전송을 중단하므로 전송 직전 상태로 되돌린다.
+                val base = if (detection.shouldBlock) state.revertOptimisticSend(sending, localId) else state
+                base.copy(riskDetection = detection)
             }
 
             if (detection.shouldBlock) {
@@ -254,25 +245,6 @@ class ChatRoomViewModel @Inject constructor(
             }
         }
 
-        awaitSendResult(sending, localId)
-    }
-
-    /**
-     * 재전송(임시 UI). 실패한 말풍선을 지우고 새 임시 id로 다시 붙인다. 위험 신호 검사는 [onSend]에서
-     * 이미 통과한 내용이라 다시 하지 않는다.
-     */
-    fun onRetrySend(message: Message) = intent {
-        if (state.isSending) return@intent
-        val sending = PendingSend(content = message.content, replyToMessageId = message.repliesToMessageId)
-        val localId = localMessageIdCounter.getAndDecrement()
-        reduce {
-            state.copy(
-                isSending = true,
-                failedMessageIds = state.failedMessageIds - message.id,
-                messages = state.messages.filterNot { it.id == message.id } +
-                    state.buildOptimisticMessage(sending, localId),
-            )
-        }
         awaitSendResult(sending, localId)
     }
 
@@ -286,8 +258,18 @@ class ChatRoomViewModel @Inject constructor(
     )
 
     /**
+     * 전송 직전 상태로 되돌린다. 먼저 그려 둔 말풍선을 지우고 보낸 내용을 입력칸에 복구한다. 그 사이
+     * 사용자가 새로 타이핑했다면 입력칸은 덮어쓰지 않는다. 답장 대상은 성공할 때만 지우므로 그대로 남는다.
+     */
+    private fun ChatRoomState.revertOptimisticSend(sending: PendingSend, localId: Long): ChatRoomState = copy(
+        isSending = false,
+        messages = messages.filterNot { it.id == localId },
+        input = input.ifEmpty { sending.content },
+    )
+
+    /**
      * 먼저 그려 둔 말풍선([localId])에 전송 결과를 반영한다. 성공하면 서버 메시지로 바꾸고,
-     * 실패하면 재전송 대상으로 표시한다.
+     * 실패하면 전송 직전 상태로 되돌린다.
      */
     private suspend fun ChatRoomSyntax.awaitSendResult(sending: PendingSend, localId: Long) {
         val result = session.send(
@@ -316,12 +298,7 @@ class ChatRoomViewModel @Inject constructor(
                 refreshTokenUsageInBackground()
             }
             is AppResult.Failure -> {
-                reduce {
-                    state.copy(
-                        isSending = false,
-                        failedMessageIds = state.failedMessageIds + localId,
-                    )
-                }
+                reduce { state.revertOptimisticSend(sending, localId) }
                 postSideEffect(ChatRoomSideEffect.ShowToast(SEND_FAILED))
             }
         }

@@ -9,8 +9,6 @@ data class ChatRoomState(
     val conversationId: Long? = null,
     val conversationCreatedAt: LocalDateTime? = null,
     val messages: List<Message> = emptyList(),
-    /** [messages] 중 전송에 실패해 재전송 버튼(임시 UI)을 보여줘야 하는 내 메시지의 id. */
-    val failedMessageIds: Set<Long> = emptySet(),
     /** 서버 id로 교체된 내 메시지의 서버 id → 임시 id. [listKeyOf]가 교체 전후 같은 key를 쓰게 한다. */
     val localKeyByMessageId: Map<Long, Long> = emptyMap(),
     val pendingComments: List<Message> = emptyList(),

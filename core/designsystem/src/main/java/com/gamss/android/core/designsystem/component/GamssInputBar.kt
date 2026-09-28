@@ -16,12 +16,18 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -81,6 +87,13 @@ fun GamssInputBar(
     replyClearContentDescription: String? = null,
 ) {
     val canSubmit = sendEnabled && value.isNotBlank()
+
+    // 문자열 API 의 BasicTextField 는 밖에서 글자를 통째로 바꾸면 이전 커서 위치를 그대로 둔다 — 비웠다가
+    // 복구하면 커서가 맨 앞에 남는다. 커서까지 직접 들고, 입력창이 가진 글자와 다른 값이 들어오면(비우기·
+    // 복구·글자 수 제한 등 밖에서 바꾼 경우) 커서를 끝에 둔다. 직접 타이핑하면 글자가 같아 커서·한글 조합
+    // 상태가 그대로 유지된다.
+    var fieldValue by remember { mutableStateOf(TextFieldValue(value, TextRange(value.length))) }
+    val shownValue = if (fieldValue.text == value) fieldValue else TextFieldValue(value, TextRange(value.length))
     val verticalPadding = if (replyQuote != null) InputBarReplyVerticalPadding else 0.dp
 
     Column(
@@ -108,8 +121,12 @@ fun GamssInputBar(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             BasicTextField(
-                value = value,
-                onValueChange = onValueChange,
+                value = shownValue,
+                onValueChange = { newValue ->
+                    fieldValue = newValue
+                    // 커서만 옮긴 경우는 올려보내지 않는다.
+                    if (newValue.text != value) onValueChange(newValue.text)
+                },
                 modifier = Modifier
                     .weight(1f)
                     .let { if (replyQuote == null) it.padding(vertical = InputBarVerticalPadding) else it },

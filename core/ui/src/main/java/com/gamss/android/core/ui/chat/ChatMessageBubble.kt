@@ -23,7 +23,6 @@ import com.gamss.android.domain.conversation.MessageSender
  *  메시지 목록 전체를 몰라도 되고, 목록이 커져도 이 값이 그대로면 재구성을 건너뛴다.
  * @param oppositeWallGap 폭이 좁은 카드 안에서는 [GamssChatBubbleDefaults.CardOppositeWallGap] 을 넘긴다.
  * @param onCharacterMessageClick 넘기지 않으면 말풍선이 눌리지 않는다. 길게 눌렀을 때 호출된다.
- * @param onRetryClick 내 메시지가 전송에 실패했을 때만 넘긴다. 넘기면 시간 대신 재전송 버튼이 뜬다.
  */
 @Composable
 fun ChatMessageBubble(
@@ -32,7 +31,6 @@ fun ChatMessageBubble(
     modifier: Modifier = Modifier,
     oppositeWallGap: Dp = GamssChatBubbleDefaults.OppositeWallGap,
     onCharacterMessageClick: ((Message) -> Unit)? = null,
-    onRetryClick: (() -> Unit)? = null,
 ) {
     Box(
         modifier = modifier.fillMaxWidth(),
@@ -43,7 +41,6 @@ fun ChatMessageBubble(
                 time = message.createdTime,
                 replyQuote = replyQuote,
                 oppositeWallGap = oppositeWallGap,
-                onRetryClick = onRetryClick,
                 modifier = Modifier.align(Alignment.CenterEnd),
             )
 
