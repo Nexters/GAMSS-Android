@@ -203,6 +203,7 @@ private fun mainEntryProvider(navigator: Navigator) = entryProvider {
             },
             onCardSkip = navigator::goBack,
             onBackClick = navigator::goBack,
+            isActive = navigator.state.currentKey == key,
         )
     }
 }
