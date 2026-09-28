@@ -71,9 +71,8 @@ internal class ChatScrollState(
      * 그 로딩이 실제 답장으로 공개됐을 때.
      */
     fun handleNewMessage(state: ChatRoomState) {
-        if (!hasScrolledToInitialBottom) return
-        val latest = state.bottomItem ?: return
-        if (latest == lastSeenItem) return
+        val latest = state.bottomItem
+        if (!hasScrolledToInitialBottom || latest == null || latest == lastSeenItem) return
 
         // 새 메시지가 추가돼도 그 이전 메시지들의 화면상 위치는 바뀌지 않는다 — 그래서 이 메시지가
         // 새 메시지를 반영한 레이아웃 이후에 확인해도, "직전 마지막 메시지가 보이고 있었는지"는
