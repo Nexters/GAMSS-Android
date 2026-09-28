@@ -42,7 +42,8 @@
     <string name="chatting_list_search_placeholder">검색어 입력</string>
     <string name="chatting_list_search_clear_content_description">검색어 지우기</string>
     <string name="chatting_list_search_cancel">취소</string>
-    <string name="chatting_list_search_empty">검색 결과가 없어요</string>
+    <string name="chatting_list_search_empty">찾으시는 결과가 없어요.</string>
+    <string name="chatting_list_search_empty_subTitle">다른 검색어로 다시 찾아보세요.</string>
     <string name="chatting_list_search_network_error">네트워크 연결을 확인해 주세요</string>
     <string name="chatting_list_search_invalid_input">최소 2글자 이상 입력해주세요</string>
     <string name="chatting_list_search_unknown_error">채팅방 검색에 실패했어요</string>
