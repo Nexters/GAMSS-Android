@@ -71,7 +71,6 @@ import com.gamss.android.feature.chat.component.NewMessageToast
 import com.gamss.android.feature.chat.component.SupportAgencyDialog
 import com.gamss.android.feature.chat.util.AnimatedChatMessage
 import com.gamss.android.feature.chat.util.ChatScrollState
-import com.gamss.android.feature.chat.util.chatMessageItemAnimation
 import com.gamss.android.feature.chat.util.dialOrNotify
 import com.gamss.android.feature.chat.util.rememberChatMessageAnimationState
 import com.gamss.android.feature.chat.util.rememberChatScrollState
@@ -431,7 +430,6 @@ private fun ChatMessageList(
                 AnimatedChatMessage(
                     messageId = state.listKeyOf(message),
                     animationState = animationState,
-                    modifier = chatMessageItemAnimation(),
                 ) {
                     if (message.id == loadingPlaceholder?.id) {
                         val character = (message.sender as? MessageSender.Character)?.character

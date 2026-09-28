@@ -1,17 +1,16 @@
 package com.gamss.android.feature.chat.util
 
-import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.LinearOutSlowInEasing
-import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.lazy.LazyItemScope
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
 
 /**
@@ -54,8 +53,12 @@ internal fun rememberChatMessageAnimationState(
 /**
  * 새 메시지를 입력창 쪽에서 [MessageSlideDistance]만큼 밀어 올리며 나타낸다.
  *
- * [modifier]에는 호출부가 [chatMessageItemAnimation]을 넘긴다. animateItem과 AnimatedVisibility를
- * 같은 노드에 얹으면 측정이 얽히므로, 바깥 Box와 안쪽 AnimatedVisibility로 나눠 둔다.
+ * 슬라이드·페이드를 graphicsLayer 하나에서 그리기 단계로만 처리한다 — 매 프레임 재배치가 없고,
+ * [CompositingStrategy.ModulateAlpha]라 페이드 중에도 오프스크린 레이어를 만들지 않는다(트레이스상
+ * 기본 전략의 오프스크린 합성이 GPU 부담이었다).
+ *
+ * 기존 메시지의 재배치(Modifier.animateItem)는 일부러 붙이지 않는다 — 새 메시지마다 보이는 아이템
+ * 전부가 함께 움직여, 벤치마크에서 develop 대비 프레임 밀림이 약 2배로 늘었다.
  */
 @Composable
 internal fun AnimatedChatMessage(
@@ -65,46 +68,32 @@ internal fun AnimatedChatMessage(
     content: @Composable () -> Unit,
 ) {
     val shouldAnimate = remember(messageId) { animationState.claimShouldAnimate(messageId) }
+    if (!shouldAnimate) {
+        Box(modifier = modifier) { content() }
+        return
+    }
 
-    Box(modifier = modifier) {
-        if (!shouldAnimate) {
-            content()
-            return@Box
-        }
-
-        val visibilityState = remember(messageId) {
-            MutableTransitionState(false).apply { targetState = true }
-        }
-        val slideDistancePx = with(LocalDensity.current) { MessageSlideDistance.roundToPx() }
-        AnimatedVisibility(
-            visibleState = visibilityState,
-            enter = slideInVertically(
-                animationSpec = tween(
-                    durationMillis = MESSAGE_SLIDE_DURATION_MILLIS,
-                    easing = LinearOutSlowInEasing,
-                ),
-                initialOffsetY = { slideDistancePx },
-            ) + fadeIn(
-                // 슬라이드보다 짧게 가져가 다 올라오기 전에 내용이 먼저 보이게 한다.
-                animationSpec = tween(
-                    durationMillis = MESSAGE_FADE_DURATION_MILLIS,
-                    easing = LinearOutSlowInEasing,
-                ),
-            ),
-        ) {
-            content()
-        }
+    // 경과 시간(0→1)만 선형으로 흘리고, 슬라이드·페이드는 각자 길이에 맞춰 이징을 적용한다.
+    val elapsed = remember(messageId) { Animatable(0f) }
+    LaunchedEffect(messageId) {
+        elapsed.animateTo(1f, tween(MESSAGE_SLIDE_DURATION_MILLIS, easing = LinearEasing))
+    }
+    Box(
+        modifier = modifier.graphicsLayer {
+            val slide = LinearOutSlowInEasing.transform(elapsed.value)
+            // 슬라이드보다 짧게 가져가 다 올라오기 전에 내용이 먼저 보이게 한다.
+            val fade = LinearOutSlowInEasing.transform((elapsed.value * FADE_TO_SLIDE_RATIO).coerceAtMost(1f))
+            translationY = (1f - slide) * MessageSlideDistance.toPx()
+            alpha = fade
+            compositingStrategy = CompositingStrategy.ModulateAlpha
+        },
+    ) {
+        content()
     }
 }
-
-/** 기존 메시지가 밀려나는 재배치를 [AnimatedChatMessage]와 같은 지속시간·이징으로 맞춘다. */
-internal fun LazyItemScope.chatMessageItemAnimation(): Modifier = Modifier.animateItem(
-    fadeInSpec = tween(MESSAGE_FADE_DURATION_MILLIS, easing = LinearOutSlowInEasing),
-    placementSpec = tween(MESSAGE_SLIDE_DURATION_MILLIS, easing = LinearOutSlowInEasing),
-    fadeOutSpec = tween(MESSAGE_FADE_DURATION_MILLIS, easing = LinearOutSlowInEasing),
-)
 
 // 아직 배치되지 않은 아이템은 실제 위치를 알 수 없어, 항상 같은 궤적이 되도록 고정 거리를 쓴다.
 private val MessageSlideDistance = 180.dp
 private const val MESSAGE_SLIDE_DURATION_MILLIS = 420
 private const val MESSAGE_FADE_DURATION_MILLIS = 260
+private const val FADE_TO_SLIDE_RATIO = MESSAGE_SLIDE_DURATION_MILLIS.toFloat() / MESSAGE_FADE_DURATION_MILLIS

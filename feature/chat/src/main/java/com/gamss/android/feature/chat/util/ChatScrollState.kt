@@ -52,8 +52,9 @@ internal class ChatScrollState(
     fun scrollToBottom(state: ChatRoomState) {
         val index = state.lastItemIndex
         if (index < 0) return
-        // 아이템 등장·재배치 애니메이션과 어긋나지 않도록 스크롤도 부드럽게 따라간다.
-        coroutineScope.launch { listState.animateScrollToItem(index) }
+        // 부드러운 스크롤은 목록 전체를 매 프레임 다시 배치해, 등장 애니메이션과 겹치면 프레임이 밀렸다
+        // (벤치마크 트레이스). 한 번에 점프하고 움직임은 새 말풍선의 등장 애니메이션에 맡긴다.
+        coroutineScope.launch { listState.scrollToItem(index) }
     }
 
     suspend fun handleInitialLoad(state: ChatRoomState) {
