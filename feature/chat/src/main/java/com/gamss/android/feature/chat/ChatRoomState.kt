@@ -11,6 +11,8 @@ data class ChatRoomState(
     val messages: List<Message> = emptyList(),
     /** [messages] 중 전송에 실패해 재전송 버튼(임시 UI)을 보여줘야 하는 내 메시지의 id. */
     val failedMessageIds: Set<Long> = emptySet(),
+    /** 서버 id로 교체된 내 메시지의 서버 id → 임시 id. [listKeyOf]가 교체 전후 같은 key를 쓰게 한다. */
+    val localKeyByMessageId: Map<Long, Long> = emptyMap(),
     val pendingComments: List<Message> = emptyList(),
     val input: String = "",
     val replyTarget: ReplyTarget? = null,
@@ -46,6 +48,20 @@ data class ChatRoomState(
             messages.any { it.sender == MessageSender.User }
 
     val canEnd: Boolean get() = endFlow.acceptsEndRequest && endPreconditionsMet
+
+    /**
+     * 다음 답장의 로딩 표시. 그 답장과 같은 id라, 공개되는 순간 같은 아이템에서 내용만 로딩 → 실제
+     * 글자로 바뀐다.
+     */
+    val loadingPlaceholder: Message? get() = pendingComments.firstOrNull()
+
+    /** 화면에 그리는 목록. [messages] 끝에 [loadingPlaceholder]를 붙인다. */
+    val displayMessages: List<Message> by lazy {
+        loadingPlaceholder?.let { messages + it } ?: messages
+    }
+
+    /** 목록 key. 임시 id → 서버 id로 바뀌어도 같은 아이템으로 남아 진입 애니메이션이 다시 돌지 않는다. */
+    fun listKeyOf(message: Message): Long = localKeyByMessageId[message.id] ?: message.id
 }
 
 data class ReplyTarget(

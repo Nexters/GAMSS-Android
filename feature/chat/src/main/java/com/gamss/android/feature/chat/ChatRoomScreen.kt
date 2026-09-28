@@ -395,17 +395,11 @@ private fun ChatMessageList(
 ) {
     val replyQuotes = rememberReplyQuoteLookup(state.messages)
 
-    // 다음 캐릭터 답장은 딜레이가 끝나 state.messages로 옮겨지기 전에도, 로딩 표시를 같은 id로
-    // 목록에 먼저 끼워 넣는다. 그래야 딜레이가 끝나는 순간 LazyColumn이 같은 아이템으로 인식해
-    // 프로필/말풍선 자리 자체가 통째로 사라졌다 다시 나타나지 않고, 내용만(로딩 → 실제 글자)
-    // 제자리에서 바뀐다.
-    val loadingPlaceholder = state.pendingComments.firstOrNull()
-    val displayMessages = remember(state.messages, loadingPlaceholder) {
-        if (loadingPlaceholder != null) state.messages + loadingPlaceholder else state.messages
-    }
+    val loadingPlaceholder = state.loadingPlaceholder
     val animationState = rememberChatMessageAnimationState(
         conversationId = state.conversationId,
         isLoading = state.isLoading,
+        initialMessageIds = { state.messages.map(state::listKeyOf) },
     )
 
     Box(modifier = modifier) {
@@ -433,9 +427,9 @@ private fun ChatMessageList(
                     }
                 }
             }
-            items(displayMessages, key = { it.id }) { message ->
+            items(state.displayMessages, key = state::listKeyOf) { message ->
                 AnimatedChatMessage(
-                    messageId = message.id,
+                    messageId = state.listKeyOf(message),
                     animationState = animationState,
                     modifier = chatMessageItemAnimation(),
                 ) {

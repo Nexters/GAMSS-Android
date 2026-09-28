@@ -50,10 +50,7 @@ class ChatRoomViewModel @Inject constructor(
     @Volatile
     private var tokenAlertJob: Job? = null
 
-    /**
-     * 서버 응답 전에 화면에 먼저 그리는 내 메시지에 붙이는 임시 id. 서버 id는 항상 양수라
-     * 음수를 쓰면 실제 메시지와 절대 부딪히지 않는다. 성공하면 서버가 내려준 진짜 id로 바뀐다.
-     */
+    /** 서버 응답 전에 먼저 그리는 내 메시지의 임시 id. 서버 id(양수)와 겹치지 않게 음수를 쓴다. */
     private val localMessageIdCounter = AtomicLong(-1)
 
     fun start(conversationId: Long) {
@@ -213,7 +210,7 @@ class ChatRoomViewModel @Inject constructor(
         flushPendingComments()
 
         var pending: PendingSend? = null
-        var localId = 0L
+        val localId = localMessageIdCounter.getAndDecrement()
         reduce {
             pending = if (state.canSend) {
                 PendingSend(content = state.input, replyToMessageId = state.replyTarget?.messageId)
@@ -221,12 +218,10 @@ class ChatRoomViewModel @Inject constructor(
                 null
             }
             val sending = pending
-            // 서버 왕복이 끝날 때까지 기다리지 않고 버튼을 누른 즉시 입력칸을 비우고, 내 메시지
-            // 말풍선도 먼저 그린다. 아래 위험 신호 차단 분기에서 되돌리지 않는 한 이 상태로 남는다.
+            // 서버 응답을 기다리지 않고 입력칸을 비우고 말풍선을 먼저 그린다. 위험 신호로 차단되면 되돌린다.
             if (sending == null) {
                 state
             } else {
-                localId = localMessageIdCounter.getAndDecrement()
                 state.copy(
                     isSending = true,
                     input = "",
@@ -242,8 +237,7 @@ class ChatRoomViewModel @Inject constructor(
             reduce {
                 state.copy(
                     riskDetection = detection,
-                    // CRITICAL이면 전송을 중단하므로 다시 전송 가능한 상태로 복구하고, 먼저 그려둔
-                    // 말풍선도 지운다 — 실제로는 보내지 않았으니 화면에 남아 있으면 안 된다.
+                    // CRITICAL이면 전송을 중단하므로 전송 가능 상태로 되돌리고 먼저 그려둔 말풍선도 지운다.
                     isSending = if (detection.shouldBlock) false else state.isSending,
                     messages = if (detection.shouldBlock) {
                         state.messages.filterNot { it.id == localId }
@@ -264,9 +258,8 @@ class ChatRoomViewModel @Inject constructor(
     }
 
     /**
-     * 재전송(임시 UI). 실패 상태로 남아있던 말풍선을 지우고 새 임시 id로 다시 붙여 넣는다 —
-     * 서버 id는 성공해야만 받을 수 있어 실패했던 id를 그대로 재사용할 수 없다. 위험 신호 검사는
-     * [onSend]에서 이미 통과한 내용이라 다시 하지 않는다.
+     * 재전송(임시 UI). 실패한 말풍선을 지우고 새 임시 id로 다시 붙인다. 위험 신호 검사는 [onSend]에서
+     * 이미 통과한 내용이라 다시 하지 않는다.
      */
     fun onRetrySend(message: Message) = intent {
         if (state.isSending) return@intent
@@ -293,8 +286,8 @@ class ChatRoomViewModel @Inject constructor(
     )
 
     /**
-     * [onSend]/[onRetrySend]가 이미 그려 둔 내 메시지 말풍선을 기준으로 실제 전송 결과를
-     * 반영한다. 실패하면 지우지 않고 그 자리에 재전송 버튼(임시 UI)을 붙인다.
+     * 먼저 그려 둔 말풍선([localId])에 전송 결과를 반영한다. 성공하면 서버 메시지로 바꾸고,
+     * 실패하면 재전송 대상으로 표시한다.
      */
     private suspend fun ChatRoomSyntax.awaitSendResult(sending: PendingSend, localId: Long) {
         val result = session.send(
@@ -312,6 +305,7 @@ class ChatRoomViewModel @Inject constructor(
                         isSending = false,
                         conversationId = sent.message.conversationId,
                         messages = state.messages.map { if (it.id == localId) sent.message else it },
+                        localKeyByMessageId = state.localKeyByMessageId + (sent.message.id to localId),
                         pendingComments = sent.comments,
                         replyTarget = state.replyTarget.takeIf { it?.messageId != sending.replyToMessageId },
                     )
@@ -465,8 +459,7 @@ class ChatRoomViewModel @Inject constructor(
     )
 
     private companion object {
-        // 대화를 여는 첫 메시지는 성공해야 서버가 conversationId 를 내려준다. 그 전까지 임시
-        // 말풍선에 채워 둘 자리표시자로, 실제 서버 id와 겹치지 않는다.
+        // 첫 메시지 전송이 성공하기 전까지 임시 말풍선에 넣어 둘 conversationId.
         const val UNASSIGNED_CONVERSATION_ID = -1L
         const val LOAD_FAILED = "대화를 불러오지 못했어요"
         const val SEND_FAILED = "메시지를 보내지 못했어요"
