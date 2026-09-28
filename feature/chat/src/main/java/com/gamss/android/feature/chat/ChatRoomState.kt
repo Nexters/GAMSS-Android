@@ -53,8 +53,8 @@ data class ChatRoomState(
      */
     val loadingPlaceholder: Message? get() = pendingComments.firstOrNull()
 
-    /** 화면에 그리는 목록. [messages] 끝에 [loadingPlaceholder]를 붙인다. */
-    val displayMessages: List<Message> by lazy {
+    /** 화면에 그리는 목록. [messages] 끝에 [loadingPlaceholder]를 붙인다. Compose(메인 스레드)에서만 읽는다. */
+    val displayMessages: List<Message> by lazy(LazyThreadSafetyMode.NONE) {
         loadingPlaceholder?.let { messages + it } ?: messages
     }
 

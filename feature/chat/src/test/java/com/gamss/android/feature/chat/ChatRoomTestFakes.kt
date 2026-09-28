@@ -62,10 +62,11 @@ internal fun chatRoomViewModel(
     tokenUsageRefreshNotifier: TokenUsageRefreshNotifier = RecordingTokenUsageRefreshNotifier(),
     pendingReveal: PendingConversationReveal = PendingConversationReveal(),
     userRepository: UserRepository = FakeUserRepository(),
+    riskLexiconRepository: RiskLexiconRepository = NoRiskLexiconRepository,
 ): ChatRoomViewModel = ChatRoomViewModel(
     tokenUsageRefreshNotifier = tokenUsageRefreshNotifier,
     detectRiskInText = DetectRiskInTextUseCase(
-        repository = NoRiskLexiconRepository,
+        repository = riskLexiconRepository,
         matcher = RiskTermMatcher(),
     ),
     getDailyTokenUsageUseCase = GetDailyTokenUsageUseCase(userRepository),
@@ -95,6 +96,11 @@ private object NoRiskLexiconRepository : RiskLexiconRepository {
         agencies = emptyList(),
     )
 
+    override suspend fun refresh() = Unit
+}
+
+internal class FixedRiskLexiconRepository(private val lexicon: RiskLexicon) : RiskLexiconRepository {
+    override suspend fun getLexicon() = lexicon
     override suspend fun refresh() = Unit
 }
 

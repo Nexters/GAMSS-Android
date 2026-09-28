@@ -1,5 +1,8 @@
 package com.gamss.android.feature.chat
 
+import com.gamss.android.domain.safety.RiskLevel
+import com.gamss.android.domain.safety.RiskLexicon
+import com.gamss.android.domain.safety.RiskTerm
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -239,6 +242,40 @@ class ChatRoomRevealTest {
             assertFalse(afterFailure.isSending)
             assertEquals(INPUT, afterFailure.input)
             assertTrue(afterFailure.messages.isEmpty())
+        }
+    }
+
+    @Test
+    fun 위험_감지가_치명적이면_전송을_중단하고_말풍선과_입력칸을_되돌린다() = runTest {
+        val riskInput = "죽고싶다"
+        val viewModel = chatRoomViewModel(
+            conversationRepository = FakeConversationRepository(commentCount = 1),
+            riskLexiconRepository = FixedRiskLexiconRepository(
+                RiskLexicon(
+                    version = 1,
+                    terms = listOf(RiskTerm(term = riskInput, level = RiskLevel.CRITICAL)),
+                    safePhrases = emptyList(),
+                    agencies = emptyList(),
+                ),
+            ),
+        )
+
+        viewModel.test(this) {
+            containerHost.onInputChange(riskInput)
+            awaitState()
+            containerHost.onSend()
+
+            val afterSendPressed = awaitState()
+            assertEquals("", afterSendPressed.input)
+            assertEquals(listOf(riskInput), afterSendPressed.messages.map { it.content })
+
+            val afterBlock = awaitState()
+            assertFalse(afterBlock.isSending)
+            assertEquals(riskInput, afterBlock.input)
+            assertTrue(afterBlock.messages.isEmpty())
+            assertEquals(RiskLevel.CRITICAL, afterBlock.riskDetection?.level)
+
+            cancelAndIgnoreRemainingItems()
         }
     }
 
