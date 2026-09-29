@@ -128,11 +128,12 @@ class HomeViewModelTest {
         assertNull(openConversation.await())
     }
 
+    // 안내를 이동 이벤트가 아니라 상태에 싣는지 본다. 응답을 기다리는 사이 탭을 옮겨도 돌아오면 그대로 떠 있어야 한다.
     @Test
-    fun `위험 신호가 경고 수준이면 막지 않고 그대로 보낸다`() = runTest {
+    fun `위험 신호가 경고 수준이면 보낸 뒤 홈에서 안내를 띄우고 아직 이동하지 않는다`() = runTest {
         val homeViewModel = viewModel(detectRisk = riskDetector(RiskTerm(CRITICAL_TERM, RiskLevel.WARNING)))
         val openConversation = async(start = CoroutineStart.UNDISPATCHED) {
-            homeViewModel.openConversationEvents.first()
+            withTimeoutOrNull(1) { homeViewModel.openConversationEvents.first() }
         }
 
         homeViewModel.test(this) {
@@ -142,11 +143,35 @@ class HomeViewModelTest {
             containerHost.onSubmit()
             expectState { copy(isSending = true) }
             expectState { copy(isSending = false) }
-            expectState { copy(input = "") }
+            val warned = awaitState()
+            assertEquals(RiskLevel.WARNING, warned.riskDetection?.level)
+            assertEquals(NEW_ROOM_ID, warned.conversationToOpen)
+            assertEquals("", warned.input)
             expectNoItems()
         }
-        assertEquals(NEW_ROOM_ID, openConversation.await())
         assertEquals(CRITICAL_WORRY, repository.sentContent)
+        assertNull(openConversation.await())
+    }
+
+    @Test
+    fun `경고 안내를 닫으면 보낸 대화방으로 이동한다`() = runTest {
+        val homeViewModel = viewModel(detectRisk = riskDetector(RiskTerm(CRITICAL_TERM, RiskLevel.WARNING)))
+
+        homeViewModel.test(this) {
+            containerHost.onInputChange(CRITICAL_WORRY)
+            expectState { copy(input = CRITICAL_WORRY) }
+            containerHost.onSubmit()
+            expectState { copy(isSending = true) }
+            expectState { copy(isSending = false) }
+            awaitState()
+
+            val openConversation = async(start = CoroutineStart.UNDISPATCHED) {
+                homeViewModel.openConversationEvents.first()
+            }
+            containerHost.onRiskDialogDismiss()
+            expectState { copy(riskDetection = null, conversationToOpen = null) }
+            assertEquals(NEW_ROOM_ID, openConversation.await())
+        }
     }
 
     @Test
