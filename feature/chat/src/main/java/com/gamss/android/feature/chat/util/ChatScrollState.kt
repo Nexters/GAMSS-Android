@@ -41,6 +41,7 @@ internal class ChatScrollState(
         private set
 
     private var lastSeenItem: BottomItem? = null
+    private var lastItemCount = 0
 
     val showScrollToBottomButton: Boolean by derivedStateOf {
         listState.canScrollForward && newMessageToast == null
@@ -65,12 +66,13 @@ internal class ChatScrollState(
             listState.scrollToItem(state.lastItemIndex)
         }
         lastSeenItem = state.bottomItem
+        lastItemCount = state.displayMessages.size
         hasScrolledToInitialBottom = true
     }
 
     /**
      * 목록의 마지막 아이템이 바뀔 때마다 호출된다 — 내가 보냈을 때, 답장 로딩 표시가 나타났을 때,
-     * 그 로딩이 실제 답장으로 공개됐을 때.
+     * 그 로딩이 실제 답장으로 공개됐을 때. 전송이 차단·실패해 먼저 그린 내 말풍선이 지워질 때도 불린다.
      */
     fun handleNewMessage(state: ChatRoomState) {
         val latest = state.bottomItem
@@ -83,12 +85,19 @@ internal class ChatScrollState(
         lastSeenItem = latest
         val follows = latest.sender == MessageSender.User || wasAtBottom
 
+        // 전송이 차단·실패하면 먼저 그린 내 말풍선이 지워져 맨 아래가 원래 있던 메시지로 돌아간다. 새로
+        // 도착한 게 아니므로 토스트·스크롤·애니메이션 기록 모두 건드리지 않는다.
+        val itemCount = state.displayMessages.size
+        val isRemoval = itemCount < lastItemCount
+        lastItemCount = itemCount
+
         // 따라 내려가지 않으면 지금 목록의 메시지는 모두 도착 순간을 놓친 것이다. 아직 그려지지 않은
         // 메시지(=화면 밖)를 미리 본 것으로 기록해, 토스트나 스크롤로 뒤늦게 보일 때 애니메이션되지 않게
         // 한다. 로딩 표시와 공개된 답장은 key가 같아 로딩 때 기록해 두면 답장도 그대로 나타난다.
-        if (!follows) animationState.markSeen(state.displayMessages.map(state::listKeyOf))
+        if (!follows && !isRemoval) animationState.markSeen(state.displayMessages.map(state::listKeyOf))
 
         when {
+            isRemoval -> Unit
             // 내가 보낸 메시지는 성공/실패나 직전 스크롤 위치와 무관하게 항상 따라간다.
             latest.sender == MessageSender.User -> {
                 newMessageToast = null

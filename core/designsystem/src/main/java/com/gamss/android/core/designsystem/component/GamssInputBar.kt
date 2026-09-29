@@ -16,6 +16,8 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -92,8 +94,8 @@ fun GamssInputBar(
     // 복구하면 커서가 맨 앞에 남는다. 커서까지 직접 들고, 입력창이 가진 글자와 다른 값이 들어오면(비우기·
     // 복구·글자 수 제한 등 밖에서 바꾼 경우) 커서를 끝에 둔다. 직접 타이핑하면 글자가 같아 커서·한글 조합
     // 상태가 그대로 유지된다.
-    var fieldValue by remember { mutableStateOf(TextFieldValue(value, TextRange(value.length))) }
-    val shownValue = if (fieldValue.text == value) fieldValue else TextFieldValue(value, TextRange(value.length))
+    var fieldValue by rememberInputFieldValue(value)
+    val shownValue = if (fieldValue.text == value) fieldValue else value.toCursorAtEnd()
     val verticalPadding = if (replyQuote != null) InputBarReplyVerticalPadding else 0.dp
 
     Column(
@@ -173,6 +175,28 @@ fun GamssInputBar(
         }
     }
 }
+
+/**
+ * 입력창이 들고 있는 [TextFieldValue]. 밖에서 [value]가 바뀌면 이 값에도 저장해 둔다 — 그러지 않으면 비울 때
+ * 전송 직전 값이 남아, 전송 실패로 같은 글자가 복구되면 글자가 같다고 보고 예전 커서·한글 조합 범위를 되살린다.
+ *
+ * [value]가 바뀐 때만 맞춘다. 타이핑 직후엔 [value]가 한 박자 늦게 따라오므로, 글자가 다르다는 이유만으로
+ * 덮으면 방금 친 글자와 조합 상태를 옛 값으로 되돌린다.
+ */
+@Composable
+private fun rememberInputFieldValue(value: String): MutableState<TextFieldValue> {
+    val fieldValue = remember { mutableStateOf(value.toCursorAtEnd()) }
+    var lastSyncedValue by remember { mutableStateOf(value) }
+    SideEffect {
+        if (value != lastSyncedValue) {
+            lastSyncedValue = value
+            if (fieldValue.value.text != value) fieldValue.value = value.toCursorAtEnd()
+        }
+    }
+    return fieldValue
+}
+
+private fun String.toCursorAtEnd(): TextFieldValue = TextFieldValue(this, TextRange(length))
 
 @Composable
 private fun ReplyPreviewRow(
