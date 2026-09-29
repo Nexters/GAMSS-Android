@@ -3,6 +3,7 @@ package com.gamss.android.feature.chat
 import com.gamss.android.domain.safety.RiskLevel
 import com.gamss.android.domain.safety.RiskLexicon
 import com.gamss.android.domain.safety.RiskTerm
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -41,6 +42,7 @@ class ChatRoomRevealTest {
 
             containerHost.onSend()
             skipItems(1) // isSending = true
+            skipItems(1) // 위험 검사 통과 후 말풍선을 그리고 입력칸을 비움
 
             val afterSend = awaitState()
             assertEquals(listOf(USER_ID), afterSend.messages.map { it.id })
@@ -77,6 +79,7 @@ class ChatRoomRevealTest {
             skipItems(1) // input 반영
             containerHost.onSend()
             skipItems(1) // isSending = true
+            skipItems(1) // 위험 검사 통과 후 말풍선을 그리고 입력칸을 비움
 
             val afterSend = awaitState()
             assertEquals(4, afterSend.pendingComments.size)
@@ -103,6 +106,7 @@ class ChatRoomRevealTest {
             skipItems(1) // input 반영
             containerHost.onSend()
             skipItems(1) // isSending = true
+            skipItems(1) // 위험 검사 통과 후 말풍선을 그리고 입력칸을 비움
 
             val afterSend = awaitState()
             assertEquals(1, afterSend.pendingComments.size)
@@ -151,12 +155,14 @@ class ChatRoomRevealTest {
             containerHost.onInputChange(INPUT)
             awaitState()
             containerHost.onSend()
-            awaitState()
+            awaitState() // isSending = true
+            awaitState() // 위험 검사 통과 후 말풍선을 그리고 입력칸을 비움
             awaitState()
             expectSideEffect(ChatRoomSideEffect.ShowToast(SEND_FAILED_MESSAGE))
 
             containerHost.onSend()
-            awaitState()
+            awaitState() // isSending = true
+            awaitState() // 위험 검사 통과 후 말풍선을 그리고 입력칸을 비움
             awaitState()
             expectSideEffect(ChatRoomSideEffect.ShowToast(SEND_FAILED_MESSAGE))
 
@@ -206,7 +212,7 @@ class ChatRoomRevealTest {
     }
 
     @Test
-    fun 전송_버튼을_누르면_응답을_기다리지_않고_입력칸이_바로_비워진다() = runTest {
+    fun 전송_버튼을_누르면_위험_검사가_끝날_때까지_입력칸을_비우지_않는다() = runTest {
         val viewModel = viewModel(commentCount = 1)
 
         viewModel.test(this) {
@@ -216,7 +222,12 @@ class ChatRoomRevealTest {
 
             val afterSendPressed = awaitState()
             assertTrue(afterSendPressed.isSending)
-            assertEquals("", afterSendPressed.input)
+            assertEquals(INPUT, afterSendPressed.input)
+            assertTrue(afterSendPressed.messages.isEmpty())
+
+            val afterRiskCheckPassed = awaitState()
+            assertEquals("", afterRiskCheckPassed.input)
+            assertEquals(listOf(INPUT), afterRiskCheckPassed.messages.map { it.content })
 
             cancelAndIgnoreRemainingItems()
         }
@@ -231,6 +242,7 @@ class ChatRoomRevealTest {
             containerHost.onInputChange(INPUT)
             awaitState()
             containerHost.onSend()
+            awaitState() // isSending = true
 
             val afterSendPressed = awaitState()
             assertEquals("", afterSendPressed.input)
@@ -246,7 +258,7 @@ class ChatRoomRevealTest {
     }
 
     @Test
-    fun 위험_감지가_치명적이면_전송을_중단하고_말풍선과_입력칸을_되돌린다() = runTest {
+    fun 위험_감지가_치명적이면_말풍선을_그리지_않고_전송을_중단한다() = runTest {
         val riskInput = "죽고싶다"
         val viewModel = chatRoomViewModel(
             conversationRepository = FakeConversationRepository(commentCount = 1),
@@ -266,14 +278,73 @@ class ChatRoomRevealTest {
             containerHost.onSend()
 
             val afterSendPressed = awaitState()
-            assertEquals("", afterSendPressed.input)
-            assertEquals(listOf(riskInput), afterSendPressed.messages.map { it.content })
+            assertTrue(afterSendPressed.isSending)
+            assertEquals(riskInput, afterSendPressed.input)
+            assertTrue(afterSendPressed.messages.isEmpty())
 
             val afterBlock = awaitState()
             assertFalse(afterBlock.isSending)
             assertEquals(riskInput, afterBlock.input)
             assertTrue(afterBlock.messages.isEmpty())
             assertEquals(RiskLevel.CRITICAL, afterBlock.riskDetection?.level)
+
+            cancelAndIgnoreRemainingItems()
+        }
+    }
+
+    @Test
+    fun 전송이_성공하면_서버_메시지의_listKey가_임시_말풍선의_id와_같다() = runTest {
+        val repository = FakeConversationRepository(commentCount = 1)
+        val viewModel = viewModel(repository)
+
+        viewModel.test(this) {
+            containerHost.onInputChange(INPUT)
+            awaitState()
+            containerHost.onSend()
+            awaitState() // isSending = true
+
+            val afterRiskCheckPassed = awaitState()
+            val localId = afterRiskCheckPassed.messages.single().id
+
+            val afterSuccess = awaitState()
+            val serverMessage = afterSuccess.messages.single()
+            assertEquals(localId, afterSuccess.listKeyOf(serverMessage))
+
+            cancelAndIgnoreRemainingItems()
+        }
+    }
+
+    @Test
+    fun 위험_검사가_끝나기_전에_새로_입력하면_검사_통과_후에도_입력칸을_비우지_않는다() = runTest {
+        val gate = CompletableDeferred<Unit>()
+        val viewModel = chatRoomViewModel(
+            conversationRepository = FakeConversationRepository(commentCount = 1),
+            riskLexiconRepository = GatedRiskLexiconRepository(
+                lexicon = RiskLexicon(
+                    version = 0,
+                    terms = emptyList(),
+                    safePhrases = emptyList(),
+                    agencies = emptyList(),
+                ),
+                gate = gate,
+            ),
+        )
+
+        viewModel.test(this) {
+            containerHost.onInputChange(INPUT)
+            awaitState()
+            containerHost.onSend()
+            awaitState() // isSending = true, 위험 검사가 gate에 걸려 대기 중
+
+            containerHost.onInputChange(SECOND_INPUT)
+            val afterRetype = awaitState()
+            assertEquals(SECOND_INPUT, afterRetype.input)
+
+            gate.complete(Unit)
+
+            val afterRiskCheckPassed = awaitState()
+            assertEquals(SECOND_INPUT, afterRiskCheckPassed.input)
+            assertEquals(listOf(INPUT), afterRiskCheckPassed.messages.map { it.content })
 
             cancelAndIgnoreRemainingItems()
         }
@@ -291,7 +362,8 @@ class ChatRoomRevealTest {
             containerHost.onInputChange(INPUT)
             awaitState()
             containerHost.onSend()
-            awaitState()
+            awaitState() // isSending = true
+            awaitState() // 위험 검사 통과 후 말풍선을 그리고 입력칸을 비움
             awaitState()
             expectSideEffect(ChatRoomSideEffect.ShowToast(SEND_FAILED_MESSAGE))
 

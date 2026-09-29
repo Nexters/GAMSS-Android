@@ -210,39 +210,33 @@ class ChatRoomViewModel @Inject constructor(
         flushPendingComments()
 
         var pending: PendingSend? = null
-        val localId = localMessageIdCounter.getAndDecrement()
         reduce {
             pending = if (state.canSend) {
                 PendingSend(content = state.input, replyToMessageId = state.replyTarget?.messageId)
             } else {
                 null
             }
-            val sending = pending
-            // 서버 응답을 기다리지 않고 입력칸을 비우고 말풍선을 먼저 그린다. 차단·실패하면 되돌린다.
-            if (sending == null) {
-                state
-            } else {
-                state.copy(
-                    isSending = true,
-                    input = "",
-                    messages = state.messages + state.buildOptimisticMessage(sending, localId),
-                )
-            }
+            // 중복 전송만 먼저 막아 둔다. 말풍선은 아래 위험 신호 검사가 끝난 뒤에 그린다.
+            if (pending == null) state else state.copy(isSending = true)
         }
         val sending = pending ?: return@intent
+        val localId = localMessageIdCounter.getAndDecrement()
 
-        // session.send() 전에 고정된 메시지 내용으로 위험 신호 검사
+        // 말풍선을 그리기 전에 고정된 메시지 내용으로 위험 신호부터 검사한다. 검사가 끝나기 전엔
+        // 화면에 아무것도 그리지 않아, CRITICAL 문구가 잠깐이라도 보이는 일이 없다.
         val detection = detectRiskInText(sending.content)
-        if (detection.level != RiskLevel.NONE) {
-            reduce {
-                // CRITICAL이면 전송을 중단하므로 전송 직전 상태로 되돌린다.
-                val base = if (detection.shouldBlock) state.revertOptimisticSend(sending, localId) else state
-                base.copy(riskDetection = detection)
-            }
+        if (detection.shouldBlock) {
+            reduce { state.copy(isSending = false, riskDetection = detection) }
+            return@intent
+        }
 
-            if (detection.shouldBlock) {
-                return@intent
-            }
+        reduce {
+            state.copy(
+                // 검사하는 동안 사용자가 새로 타이핑했다면 입력칸은 덮어쓰지 않는다.
+                input = if (state.input == sending.content) "" else state.input,
+                messages = state.messages + state.buildOptimisticMessage(sending, localId),
+                riskDetection = if (detection.level != RiskLevel.NONE) detection else state.riskDetection,
+            )
         }
 
         awaitSendResult(sending, localId)

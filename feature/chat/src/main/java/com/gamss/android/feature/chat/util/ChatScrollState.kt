@@ -41,7 +41,6 @@ internal class ChatScrollState(
         private set
 
     private var lastSeenItem: BottomItem? = null
-    private var lastItemCount = 0
 
     val showScrollToBottomButton: Boolean by derivedStateOf {
         listState.canScrollForward && newMessageToast == null
@@ -66,13 +65,12 @@ internal class ChatScrollState(
             listState.scrollToItem(state.lastItemIndex)
         }
         lastSeenItem = state.bottomItem
-        lastItemCount = state.displayMessages.size
         hasScrolledToInitialBottom = true
     }
 
     /**
      * 목록의 마지막 아이템이 바뀔 때마다 호출된다 — 내가 보냈을 때, 답장 로딩 표시가 나타났을 때,
-     * 그 로딩이 실제 답장으로 공개됐을 때. 전송이 차단·실패해 먼저 그린 내 말풍선이 지워질 때도 불린다.
+     * 그 로딩이 실제 답장으로 공개됐을 때. 전송이 실패해 먼저 그린 내 말풍선이 지워질 때도 불린다.
      */
     fun handleNewMessage(state: ChatRoomState) {
         val latest = state.bottomItem
@@ -82,14 +80,17 @@ internal class ChatScrollState(
         // 새 메시지를 반영한 레이아웃 이후에 확인해도, "직전 마지막 메시지가 보이고 있었는지"는
         // 곧 "도착 직전에 바닥을 보고 있었는지"와 같은 뜻이다.
         val wasAtBottom = lastSeenItem?.key?.let(::isMessageVisible) ?: true
+        val previous = lastSeenItem
         lastSeenItem = latest
         val follows = latest.sender == MessageSender.User || wasAtBottom
 
-        // 전송이 차단·실패하면 먼저 그린 내 말풍선이 지워져 맨 아래가 원래 있던 메시지로 돌아간다. 새로
-        // 도착한 게 아니므로 토스트·스크롤·애니메이션 기록 모두 건드리지 않는다.
-        val itemCount = state.displayMessages.size
-        val isRemoval = itemCount < lastItemCount
-        lastItemCount = itemCount
+        // 전송이 실패하면 먼저 그린 내 말풍선이 지워져 맨 아래가 원래 있던 메시지로 돌아간다. 목록
+        // 길이가 아니라 직전 바닥 아이템의 key가 지금도 남아 있는지로 판정한다 — 성공 경로는
+        // listKeyOf가 임시 id·서버 id를 같은 key로 매핑해 영향받지 않고, 나중에 다른 제거 경로가
+        // 추가돼도 이 판정은 그대로 맞는다. 새로 도착한 게 아니므로 토스트·스크롤·애니메이션 기록
+        // 모두 건드리지 않는다.
+        val isRemoval = previous != null &&
+            state.displayMessages.none { state.listKeyOf(it) == previous.key }
 
         // 따라 내려가지 않으면 지금 목록의 메시지는 모두 도착 순간을 놓친 것이다. 아직 그려지지 않은
         // 메시지(=화면 밖)를 미리 본 것으로 기록해, 토스트나 스크롤로 뒤늦게 보일 때 애니메이션되지 않게

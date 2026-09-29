@@ -104,6 +104,19 @@ internal class FixedRiskLexiconRepository(private val lexicon: RiskLexicon) : Ri
     override suspend fun refresh() = Unit
 }
 
+/** [gate]가 완료될 때까지 검사를 붙든다. 검사 도중 사용자가 다시 입력하는 경합을 재현할 때 쓴다. */
+internal class GatedRiskLexiconRepository(
+    private val lexicon: RiskLexicon,
+    private val gate: CompletableDeferred<Unit>,
+) : RiskLexiconRepository {
+    override suspend fun getLexicon(): RiskLexicon {
+        gate.await()
+        return lexicon
+    }
+
+    override suspend fun refresh() = Unit
+}
+
 /** 토큰 사용량 조회만 있으면 되는 테스트용 스텁. 채팅 흐름은 닉네임/계정 API 를 쓰지 않는다. */
 internal class FakeUserRepository(
     private val usage: DailyTokenUsage = DailyTokenUsage(usedTokens = 0, dailyLimit = 100, exceeded = false),
