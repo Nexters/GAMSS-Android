@@ -70,6 +70,7 @@ import com.gamss.android.feature.chat.component.MessageInputBar
 import com.gamss.android.feature.chat.component.NewMessageToast
 import com.gamss.android.feature.chat.component.SupportAgencyDialog
 import com.gamss.android.feature.chat.util.AnimatedChatMessage
+import com.gamss.android.feature.chat.util.ChatMessageAnimation
 import com.gamss.android.feature.chat.util.ChatScrollState
 import com.gamss.android.feature.chat.util.dialOrNotify
 import com.gamss.android.feature.chat.util.rememberChatMessageAnimationState
@@ -222,7 +223,16 @@ private fun ChatRoomContent(
 ) {
     val listState = rememberLazyListState()
     val focusManager = LocalFocusManager.current
-    val chatScrollState = rememberChatScrollState(state = state, listState = listState)
+    val animationState = rememberChatMessageAnimationState(
+        conversationId = state.conversationId,
+        isLoading = state.isLoading,
+        initialMessageIds = { state.messages.map(state::listKeyOf) },
+    )
+    val chatScrollState = rememberChatScrollState(
+        state = state,
+        listState = listState,
+        animationState = animationState,
+    )
 
     // WindowInsets.ime 게터 자체가 @Composable이라 LaunchedEffect(코루틴) 안에서 직접 부를 수
     // 없다. 여기서 객체 참조만 한 번 얻어두면, 이후 getBottom() 호출은 일반 함수 호출이라 코루틴
@@ -276,6 +286,7 @@ private fun ChatRoomContent(
                 actions = actions,
                 listState = listState,
                 scrollState = chatScrollState,
+                animationState = animationState,
                 showScrollToBottomButton = chatScrollState.showScrollToBottomButton && !isImeInTransition,
                 modifier = Modifier
                     .weight(1f)
@@ -387,17 +398,13 @@ private fun ChatMessageList(
     actions: ChatRoomActions,
     listState: LazyListState,
     scrollState: ChatScrollState,
+    animationState: ChatMessageAnimation,
     showScrollToBottomButton: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val replyQuotes = rememberReplyQuoteLookup(state.messages)
 
     val loadingPlaceholder = state.loadingPlaceholder
-    val animationState = rememberChatMessageAnimationState(
-        conversationId = state.conversationId,
-        isLoading = state.isLoading,
-        initialMessageIds = { state.messages.map(state::listKeyOf) },
-    )
 
     Box(modifier = modifier) {
         LazyColumn(
