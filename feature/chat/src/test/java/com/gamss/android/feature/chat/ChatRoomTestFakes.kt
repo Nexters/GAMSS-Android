@@ -157,6 +157,7 @@ internal class FakeConversationRepository(
     private val failing: Boolean = false,
     private val endFailing: Boolean = false,
     private val restoredConversation: Conversation = Conversation(id = ROOM_ID, title = null),
+    private val restoredMessages: List<Message> = emptyList(),
 ) : ConversationRepository {
     private var sentCount = 0
 
@@ -201,7 +202,7 @@ internal class FakeConversationRepository(
         AppResult.Success(
             ConversationDetail(
                 conversation = restoredConversation,
-                messages = emptyList(),
+                messages = restoredMessages,
             ),
         )
 
