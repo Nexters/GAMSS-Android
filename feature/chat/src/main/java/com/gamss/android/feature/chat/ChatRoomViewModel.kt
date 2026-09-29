@@ -334,6 +334,22 @@ class ChatRoomViewModel @Inject constructor(
         }
     }
 
+    fun onCardSetAside() = intent {
+        reduce {
+            val ready = (state.endFlow as? EndFlow.CardReady)
+                ?.takeIf { it.foldStage == CardFoldStage.Unfolded }
+                ?: return@reduce state
+            state.copy(endFlow = EndFlow.CardSetAside(ready.card))
+        }
+    }
+
+    fun onCardReopen() = intent {
+        reduce {
+            val setAside = state.endFlow as? EndFlow.CardSetAside ?: return@reduce state
+            state.copy(endFlow = EndFlow.CardReady(setAside.card))
+        }
+    }
+
     private suspend fun ChatRoomSyntax.runCardCreation() {
         reduce { state.copy(endFlow = EndFlow.CreatingCard) }
 

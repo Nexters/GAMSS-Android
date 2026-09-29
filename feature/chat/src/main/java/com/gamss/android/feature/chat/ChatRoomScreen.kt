@@ -83,20 +83,13 @@ import org.orbitmvi.orbit.compose.collectSideEffect
 import kotlin.coroutines.cancellation.CancellationException
 
 /**
- * 두 콜백 모두 이 화면을 실제로 벗어나야 한다. 머무르면 카드 단계가 그대로라 접기 연출이 다시 열린다.
- *
  * @param onCardDiscard 접은 카드를 통에 버린 뒤 호출한다. 버린 카드가 쌓인 보관함 칸으로 보내려면
  *  어느 감정 칸인지, 그중 어느 카드인지 알아야 하므로 함께 넘긴다.
- * @param onCardSkip 연출을 건너뛴 뒤 호출한다. 카드는 이미 기록에 남아 결과는 같지만, 버리는
- *  동작을 하지 않았으니 보관함까지 데려가지 않는다.
- * @param isActive 이 화면이 백스택 맨 위인지 여부입니다. 카드 창은 별도 window 라 화면 전환에
- *  같이 밀려나지 않으므로, 떠나는 순간 내리려면 백스택에서 파생한 값이 필요합니다.
  */
 @Composable
 fun ChatRoomScreen(
     conversationId: Long,
     onCardDiscard: (EmotionCharacter, Long) -> Unit,
-    onCardSkip: () -> Unit,
     onBackClick: () -> Unit,
     isActive: Boolean = true,
     modifier: Modifier = Modifier,
@@ -141,6 +134,7 @@ fun ChatRoomScreen(
             onCharacterMessageClick = viewModel::onReplyTargetSelect,
             onReplyTargetClear = viewModel::onReplyTargetClear,
             onEndClick = viewModel::onEndRequest,
+            onCardReopenClick = viewModel::onCardReopen,
             onTokenUsageToggle = viewModel::onTokenUsageToggle,
             onTokenUsageRetry = viewModel::onTokenUsageRetry
         )
@@ -168,7 +162,7 @@ fun ChatRoomScreen(
         onEndConfirm = viewModel::onEndConfirm,
         onEndCancel = viewModel::onEndCancel,
         onFoldTap = viewModel::onCardFoldTap,
-        onCardSkip = onCardSkip,
+        onCardSetAside = viewModel::onCardSetAside,
         onCardDiscard = onCardDiscard,
     )
 }
@@ -181,7 +175,7 @@ private fun ChatRoomEndFlowHost(
     onEndConfirm: () -> Unit,
     onEndCancel: () -> Unit,
     onFoldTap: () -> Unit,
-    onCardSkip: () -> Unit,
+    onCardSetAside: () -> Unit,
     onCardDiscard: (EmotionCharacter, Long) -> Unit,
 ) {
     // else 를 두지 않아야 단계를 추가할 때 화면이 컴파일 에러로 알려준다.
@@ -196,7 +190,7 @@ private fun ChatRoomEndFlowHost(
                 card = endFlow.card,
                 foldStage = endFlow.foldStage,
                 onFoldTap = onFoldTap,
-                onSkip = onCardSkip,
+                onSkip = onCardSetAside,
                 onDiscard = { onCardDiscard(endFlow.card.character, endFlow.card.id) },
             )
         }
@@ -204,6 +198,7 @@ private fun ChatRoomEndFlowHost(
         EndFlow.NotStarted,
         EndFlow.Ending,
         EndFlow.CreatingCard,
+        is EndFlow.CardSetAside,
         EndFlow.CardFailedRetryable,
         EndFlow.CardFailedFinal,
         -> Unit
@@ -217,6 +212,7 @@ private data class ChatRoomActions(
     val onCharacterMessageClick: (Message) -> Unit,
     val onReplyTargetClear: () -> Unit,
     val onEndClick: () -> Unit,
+    val onCardReopenClick: () -> Unit,
     val onTokenUsageToggle: () -> Unit,
     val onTokenUsageRetry: () -> Unit,
 )
@@ -331,6 +327,11 @@ private fun ChatRoomTopBar(
                     state.canEnd -> GamssTopNavigationIconAction(
                         icon = GamssTopNavigationIcon.CreateCard,
                         onClick = actions.onEndClick,
+                    )
+                    state.endFlow is EndFlow.CardSetAside -> GamssTopNavigationIconAction(
+                        icon = GamssTopNavigationIcon.CreateCard,
+                        onClick = actions.onCardReopenClick,
+                        contentDescription = stringResource(R.string.chat_room_card_reopen_description),
                     )
                     else -> null
                 },
@@ -580,6 +581,7 @@ private fun ChatRoomPreviewContent() {
         onCharacterMessageClick = {},
         onReplyTargetClear = {},
         onEndClick = {},
+        onCardReopenClick = {},
         onTokenUsageToggle = {},
         onTokenUsageRetry = {}
     )

@@ -68,9 +68,6 @@ import com.gamss.android.core.designsystem.R as DesignSystemR
  * 배경 dim 은 [Dialog] 창이 기본으로 그려 주므로 여기서 따로 그리지 않는다. 카드는 이미 서버에
  * 만들어져 되돌릴 수 없으므로 [Dialog] 의 취소 경로(뒤로가기·바깥 탭)는 모두 닫아 두고, 대신
  * 카드 우상단 닫기 버튼으로만 연출을 건너뛴다.
- *
- * @param onSkip 접기를 건너뛰고 화면을 벗어난다. 카드는 이미 기록에 남아 있어 버리는 동작과
- *  결과가 같고, 연출만 생략한다.
  */
 @Composable
 internal fun CardFoldOverlay(

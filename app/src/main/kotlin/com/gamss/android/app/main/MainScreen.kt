@@ -201,7 +201,6 @@ private fun mainEntryProvider(navigator: Navigator) = entryProvider {
             onCardDiscard = { emotion, cardId ->
                 navigator.openDroppedCard(ArchiveKey, ArchiveDetailKey(emotion), cardId)
             },
-            onCardSkip = navigator::goBack,
             onBackClick = navigator::goBack,
             isActive = navigator.state.currentKey == key,
         )

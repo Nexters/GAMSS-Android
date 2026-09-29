@@ -35,6 +35,9 @@ sealed interface EndFlow {
         val foldStage: CardFoldStage = CardFoldStage.Unfolded,
     ) : Ended
 
+    /** 닫기 버튼은 펼친 카드에만 있어 접기 단계를 들지 않습니다. */
+    data class CardSetAside(val card: Card) : Ended
+
     /** 재시도하면 결과가 달라질 수 있는 실패. */
     data object CardFailedRetryable : Ended
 
