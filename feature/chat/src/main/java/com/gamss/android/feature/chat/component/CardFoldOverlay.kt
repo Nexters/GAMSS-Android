@@ -1,5 +1,6 @@
 package com.gamss.android.feature.chat.component
 
+import androidx.activity.compose.BackHandler
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -63,11 +64,11 @@ import java.time.LocalDate
 import com.gamss.android.core.designsystem.R as DesignSystemR
 
 /**
- * 카드를 눌러 두 번 접고, 접힌 종이를 아래 통으로 끌어내려 버리는 연출.
+ * 카드를 눌러 두 번 접고, 접힌 종이를 아래 통으로 끌어내려 버리는 연출입니다.
  *
- * 배경 dim 은 [Dialog] 창이 기본으로 그려 주므로 여기서 따로 그리지 않는다. 카드는 이미 서버에
- * 만들어져 되돌릴 수 없으므로 [Dialog] 의 취소 경로(뒤로가기·바깥 탭)는 모두 닫아 두고, 대신
- * 카드 우상단 닫기 버튼으로만 연출을 건너뛴다.
+ * 배경 dim 은 [Dialog] 창이 기본으로 그려 주므로 여기서 따로 그리지 않습니다. 카드는 이미 서버에
+ * 만들어져 되돌릴 수 없으므로 [Dialog] 의 취소 경로는 닫아 두고, 뒤로가기는 버리는 중이 아닐 때만
+ * 닫기 버튼과 같게 받습니다.
  */
 @Composable
 internal fun CardFoldOverlay(
@@ -116,6 +117,8 @@ private fun CardFoldContent(
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val metrics = rememberCardFoldMetrics(maxWidth, maxHeight, foldStage)
         val drag = rememberCardFoldDragState(metrics.travel, onDiscard)
+        // 가라앉는 중에 닫으면 버리기 콜백이 불리지 않습니다. 누른 순간의 값을 읽어야 시작 직후도 막힙니다.
+        BackHandler { if (!drag.discarding) onSkip() }
 
         Box(
             modifier = Modifier

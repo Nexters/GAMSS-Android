@@ -328,11 +328,12 @@ private fun ChatRoomTopBar(
                         icon = GamssTopNavigationIcon.CreateCard,
                         onClick = actions.onEndClick,
                     )
-                    state.endFlow is EndFlow.CardSetAside -> GamssTopNavigationIconAction(
-                        icon = GamssTopNavigationIcon.CreateCard,
-                        onClick = actions.onCardReopenClick,
-                        contentDescription = stringResource(R.string.chat_room_card_reopen_description),
-                    )
+                    state.endFlow is EndFlow.CardReady || state.endFlow is EndFlow.CardSetAside ->
+                        GamssTopNavigationIconAction(
+                            icon = GamssTopNavigationIcon.CreateCard,
+                            onClick = actions.onCardReopenClick,
+                            contentDescription = stringResource(R.string.chat_room_card_reopen_description),
+                        )
                     else -> null
                 },
                 GamssTopNavigationIconAction(

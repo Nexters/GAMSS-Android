@@ -246,7 +246,7 @@ class ChatRoomEndFlowTest {
     }
 
     @Test
-    fun 카드를_닫아_두면_같은_카드를_펼친_채로_다시_연다() = runTest {
+    fun 카드를_닫아_두면_같은_카드를_다시_연다() = runTest {
         chatRoomViewModel().test(this) {
             containerHost.sendOneMessage()
             runCurrent()
@@ -256,7 +256,7 @@ class ChatRoomEndFlowTest {
 
             containerHost.onCardSetAside()
             runCurrent()
-            assertEquals(EndFlow.CardSetAside(card), containerHost.endFlow())
+            assertEquals(EndFlow.CardSetAside(card, CardFoldStage.Unfolded), containerHost.endFlow())
 
             containerHost.onCardReopen()
             runCurrent()
@@ -287,7 +287,31 @@ class ChatRoomEndFlowTest {
     }
 
     @Test
-    fun 접기_시작한_카드는_닫아_둘_수_없다() = runTest {
+    fun 접던_카드를_닫았다_다시_열면_접던_단계에서_이어진다() = runTest {
+        chatRoomViewModel().test(this) {
+            containerHost.sendOneMessage()
+            runCurrent()
+            containerHost.endConversation()
+            runCurrent()
+            containerHost.onCardFoldTap()
+            containerHost.onCardFoldTap()
+            runCurrent()
+            val card = (containerHost.endFlow() as EndFlow.CardReady).card
+
+            containerHost.onCardSetAside()
+            runCurrent()
+            assertEquals(EndFlow.CardSetAside(card, CardFoldStage.FoldedTwice), containerHost.endFlow())
+
+            containerHost.onCardReopen()
+            runCurrent()
+            assertEquals(EndFlow.CardReady(card, CardFoldStage.FoldedTwice), containerHost.endFlow())
+
+            cancelAndIgnoreRemainingItems()
+        }
+    }
+
+    @Test
+    fun 카드가_떠_있을_때_다시_열기를_눌러도_아무_일도_없다() = runTest {
         chatRoomViewModel().test(this) {
             containerHost.sendOneMessage()
             runCurrent()
@@ -295,10 +319,11 @@ class ChatRoomEndFlowTest {
             runCurrent()
             containerHost.onCardFoldTap()
             runCurrent()
+            val ready = containerHost.endFlow()
 
-            containerHost.onCardSetAside()
+            containerHost.onCardReopen()
             runCurrent()
-            assertEquals(CardFoldStage.FoldedOnce, containerHost.foldStage())
+            assertEquals(ready, containerHost.endFlow())
 
             cancelAndIgnoreRemainingItems()
         }
