@@ -33,6 +33,14 @@ internal class ChatMessageAnimation {
         hasCapturedInitial = true
     }
 
+    /**
+     * 아직 컴포지션 전인 메시지를 "본 메시지"로 기록해 나중에 처음 그려져도 애니메이션되지 않게 한다.
+     * 화면 밖에 도착한 메시지는 도착 순간을 놓쳤으므로, 스크롤로 뒤늦게 보일 때 새로 온 것처럼 움직이면 안 된다.
+     */
+    fun markSeen(messageIds: List<Long>) {
+        seenMessageIds += messageIds
+    }
+
     /** 이 messageId가 처음 컴포지션되는지 판정하고 기록한다. 아이템당 한 번만 불러야 한다. */
     fun claimShouldAnimate(messageId: Long): Boolean = hasCapturedInitial && seenMessageIds.add(messageId)
 }

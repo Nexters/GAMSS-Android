@@ -23,13 +23,15 @@ import kotlinx.coroutines.launch
  * - 내가 보낸 메시지는 말풍선이 그려지는 즉시 항상 바닥까지 스크롤한다.
  * - 답장 로딩 표시가 나타나거나 실제 글자로 바뀌거나 상대 메시지가 도착하면, 직전에 바닥을 보고
  *   있었을 때만 따라 내려간다. 위를 보고 있었다면 도착한 메시지를 [newMessageToast]로 안내하고,
- *   그 메시지가 화면에 들어오면 지운다.
+ *   그 메시지가 화면에 들어오면 지운다. 이렇게 화면 밖에 도착한 메시지는 뒤늦게 스크롤로 보여도
+ *   등장 애니메이션 없이 그대로 나타난다.
  *
  * 메시지는 [ChatRoomState.listKeyOf] 기준으로 구분한다. 목록 key와 같아야 가시성 판정이 맞고,
  * 내 메시지가 임시 id → 서버 id로 바뀌어도 새 메시지로 보지 않는다.
  */
 internal class ChatScrollState(
     private val listState: LazyListState,
+    private val animationState: ChatMessageAnimation,
     private val coroutineScope: CoroutineScope,
 ) {
     var newMessageToast by mutableStateOf<Message?>(null)
@@ -79,6 +81,12 @@ internal class ChatScrollState(
         // 곧 "도착 직전에 바닥을 보고 있었는지"와 같은 뜻이다.
         val wasAtBottom = lastSeenItem?.key?.let(::isMessageVisible) ?: true
         lastSeenItem = latest
+        val follows = latest.sender == MessageSender.User || wasAtBottom
+
+        // 따라 내려가지 않으면 지금 목록의 메시지는 모두 도착 순간을 놓친 것이다. 아직 그려지지 않은
+        // 메시지(=화면 밖)를 미리 본 것으로 기록해, 토스트나 스크롤로 뒤늦게 보일 때 애니메이션되지 않게
+        // 한다. 로딩 표시와 공개된 답장은 key가 같아 로딩 때 기록해 두면 답장도 그대로 나타난다.
+        if (!follows) animationState.markSeen(state.displayMessages.map(state::listKeyOf))
 
         when {
             // 내가 보낸 메시지는 성공/실패나 직전 스크롤 위치와 무관하게 항상 따라간다.
@@ -131,9 +139,12 @@ private val ChatRoomState.lastItemIndex: Int
 internal fun rememberChatScrollState(
     state: ChatRoomState,
     listState: LazyListState,
+    animationState: ChatMessageAnimation,
 ): ChatScrollState {
     val coroutineScope = rememberCoroutineScope()
-    val scrollState = remember(state.conversationId) { ChatScrollState(listState, coroutineScope) }
+    val scrollState = remember(state.conversationId, animationState) {
+        ChatScrollState(listState, animationState, coroutineScope)
+    }
 
     LaunchedEffect(state.conversationId, state.isLoading) {
         scrollState.handleInitialLoad(state)
