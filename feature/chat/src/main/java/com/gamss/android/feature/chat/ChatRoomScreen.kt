@@ -59,6 +59,7 @@ import com.gamss.android.core.designsystem.topnavigation.GamssTopNavigationIconA
 import com.gamss.android.core.designsystem.topnavigation.GamssTopNavigationTitleAlignment
 import com.gamss.android.core.ui.chat.ChatMessageBubble
 import com.gamss.android.core.ui.chat.rememberReplyQuoteLookup
+import com.gamss.android.core.ui.safety.SupportAgencyDialog
 import com.gamss.android.domain.conversation.Message
 import com.gamss.android.domain.conversation.MessageSender
 import com.gamss.android.domain.emotion.EmotionCharacter
@@ -68,11 +69,9 @@ import com.gamss.android.feature.chat.component.EndConversationDialog
 import com.gamss.android.feature.chat.component.LoadingMessageBubble
 import com.gamss.android.feature.chat.component.MessageInputBar
 import com.gamss.android.feature.chat.component.NewMessageToast
-import com.gamss.android.feature.chat.component.SupportAgencyDialog
 import com.gamss.android.feature.chat.util.AnimatedChatMessage
 import com.gamss.android.feature.chat.util.ChatMessageAnimation
 import com.gamss.android.feature.chat.util.ChatScrollState
-import com.gamss.android.feature.chat.util.dialOrNotify
 import com.gamss.android.feature.chat.util.rememberChatMessageAnimationState
 import com.gamss.android.feature.chat.util.rememberChatScrollState
 import kotlinx.coroutines.currentCoroutineContext
@@ -153,8 +152,6 @@ fun ChatRoomScreen(
     state.riskDetection?.let { detection ->
         SupportAgencyDialog(
             agencies = detection.agencies,
-            onCallClick = { agency -> context.dialOrNotify(agency.phoneNumber) },
-            onEmergencyCallClick = { context.dialOrNotify(EMERGENCY_PHONE_NUMBER) },
             onDismiss = viewModel::onRiskDialogDismiss,
         )
     }
@@ -505,7 +502,6 @@ private fun ChatRoomInputSection(
     )
 }
 
-private const val EMERGENCY_PHONE_NUMBER = "119"
 private const val IME_SETTLE_GRACE_PERIOD_MILLIS = 120L
 
 @Preview(name = "Light", showBackground = true)
