@@ -108,12 +108,21 @@ internal class ChatScrollState(
                 newMessageToast = null
                 scrollToBottom(state)
             }
-            // 로딩 표시는 안내할 메시지가 아니다.
-            latest.isLoading -> Unit
-            // 도착한 시점에 이미 화면에 보이는 메시지라면(뷰포트에 여유가 있어 스크롤 없이도
-            // 보이는 경우) 안내할 필요가 없다.
-            else -> newMessageToast = if (isMessageVisible(latest.key)) null else state.messages.last()
+            else -> updateToastForLatestReply(state)
         }
+    }
+
+    /**
+     * 맨 아래 아이템이 아니라 로딩 표시를 뺀 최신 메시지로 안내한다. 답장이 공개되는 순간 다음 답장의 로딩
+     * 표시가 곧바로 붙어 맨 아래는 늘 로딩이므로, 맨 아래만 보면 마지막 답장 전까지 토스트가 뜨지 않는다.
+     */
+    private fun updateToastForLatestReply(state: ChatRoomState) {
+        val reply = state.messages.lastOrNull()
+        // 내 메시지 뒤에 로딩 표시만 붙은 경우처럼 새로 공개된 답장이 없으면 안내할 게 없다.
+        if (reply == null || reply.sender == MessageSender.User) return
+        // 도착한 시점에 이미 화면에 보이는 메시지라면(뷰포트에 여유가 있어 스크롤 없이도
+        // 보이는 경우) 안내할 필요가 없다.
+        newMessageToast = if (isMessageVisible(state.listKeyOf(reply))) null else reply
     }
 
     /**
