@@ -2,6 +2,7 @@ package com.gamss.android.feature.chat
 
 import com.gamss.android.core.common.AppResult
 import com.gamss.android.core.common.network.ApiException
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -38,7 +39,7 @@ class ChattingListLoadTest {
             containerHost.load()
             runCurrent()
 
-            assertEquals(ChattingListPhase.NetworkError, (awaitItem() as Item.StateItem).value.phase)
+            assertEquals(ChattingListPhase.NetworkError, awaitPhase())
             expectNoItems()
         }
     }
@@ -70,13 +71,13 @@ class ChattingListLoadTest {
         chattingListViewModel(repository).test(this) {
             containerHost.load()
             runCurrent()
-            assertEquals(ChattingListPhase.NetworkError, (awaitItem() as Item.StateItem).value.phase)
+            assertEquals(ChattingListPhase.NetworkError, awaitPhase())
 
             repository.listResult = AppResult.Success(listOf(conversation(1L)))
             containerHost.load()
             runCurrent()
 
-            assertEquals(ChattingListPhase.Browsing, (awaitItem() as Item.StateItem).value.phase)
+            assertEquals(ChattingListPhase.Browsing, awaitPhase())
             assertEquals(listOf(1L), containerHost.rowIds())
             expectNoItems()
         }
@@ -106,7 +107,7 @@ class ChattingListLoadTest {
         chattingListViewModel(repository).test(this) {
             containerHost.load()
             runCurrent()
-            assertEquals(ChattingListPhase.NetworkError, (awaitItem() as Item.StateItem).value.phase)
+            assertEquals(ChattingListPhase.NetworkError, awaitPhase())
 
             containerHost.load()
             runCurrent()
@@ -151,6 +152,135 @@ class ChattingListLoadTest {
             cancelAndIgnoreRemainingItems()
         }
     }
+
+    @Test
+    fun 조회_중에_다시_불러도_요청은_한_번만_나간다() = runTest {
+        val repository = FakeChattingListRepository().apply { listResult = networkFailure() }
+
+        chattingListViewModel(repository).test(this) {
+            containerHost.load()
+            runCurrent()
+            assertEquals(ChattingListPhase.NetworkError, containerHost.phase())
+
+            val callsBefore = repository.listCallCount
+            val gate = CompletableDeferred<Unit>()
+            repository.listGate = gate
+            repository.listResult = AppResult.Success(listOf(conversation(1L)))
+            containerHost.load()
+            containerHost.load()
+            runCurrent()
+            assertEquals(1, repository.listCallCount - callsBefore)
+
+            gate.complete(Unit)
+            runCurrent()
+            assertEquals(ChattingListPhase.Browsing, containerHost.phase())
+            assertEquals(listOf(1L), containerHost.rowIds())
+
+            cancelAndIgnoreRemainingItems()
+        }
+    }
+
+    @Test
+    fun 조회_중에_선택_모드에_들어가면_응답이_와도_선택이_유지된다() = runTest {
+        val repository = FakeChattingListRepository(listOf(conversation(1L)))
+
+        chattingListViewModel(repository).test(this) {
+            containerHost.load()
+            runCurrent()
+
+            val gate = CompletableDeferred<Unit>()
+            repository.listGate = gate
+            containerHost.load()
+            runCurrent()
+            containerHost.onCardLongClick(1L)
+            runCurrent()
+
+            gate.complete(Unit)
+            runCurrent()
+            assertEquals(ChattingListPhase.Selecting(setOf(1L)), containerHost.phase())
+
+            cancelAndIgnoreRemainingItems()
+        }
+    }
+
+    @Test
+    fun 조회_중에_고른_방이_새_목록에서_사라지면_선택에서_빠진다() = runTest {
+        val repository = FakeChattingListRepository(listOf(conversation(1L), conversation(2L)))
+
+        chattingListViewModel(repository).test(this) {
+            containerHost.load()
+            runCurrent()
+
+            val gate = CompletableDeferred<Unit>()
+            repository.listGate = gate
+            repository.listResult = AppResult.Success(listOf(conversation(1L)))
+            containerHost.load()
+            runCurrent()
+            containerHost.onCardLongClick(1L)
+            containerHost.onCardLongClick(2L)
+            runCurrent()
+
+            gate.complete(Unit)
+            runCurrent()
+            assertEquals(ChattingListPhase.Selecting(setOf(1L)), containerHost.phase())
+            assertEquals(listOf(1L), containerHost.rowIds())
+
+            cancelAndIgnoreRemainingItems()
+        }
+    }
+
+    @Test
+    fun 조회_중에_선택_모드에_들어갔는데_새_목록이_비면_선택_모드를_나간다() = runTest {
+        val repository = FakeChattingListRepository(listOf(conversation(1L)))
+
+        chattingListViewModel(repository).test(this) {
+            containerHost.load()
+            runCurrent()
+
+            val gate = CompletableDeferred<Unit>()
+            repository.listGate = gate
+            repository.listResult = AppResult.Success(emptyList())
+            containerHost.load()
+            runCurrent()
+            containerHost.onCardLongClick(1L)
+            runCurrent()
+
+            gate.complete(Unit)
+            runCurrent()
+            assertEquals(ChattingListPhase.Browsing, containerHost.phase())
+            assertEquals(emptyList<Long>(), containerHost.rowIds())
+
+            cancelAndIgnoreRemainingItems()
+        }
+    }
+
+    @Test
+    fun 조회_중에_선택_모드에_들어가면_조회가_실패해도_선택이_유지된다() = runTest {
+        val repository = FakeChattingListRepository(listOf(conversation(1L)))
+
+        chattingListViewModel(repository).test(this) {
+            containerHost.load()
+            runCurrent()
+
+            val gate = CompletableDeferred<Unit>()
+            repository.listGate = gate
+            repository.listResult = networkFailure()
+            containerHost.load()
+            runCurrent()
+            containerHost.onCardLongClick(1L)
+            runCurrent()
+
+            gate.complete(Unit)
+            runCurrent()
+            assertEquals(ChattingListSideEffect.ShowLoadFailed, awaitNextSideEffect())
+            assertEquals(ChattingListPhase.Selecting(setOf(1L)), containerHost.phase())
+
+            cancelAndIgnoreRemainingItems()
+        }
+    }
+
+    private suspend fun ChattingListTestContext.awaitPhase(): ChattingListPhase =
+        (awaitItem() as Item.StateItem).value.phase
 
     private fun networkFailure() = AppResult.Failure(ApiException.Network(IOException("offline")))
 }
