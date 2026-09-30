@@ -144,8 +144,7 @@ private fun HomeContent(
                 rootTopInWindow = bounds.top
             },
     ) {
-        val isNetworkError = state.userInfo is UserInfoState.NetworkError
-        if (!isNetworkError) HomeDecorations()
+        if (!state.isNetworkError) HomeDecorations()
 
         Column(modifier = Modifier.fillMaxSize()) {
             GamssTopBar(
@@ -160,7 +159,7 @@ private fun HomeContent(
                 },
             )
 
-            if (isNetworkError) {
+            if (state.isNetworkError) {
                 GamssNetworkErrorContent(
                     onRefresh = actions.onRefresh,
                     modifier = Modifier
@@ -171,11 +170,11 @@ private fun HomeContent(
                 Spacer(modifier = Modifier.weight(GREETING_TOP_WEIGHT))
 
                 HomeGreeting(
-                    nickname = (state.userInfo as? UserInfoState.Loaded)?.nickname,
+                    nickname = state.nickname,
                     modifier = Modifier
                         .padding(start = GreetingStartPadding)
                         // 닉네임이 도착하기 전에 먼저 그리면 문구가 옆으로 밀린다. 자리만 잡아 두고 감춘다.
-                        .alpha(if (state.userInfo is UserInfoState.Loading) 0f else 1f),
+                        .alpha(if (state.isUserInfoLoading) 0f else 1f),
                 )
 
                 Spacer(modifier = Modifier.height(GreetingToInputGap))

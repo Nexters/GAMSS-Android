@@ -121,11 +121,12 @@ class HomeViewModel @Inject constructor(
                 _openConversationEvents.emit(result.data.message.conversationId)
             }
             // 입력은 남겨 둔다. 실패한 문구를 다시 치게 하면 안 된다.
-            is AppResult.Failure -> postSideEffect(
-                HomeSideEffect.ShowToast(
-                    if (result.throwable is ApiException.Network) SEND_NETWORK_FAILED else SEND_FAILED,
-                ),
-            )
+            is AppResult.Failure -> postSideEffect(HomeSideEffect.ShowToast(result.throwable.toSendFailureMessage()))
         }
+    }
+
+    private fun Throwable.toSendFailureMessage(): String = when (this) {
+        is ApiException.Network -> SEND_NETWORK_FAILED
+        else -> SEND_FAILED
     }
 }
