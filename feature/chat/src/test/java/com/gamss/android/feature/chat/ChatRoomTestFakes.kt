@@ -62,8 +62,7 @@ internal fun chatRoomViewModel(
     tokenUsageRefreshNotifier: TokenUsageRefreshNotifier = RecordingTokenUsageRefreshNotifier(),
     pendingReveal: PendingConversationReveal = PendingConversationReveal(),
     userRepository: UserRepository = FakeUserRepository(),
-    riskLexicon: RiskLexicon = EmptyRiskLexicon,
-    riskLexiconRepository: RiskLexiconRepository = FixedRiskLexiconRepository(riskLexicon),
+    riskLexiconRepository: RiskLexiconRepository = FixedRiskLexiconRepository(EmptyRiskLexicon),
 ): ChatRoomViewModel = ChatRoomViewModel(
     tokenUsageRefreshNotifier = tokenUsageRefreshNotifier,
     detectRiskInText = DetectRiskInTextUseCase(
