@@ -22,7 +22,7 @@ import javax.inject.Inject
 
 internal const val LAST_CHARACTER_BLOCKED = "한 명은 남겨 주세요"
 internal const val SEND_FAILED = "보내지 못했어요. 잠시 후 다시 시도해 주세요."
-internal const val SEND_NETWORK_FAILED = "네트워크 연결을 확인해 주세요"
+internal const val SEND_NETWORK_FAILED = "네트워크 연결 상태를 확인해주세요."
 internal val MESSAGE_LENGTH_EXCEEDED = "메시지는 ${MAX_MESSAGE_LENGTH}자까지 입력할 수 있어요."
 
 @HiltViewModel
