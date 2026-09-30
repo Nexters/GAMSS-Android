@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import org.orbitmvi.orbit.ContainerHost
 import org.orbitmvi.orbit.syntax.Syntax
 import org.orbitmvi.orbit.viewmodel.container
@@ -52,7 +53,7 @@ class ChattingListViewModel @Inject constructor(
     fun load() = intent {
         // 회전이나 재진입으로 다시 불린다. 선택·삭제 흐름 중이면 단계를 건드리지 않는다.
         if (!state.phase.isSettledByLoad) return@intent
-        // 재시도를 연달아 누르면 먼저 보낸 요청의 실패가 나중 요청의 성공을 덮으므로 한 번에 하나만 돌립니다.
+        // 재시도를 연달아 누르면 먼저 보낸 요청의 실패가 나중 요청의 성공을 덮으므로 한 번에 하나만 돌린다.
         if (!loadMutex.tryLock()) return@intent
         try {
             fetchOngoingConversations()
@@ -68,7 +69,7 @@ class ChattingListViewModel @Inject constructor(
         if (state.groups.isEmpty() && !state.isNetworkError) {
             reduce { state.copy(phase = ChattingListPhase.Loading) }
         }
-        // 응답을 기다리는 사이 선택이나 삭제에 들어갔다면 그 단계를 지킵니다.
+        // 응답을 기다리는 사이 선택이나 삭제에 들어갔다면 그 단계를 지킨다.
         when (val result = getOngoingConversations()) {
             is AppResult.Success -> reduce {
                 val groups = result.data.toConversationGroups()
@@ -249,10 +250,13 @@ class ChattingListViewModel @Inject constructor(
      * 지운 행이 남아 있으면 사용자가 같은 방을 다시 지우려 한다.
      */
     private suspend fun ChattingListSyntax.reload(knownDeletedIds: List<Long>) {
-        when (val result = getOngoingConversations()) {
-            is AppResult.Success -> reduce { state.copy(groups = result.data.toConversationGroups()) }
-            is AppResult.Failure ->
-                reduce { state.copy(groups = state.groups.withoutIds(knownDeletedIds.toSet())) }
+        // 삭제 전에 보낸 조회가 늦게 오면 지운 방을 되살린다. 그 조회가 끝난 뒤에 받아 마지막에 반영한다.
+        loadMutex.withLock {
+            when (val result = getOngoingConversations()) {
+                is AppResult.Success -> reduce { state.copy(groups = result.data.toConversationGroups()) }
+                is AppResult.Failure ->
+                    reduce { state.copy(groups = state.groups.withoutIds(knownDeletedIds.toSet())) }
+            }
         }
     }
 }
@@ -274,8 +278,8 @@ private fun ChattingListPhase.settledTo(loaded: ChattingListPhase): ChattingList
     if (isSettledByLoad) loaded else this
 
 /**
- * 목록에서 사라진 방이 선택에 남으면, 지울 때 없는 방이라 일부 실패로 알리게 됩니다.
- * 고를 방이 하나도 없으면 빈 화면 위에 선택 모드만 남으므로 나갑니다.
+ * 목록에서 사라진 방이 선택에 남으면, 지울 때 없는 방이라 일부 실패로 알리게 된다.
+ * 고를 방이 하나도 없으면 빈 화면 위에 선택 모드만 남으므로 나간다.
  */
 private fun ChattingListPhase.selectingOnlyRowsIn(groups: List<ConversationGroup>): ChattingListPhase {
     if (this !is ChattingListPhase.Selecting) return this

@@ -279,6 +279,35 @@ class ChattingListLoadTest {
         }
     }
 
+    @Test
+    fun 삭제_전에_보낸_조회가_늦게_와도_지운_방은_되살아나지_않는다() = runTest {
+        val repository = FakeChattingListRepository(listOf(conversation(1L), conversation(2L)))
+
+        chattingListViewModel(repository).test(this) {
+            containerHost.load()
+            runCurrent()
+
+            val gate = CompletableDeferred<Unit>()
+            repository.listGate = gate
+            containerHost.load()
+            runCurrent()
+
+            repository.listGate = null
+            repository.listResult = AppResult.Success(listOf(conversation(2L)))
+            containerHost.onCardLongClick(1L)
+            containerHost.onDeleteRequest()
+            containerHost.onDeleteConfirm()
+            runCurrent()
+
+            gate.complete(Unit)
+            runCurrent()
+            assertEquals(listOf(1L), repository.deletedIds)
+            assertEquals(listOf(2L), containerHost.rowIds())
+
+            cancelAndIgnoreRemainingItems()
+        }
+    }
+
     private suspend fun ChattingListTestContext.awaitPhase(): ChattingListPhase =
         (awaitItem() as Item.StateItem).value.phase
 
