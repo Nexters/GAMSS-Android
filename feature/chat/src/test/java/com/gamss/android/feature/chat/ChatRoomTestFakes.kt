@@ -173,6 +173,8 @@ internal class FakeConversationRepository(
     private val failing: Boolean = false,
     private val endFailing: Boolean = false,
     private val restoredConversation: Conversation = Conversation(id = ROOM_ID, title = null),
+    /** 지정하면 완료될 때까지 전송 응답을 붙든다. 응답 대기 중 사용자가 다시 입력하는 경합을 재현할 때 쓴다. */
+    private val sendGate: CompletableDeferred<Unit>? = null,
 ) : ConversationRepository {
     private var sentCount = 0
 
@@ -190,6 +192,7 @@ internal class FakeConversationRepository(
     ): AppResult<SentMessage> {
         sentContextSummaries += contextSummary
         sentExcludeCharacters += excludeCharacters
+        sendGate?.await()
         if (failing) return AppResult.Failure(IllegalStateException("send failed"))
         val roomId = conversationId ?: ROOM_ID
         return AppResult.Success(

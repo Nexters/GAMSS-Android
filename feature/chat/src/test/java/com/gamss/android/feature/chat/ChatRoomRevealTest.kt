@@ -258,6 +258,33 @@ class ChatRoomRevealTest {
     }
 
     @Test
+    fun 응답을_기다리는_동안_새로_입력했다면_전송이_실패해도_입력칸을_덮어쓰지_않는다() = runTest {
+        val sendGate = CompletableDeferred<Unit>()
+        val repository = FakeConversationRepository(commentCount = 1, failing = true, sendGate = sendGate)
+        val viewModel = viewModel(repository)
+
+        viewModel.test(this) {
+            containerHost.onInputChange(INPUT)
+            awaitState()
+            containerHost.onSend()
+            awaitState() // isSending = true
+            awaitState() // 위험 검사 통과 후 말풍선을 그리고 입력칸을 비움, 응답은 sendGate에 걸려 대기 중
+
+            containerHost.onInputChange(SECOND_INPUT)
+            assertEquals(SECOND_INPUT, awaitState().input)
+
+            sendGate.complete(Unit)
+
+            val afterFailure = awaitState()
+            expectSideEffect(ChatRoomSideEffect.ShowToast(SEND_FAILED_MESSAGE))
+
+            assertFalse(afterFailure.isSending)
+            assertEquals(SECOND_INPUT, afterFailure.input)
+            assertTrue(afterFailure.messages.isEmpty())
+        }
+    }
+
+    @Test
     fun 위험_감지가_치명적이면_말풍선을_그리지_않고_전송을_중단한다() = runTest {
         val riskInput = "죽고싶다"
         val viewModel = chatRoomViewModel(

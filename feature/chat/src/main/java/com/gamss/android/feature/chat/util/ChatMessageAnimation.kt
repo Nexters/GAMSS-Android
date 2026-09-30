@@ -18,7 +18,7 @@ import androidx.compose.ui.unit.dp
  *
  * LazyColumn 아이템은 부모보다 늦게(레이아웃 단계에서) 컴포지션되므로, 화면에 보이지 않는 동안(스크롤을
  * 올려 과거를 보는 중) 도착한 메시지는 아직 한 번도 컴포지션되지 않은 상태다. 그런 메시지는
- * [markAlreadySeen]으로 도착 시점에 바로 "본 메시지" 처리해 둔다 — 그래야 나중에 스크롤해서 처음
+ * [markSeen]으로 도착 시점에 바로 "본 메시지" 처리해 둔다 — 그래야 나중에 스크롤해서 처음
  * 컴포지션될 때도 애니메이션 없이 바로 보인다. 화면에 보이는 동안 도착한 메시지는 아무 것도 하지 않고
  * 두면, 자신의 첫 컴포지션에서 [claimShouldAnimate]가 판정과 기록을 함께 한다.
  */
@@ -41,14 +41,6 @@ internal class ChatMessageAnimation {
      * 화면 밖에 도착한 메시지는 도착 순간을 놓쳤으므로, 스크롤로 뒤늦게 보일 때 새로 온 것처럼 움직이면 안 된다.
      */
     fun markSeen(messageIds: List<Long>) {
-        seenMessageIds += messageIds
-    }
-
-    /**
-     * 화면 밖에서 도착한 메시지들이다. 아직 한 번도 컴포지션되지 않았어도, 나중에 스크롤해서 처음
-     * 보일 때 애니메이션이 재생되지 않도록 미리 "본 메시지"로 기록해 둔다.
-     */
-    fun markAlreadySeen(messageIds: Collection<Long>) {
         seenMessageIds += messageIds
     }
 
