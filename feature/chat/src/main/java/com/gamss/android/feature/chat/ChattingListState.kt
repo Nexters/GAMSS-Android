@@ -41,6 +41,8 @@ data class ChattingListState(
 ) {
     val isLoading: Boolean get() = phase is ChattingListPhase.Loading
 
+    val isNetworkError: Boolean get() = phase is ChattingListPhase.NetworkError
+
     val isEmpty: Boolean get() = !isLoading && groups.isEmpty()
 
     /** 체크박스와 하단 삭제 버튼을 그릴지. 확인·삭제 중에도 무엇을 지우는 중인지는 보여야 한다. */

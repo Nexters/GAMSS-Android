@@ -45,6 +45,9 @@ internal class FakeChattingListRepository(
     /** 값이 있으면 완료될 때까지 삭제 응답을 붙든다. Deleting 단계를 관찰하기 위한 장치다. */
     var deleteGate: CompletableDeferred<Unit>? = null
 
+    /** 값이 있으면 완료될 때까지 목록 조회 응답을 붙든다. 조회 중에 일어나는 일을 관찰하기 위한 장치다. */
+    var listGate: CompletableDeferred<Unit>? = null
+
     val deletedIds = mutableListOf<Long>()
 
     val requestedKeywords = mutableListOf<String>()
@@ -57,7 +60,10 @@ internal class FakeChattingListRepository(
 
     override suspend fun getOngoingConversations(): AppResult<List<Conversation>> {
         listCallCount++
-        return listResult
+        // 붙든 동안 결과를 바꿔도 이미 보낸 요청은 보낸 시점의 목록을 받는다. 늦게 온 낡은 응답을 흉내 낸다.
+        val result = listResult
+        listGate?.await()
+        return result
     }
 
     override suspend fun deleteConversation(conversationId: Long): AppResult<Unit> {

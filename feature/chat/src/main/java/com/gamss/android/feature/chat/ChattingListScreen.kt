@@ -30,6 +30,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.paging.compose.collectAsLazyPagingItems
 import com.gamss.android.core.designsystem.button.GamssButton
 import com.gamss.android.core.designsystem.button.GamssButtonVariant
+import com.gamss.android.core.designsystem.component.GamssNetworkErrorContent
 import com.gamss.android.core.designsystem.theme.GamssTheme
 import com.gamss.android.feature.chat.component.ChattingListTopBar
 import com.gamss.android.feature.chat.component.ChattingSearchContent
@@ -72,6 +73,7 @@ fun ChattingListScreen(
             onCardClick = viewModel::onCardClick,
             onCardLongClick = viewModel::onCardLongClick,
             onDeleteActionClick = viewModel::onDeleteActionClick,
+            onRefresh = viewModel::load,
         )
     }
 
@@ -165,6 +167,11 @@ private fun ChattingListBody(
     when {
         state.isLoading -> CenteredBox(modifier) { CircularProgressIndicator() }
 
+        state.isNetworkError -> GamssNetworkErrorContent(
+            onRefresh = actions.onRefresh,
+            modifier = modifier.fillMaxSize(),
+        )
+
         state.isEmpty -> CenteredBox(modifier) {
             Text(
                 text = stringResource(R.string.chatting_list_empty),
@@ -256,6 +263,7 @@ private fun ChattingListPreviewContent() {
         onCardClick = {},
         onCardLongClick = {},
         onDeleteActionClick = {},
+        onRefresh = {},
     )
 
     Column(modifier = Modifier.fillMaxSize()) {

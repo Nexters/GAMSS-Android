@@ -5,9 +5,16 @@ import com.gamss.android.domain.safety.RiskDetection
 
 private val AllCharacters: Set<EmotionCharacter> = EmotionCharacter.entries.toSet()
 
+sealed interface UserInfoState {
+    data object Loading : UserInfoState
+
+    data class Loaded(val nickname: String?) : UserInfoState
+
+    data object NetworkError : UserInfoState
+}
+
 data class HomeState(
-    val isLoading: Boolean = true,
-    val nickname: String? = null,
+    val userInfo: UserInfoState = UserInfoState.Loading,
     val input: String = "",
     /** 전송 API 가 캐릭터 댓글 생성까지 동기로 처리해 수 초 걸린다. 그동안 입력바를 잠근다. */
     val isSending: Boolean = false,
@@ -22,6 +29,12 @@ data class HomeState(
     /** 안내를 닫으면 열 대화. WARNING 안내가 떠 있는 동안에만 채운다. */
     val conversationToOpen: Long? = null,
 ) {
+    val nickname: String? get() = (userInfo as? UserInfoState.Loaded)?.nickname
+
+    val isUserInfoLoading: Boolean get() = userInfo is UserInfoState.Loading
+
+    val isNetworkError: Boolean get() = userInfo is UserInfoState.NetworkError
+
     /** 서버는 반응할 캐릭터가 아니라 제외할 캐릭터를 받는다. */
     val excludedCharacters: Set<EmotionCharacter>
         get() = AllCharacters - selectedCharacters

@@ -15,6 +15,8 @@ sealed interface ChattingListPhase {
 
     data object Browsing : ChattingListPhase
 
+    data object NetworkError : ChattingListPhase
+
     /**
      * 선택 모드. [selectedIds] 는 비어 있을 수 있다. 헤더의 삭제 액션으로 진입하면 아무것도 고르지 않은
      * 상태로 시작하므로, 마지막 선택을 해제해도 자동으로 나가지 않는다. 진입 경로와 어긋나기 때문이다.

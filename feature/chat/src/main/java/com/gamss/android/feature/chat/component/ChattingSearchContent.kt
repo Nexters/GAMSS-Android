@@ -37,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import androidx.paging.LoadState
 import androidx.paging.compose.LazyPagingItems
 import com.gamss.android.core.designsystem.button.GamssButton
+import com.gamss.android.core.designsystem.component.GamssNetworkErrorContent
 import com.gamss.android.core.designsystem.modifier.noRippleCombinedClickable
 import com.gamss.android.core.designsystem.theme.GamssTheme
 import com.gamss.android.domain.conversation.chattingsearch.ChattingRoomSummary
@@ -153,10 +154,14 @@ private fun SearchResultContent(
 ) {
     when (val refresh = chattingRooms.loadState.refresh) {
         is LoadState.Loading -> LoadingContent()
-        is LoadState.Error -> ErrorContent(
-            messageRes = refresh.error.toSearchFailureReason().messageRes,
-            onRetry = onRetry,
-        )
+        is LoadState.Error -> when (val reason = refresh.error.toSearchFailureReason()) {
+            SearchFailureReason.NETWORK -> GamssNetworkErrorContent(
+                onRefresh = onRetry,
+                modifier = Modifier.fillMaxSize(),
+            )
+
+            else -> ErrorContent(messageRes = reason.messageRes, onRetry = onRetry)
+        }
 
         is LoadState.NotLoading -> if (chattingRooms.itemCount == 0) {
             SearchEmptyResult()
