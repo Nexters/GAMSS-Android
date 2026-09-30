@@ -62,10 +62,11 @@ internal fun chatRoomViewModel(
     tokenUsageRefreshNotifier: TokenUsageRefreshNotifier = RecordingTokenUsageRefreshNotifier(),
     pendingReveal: PendingConversationReveal = PendingConversationReveal(),
     userRepository: UserRepository = FakeUserRepository(),
+    riskLexicon: RiskLexicon = EmptyRiskLexicon,
 ): ChatRoomViewModel = ChatRoomViewModel(
     tokenUsageRefreshNotifier = tokenUsageRefreshNotifier,
     detectRiskInText = DetectRiskInTextUseCase(
-        repository = NoRiskLexiconRepository,
+        repository = FixedRiskLexiconRepository(riskLexicon),
         matcher = RiskTermMatcher(),
     ),
     getDailyTokenUsageUseCase = GetDailyTokenUsageUseCase(userRepository),
@@ -87,13 +88,15 @@ internal fun chatRoomViewModel(
     ),
 )
 
-private object NoRiskLexiconRepository : RiskLexiconRepository {
-    override suspend fun getLexicon() = RiskLexicon(
-        version = 0,
-        terms = emptyList(),
-        safePhrases = emptyList(),
-        agencies = emptyList(),
-    )
+internal val EmptyRiskLexicon = RiskLexicon(
+    version = 0,
+    terms = emptyList(),
+    safePhrases = emptyList(),
+    agencies = emptyList(),
+)
+
+private class FixedRiskLexiconRepository(private val lexicon: RiskLexicon) : RiskLexiconRepository {
+    override suspend fun getLexicon() = lexicon
 
     override suspend fun refresh() = Unit
 }
@@ -154,6 +157,7 @@ internal class FakeConversationRepository(
     private val failing: Boolean = false,
     private val endFailing: Boolean = false,
     private val restoredConversation: Conversation = Conversation(id = ROOM_ID, title = null),
+    private val restoredMessages: List<Message> = emptyList(),
 ) : ConversationRepository {
     private var sentCount = 0
 
@@ -198,7 +202,7 @@ internal class FakeConversationRepository(
         AppResult.Success(
             ConversationDetail(
                 conversation = restoredConversation,
-                messages = emptyList(),
+                messages = restoredMessages,
             ),
         )
 

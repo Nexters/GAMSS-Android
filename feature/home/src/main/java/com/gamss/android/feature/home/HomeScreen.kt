@@ -57,6 +57,7 @@ import com.gamss.android.core.designsystem.component.GamssTape
 import com.gamss.android.core.designsystem.component.GamssText
 import com.gamss.android.core.designsystem.component.GamssTopBar
 import com.gamss.android.core.designsystem.theme.GamssTheme
+import com.gamss.android.core.ui.safety.SupportAgencyDialog
 import com.gamss.android.domain.emotion.EmotionCharacter
 import org.orbitmvi.orbit.compose.collectAsState
 import org.orbitmvi.orbit.compose.collectSideEffect
@@ -107,6 +108,13 @@ fun HomeScreen(
     BackHandler(enabled = state.isEmotionPickerExpanded, onBack = actions.onEmotionPickerDismiss)
 
     HomeContent(state = state, actions = actions, modifier = modifier)
+
+    state.riskDetection?.let { detection ->
+        SupportAgencyDialog(
+            agencies = detection.agencies,
+            onDismiss = viewModel::onRiskDialogDismiss,
+        )
+    }
 }
 
 @Immutable

@@ -1,6 +1,7 @@
 package com.gamss.android.feature.home
 
 import com.gamss.android.domain.emotion.EmotionCharacter
+import com.gamss.android.domain.safety.RiskDetection
 
 private val AllCharacters: Set<EmotionCharacter> = EmotionCharacter.entries.toSet()
 
@@ -20,6 +21,13 @@ data class HomeState(
     val isEmotionPickerExpanded: Boolean = false,
     /** 반응할 캐릭터. 기본은 전체 선택이고, 최소 한 종은 남는다. */
     val selectedCharacters: Set<EmotionCharacter> = AllCharacters,
+    /**
+     * 위험 신호 안내. CRITICAL 이면 전송이 막힌 채 입력이 남아 있고, WARNING 이면 이미 보낸 뒤라
+     * [conversationToOpen] 이 함께 채워진다.
+     */
+    val riskDetection: RiskDetection? = null,
+    /** 안내를 닫으면 열 대화. WARNING 안내가 떠 있는 동안에만 채운다. */
+    val conversationToOpen: Long? = null,
 ) {
     val nickname: String? get() = (userInfo as? UserInfoState.Loaded)?.nickname
 

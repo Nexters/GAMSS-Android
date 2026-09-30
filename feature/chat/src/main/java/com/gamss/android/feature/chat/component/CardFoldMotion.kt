@@ -206,10 +206,12 @@ private fun Density.discardTravel(windowHeight: Dp, binHeight: Dp, paperHeight: 
  */
 @Composable
 internal fun rememberBinReady(folded: Boolean): Boolean {
-    var ready by remember { mutableStateOf(false) }
+    // 닫아 둔 카드를 접힌 채로 다시 열면 통이 fade 없이 바로 보이므로 기다리지 않습니다.
+    var ready by remember { mutableStateOf(folded) }
     LaunchedEffect(folded) {
-        ready = false
-        if (folded) {
+        if (!folded) {
+            ready = false
+        } else if (!ready) {
             delay(CARD_FOLD_BIN_SHOWN_MS.toLong())
             ready = true
         }

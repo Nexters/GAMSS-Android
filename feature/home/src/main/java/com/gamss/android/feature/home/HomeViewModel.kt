@@ -8,6 +8,8 @@ import com.gamss.android.domain.conversation.ConversationSession
 import com.gamss.android.domain.conversation.MAX_MESSAGE_LENGTH
 import com.gamss.android.domain.conversation.takeWithinMessageLimit
 import com.gamss.android.domain.emotion.EmotionCharacter
+import com.gamss.android.domain.safety.DetectRiskInTextUseCase
+import com.gamss.android.domain.safety.RiskLevel
 import com.gamss.android.domain.user.GetUserInfoUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -27,6 +29,7 @@ internal val MESSAGE_LENGTH_EXCEEDED = "메시지는 ${MAX_MESSAGE_LENGTH}자까
 class HomeViewModel @Inject constructor(
     private val getUserInfoUseCase: GetUserInfoUseCase,
     private val session: ConversationSession,
+    private val detectRiskInText: DetectRiskInTextUseCase,
 ) : ViewModel(), ContainerHost<HomeState, HomeSideEffect> {
 
     private val _openConversationEvents = MutableSharedFlow<Long>(replay = 0)
@@ -62,6 +65,16 @@ class HomeViewModel @Inject constructor(
         reduce { state.copy(input = limited) }
 
         if (crossedLimit) postSideEffect(HomeSideEffect.ShowToast(MESSAGE_LENGTH_EXCEEDED))
+    }
+
+    fun onRiskDialogDismiss() = intent {
+        // 닫기가 겹쳐 들어와도 이동은 한 번만 나가도록 읽기와 비우기를 한 reduce 안에서 끝낸다.
+        var toOpen: Long? = null
+        reduce {
+            toOpen = state.conversationToOpen
+            state.copy(riskDetection = null, conversationToOpen = null)
+        }
+        toOpen?.let { _openConversationEvents.emit(it) }
     }
 
     fun onEmotionPickerToggle() = intent {
@@ -104,6 +117,14 @@ class HomeViewModel @Inject constructor(
         }
         val message = pending ?: return@intent
 
+        // 대화가 만들어지기 전에 검사한다. CRITICAL 이면 서버로 보내지 않고 입력도 남겨 둔다.
+        // WARNING 은 그대로 보내되, 안내를 닫은 뒤에야 대화방으로 넘어간다.
+        val detection = detectRiskInText(message)
+        if (detection.shouldBlock) {
+            reduce { state.copy(isSending = false, riskDetection = detection) }
+            return@intent
+        }
+
         val result = session.send(
             conversationId = null,
             content = message,
@@ -117,8 +138,15 @@ class HomeViewModel @Inject constructor(
                 // 제목 예약과 온디바이스 후처리다. 기다리지 않는다. 제목 반영은 데이터 계층이
                 // applicationScope 로 돌려서 이 화면을 벗어나도 끊기지 않는다.
                 viewModelScope.launch { session.finishSend() }
-                reduce { state.copy(input = "") }
-                _openConversationEvents.emit(result.data.message.conversationId)
+                val conversationId = result.data.message.conversationId
+                // 안내는 이동 이벤트가 아니라 상태에 싣는다. 이벤트는 구독자가 없으면 버려지므로
+                // 응답을 기다리는 사이 탭을 옮기면 안내를 한 번도 못 보게 된다.
+                if (detection.level != RiskLevel.NONE) {
+                    reduce { state.copy(input = "", riskDetection = detection, conversationToOpen = conversationId) }
+                } else {
+                    reduce { state.copy(input = "") }
+                    _openConversationEvents.emit(conversationId)
+                }
             }
             // 입력은 남겨 둔다. 실패한 문구를 다시 치게 하면 안 된다.
             is AppResult.Failure -> postSideEffect(HomeSideEffect.ShowToast(result.throwable.toSendFailureMessage()))

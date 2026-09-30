@@ -245,6 +245,105 @@ class ChatRoomEndFlowTest {
         }
     }
 
+    @Test
+    fun 카드를_닫아_두면_같은_카드를_다시_연다() = runTest {
+        chatRoomViewModel().test(this) {
+            containerHost.sendOneMessage()
+            runCurrent()
+            containerHost.endConversation()
+            runCurrent()
+            val card = (containerHost.endFlow() as EndFlow.CardReady).card
+
+            containerHost.onCardSetAside()
+            runCurrent()
+            assertEquals(EndFlow.CardSetAside(card, CardFoldStage.Unfolded), containerHost.endFlow())
+
+            containerHost.onCardReopen()
+            runCurrent()
+            assertEquals(EndFlow.CardReady(card, CardFoldStage.Unfolded), containerHost.endFlow())
+
+            cancelAndIgnoreRemainingItems()
+        }
+    }
+
+    @Test
+    fun 닫아_둔_카드는_접히지_않고_다시_끝낼_수도_없다() = runTest {
+        chatRoomViewModel().test(this) {
+            containerHost.sendOneMessage()
+            runCurrent()
+            containerHost.endConversation()
+            runCurrent()
+            containerHost.onCardSetAside()
+            runCurrent()
+            val setAside = containerHost.endFlow()
+
+            containerHost.onCardFoldTap()
+            containerHost.onEndRequest()
+            runCurrent()
+            assertEquals(setAside, containerHost.endFlow())
+
+            cancelAndIgnoreRemainingItems()
+        }
+    }
+
+    @Test
+    fun 접던_카드를_닫았다_다시_열면_접던_단계에서_이어진다() = runTest {
+        chatRoomViewModel().test(this) {
+            containerHost.sendOneMessage()
+            runCurrent()
+            containerHost.endConversation()
+            runCurrent()
+            containerHost.onCardFoldTap()
+            containerHost.onCardFoldTap()
+            runCurrent()
+            val card = (containerHost.endFlow() as EndFlow.CardReady).card
+
+            containerHost.onCardSetAside()
+            runCurrent()
+            assertEquals(EndFlow.CardSetAside(card, CardFoldStage.FoldedTwice), containerHost.endFlow())
+
+            containerHost.onCardReopen()
+            runCurrent()
+            assertEquals(EndFlow.CardReady(card, CardFoldStage.FoldedTwice), containerHost.endFlow())
+
+            cancelAndIgnoreRemainingItems()
+        }
+    }
+
+    @Test
+    fun 카드가_떠_있을_때_다시_열기를_눌러도_아무_일도_없다() = runTest {
+        chatRoomViewModel().test(this) {
+            containerHost.sendOneMessage()
+            runCurrent()
+            containerHost.endConversation()
+            runCurrent()
+            containerHost.onCardFoldTap()
+            runCurrent()
+            val ready = containerHost.endFlow()
+
+            containerHost.onCardReopen()
+            runCurrent()
+            assertEquals(ready, containerHost.endFlow())
+
+            cancelAndIgnoreRemainingItems()
+        }
+    }
+
+    @Test
+    fun 카드가_없는_단계에서_닫기와_다시_열기를_눌러도_아무_일도_없다() = runTest {
+        chatRoomViewModel().test(this) {
+            containerHost.sendOneMessage()
+            runCurrent()
+
+            containerHost.onCardSetAside()
+            containerHost.onCardReopen()
+            runCurrent()
+            assertEquals(EndFlow.NotStarted, containerHost.endFlow())
+
+            cancelAndIgnoreRemainingItems()
+        }
+    }
+
     private fun ChatRoomViewModel.endFlow(): EndFlow = container.stateFlow.value.endFlow
 
     private fun ChatRoomViewModel.foldStage(): CardFoldStage =

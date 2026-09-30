@@ -7,6 +7,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -32,12 +33,14 @@ internal fun ConversationList(
     state: ChattingListState,
     actions: ChattingListActions,
     modifier: Modifier = Modifier,
+    listState: LazyListState = rememberLazyListState(),
 ) {
     val untitled = stringResource(R.string.chatting_list_untitled)
 
     LazyColumn(
         modifier = modifier.fillMaxSize(),
         contentPadding = ListContentPadding,
+        state = listState,
     ) {
         state.groups.forEachIndexed { index, group ->
             if (group.hasHeader(isFirst = index == 0)) {
