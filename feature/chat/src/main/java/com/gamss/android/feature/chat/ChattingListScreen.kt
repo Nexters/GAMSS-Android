@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -54,6 +56,7 @@ fun ChattingListScreen(
 ) {
     val state by viewModel.collectAsState()
     val chattingRooms = viewModel.chattingRooms.collectAsLazyPagingItems()
+    val listState = rememberLazyListState()
 
     ChattingListSideEffectHandler(viewModel = viewModel, onChatClick = onChatClick)
 
@@ -84,22 +87,25 @@ fun ChattingListScreen(
             onSettingClick = onSettingClick,
         )
 
-        ChattingSearchContent(
-            state = state,
-            chattingRooms = chattingRooms,
-            actions = actions,
-            onKeywordChanged = viewModel::onSearchKeywordChanged,
-            onSearch = viewModel::search,
-            onCancel = viewModel::onSearchCancel,
-            idleContent = {
-                ChattingListBody(
-                    state = state,
-                    actions = actions,
-                    modifier = Modifier.fillMaxSize(),
-                )
-            },
-            modifier = Modifier.weight(1f),
-        )
+        // 검색 모드와 목록 모드는 서로 다른 화면이다. 검색 모드에서는 진행 중인 목록을 그리지 않는다.
+        if (state.search.isActive) {
+            ChattingSearchContent(
+                state = state,
+                chattingRooms = chattingRooms,
+                actions = actions,
+                onKeywordChanged = viewModel::onSearchKeywordChanged,
+                onSearch = viewModel::search,
+                onCancel = viewModel::onSearchCancel,
+                modifier = Modifier.weight(1f),
+            )
+        } else {
+            ChattingListBody(
+                state = state,
+                actions = actions,
+                listState = listState,
+                modifier = Modifier.weight(1f),
+            )
+        }
 
         if (state.isSelectionMode) {
             DeleteButton(enabled = state.canDelete, onClick = viewModel::onDeleteRequest)
@@ -154,6 +160,7 @@ private fun ChattingListBody(
     state: ChattingListState,
     actions: ChattingListActions,
     modifier: Modifier = Modifier,
+    listState: LazyListState = rememberLazyListState(),
 ) {
     when {
         state.isLoading -> CenteredBox(modifier) { CircularProgressIndicator() }
@@ -166,7 +173,7 @@ private fun ChattingListBody(
             )
         }
 
-        else -> ConversationList(state = state, actions = actions, modifier = modifier)
+        else -> ConversationList(state = state, actions = actions, modifier = modifier, listState = listState)
     }
 }
 

@@ -20,9 +20,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.LifecycleStartEffect
+import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
+import androidx.navigation3.runtime.rememberDecoratedNavEntries
 import androidx.navigation3.runtime.rememberNavBackStack
+import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import com.gamss.android.app.R
 import com.gamss.android.app.main.MainScreen
@@ -105,39 +108,45 @@ private fun RootNavDisplay(
         }
     }
 
-    NavDisplay(
-        entries = backStack.map(
-            entryProvider {
-                entry<LoginKey> {
-                    LoginScreen(
-                        googleWebClientId = stringResource(R.string.default_web_client_id),
-                        onLoginSuccess = { isFirstLogin ->
-                            replaceRoot(if (isFirstLogin) OnboardingKey else MainKey)
-                        },
-                    )
-                }
-                entry<OnboardingKey> {
-                    OnboardingScreen(
-                        onComplete = {
-                            // 권한 안내는 동의/거절 모두 온보딩에서 끝난다. 거절도 결정으로 남겨 메인에서 다시 묻지 않는다.
-                            markNotificationPermissionPrompted()
-                            replaceRoot(MainKey)
-                        },
-                        onNotificationPermissionRequest = { requestNotificationPermission() },
-                    )
-                }
-                entry<MainKey> {
-                    // 온보딩을 거치지 않고 들어오는 기존 사용자에게만 한 번 요청한다.
-                    LaunchedEffect(Unit) {
-                        if (!promptedInSession && shouldPromptNotificationPermission()) {
-                            requestNotificationPermission()
-                        }
-                    }
-                    MainScreen()
-                }
-            },
+    val entries = rememberDecoratedNavEntries(
+        backStack = backStack,
+        entryDecorators = listOf(
+            rememberSaveableStateHolderNavEntryDecorator<NavKey>(),
+            rememberViewModelStoreNavEntryDecorator<NavKey>(),
         ),
+        entryProvider = entryProvider {
+            entry<LoginKey> {
+                LoginScreen(
+                    googleWebClientId = stringResource(R.string.default_web_client_id),
+                    onLoginSuccess = { isFirstLogin ->
+                        replaceRoot(if (isFirstLogin) OnboardingKey else MainKey)
+                    },
+                )
+            }
+            entry<OnboardingKey> {
+                OnboardingScreen(
+                    onComplete = {
+                        // 권한 안내는 동의/거절 모두 온보딩에서 끝난다. 거절도 결정으로 남겨 메인에서 다시 묻지 않는다.
+                        markNotificationPermissionPrompted()
+                        replaceRoot(MainKey)
+                    },
+                    onNotificationPermissionRequest = { requestNotificationPermission() },
+                )
+            }
+            entry<MainKey> {
+                // 온보딩을 거치지 않고 들어오는 기존 사용자에게만 한 번 요청한다.
+                LaunchedEffect(Unit) {
+                    if (!promptedInSession && shouldPromptNotificationPermission()) {
+                        requestNotificationPermission()
+                    }
+                }
+                MainScreen()
+            }
+        },
+    )
 
+    NavDisplay(
+        entries = entries,
         transitionSpec = { fadeIn(tween(300)) togetherWith fadeOut(tween(300)) },
         popTransitionSpec = { fadeIn(tween(300)) togetherWith fadeOut(tween(300)) },
         onBack = {

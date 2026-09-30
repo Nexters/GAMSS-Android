@@ -42,7 +42,7 @@ fun ShredStrips(progress: Float, modifier: Modifier = Modifier) {
 
     BoxWithConstraints(modifier = modifier.clipToBounds()) {
         val stripMaxHeight = maxHeight * STRIP_MAX_HEIGHT_FRACTION
-        val fallDistance = maxHeight + stripMaxHeight
+        val fallDistance = maxHeight
         val tearProgress = (displayProgress.value / SHRED_TEAR_FRACTION).coerceIn(0f, 1f)
         val fallProgress = ((displayProgress.value - SHRED_TEAR_FRACTION) / (1f - SHRED_TEAR_FRACTION))
             .coerceIn(0f, 1f)

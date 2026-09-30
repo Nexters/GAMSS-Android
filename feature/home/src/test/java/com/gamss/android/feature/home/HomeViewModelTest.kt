@@ -4,6 +4,9 @@ import com.gamss.android.core.common.AppResult
 import com.gamss.android.domain.conversation.ConversationRepository
 import com.gamss.android.domain.conversation.MAX_MESSAGE_LENGTH
 import com.gamss.android.domain.emotion.EmotionCharacter
+import com.gamss.android.domain.safety.DetectRiskInTextUseCase
+import com.gamss.android.domain.safety.RiskLevel
+import com.gamss.android.domain.safety.RiskTerm
 import com.gamss.android.domain.user.GetUserInfoUseCase
 import com.gamss.android.domain.user.UserProfile
 import io.mockk.coEvery
@@ -26,8 +29,10 @@ class HomeViewModelTest {
     private val getUserInfoUseCase: GetUserInfoUseCase = mockk()
     private val repository = RecordingConversationRepository()
 
-    private fun viewModel(repository: ConversationRepository = this.repository) =
-        HomeViewModel(getUserInfoUseCase, conversationSession(repository))
+    private fun viewModel(
+        repository: ConversationRepository = this.repository,
+        detectRisk: DetectRiskInTextUseCase = riskDetector(),
+    ) = HomeViewModel(getUserInfoUseCase, conversationSession(repository), detectRisk)
 
     @Test
     fun `유저 정보를 받아오면 인사말에 쓸 닉네임이 채워진다`() = runTest {
@@ -98,6 +103,91 @@ class HomeViewModelTest {
         assertEquals(NEW_ROOM_ID, openConversation.await())
         assertEquals(WORRY, repository.sentContent)
         assertNull(repository.sentConversationId)
+    }
+
+    @Test
+    fun `위험 신호가 심각하면 보내지 않고 입력을 남긴 채 안내를 띄운다`() = runTest {
+        val homeViewModel = viewModel(detectRisk = riskDetector(RiskTerm(CRITICAL_TERM, RiskLevel.CRITICAL)))
+        val openConversation = async(start = CoroutineStart.UNDISPATCHED) {
+            withTimeoutOrNull(1) { homeViewModel.openConversationEvents.first() }
+        }
+
+        homeViewModel.test(this) {
+            containerHost.onInputChange(CRITICAL_WORRY)
+            expectState { copy(input = CRITICAL_WORRY) }
+
+            containerHost.onSubmit()
+            expectState { copy(isSending = true) }
+            val blocked = awaitState()
+            assertEquals(false, blocked.isSending)
+            assertEquals(RiskLevel.CRITICAL, blocked.riskDetection?.level)
+            assertEquals(CRITICAL_WORRY, blocked.input)
+            expectNoItems()
+        }
+        assertEquals(0, repository.sendCount)
+        assertNull(openConversation.await())
+    }
+
+    // 안내를 이동 이벤트가 아니라 상태에 싣는지 본다. 응답을 기다리는 사이 탭을 옮겨도 돌아오면 그대로 떠 있어야 한다.
+    @Test
+    fun `위험 신호가 경고 수준이면 보낸 뒤 홈에서 안내를 띄우고 아직 이동하지 않는다`() = runTest {
+        val homeViewModel = viewModel(detectRisk = riskDetector(RiskTerm(CRITICAL_TERM, RiskLevel.WARNING)))
+        val openConversation = async(start = CoroutineStart.UNDISPATCHED) {
+            withTimeoutOrNull(1) { homeViewModel.openConversationEvents.first() }
+        }
+
+        homeViewModel.test(this) {
+            containerHost.onInputChange(CRITICAL_WORRY)
+            expectState { copy(input = CRITICAL_WORRY) }
+
+            containerHost.onSubmit()
+            expectState { copy(isSending = true) }
+            expectState { copy(isSending = false) }
+            val warned = awaitState()
+            assertEquals(RiskLevel.WARNING, warned.riskDetection?.level)
+            assertEquals(NEW_ROOM_ID, warned.conversationToOpen)
+            assertEquals("", warned.input)
+            expectNoItems()
+        }
+        assertEquals(CRITICAL_WORRY, repository.sentContent)
+        assertNull(openConversation.await())
+    }
+
+    @Test
+    fun `경고 안내를 닫으면 보낸 대화방으로 이동한다`() = runTest {
+        val homeViewModel = viewModel(detectRisk = riskDetector(RiskTerm(CRITICAL_TERM, RiskLevel.WARNING)))
+
+        homeViewModel.test(this) {
+            containerHost.onInputChange(CRITICAL_WORRY)
+            expectState { copy(input = CRITICAL_WORRY) }
+            containerHost.onSubmit()
+            expectState { copy(isSending = true) }
+            expectState { copy(isSending = false) }
+            awaitState()
+
+            val openConversation = async(start = CoroutineStart.UNDISPATCHED) {
+                homeViewModel.openConversationEvents.first()
+            }
+            containerHost.onRiskDialogDismiss()
+            expectState { copy(riskDetection = null, conversationToOpen = null) }
+            assertEquals(NEW_ROOM_ID, openConversation.await())
+        }
+    }
+
+    @Test
+    fun `위험 안내를 닫으면 안내만 사라지고 입력은 남는다`() = runTest {
+        viewModel(detectRisk = riskDetector(RiskTerm(CRITICAL_TERM, RiskLevel.CRITICAL))).test(this) {
+            containerHost.onInputChange(CRITICAL_WORRY)
+            expectState { copy(input = CRITICAL_WORRY) }
+            containerHost.onSubmit()
+            expectState { copy(isSending = true) }
+            awaitState()
+
+            containerHost.onRiskDialogDismiss()
+            val dismissed = awaitState()
+            assertNull(dismissed.riskDetection)
+            assertEquals(CRITICAL_WORRY, dismissed.input)
+        }
     }
 
     @Test
@@ -392,5 +482,7 @@ class HomeViewModelTest {
         const val WORRY = "오늘 발표가 너무 떨려요"
         const val SECOND_WORRY = "주말에 약속이 겹쳐서 곤란해요"
         const val BLANK = "   "
+        const val CRITICAL_TERM = "사라지고싶다"
+        const val CRITICAL_WORRY = "다 놓고 사라지고 싶다"
     }
 }

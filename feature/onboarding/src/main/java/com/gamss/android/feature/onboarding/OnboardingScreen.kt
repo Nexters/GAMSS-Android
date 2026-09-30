@@ -66,12 +66,12 @@ private enum class OnboardingPage(
         messageRes = R.string.onboarding_step1_message,
     ),
     Talk(
-        illustrationRes = R.drawable.image_onboarding_step2,
+        illustrationRes = R.drawable.img_onboarding_step2,
         illustrationDescriptionRes = R.string.onboarding_step2_description,
         messageRes = R.string.onboarding_step2_message,
     ),
     Empty(
-        illustrationRes = R.drawable.image_onboarding_step3,
+        illustrationRes = R.drawable.img_onboarding_step3,
         illustrationDescriptionRes = R.string.onboarding_step3_description,
         messageRes = R.string.onboarding_step3_message,
     ),
