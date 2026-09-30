@@ -16,12 +16,20 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -81,6 +89,13 @@ fun GamssInputBar(
     replyClearContentDescription: String? = null,
 ) {
     val canSubmit = sendEnabled && value.isNotBlank()
+
+    // 문자열 API 의 BasicTextField 는 밖에서 글자를 통째로 바꾸면 이전 커서 위치를 그대로 둔다 — 비웠다가
+    // 복구하면 커서가 맨 앞에 남는다. 커서까지 직접 들고, 입력창이 가진 글자와 다른 값이 들어오면(비우기·
+    // 복구·글자 수 제한 등 밖에서 바꾼 경우) 커서를 끝에 둔다. 직접 타이핑하면 글자가 같아 커서·한글 조합
+    // 상태가 그대로 유지된다.
+    var fieldValue by rememberInputFieldValue(value)
+    val shownValue = if (fieldValue.text == value) fieldValue else value.toCursorAtEnd()
     val verticalPadding = if (replyQuote != null) InputBarReplyVerticalPadding else 0.dp
 
     Column(
@@ -108,8 +123,12 @@ fun GamssInputBar(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             BasicTextField(
-                value = value,
-                onValueChange = onValueChange,
+                value = shownValue,
+                onValueChange = { newValue ->
+                    fieldValue = newValue
+                    // 커서만 옮긴 경우는 올려보내지 않는다.
+                    if (newValue.text != value) onValueChange(newValue.text)
+                },
                 modifier = Modifier
                     .weight(1f)
                     .let { if (replyQuote == null) it.padding(vertical = InputBarVerticalPadding) else it },
@@ -156,6 +175,28 @@ fun GamssInputBar(
         }
     }
 }
+
+/**
+ * 입력창이 들고 있는 [TextFieldValue]. 밖에서 [value]가 바뀌면 이 값에도 저장해 둔다 — 그러지 않으면 비울 때
+ * 전송 직전 값이 남아, 전송 실패로 같은 글자가 복구되면 글자가 같다고 보고 예전 커서·한글 조합 범위를 되살린다.
+ *
+ * [value]가 바뀐 때만 맞춘다. 타이핑 직후엔 [value]가 한 박자 늦게 따라오므로, 글자가 다르다는 이유만으로
+ * 덮으면 방금 친 글자와 조합 상태를 옛 값으로 되돌린다.
+ */
+@Composable
+private fun rememberInputFieldValue(value: String): MutableState<TextFieldValue> {
+    val fieldValue = remember { mutableStateOf(value.toCursorAtEnd()) }
+    var lastSyncedValue by remember { mutableStateOf(value) }
+    SideEffect {
+        if (value != lastSyncedValue) {
+            lastSyncedValue = value
+            if (fieldValue.value.text != value) fieldValue.value = value.toCursorAtEnd()
+        }
+    }
+    return fieldValue
+}
+
+private fun String.toCursorAtEnd(): TextFieldValue = TextFieldValue(this, TextRange(length))
 
 @Composable
 private fun ReplyPreviewRow(

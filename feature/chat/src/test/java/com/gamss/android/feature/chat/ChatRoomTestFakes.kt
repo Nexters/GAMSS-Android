@@ -62,11 +62,11 @@ internal fun chatRoomViewModel(
     tokenUsageRefreshNotifier: TokenUsageRefreshNotifier = RecordingTokenUsageRefreshNotifier(),
     pendingReveal: PendingConversationReveal = PendingConversationReveal(),
     userRepository: UserRepository = FakeUserRepository(),
-    riskLexicon: RiskLexicon = EmptyRiskLexicon,
+    riskLexiconRepository: RiskLexiconRepository = FixedRiskLexiconRepository(EmptyRiskLexicon),
 ): ChatRoomViewModel = ChatRoomViewModel(
     tokenUsageRefreshNotifier = tokenUsageRefreshNotifier,
     detectRiskInText = DetectRiskInTextUseCase(
-        repository = FixedRiskLexiconRepository(riskLexicon),
+        repository = riskLexiconRepository,
         matcher = RiskTermMatcher(),
     ),
     getDailyTokenUsageUseCase = GetDailyTokenUsageUseCase(userRepository),
@@ -95,8 +95,20 @@ internal val EmptyRiskLexicon = RiskLexicon(
     agencies = emptyList(),
 )
 
-private class FixedRiskLexiconRepository(private val lexicon: RiskLexicon) : RiskLexiconRepository {
+internal class FixedRiskLexiconRepository(private val lexicon: RiskLexicon) : RiskLexiconRepository {
     override suspend fun getLexicon() = lexicon
+    override suspend fun refresh() = Unit
+}
+
+/** [gate]가 완료될 때까지 검사를 붙든다. 검사 도중 사용자가 다시 입력하는 경합을 재현할 때 쓴다. */
+internal class GatedRiskLexiconRepository(
+    private val lexicon: RiskLexicon,
+    private val gate: CompletableDeferred<Unit>,
+) : RiskLexiconRepository {
+    override suspend fun getLexicon(): RiskLexicon {
+        gate.await()
+        return lexicon
+    }
 
     override suspend fun refresh() = Unit
 }
@@ -158,6 +170,8 @@ internal class FakeConversationRepository(
     private val endFailing: Boolean = false,
     private val restoredConversation: Conversation = Conversation(id = ROOM_ID, title = null),
     private val restoredMessages: List<Message> = emptyList(),
+    /** 지정하면 완료될 때까지 전송 응답을 붙든다. 응답 대기 중 사용자가 다시 입력하는 경합을 재현할 때 쓴다. */
+    private val sendGate: CompletableDeferred<Unit>? = null,
 ) : ConversationRepository {
     private var sentCount = 0
 
@@ -175,6 +189,7 @@ internal class FakeConversationRepository(
     ): AppResult<SentMessage> {
         sentContextSummaries += contextSummary
         sentExcludeCharacters += excludeCharacters
+        sendGate?.await()
         if (failing) return AppResult.Failure(IllegalStateException("send failed"))
         val roomId = conversationId ?: ROOM_ID
         return AppResult.Success(

@@ -19,16 +19,19 @@ import kotlinx.coroutines.launch
 /**
  * 채팅 목록의 "바닥 유지" 동작을 관리한다.
  *
- * - 최초 진입(과거 메시지 로딩 완료) 시 한 번 바닥으로 점프한다.
- * - 내가 메시지를 보내면(전송 완료 시점) 항상 바닥까지 스크롤한다. 사용자의 명시적 행동이라
- *   상대 메시지 도착 시와 달리 자동 스크롤을 유지한다.
- * - 상대 메시지가 도착했을 때, 도착 직전에 이미 바닥을 보고 있었다면(=직전 마지막 메시지가
- *   화면에 보이고 있었다면) 그대로 따라가며 바닥까지 자동 스크롤한다. 이미 위로 스크롤해
- *   과거를 보고 있었다면 자동 스크롤하지 않고 [newMessageToast]를 채워 안내하며, 그 메시지가
- *   화면에 들어오면(사용자가 스크롤해서 직접 봤으면) 지운다.
+ * - 최초 진입 시 한 번 바닥으로 점프한다.
+ * - 내가 보낸 메시지는 말풍선이 그려지는 즉시 항상 바닥까지 스크롤한다.
+ * - 답장 로딩 표시가 나타나거나 실제 글자로 바뀌거나 상대 메시지가 도착하면, 직전에 바닥을 보고
+ *   있었을 때만 따라 내려간다. 위를 보고 있었다면 도착한 메시지를 [newMessageToast]로 안내하고,
+ *   그 메시지가 화면에 들어오면 지운다. 이렇게 화면 밖에 도착한 메시지는 뒤늦게 스크롤로 보여도
+ *   등장 애니메이션 없이 그대로 나타난다.
+ *
+ * 메시지는 [ChatRoomState.listKeyOf] 기준으로 구분한다. 목록 key와 같아야 가시성 판정이 맞고,
+ * 내 메시지가 임시 id → 서버 id로 바뀌어도 새 메시지로 보지 않는다.
  */
 internal class ChatScrollState(
     private val listState: LazyListState,
+    private val animationState: ChatMessageAnimation,
     private val coroutineScope: CoroutineScope,
 ) {
     var newMessageToast by mutableStateOf<Message?>(null)
@@ -37,20 +40,7 @@ internal class ChatScrollState(
     var hasScrolledToInitialBottom by mutableStateOf(false)
         private set
 
-    private var lastSeenMessageId: Long? = null
-
-    // 내 전송 완료로 인한 자동 스크롤이 방금 반영한 메시지 id. handleNewMessage 가 같은 메시지를
-    // 또 새 메시지로 처리해 토스트를 잠깐 띄웠다 지우는 걸 막는다.
-    private var lastAutoScrolledMessageId: Long? = null
-
-    // handleSendingChanged 가 true→false 전환만 골라내는 데 쓰는 직전 값.
-    private var wasSending = false
-
-    // 전송이 시작된 시점(isSending false→true)의 마지막 메시지 id. 전송이 끝났을 때(true→false)
-    // 이 값과 비교해 성공 여부를 판단한다 — 실패(네트워크 오류, 위험 감지 차단 등)하면 메시지가 추가되지
-    // 않아 id가 그대로다. 이 비교 없이 isSending 전환만 보면, 위로 스크롤해 과거를 보는 중에 전송이
-    // 실패해도 newMessageToast가 지워지고 바닥으로 점프해버린다.
-    private var lastMessageIdBeforeSend: Long? = null
+    private var lastSeenItem: BottomItem? = null
 
     val showScrollToBottomButton: Boolean by derivedStateOf {
         listState.canScrollForward && newMessageToast == null
@@ -64,6 +54,8 @@ internal class ChatScrollState(
     fun scrollToBottom(state: ChatRoomState) {
         val index = state.lastItemIndex
         if (index < 0) return
+        // 부드러운 스크롤은 목록 전체를 매 프레임 다시 배치해, 등장 애니메이션과 겹치면 프레임이 밀렸다
+        // (벤치마크 트레이스). 한 번에 점프하고 움직임은 새 말풍선의 등장 애니메이션에 맡긴다.
         coroutineScope.launch { listState.scrollToItem(index) }
     }
 
@@ -72,58 +64,66 @@ internal class ChatScrollState(
         if (state.messages.isNotEmpty()) {
             listState.scrollToItem(state.lastItemIndex)
         }
-        lastSeenMessageId = state.messages.lastOrNull()?.id
+        lastSeenItem = state.bottomItem
         hasScrolledToInitialBottom = true
     }
 
-    /** [state]의 isSending 값이 바뀔 때마다 호출한다. true→false 전환일 때만 전송 완료 처리를 한다. */
-    suspend fun handleSendingChanged(state: ChatRoomState) {
-        val isSending = state.isSending
-        if (!wasSending && isSending) {
-            lastMessageIdBeforeSend = state.messages.lastOrNull()?.id
-        } else if (wasSending && !isSending) {
-            val succeeded = state.messages.lastOrNull()?.id != lastMessageIdBeforeSend
-            handleSendConcluded(state, succeeded)
-        }
-        wasSending = isSending
-    }
-
-    // 스크롤(애니메이션이라 시간이 걸림)보다 커서 갱신이 먼저 반영돼야, 그 사이 handleNewMessage
-    // 가 같은 메시지를 놓치고 토스트를 잠깐 띄우는 경합을 막을 수 있다.
-    private suspend fun handleSendConcluded(state: ChatRoomState, succeeded: Boolean) {
-        if (!succeeded || !hasScrolledToInitialBottom) return
-        lastAutoScrolledMessageId = state.messages.lastOrNull()?.id
-        newMessageToast = null
-        val index = state.lastItemIndex
-        if (index >= 0) {
-            listState.scrollToItem(index)
-        }
-    }
-
-    /** 상대 메시지가 하나씩 도착할 때마다(코멘트 순차 공개 포함) 호출된다. */
+    /**
+     * 목록의 마지막 아이템이 바뀔 때마다 호출된다 — 내가 보냈을 때, 답장 로딩 표시가 나타났을 때,
+     * 그 로딩이 실제 답장으로 공개됐을 때. 전송이 실패해 먼저 그린 내 말풍선이 지워질 때도 불린다.
+     */
     fun handleNewMessage(state: ChatRoomState) {
-        if (!hasScrolledToInitialBottom) return
-        val latest = state.messages.lastOrNull()
-        if (latest == null || latest.id == lastSeenMessageId) return
+        val latest = state.bottomItem
+        if (!hasScrolledToInitialBottom || latest == null || latest == lastSeenItem) return
 
         // 새 메시지가 추가돼도 그 이전 메시지들의 화면상 위치는 바뀌지 않는다 — 그래서 이 메시지가
         // 새 메시지를 반영한 레이아웃 이후에 확인해도, "직전 마지막 메시지가 보이고 있었는지"는
         // 곧 "도착 직전에 바닥을 보고 있었는지"와 같은 뜻이다.
-        val wasAtBottom = lastSeenMessageId?.let(::isMessageVisible) ?: true
-        lastSeenMessageId = latest.id
+        val wasAtBottom = lastSeenItem?.key?.let(::isMessageVisible) ?: true
+        val previous = lastSeenItem
+        lastSeenItem = latest
+        val follows = latest.sender == MessageSender.User || wasAtBottom
 
-        // 내 전송으로 이미 자동 스크롤된 메시지거나 내가 보낸 메시지면 토스트/자동 스크롤 대상이
-        // 아니다 — 기존 토스트가 있다면 건드리지 않고 그대로 둔다.
-        val isToastCandidate = latest.id != lastAutoScrolledMessageId && latest.sender != MessageSender.User
-        if (isToastCandidate && wasAtBottom) {
-            // 이미 바닥을 보고 있었다면 새 메시지를 놓치지 않도록 그대로 따라 내려간다.
-            newMessageToast = null
-            scrollToBottom(state)
-        } else if (isToastCandidate) {
-            // 도착한 시점에 이미 화면에 보이는 메시지라면(뷰포트에 여유가 있어 스크롤 없이도
-            // 보이는 경우) 안내할 필요가 없다.
-            newMessageToast = if (isMessageVisible(latest.id)) null else latest
+        // 전송이 실패하면 먼저 그린 내 말풍선이 지워져 맨 아래가 원래 있던 메시지로 돌아간다. 목록
+        // 길이가 아니라 직전 바닥 아이템의 key가 지금도 남아 있는지로 판정한다 — 성공 경로는
+        // listKeyOf가 임시 id·서버 id를 같은 key로 매핑해 영향받지 않고, 나중에 다른 제거 경로가
+        // 추가돼도 이 판정은 그대로 맞는다. 새로 도착한 게 아니므로 토스트·스크롤·애니메이션 기록
+        // 모두 건드리지 않는다.
+        val isRemoval = previous != null &&
+            state.displayMessages.none { state.listKeyOf(it) == previous.key }
+
+        // 따라 내려가지 않으면 지금 목록의 메시지는 모두 도착 순간을 놓친 것이다. 아직 그려지지 않은
+        // 메시지(=화면 밖)를 미리 본 것으로 기록해, 토스트나 스크롤로 뒤늦게 보일 때 애니메이션되지 않게
+        // 한다. 로딩 표시와 공개된 답장은 key가 같아 로딩 때 기록해 두면 답장도 그대로 나타난다.
+        if (!follows && !isRemoval) animationState.markSeen(state.displayMessages.map(state::listKeyOf))
+
+        when {
+            isRemoval -> Unit
+            // 내가 보낸 메시지는 성공/실패나 직전 스크롤 위치와 무관하게 항상 따라간다.
+            latest.sender == MessageSender.User -> {
+                newMessageToast = null
+                scrollToBottom(state)
+            }
+            // 상대 메시지 도착 직전에 이미 바닥을 보고 있었다면 놓치지 않도록 그대로 따라 내려간다.
+            wasAtBottom -> {
+                newMessageToast = null
+                scrollToBottom(state)
+            }
+            else -> updateToastForLatestReply(state)
         }
+    }
+
+    /**
+     * 맨 아래 아이템이 아니라 로딩 표시를 뺀 최신 메시지로 안내한다. 답장이 공개되는 순간 다음 답장의 로딩
+     * 표시가 곧바로 붙어 맨 아래는 늘 로딩이므로, 맨 아래만 보면 마지막 답장 전까지 토스트가 뜨지 않는다.
+     */
+    private fun updateToastForLatestReply(state: ChatRoomState) {
+        val reply = state.messages.lastOrNull()
+        // 내 메시지 뒤에 로딩 표시만 붙은 경우처럼 새로 공개된 답장이 없으면 안내할 게 없다.
+        if (reply == null || reply.sender == MessageSender.User) return
+        // 도착한 시점에 이미 화면에 보이는 메시지라면(뷰포트에 여유가 있어 스크롤 없이도
+        // 보이는 경우) 안내할 필요가 없다.
+        newMessageToast = if (isMessageVisible(state.listKeyOf(reply))) null else reply
     }
 
     /**
@@ -140,27 +140,36 @@ internal class ChatScrollState(
         listState.layoutInfo.visibleItemsInfo.any { it.key == messageId }
 }
 
-/** 가장 최근에 보이던 마지막 아이템의 인덱스. 코멘트 생성 표시(로딩)까지 바닥에 포함시킨다. */
+/**
+ * 목록 맨 아래 아이템. 로딩 표시와 공개된 답장은 key가 같으므로 [isLoading]까지 비교해야
+ * 로딩 → 실제 글자로 바뀌는 순간도 새 아이템으로 잡힌다.
+ */
+private data class BottomItem(val key: Long, val isLoading: Boolean, val sender: MessageSender)
+
+private val ChatRoomState.bottomItem: BottomItem?
+    get() = displayMessages.lastOrNull()?.let {
+        BottomItem(listKeyOf(it), isLoading = it.id == loadingPlaceholder?.id, it.sender)
+    }
+
 private val ChatRoomState.lastItemIndex: Int
-    get() = messages.size - 1 + if (isAwaitingComments) 1 else 0
+    get() = displayMessages.lastIndex
 
 @Composable
 internal fun rememberChatScrollState(
     state: ChatRoomState,
     listState: LazyListState,
+    animationState: ChatMessageAnimation,
 ): ChatScrollState {
     val coroutineScope = rememberCoroutineScope()
-    val scrollState = remember(state.conversationId) { ChatScrollState(listState, coroutineScope) }
+    val scrollState = remember(state.conversationId, animationState) {
+        ChatScrollState(listState, animationState, coroutineScope)
+    }
 
     LaunchedEffect(state.conversationId, state.isLoading) {
         scrollState.handleInitialLoad(state)
     }
 
-    LaunchedEffect(state.isSending) {
-        scrollState.handleSendingChanged(state)
-    }
-
-    LaunchedEffect(state.messages.lastOrNull()?.id, scrollState.hasScrolledToInitialBottom) {
+    LaunchedEffect(state.bottomItem, scrollState.hasScrolledToInitialBottom) {
         scrollState.handleNewMessage(state)
     }
 

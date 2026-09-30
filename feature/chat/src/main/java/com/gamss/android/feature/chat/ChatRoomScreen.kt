@@ -223,12 +223,16 @@ private fun ChatRoomContent(
 ) {
     val listState = rememberLazyListState()
     val focusManager = LocalFocusManager.current
-    val messageAnimationState = rememberChatMessageAnimationState(
+    val animationState = rememberChatMessageAnimationState(
         conversationId = state.conversationId,
         isLoading = state.isLoading,
-        messageIds = state.messages.map(Message::id),
+        initialMessageIds = { state.messages.map(state::listKeyOf) },
     )
-    val chatScrollState = rememberChatScrollState(state = state, listState = listState)
+    val chatScrollState = rememberChatScrollState(
+        state = state,
+        listState = listState,
+        animationState = animationState,
+    )
 
     // WindowInsets.ime 게터 자체가 @Composable이라 LaunchedEffect(코루틴) 안에서 직접 부를 수
     // 없다. 여기서 객체 참조만 한 번 얻어두면, 이후 getBottom() 호출은 일반 함수 호출이라 코루틴
@@ -281,8 +285,8 @@ private fun ChatRoomContent(
                 state = state,
                 actions = actions,
                 listState = listState,
-                animationState = messageAnimationState,
                 scrollState = chatScrollState,
+                animationState = animationState,
                 showScrollToBottomButton = chatScrollState.showScrollToBottomButton && !isImeInTransition,
                 modifier = Modifier
                     .weight(1f)
@@ -399,12 +403,14 @@ private fun ChatMessageList(
     state: ChatRoomState,
     actions: ChatRoomActions,
     listState: LazyListState,
-    animationState: ChatMessageAnimation,
     scrollState: ChatScrollState,
+    animationState: ChatMessageAnimation,
     showScrollToBottomButton: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val replyQuotes = rememberReplyQuoteLookup(state.messages)
+
+    val loadingPlaceholder = state.loadingPlaceholder
 
     Box(modifier = modifier) {
         LazyColumn(
@@ -431,24 +437,22 @@ private fun ChatMessageList(
                     }
                 }
             }
-            items(state.messages, key = { it.id }) { message ->
-                val replyQuote = replyQuotes.quoteFor(message)
+            items(state.displayMessages, key = state::listKeyOf) { message ->
                 AnimatedChatMessage(
-                    messageId = message.id,
-                    shouldAnimate = animationState.shouldAnimate(message.id),
-                    listState = listState,
+                    messageId = state.listKeyOf(message),
+                    animationState = animationState,
                 ) {
-                    ChatMessageBubble(
-                        message = message,
-                        replyQuote = replyQuote,
-                        onCharacterMessageClick = actions.onCharacterMessageClick,
-                    )
+                    if (message.id == loadingPlaceholder?.id) {
+                        val character = (message.sender as? MessageSender.Character)?.character
+                        LoadingMessageBubble(character = character)
+                    } else {
+                        ChatMessageBubble(
+                            message = message,
+                            replyQuote = replyQuotes.quoteFor(message),
+                            onCharacterMessageClick = actions.onCharacterMessageClick,
+                        )
+                    }
                 }
-            }
-            if (state.isAwaitingComments) {
-                val nextCharacter = (state.pendingComments.firstOrNull()?.sender as? MessageSender.Character)
-                    ?.character
-                item { LoadingMessageBubble(character = nextCharacter) }
             }
         }
 

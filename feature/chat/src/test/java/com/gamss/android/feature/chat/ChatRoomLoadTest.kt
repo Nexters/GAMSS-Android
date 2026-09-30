@@ -86,7 +86,7 @@ class ChatRoomLoadTest {
         val viewModel = chatRoomViewModel(
             conversationRepository = repository,
             pendingReveal = reveal,
-            riskLexicon = EmptyRiskLexicon.copy(terms = listOf(RiskTerm(WARNING_TERM, RiskLevel.WARNING))),
+            riskLexiconRepository = warningLexiconRepository(),
         )
 
         viewModel.test(this) {
@@ -115,20 +115,24 @@ class ChatRoomLoadTest {
         )
         val repository = FakeConversationRepository(restoredMessages = listOf(sent, serverComment))
         val reveal = PendingConversationReveal()
-        val warningLexicon = EmptyRiskLexicon.copy(terms = listOf(RiskTerm(WARNING_TERM, RiskLevel.WARNING)))
+        val warningLexiconRepository = warningLexiconRepository()
         homeSession(repository, reveal).send(conversationId = null, content = WARNING_INPUT, replyToMessageId = null)
 
         val firstVisit = chatRoomViewModel(
             conversationRepository = repository,
             pendingReveal = reveal,
-            riskLexicon = warningLexicon,
+            riskLexiconRepository = warningLexiconRepository,
         )
         firstVisit.start(ROOM_ID)
         advanceUntilIdle()
         // 첫 진입은 pending 경로로 들어와 방금 보낸 메시지만 보인다.
         assertEquals(listOf(USER_ID), firstVisit.container.stateFlow.value.messages.map { it.id })
 
-        chatRoomViewModel(conversationRepository = repository, pendingReveal = reveal, riskLexicon = warningLexicon)
+        chatRoomViewModel(
+            conversationRepository = repository,
+            pendingReveal = reveal,
+            riskLexiconRepository = warningLexiconRepository,
+        )
             .test(this) {
                 containerHost.start(ROOM_ID)
                 skipItems(1) // isLoading = true
@@ -157,6 +161,9 @@ class ChatRoomLoadTest {
             cancelAndIgnoreRemainingItems()
         }
     }
+
+    private fun warningLexiconRepository() =
+        FixedRiskLexiconRepository(EmptyRiskLexicon.copy(terms = listOf(RiskTerm(WARNING_TERM, RiskLevel.WARNING))))
 
     /** 홈 화면이 실제로 받는 것과 같은 모양의, 채팅방과는 별개인 ConversationSession 인스턴스. */
     private fun homeSession(repository: FakeConversationRepository, pendingReveal: PendingConversationReveal) =
