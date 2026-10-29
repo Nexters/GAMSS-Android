@@ -17,8 +17,8 @@ import com.gamss.android.domain.safety.RiskTerm
 import com.gamss.android.domain.summary.SummarizeDiaryUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
-import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
@@ -123,10 +123,12 @@ class ChatRoomLoadTest {
             pendingReveal = reveal,
             riskLexiconRepository = warningLexiconRepository,
         )
+        // 한 runTest 에서 test 블록을 쓰고 나면 다음 test 블록의 intent 가 실행되지 않아 첫 진입은 실제 컨테이너로 둔다.
+        // 실제 컨테이너는 Dispatchers.Default 에서 처리되어 advanceUntilIdle 로는 기다릴 수 없다.
         firstVisit.start(ROOM_ID)
-        advanceUntilIdle()
+        val afterFirstVisit = firstVisit.container.stateFlow.first { it.conversationId == ROOM_ID && !it.isLoading }
         // 첫 진입은 pending 경로로 들어와 방금 보낸 메시지만 보인다.
-        assertEquals(listOf(USER_ID), firstVisit.container.stateFlow.value.messages.map { it.id })
+        assertEquals(listOf(USER_ID), afterFirstVisit.messages.map { it.id })
 
         chatRoomViewModel(
             conversationRepository = repository,
