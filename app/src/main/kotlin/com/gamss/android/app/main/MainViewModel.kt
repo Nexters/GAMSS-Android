@@ -1,6 +1,10 @@
 package com.gamss.android.app.main
 
 import androidx.lifecycle.ViewModel
+import androidx.navigation3.runtime.NavKey
+import com.gamss.android.app.navigation.SCREEN_VIEW_EVENT
+import com.gamss.android.app.navigation.toScreenView
+import com.gamss.android.domain.analytics.AnalyticsTracker
 import com.gamss.android.domain.auth.ObserveSessionStateUseCase
 import com.gamss.android.domain.auth.RestoreSessionUseCase
 import com.gamss.android.domain.auth.SessionState
@@ -19,6 +23,7 @@ class MainViewModel @Inject constructor(
     private val syncDeviceTokenUseCase: SyncDeviceTokenUseCase,
     private val shouldPromptNotificationPermissionUseCase: ShouldPromptNotificationPermissionUseCase,
     private val markNotificationPermissionPromptedUseCase: MarkNotificationPermissionPromptedUseCase,
+    private val analyticsTracker: AnalyticsTracker,
 ) : ViewModel(), ContainerHost<MainState, Unit> {
 
     override val container = container<MainState, Unit>(MainState())
@@ -47,6 +52,11 @@ class MainViewModel @Inject constructor(
 
     fun markNotificationPermissionPrompted() = intent {
         markNotificationPermissionPromptedUseCase()
+    }
+
+    fun trackScreenView(key: NavKey) {
+        val screenView = key.toScreenView() ?: return
+        analyticsTracker.track(SCREEN_VIEW_EVENT, mapOf("screen" to screenView.name) + screenView.properties)
     }
 
     private suspend fun syncDeviceTokenIfAuthenticated(sessionState: SessionState) {
