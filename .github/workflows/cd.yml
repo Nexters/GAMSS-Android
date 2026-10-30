@@ -68,11 +68,17 @@ jobs:
         env:
           DEV_BASE_URL: ${{ secrets.DEV_BASE_URL }}
           PROD_BASE_URL: ${{ secrets.PROD_BASE_URL }}
+          DEV_MIXPANEL_TOKEN: ${{ secrets.DEV_MIXPANEL_TOKEN }}
+          PROD_MIXPANEL_TOKEN: ${{ secrets.PROD_MIXPANEL_TOKEN }}
         run: |
           : "${DEV_BASE_URL:?DEV_BASE_URL secret is not configured}"
           : "${PROD_BASE_URL:?PROD_BASE_URL secret is not configured}"
+          : "${DEV_MIXPANEL_TOKEN:?DEV_MIXPANEL_TOKEN secret is not configured}"
+          : "${PROD_MIXPANEL_TOKEN:?PROD_MIXPANEL_TOKEN secret is not configured}"
           printf 'DEV_BASE_URL=%s\n' "$DEV_BASE_URL" > local.properties
           printf 'PROD_BASE_URL=%s\n' "$PROD_BASE_URL" >> local.properties
+          printf 'DEV_MIXPANEL_TOKEN=%s\n' "$DEV_MIXPANEL_TOKEN" >> local.properties
+          printf 'PROD_MIXPANEL_TOKEN=%s\n' "$PROD_MIXPANEL_TOKEN" >> local.properties
 
       - name: Write release keystore
         run: echo "${{ secrets.RELEASE_KEYSTORE }}" | base64 -d > keystore/release.jks
@@ -157,11 +163,17 @@ jobs:
         env:
           DEV_BASE_URL: ${{ secrets.DEV_BASE_URL }}
           PROD_BASE_URL: ${{ secrets.PROD_BASE_URL }}
+          DEV_MIXPANEL_TOKEN: ${{ secrets.DEV_MIXPANEL_TOKEN }}
+          PROD_MIXPANEL_TOKEN: ${{ secrets.PROD_MIXPANEL_TOKEN }}
         run: |
           : "${DEV_BASE_URL:?DEV_BASE_URL secret is not configured}"
           : "${PROD_BASE_URL:?PROD_BASE_URL secret is not configured}"
+          : "${DEV_MIXPANEL_TOKEN:?DEV_MIXPANEL_TOKEN secret is not configured}"
+          : "${PROD_MIXPANEL_TOKEN:?PROD_MIXPANEL_TOKEN secret is not configured}"
           printf 'DEV_BASE_URL=%s\n' "$DEV_BASE_URL" > local.properties
           printf 'PROD_BASE_URL=%s\n' "$PROD_BASE_URL" >> local.properties
+          printf 'DEV_MIXPANEL_TOKEN=%s\n' "$DEV_MIXPANEL_TOKEN" >> local.properties
+          printf 'PROD_MIXPANEL_TOKEN=%s\n' "$PROD_MIXPANEL_TOKEN" >> local.properties
 
       - name: Write release keystore
         run: echo "${{ secrets.RELEASE_KEYSTORE }}" | base64 -d > keystore/release.jks

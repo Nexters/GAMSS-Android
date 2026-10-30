@@ -25,6 +25,16 @@ fun resolveBaseUrl(key: String): String {
 val devBaseUrl = resolveBaseUrl("DEV_BASE_URL")
 val prodBaseUrl = resolveBaseUrl("PROD_BASE_URL")
 
+// 개발 빌드 이벤트가 운영 지표에 섞이지 않도록 Mixpanel 프로젝트를 나눈다.
+fun resolveMixpanelToken(key: String): String {
+    val value = localProperties.getProperty(key)
+    require(!value.isNullOrBlank()) { "Missing $key in local.properties" }
+    return value.trim()
+}
+
+val devMixpanelToken = resolveMixpanelToken("DEV_MIXPANEL_TOKEN")
+val prodMixpanelToken = resolveMixpanelToken("PROD_MIXPANEL_TOKEN")
+
 android {
     namespace = "com.gamss.android.data"
 
@@ -35,16 +45,20 @@ android {
     buildTypes {
         debug {
             buildConfigField("String", "BASE_URL", "\"$devBaseUrl\"")
+            buildConfigField("String", "MIXPANEL_TOKEN", "\"$devMixpanelToken\"")
         }
         release {
             buildConfigField("String", "BASE_URL", "\"$prodBaseUrl\"")
+            buildConfigField("String", "MIXPANEL_TOKEN", "\"$prodMixpanelToken\"")
         }
         // app 의 `internal` buildType(Firebase App Distribution 배포)과 짝을 맞춘다. app 은 이
         // buildType 에 matchingFallbacks("release")를 두지만, 그건 internal variant 가 아예 없는
         // 라이브러리에만 적용된다 — 이 모듈처럼 진짜 internal variant 를 선언하면 그게 우선한다.
-        // BASE_URL 은 release 와 동일(운영 서버 대상 QA 배포).
+        // BASE_URL 은 release 와 동일(운영 서버 대상 QA 배포). Mixpanel 은 QA 기록이 운영 지표에
+        // 섞이지 않도록 개발 프로젝트로 보낸다.
         create("internal") {
             initWith(getByName("release"))
+            buildConfigField("String", "MIXPANEL_TOKEN", "\"$devMixpanelToken\"")
         }
     }
 
@@ -105,6 +119,8 @@ dependencies {
     // 감정/요약 모델(.tflite, .onnx)을 담은 on-demand 애셋팩(:models:emotion-pack, :models:summary-pack)을
     // 런타임에 요청·추적·로컬 경로 조회하는 데 사용.
     implementation(libs.play.asset.delivery)
+
+    implementation(libs.mixpanel.android)
 
     testImplementation(libs.junit)
     testImplementation(libs.mockk)

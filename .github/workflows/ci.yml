@@ -68,6 +68,8 @@ jobs:
         run: |
           printf 'DEV_BASE_URL=%s\n' "${{ secrets.DEV_BASE_URL }}" > local.properties
           printf 'PROD_BASE_URL=%s\n' "${{ secrets.PROD_BASE_URL }}" >> local.properties
+          printf 'DEV_MIXPANEL_TOKEN=%s\n' "${{ secrets.DEV_MIXPANEL_TOKEN }}" >> local.properties
+          printf 'PROD_MIXPANEL_TOKEN=%s\n' "${{ secrets.PROD_MIXPANEL_TOKEN }}" >> local.properties
 
       - name: Run ${{ matrix.task }}
         run: ./gradlew ${{ matrix.task }} --stacktrace
