@@ -25,7 +25,6 @@ fun resolveBaseUrl(key: String): String {
 val devBaseUrl = resolveBaseUrl("DEV_BASE_URL")
 val prodBaseUrl = resolveBaseUrl("PROD_BASE_URL")
 
-// 개발 빌드 이벤트가 운영 지표에 섞이지 않도록 Mixpanel 프로젝트를 나눈다.
 fun resolveMixpanelToken(key: String): String {
     val value = localProperties.getProperty(key)
     require(!value.isNullOrBlank()) { "Missing $key in local.properties" }

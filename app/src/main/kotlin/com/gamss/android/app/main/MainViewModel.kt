@@ -56,7 +56,7 @@ class MainViewModel @Inject constructor(
 
     fun trackScreenView(key: NavKey) {
         val screenView = key.toScreenView() ?: return
-        analyticsTracker.track(SCREEN_VIEW_EVENT, mapOf("screen" to screenView.name) + screenView.properties)
+        analyticsTracker.track(SCREEN_VIEW_EVENT, screenView.properties + ("screen" to screenView.name))
     }
 
     private suspend fun syncDeviceTokenIfAuthenticated(sessionState: SessionState) {

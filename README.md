@@ -54,12 +54,16 @@ sdk.dir=/path/to/Android/sdk
 # 필수. 없으면 빌드가 실패한다.
 DEV_BASE_URL=<debug-base-url>
 PROD_BASE_URL=<release-base-url>
+DEV_MIXPANEL_TOKEN=<dev-project-token>
+PROD_MIXPANEL_TOKEN=<prod-project-token>
 ```
 
 `DEV_BASE_URL`은 debug 빌드, `PROD_BASE_URL`은 release 빌드의 `BuildConfig.BASE_URL`이 된다.
 기본값으로 떨어뜨리지 않는 이유는, 값이 빠진 채 빌드되면 잘못된 서버를 가리키는 앱이 나오기 때문이다.
 
-CI에서는 저장소 시크릿(`DEV_BASE_URL`, `PROD_BASE_URL`)으로 같은 파일을 만든다.
+Mixpanel 토큰은 각 프로젝트의 Project Token을 넣습니다. debug와 internal 빌드는 `DEV_MIXPANEL_TOKEN`, release 빌드는 `PROD_MIXPANEL_TOKEN`을 씁니다.
+
+CI에서는 저장소 시크릿(`DEV_BASE_URL`, `PROD_BASE_URL`, `DEV_MIXPANEL_TOKEN`, `PROD_MIXPANEL_TOKEN`)으로 같은 파일을 만든다.
 
 API 키 등 비밀 값이 필요한 경우에도 `local.properties`에 두고 저장소에 커밋하지 않는다. (`.gitignore`에 포함)
 

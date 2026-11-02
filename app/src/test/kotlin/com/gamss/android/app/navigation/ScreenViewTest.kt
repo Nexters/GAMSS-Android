@@ -27,7 +27,7 @@ class ScreenViewTest {
     }
 
     @Test
-    fun `실제 화면 key 는 모두 이름이 붙어 있다`() {
+    fun `현재 화면 key 는 모두 이름이 붙어 있다`() {
         val keys = listOf(
             LoginKey,
             OnboardingKey,
