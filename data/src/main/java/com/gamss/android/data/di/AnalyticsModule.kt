@@ -16,7 +16,8 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 internal object AnalyticsModule {
 
-    // 자동 이벤트(첫 실행, 세션)는 켜 둔다. IP 기반 위치는 국내 서비스라 쓸 데가 없어 끈다.
+    // 첫 실행, 세션 자동 이벤트는 활성화한다. IP 주소로 위치를 추정하는 기능은 국가나 도시별로 나눠 볼
+    // 계획이 없어 비활성화한다.
     @Provides
     @Singleton
     fun provideAnalyticsTracker(@ApplicationContext context: Context): AnalyticsTracker {

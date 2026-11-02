@@ -69,7 +69,7 @@
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_channel_id"
             android:value="@string/default_notification_channel_id" />
-        <!-- 크래시는 Crashlytics 가 모은다. Mixpanel 은 예외 메시지를 그대로 실어 보내므로 끈다. -->
+        <!-- 크래시는 Crashlytics 에서 수집한다. Mixpanel 크래시 이벤트에는 예외 메시지가 그대로 포함되므로 비활성화한다. -->
         <meta-data
             android:name="com.mixpanel.android.MPConfig.DisableExceptionHandler"
             android:value="true" />
