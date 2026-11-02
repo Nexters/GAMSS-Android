@@ -21,14 +21,21 @@ data class ScreenView(
     val properties: Map<String, Any> = emptyMap(),
 )
 
+// 인자 없는 화면은 Map 으로 둔다. when 분기에 두면 화면이 늘 때마다 복잡도가 올라 detekt
+// CyclomaticComplexMethod 검사에서 실패한다.
+private val screenNames: Map<NavKey, String> = mapOf(
+    LoginKey to "login",
+    OnboardingKey to "onboarding",
+    HomeKey to "home",
+    ChatKey to "chat_list",
+    ArchiveKey to "archive",
+    SettingKey to "setting",
+    AccountInfoKey to "account_info",
+)
+
 /** 새 화면 key 를 추가하면 여기에도 이름을 붙여야 집계된다. MainKey 는 탭을 담는 틀이라 세지 않는다. */
-fun NavKey.toScreenView(): ScreenView? = when (this) {
-    LoginKey -> ScreenView("login")
-    OnboardingKey -> ScreenView("onboarding")
-    HomeKey -> ScreenView("home")
-    ChatKey -> ScreenView("chat_list")
+fun NavKey.toScreenView(): ScreenView? = screenNames[this]?.let(::ScreenView) ?: when (this) {
     is ChatRoomKey -> ScreenView("chat_room")
-    ArchiveKey -> ScreenView("archive")
     is ArchiveDetailKey -> ScreenView("archive_detail", mapOf("emotion" to emotion.name.lowercase()))
     is CardDeleteKey -> ScreenView(
         name = "card_delete",
@@ -37,8 +44,6 @@ fun NavKey.toScreenView(): ScreenView? = when (this) {
             "scope" to if (cardId == null) "emotion_all" else "single",
         ),
     )
-    SettingKey -> ScreenView("setting")
-    AccountInfoKey -> ScreenView("account_info")
     is NicknameChangeKey -> ScreenView("nickname_change")
     is WebViewKey -> ScreenView("webview", mapOf("page" to page.name.lowercase()))
     else -> null
