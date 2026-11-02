@@ -48,6 +48,8 @@ import com.gamss.android.feature.archive.ArchiveDetailScreen
 import com.gamss.android.feature.archive.ArchiveScreen
 import com.gamss.android.feature.archive.navigation.ArchiveDetailKey
 import com.gamss.android.feature.archive.navigation.ArchiveKey
+import com.gamss.android.feature.billing.BillingTestScreen
+import com.gamss.android.feature.billing.navigation.BillingKey
 import com.gamss.android.feature.carddelete.CardDeleteScreen
 import com.gamss.android.feature.carddelete.navigation.CardDeleteKey
 import com.gamss.android.feature.chat.ChatRoomScreen
@@ -157,7 +159,11 @@ private fun mainEntryProvider(navigator: Navigator) = entryProvider {
             onAccountInfoClick = { navigator.navigate(AccountInfoKey) },
             onServiceTermsClick = { navigator.navigate(WebViewKey(GamssWebPage.ServiceTerms)) },
             onPrivacyPolicyClick = { navigator.navigate(WebViewKey(GamssWebPage.PrivacyPolicy)) },
+            onBillingTestClick = { navigator.navigate(BillingKey) },
         )
+    }
+    entry<BillingKey>(metadata = detailSlideTransition) {
+        BillingTestScreen(onBackClick = navigator::goBack)
     }
     entry<CardDeleteKey>(metadata = detailSlideTransition) { key ->
         val cardId = key.cardId

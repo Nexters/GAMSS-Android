@@ -9,12 +9,14 @@ import com.gamss.android.data.local.auth.TokenProvider
 import com.gamss.android.data.local.auth.TokenProviderImpl
 import com.gamss.android.data.local.card.CardLocalDataSource
 import com.gamss.android.data.local.card.RoomCardLocalDataSource
+import com.gamss.android.data.repository.BillingRepositoryImpl
 import com.gamss.android.data.repository.CardRepositoryImpl
 import com.gamss.android.data.repository.ConversationRepositoryImpl
 import com.gamss.android.data.repository.DeviceTokenRepositoryImpl
 import com.gamss.android.data.repository.TokenUsageRefreshNotifierImpl
 import com.gamss.android.data.repository.UserRepositoryImpl
 import com.gamss.android.domain.auth.AuthRepository
+import com.gamss.android.domain.billing.BillingRepository
 import com.gamss.android.domain.card.CardRepository
 import com.gamss.android.domain.conversation.ConversationRepository
 import com.gamss.android.domain.push.DeviceTokenRepository
@@ -47,6 +49,11 @@ internal abstract class RepositoryModule {
     abstract fun bindAuthRepository(
         authRepositoryImpl: AuthRepositoryImpl
     ): AuthRepository
+
+    @Binds
+    abstract fun bindBillingRepository(
+        billingRepositoryImpl: BillingRepositoryImpl,
+    ): BillingRepository
 
     @Binds
     abstract fun bindConversationRepository(

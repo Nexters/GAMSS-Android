@@ -22,6 +22,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.net.toUri
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import com.gamss.android.core.designsystem.theme.GamssTheme
@@ -36,7 +37,9 @@ fun SettingScreen(
     onAccountInfoClick: () -> Unit,
     onServiceTermsClick: () -> Unit,
     onPrivacyPolicyClick: () -> Unit,
+    onBillingTestClick: () -> Unit,
     modifier: Modifier = Modifier,
+    viewModel: SettingViewModel = hiltViewModel(),
 ) {
     val context = LocalContext.current
     val appVersion = remember(context) { context.appVersion() }
@@ -92,6 +95,13 @@ fun SettingScreen(
                 title = stringResource(R.string.setting_list_app_version),
                 additionalInfo = appVersion,
             )
+            // 릴리즈 빌드에는 노출되지 않는 디버그 전용 메뉴.
+            if (viewModel.isDebugBuild) {
+                SettingListItem(
+                    title = stringResource(R.string.setting_list_billing_test),
+                    onClick = onBillingTestClick,
+                )
+            }
         }
     }
 }
