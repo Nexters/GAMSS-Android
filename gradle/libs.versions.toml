@@ -21,6 +21,7 @@ litert = "2.1.5"
 # 1.21.1 부터 libonnxruntime4j_jni.so 가 16KB 페이지에 맞춰 정렬된다(1.20.0, 1.21.0 은 4KB).
 onnxruntime = "1.21.1"
 orbit-mvi = "11.0.0"
+billing = "9.1.0"
 retrofit = "3.0.0"
 okhttp = "5.4.0"
 room = "3.0.0-alpha06"
@@ -92,6 +93,8 @@ orbit-core = { module = "org.orbit-mvi:orbit-core", version.ref = "orbit-mvi" }
 orbit-viewmodel = { module = "org.orbit-mvi:orbit-viewmodel", version.ref = "orbit-mvi" }
 orbit-compose = { module = "org.orbit-mvi:orbit-compose", version.ref = "orbit-mvi" }
 orbit-test = { module = "org.orbit-mvi:orbit-test", version.ref = "orbit-mvi" }
+
+billing-ktx = { module = "com.android.billingclient:billing-ktx", version.ref = "billing" }
 
 retrofit = { module = "com.squareup.retrofit2:retrofit", version.ref = "retrofit" }
 retrofit-converter-kotlinx-serialization = { module = "com.squareup.retrofit2:converter-kotlinx-serialization", version.ref = "retrofit" }

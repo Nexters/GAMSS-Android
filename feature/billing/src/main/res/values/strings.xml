@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="billing_test_title">Billing 테스트</string>
+    <string name="billing_test_not_purchasable">지금은 구매할 수 없는 상품이에요.</string>
+    <string name="billing_test_pending_title">결제 대기 중</string>
+    <string name="billing_test_pending_message">결제가 아직 완료되지 않았어요. 완료되면 자동으로 지급돼요.</string>
+    <string name="billing_test_confirm">확인</string>
+    <string name="billing_test_error_default">결제 중 오류가 발생했어요.</string>
+</resources>
