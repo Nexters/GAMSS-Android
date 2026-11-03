@@ -44,6 +44,8 @@ internal fun CardDetailDialog(
     onViewConversationClick: () -> Unit,
     onShareClick: () -> Unit,
     onShareSheetDismiss: () -> Unit,
+    onKakaoTalkShareClick: () -> Unit,
+    onInstagramShareClick: () -> Unit,
     onInstagramShareFailed: (StoryShareResult) -> Unit,
     onKakaoTalkShareFailed: () -> Unit,
 ) {
@@ -114,13 +116,15 @@ internal fun CardDetailDialog(
         ShareTargetSheet(
             onKakaoTalkClick = {
                 onShareSheetDismiss()
-                if (consumeShareTap() && !context.shareTextToKakaoTalk(kakaoTalkText)) {
-                    onKakaoTalkShareFailed()
+                if (consumeShareTap()) {
+                    onKakaoTalkShareClick()
+                    if (!context.shareTextToKakaoTalk(kakaoTalkText)) onKakaoTalkShareFailed()
                 }
             },
             onInstagramStoryClick = {
                 onShareSheetDismiss()
                 if (consumeShareTap() && !isSharingInstagramStory) {
+                    onInstagramShareClick()
                     isSharingInstagramStory = true
                     scope.launch {
                         try {

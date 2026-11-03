@@ -124,6 +124,8 @@ fun ArchiveDetailScreen(
         onConversationCardDismiss = viewModel::dismissConversationCard,
         onCardShareClick = viewModel::showShareSheet,
         onCardShareSheetDismiss = viewModel::dismissShareSheet,
+        onCardKakaoTalkShareClick = viewModel::reportKakaoTalkShareClick,
+        onCardInstagramShareClick = viewModel::reportInstagramShareClick,
         onCardInstagramShareFailed = viewModel::reportInstagramShareFailure,
         onCardKakaoTalkShareFailed = viewModel::reportKakaoTalkShareFailure,
     )
@@ -184,6 +186,8 @@ private fun ArchiveDetailOverlays(
     onConversationCardDismiss: () -> Unit,
     onCardShareClick: () -> Unit,
     onCardShareSheetDismiss: () -> Unit,
+    onCardKakaoTalkShareClick: () -> Unit,
+    onCardInstagramShareClick: () -> Unit,
     onCardInstagramShareFailed: (StoryShareResult) -> Unit,
     onCardKakaoTalkShareFailed: () -> Unit,
 ) {
@@ -212,6 +216,8 @@ private fun ArchiveDetailOverlays(
             onViewConversationClick = onCardConversationClick,
             onShareClick = onCardShareClick,
             onShareSheetDismiss = onCardShareSheetDismiss,
+            onKakaoTalkShareClick = onCardKakaoTalkShareClick,
+            onInstagramShareClick = onCardInstagramShareClick,
             onInstagramShareFailed = onCardInstagramShareFailed,
             onKakaoTalkShareFailed = onCardKakaoTalkShareFailed,
         )

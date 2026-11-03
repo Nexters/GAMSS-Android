@@ -3,6 +3,8 @@ package com.gamss.android.feature.login
 import androidx.lifecycle.ViewModel
 import com.gamss.android.core.common.AppResult
 import com.gamss.android.core.common.network.ApiException
+import com.gamss.android.domain.analytics.AnalyticsEvent
+import com.gamss.android.domain.analytics.AnalyticsTracker
 import com.gamss.android.domain.auth.LoginUseCase
 import com.gamss.android.domain.auth.SessionExpiredException
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -13,6 +15,7 @@ import javax.inject.Inject
 @HiltViewModel
 class LoginViewModel @Inject constructor(
     private val loginUseCase: LoginUseCase,
+    private val analyticsTracker: AnalyticsTracker,
 ) : ViewModel(), ContainerHost<LoginState, LoginSideEffect> {
 
     override val container = container<LoginState, LoginSideEffect>(LoginState())
@@ -22,11 +25,13 @@ class LoginViewModel @Inject constructor(
 
         when (val result = loginUseCase(googleIdToken)) {
             is AppResult.Success -> {
+                analyticsTracker.track(AnalyticsEvent.LOGIN_SUCCESS, emptyMap())
                 reduce { state.copy(isLoading = false) }
                 postSideEffect(LoginSideEffect.LoginSucceeded(result.data.isFirstLogin))
             }
 
             is AppResult.Failure -> {
+                analyticsTracker.track(AnalyticsEvent.LOGIN_FAIL, emptyMap())
                 reduce { state.copy(isLoading = false) }
                 postSideEffect(LoginSideEffect.ShowToast(result.throwable.toLoginFailureMessage()))
             }
@@ -34,6 +39,7 @@ class LoginViewModel @Inject constructor(
     }
 
     fun requestGoogleSignIn() = intent {
+        analyticsTracker.track(AnalyticsEvent.LOGIN_CLICK, emptyMap())
         reduce {
             state.copy(
                 isLoading = true,
@@ -48,6 +54,7 @@ class LoginViewModel @Inject constructor(
     }
 
     fun onGoogleSignInFailed() = intent {
+        analyticsTracker.track(AnalyticsEvent.LOGIN_FAIL, emptyMap())
         reduce {
             state.copy(
                 isLoading = false,
@@ -58,6 +65,7 @@ class LoginViewModel @Inject constructor(
     }
 
     fun onGoogleSignInCancelled() = intent {
+        analyticsTracker.track(AnalyticsEvent.LOGIN_CANCEL, emptyMap())
         reduce {
             state.copy(
                 isLoading = false,

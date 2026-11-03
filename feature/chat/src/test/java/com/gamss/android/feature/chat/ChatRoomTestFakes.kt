@@ -2,6 +2,7 @@ package com.gamss.android.feature.chat
 
 import androidx.paging.PagingData
 import com.gamss.android.core.common.AppResult
+import com.gamss.android.domain.analytics.AnalyticsTracker
 import com.gamss.android.domain.card.Card
 import com.gamss.android.domain.card.CardRepository
 import com.gamss.android.domain.card.CreateCardUseCase
@@ -63,6 +64,7 @@ internal fun chatRoomViewModel(
     pendingReveal: PendingConversationReveal = PendingConversationReveal(),
     userRepository: UserRepository = FakeUserRepository(),
     riskLexiconRepository: RiskLexiconRepository = FixedRiskLexiconRepository(EmptyRiskLexicon),
+    analyticsTracker: AnalyticsTracker = RecordingAnalyticsTracker(),
 ): ChatRoomViewModel = ChatRoomViewModel(
     tokenUsageRefreshNotifier = tokenUsageRefreshNotifier,
     detectRiskInText = DetectRiskInTextUseCase(
@@ -86,7 +88,16 @@ internal fun chatRoomViewModel(
         emotionAccumulator = ConversationEmotionAccumulator(classifier),
         pendingReveal = pendingReveal,
     ),
+    analyticsTracker = analyticsTracker,
 )
+
+internal class RecordingAnalyticsTracker : AnalyticsTracker {
+    val events = mutableListOf<Pair<String, Map<String, Any>>>()
+
+    override fun track(event: String, properties: Map<String, Any>) {
+        events += event to properties
+    }
+}
 
 internal val EmptyRiskLexicon = RiskLexicon(
     version = 0,

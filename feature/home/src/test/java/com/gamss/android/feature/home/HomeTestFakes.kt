@@ -2,6 +2,7 @@ package com.gamss.android.feature.home
 
 import androidx.paging.PagingData
 import com.gamss.android.core.common.AppResult
+import com.gamss.android.domain.analytics.AnalyticsTracker
 import com.gamss.android.domain.card.Card
 import com.gamss.android.domain.card.CardRepository
 import com.gamss.android.domain.card.CreateCardUseCase
@@ -143,6 +144,14 @@ internal class RecordingConversationRepository(
 
     override fun searchChattingRooms(keyword: String): Flow<PagingData<ChattingRoomSummary>> =
         error("홈 테스트에서 쓰지 않는다")
+}
+
+internal class RecordingAnalyticsTracker : AnalyticsTracker {
+    val events = mutableListOf<Pair<String, Map<String, Any>>>()
+
+    override fun track(event: String, properties: Map<String, Any>) {
+        events += event to properties
+    }
 }
 
 private object NoCardRepository : CardRepository {

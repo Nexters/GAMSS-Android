@@ -35,6 +35,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.gamss.android.core.designsystem.button.GamssButton
 import com.gamss.android.core.designsystem.button.GamssButtonVariant
 import com.gamss.android.core.designsystem.component.GamssText
@@ -88,10 +89,14 @@ fun OnboardingScreen(
     onComplete: () -> Unit,
     onNotificationPermissionRequest: () -> Unit,
     modifier: Modifier = Modifier,
+    viewModel: OnboardingViewModel = hiltViewModel(),
 ) {
     OnboardingContent(
         onComplete = onComplete,
         onNotificationPermissionRequest = onNotificationPermissionRequest,
+        onNextClick = viewModel::trackNext,
+        onSkipClick = viewModel::trackSkip,
+        onStartConfirm = viewModel::trackComplete,
         modifier = modifier,
     )
 }
@@ -100,6 +105,9 @@ fun OnboardingScreen(
 private fun OnboardingContent(
     onComplete: () -> Unit,
     onNotificationPermissionRequest: () -> Unit,
+    onNextClick: (currentPage: Int) -> Unit,
+    onSkipClick: (currentPage: Int) -> Unit,
+    onStartConfirm: () -> Unit,
     modifier: Modifier = Modifier,
     initialPage: Int = 0,
 ) {
@@ -113,10 +121,12 @@ private fun OnboardingContent(
             onDismiss = { showPermissionDialog = false },
             onDisagree = {
                 showPermissionDialog = false
+                onStartConfirm()
                 onComplete()
             },
             onAgree = {
                 showPermissionDialog = false
+                onStartConfirm()
                 onNotificationPermissionRequest()
                 onComplete()
             },
@@ -143,7 +153,10 @@ private fun OnboardingContent(
             onBackClick = {
                 coroutineScope.launch { pagerState.animateScrollToPage(pagerState.currentPage - 1) }
             },
-            onSkipClick = onComplete,
+            onSkipClick = {
+                onSkipClick(pagerState.currentPage)
+                onComplete()
+            },
             modifier = Modifier.align(Alignment.TopCenter),
         )
 
@@ -163,6 +176,7 @@ private fun OnboardingContent(
             OnboardingActionButton(
                 isLastPage = pagerState.currentPage == pages.lastIndex,
                 onNextClick = {
+                    onNextClick(pagerState.currentPage)
                     coroutineScope.launch { pagerState.animateScrollToPage(pagerState.currentPage + 1) }
                 },
                 onStartClick = { showPermissionDialog = true },
@@ -303,6 +317,9 @@ private fun OnboardingStep1Preview() {
         OnboardingContent(
             onComplete = {},
             onNotificationPermissionRequest = {},
+            onNextClick = {},
+            onSkipClick = {},
+            onStartConfirm = {},
         )
     }
 }
@@ -315,6 +332,9 @@ private fun OnboardingStep3Preview() {
         OnboardingContent(
             onComplete = {},
             onNotificationPermissionRequest = {},
+            onNextClick = {},
+            onSkipClick = {},
+            onStartConfirm = {},
             initialPage = OnboardingPage.entries.lastIndex,
         )
     }

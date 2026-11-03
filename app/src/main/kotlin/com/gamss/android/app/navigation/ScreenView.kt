@@ -1,6 +1,7 @@
 package com.gamss.android.app.navigation
 
 import androidx.navigation3.runtime.NavKey
+import com.gamss.android.domain.analytics.AnalyticsProperty
 import com.gamss.android.feature.archive.navigation.ArchiveDetailKey
 import com.gamss.android.feature.archive.navigation.ArchiveKey
 import com.gamss.android.feature.carddelete.navigation.CardDeleteKey
@@ -36,12 +37,12 @@ private val screenNames: Map<NavKey, String> = mapOf(
 /** 새 화면 key 를 추가하면 여기에도 이름을 붙여야 집계된다. MainKey 는 탭을 담는 틀이라 세지 않는다. */
 fun NavKey.toScreenView(): ScreenView? = screenNames[this]?.let(::ScreenView) ?: when (this) {
     is ChatRoomKey -> ScreenView("chat_room")
-    is ArchiveDetailKey -> ScreenView("archive_detail", mapOf("emotion" to emotion.name.lowercase()))
+    is ArchiveDetailKey -> ScreenView("archive_detail", mapOf(AnalyticsProperty.EMOTION to emotion.name.lowercase()))
     is CardDeleteKey -> ScreenView(
         name = "card_delete",
         properties = mapOf(
-            "emotion" to emotion.name.lowercase(),
-            "scope" to if (cardId == null) "emotion_all" else "single",
+            AnalyticsProperty.EMOTION to emotion.name.lowercase(),
+            AnalyticsProperty.SCOPE to if (cardId == null) "emotion_all" else "single",
         ),
     )
     is NicknameChangeKey -> ScreenView("nickname_change")
