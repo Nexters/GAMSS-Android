@@ -4,6 +4,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gamss.android.core.common.AppResult
 import com.gamss.android.core.common.util.formatKoreanTime
+import com.gamss.android.domain.analytics.AnalyticsEvent
+import com.gamss.android.domain.analytics.AnalyticsProperty
+import com.gamss.android.domain.analytics.AnalyticsTracker
+import com.gamss.android.domain.analytics.analyticsValue
 import com.gamss.android.domain.card.CardNotRetryableException
 import com.gamss.android.domain.conversation.CommentGenerationStatus
 import com.gamss.android.domain.conversation.ConversationSession
@@ -36,6 +40,7 @@ class ChatRoomViewModel @Inject constructor(
     private val tokenUsageRefreshNotifier: TokenUsageRefreshNotifier,
     private val detectRiskInText: DetectRiskInTextUseCase,
     private val getDailyTokenUsageUseCase: GetDailyTokenUsageUseCase,
+    private val analyticsTracker: AnalyticsTracker,
 ) : ViewModel(),
     ContainerHost<ChatRoomState, ChatRoomSideEffect> {
 
@@ -220,6 +225,7 @@ class ChatRoomViewModel @Inject constructor(
             if (pending == null) state else state.copy(isSending = true)
         }
         val sending = pending ?: return@intent
+        analyticsTracker.track(AnalyticsEvent.CHAT_SEND)
         val localId = localMessageIdCounter.getAndDecrement()
 
         // 말풍선을 그리기 전에 고정된 메시지 내용으로 위험 신호부터 검사한다. 검사가 끝나기 전엔
@@ -227,6 +233,7 @@ class ChatRoomViewModel @Inject constructor(
         val detection = detectRiskInText(sending.content)
         if (detection.shouldBlock) {
             reduce { state.copy(isSending = false, riskDetection = detection) }
+            analyticsTracker.track(AnalyticsEvent.CHAT_SEND_BLOCKED)
             return@intent
         }
 
@@ -293,6 +300,7 @@ class ChatRoomViewModel @Inject constructor(
             }
             is AppResult.Failure -> {
                 reduce { state.revertOptimisticSend(sending, localId) }
+                analyticsTracker.track(AnalyticsEvent.CHAT_SEND_FAIL)
                 postSideEffect(ChatRoomSideEffect.ShowToast(SEND_FAILED))
             }
         }
@@ -302,8 +310,10 @@ class ChatRoomViewModel @Inject constructor(
         // 검사와 전환을 한 reduce 안에서 처리해야 연타로 두 번 시작되지 않는다.
         // 전이 여부는 단계 값이 아니라 별도 플래그로 든다. 이미 CreatingCard 인 상태에서 또 시작되는 걸 막는다.
         var startCardCreation = false
+        var confirming = false
         reduce {
             startCardCreation = state.canEnd && state.endFlow == EndFlow.CardFailedRetryable
+            confirming = state.canEnd && !startCardCreation
             when {
                 !state.canEnd -> state
                 // 이미 종료된 뒤 카드만 실패한 경우라 다시 물어볼 게 없다.
@@ -311,13 +321,13 @@ class ChatRoomViewModel @Inject constructor(
                 else -> state.copy(endFlow = EndFlow.Confirming)
             }
         }
+        if (confirming) analyticsTracker.track(AnalyticsEvent.CHAT_END_REQUEST)
         if (startCardCreation) runCardCreation()
     }
 
     fun onEndCancel() = intent {
-        reduce {
-            if (state.endFlow == EndFlow.Confirming) state.copy(endFlow = EndFlow.NotStarted) else state
-        }
+        val cancelled = moveEndFlow { if (it == EndFlow.Confirming) EndFlow.NotStarted else null }
+        if (cancelled != null) analyticsTracker.track(AnalyticsEvent.CHAT_END_CANCEL)
     }
 
     fun onEndConfirm() = intent {
@@ -331,6 +341,7 @@ class ChatRoomViewModel @Inject constructor(
             }
         }
         if (!accepted) return@intent
+        analyticsTracker.track(AnalyticsEvent.CHAT_END_CONFIRM)
 
         // 카드를 만드는 동안 댓글이 하나씩 튀어나오면 어색하다.
         flushPendingComments()
@@ -350,25 +361,30 @@ class ChatRoomViewModel @Inject constructor(
     }
 
     fun onCardFoldTap() = intent {
-        reduce {
-            val ready = state.endFlow as? EndFlow.CardReady ?: return@reduce state
-            val next = ready.foldStage.next ?: return@reduce state
-            state.copy(endFlow = ready.copy(foldStage = next))
+        val folded = moveEndFlow { current ->
+            val ready = current as? EndFlow.CardReady
+            ready?.foldStage?.next?.let { ready.copy(foldStage = it) }
+        }
+        folded?.let {
+            analyticsTracker.track(
+                AnalyticsEvent.CARD_FOLD_STEP,
+                mapOf(AnalyticsProperty.STAGE to it.foldStage.analyticsValue),
+            )
         }
     }
 
     fun onCardSetAside() = intent {
-        reduce {
-            val ready = state.endFlow as? EndFlow.CardReady ?: return@reduce state
-            state.copy(endFlow = EndFlow.CardSetAside(ready.card, ready.foldStage))
+        val setAside = moveEndFlow { current ->
+            (current as? EndFlow.CardReady)?.let { EndFlow.CardSetAside(it.card, it.foldStage) }
         }
+        if (setAside != null) analyticsTracker.track(AnalyticsEvent.CARD_SET_ASIDE)
     }
 
     fun onCardReopen() = intent {
-        reduce {
-            val setAside = state.endFlow as? EndFlow.CardSetAside ?: return@reduce state
-            state.copy(endFlow = EndFlow.CardReady(setAside.card, setAside.foldStage))
+        val reopened = moveEndFlow { current ->
+            (current as? EndFlow.CardSetAside)?.let { EndFlow.CardReady(it.card, it.foldStage) }
         }
+        if (reopened != null) analyticsTracker.track(AnalyticsEvent.CARD_REOPEN)
     }
 
     private suspend fun ChatRoomSyntax.runCardCreation() {
@@ -385,8 +401,12 @@ class ChatRoomViewModel @Inject constructor(
                 }
         }
         reduce { state.copy(endFlow = next) }
-        if (result is AppResult.Failure) {
-            postSideEffect(ChatRoomSideEffect.ShowToast(result.throwable.toCardFailureMessage()))
+        when (result) {
+            is AppResult.Success -> analyticsTracker.track(AnalyticsEvent.CARD_CREATE_SUCCESS)
+            is AppResult.Failure -> {
+                analyticsTracker.track(AnalyticsEvent.CARD_CREATE_FAIL)
+                postSideEffect(ChatRoomSideEffect.ShowToast(result.throwable.toCardFailureMessage()))
+            }
         }
     }
 
@@ -453,4 +473,14 @@ class ChatRoomViewModel @Inject constructor(
         const val CARD_ALREADY_MADE = "이 대화의 카드는 이미 만들어졌어요"
         const val CARD_INPUT_MISSING = "카드를 만들 내용이 부족해요"
     }
+}
+
+// reduce 는 다른 intent 와 동시에 상태를 바꾸면 람다를 다시 실행하므로, 실제로 반영된 실행이 고른 값을 반환한다.
+private suspend fun <T : EndFlow> ChatRoomSyntax.moveEndFlow(next: (EndFlow) -> T?): T? {
+    var moved: T? = null
+    reduce {
+        moved = next(state.endFlow)
+        moved?.let { state.copy(endFlow = it) } ?: state
+    }
+    return moved
 }

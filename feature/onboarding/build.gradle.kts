@@ -5,3 +5,7 @@ plugins {
 android {
     namespace = "com.gamss.android.feature.onboarding"
 }
+
+dependencies {
+    implementation(projects.domain)
+}

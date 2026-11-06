@@ -2,6 +2,7 @@ package com.gamss.android.feature.chat
 
 import androidx.paging.PagingData
 import com.gamss.android.core.common.AppResult
+import com.gamss.android.domain.analytics.AnalyticsTracker
 import com.gamss.android.domain.conversation.Conversation
 import com.gamss.android.domain.conversation.ConversationDetail
 import com.gamss.android.domain.conversation.ConversationRepository
@@ -23,10 +24,12 @@ import java.time.LocalDateTime
  */
 internal fun chattingListViewModel(
     repository: ConversationRepository,
+    analyticsTracker: AnalyticsTracker = RecordingAnalyticsTracker(),
 ): ChattingListViewModel = ChattingListViewModel(
     getOngoingConversations = GetOngoingConversationsUseCase(repository),
     deleteConversations = DeleteConversationsUseCase(repository),
     searchChattingRooms = SearchChattingRoomsUseCase(repository),
+    analyticsTracker = analyticsTracker,
 )
 
 /**

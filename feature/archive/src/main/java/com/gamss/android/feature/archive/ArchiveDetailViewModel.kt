@@ -4,6 +4,10 @@ import androidx.lifecycle.ViewModel
 import com.gamss.android.core.common.AppResult
 import com.gamss.android.core.common.util.KoreanTimeZone
 import com.gamss.android.core.ui.share.StoryShareResult
+import com.gamss.android.domain.analytics.AnalyticsEvent
+import com.gamss.android.domain.analytics.AnalyticsProperty
+import com.gamss.android.domain.analytics.AnalyticsTracker
+import com.gamss.android.domain.analytics.analyticsValue
 import com.gamss.android.domain.card.Card
 import com.gamss.android.domain.card.GetCardsByMonthAndEmotionUseCase
 import com.gamss.android.domain.card.MonthlyEmotionQuery
@@ -20,6 +24,7 @@ import javax.inject.Inject
 class ArchiveDetailViewModel @Inject constructor(
     private val getCardsByMonthAndEmotion: GetCardsByMonthAndEmotionUseCase,
     private val getConversation: GetConversationUseCase,
+    private val analyticsTracker: AnalyticsTracker,
 ) : ViewModel(), ContainerHost<ArchiveDetailState, ArchiveDetailSideEffect> {
 
     override val container = container<ArchiveDetailState, ArchiveDetailSideEffect>(
@@ -59,6 +64,7 @@ class ArchiveDetailViewModel @Inject constructor(
 
     fun confirmClear() = intent {
         reduce { state.copy(isClearDialogVisible = false) }
+        trackEvent(AnalyticsEvent.ARCHIVE_CLEAR)
         // 카드를 고르지 않았으니 이 감정 칸을 통째로 비운다. 다른 칸은 건드리지 않는다.
         postSideEffect(ArchiveDetailSideEffect.OpenCardDelete(cardId = null))
     }
@@ -78,11 +84,13 @@ class ArchiveDetailViewModel @Inject constructor(
                 cards = ArchiveCards.Loading,
             )
         }
+        trackEvent(AnalyticsEvent.ARCHIVE_MONTH_CHANGE, AnalyticsProperty.YEAR_MONTH to yearMonth.toString())
         loadMonth(emotion, yearMonth)
     }
 
     fun selectCard(card: Card) = intent {
         reduce { state.copy(selectedCard = card) }
+        trackEvent(AnalyticsEvent.ARCHIVE_CARD_OPEN)
     }
 
     fun dismissCard() = intent {
@@ -96,6 +104,7 @@ class ArchiveDetailViewModel @Inject constructor(
     fun discardSelectedCard() = intent {
         val card = state.selectedCard ?: return@intent
         reduce { state.copy(selectedCard = null, isShareSheetVisible = false) }
+        trackEvent(AnalyticsEvent.ARCHIVE_CARD_DISCARD)
         postSideEffect(ArchiveDetailSideEffect.OpenCardDelete(cardId = card.id))
     }
 
@@ -148,6 +157,9 @@ class ArchiveDetailViewModel @Inject constructor(
             }
         }
 
+        if (conversationCard != null && state.conversationCard == conversationCard) {
+            trackEvent(AnalyticsEvent.ARCHIVE_CONVERSATION_VIEW)
+        }
         // 닫아 버린 카드의 실패를 뒤늦게 알리지 않는다.
         if (conversationCard == null && state.selectedCard?.id == card.id) {
             postSideEffect(ArchiveDetailSideEffect.ConversationLoadFailed)
@@ -165,6 +177,10 @@ class ArchiveDetailViewModel @Inject constructor(
 
     fun dismissShareSheet() = intent {
         reduce { state.copy(isShareSheetVisible = false) }
+    }
+
+    fun reportShareClick(target: ShareTarget) = intent {
+        trackEvent(AnalyticsEvent.ARCHIVE_SHARE_CLICK, AnalyticsProperty.TARGET to target.analyticsValue)
     }
 
     /** [result] 는 항상 실패인 경우만 넘어온다. 호출부가 성공(Shared)까지 올리지 않는다. */
@@ -189,5 +205,16 @@ class ArchiveDetailViewModel @Inject constructor(
         reduce {
             if (state.yearMonth == yearMonth && state.emotion == emotion) state.copy(cards = cards) else state
         }
+    }
+
+    private fun Syntax<ArchiveDetailState, ArchiveDetailSideEffect>.trackEvent(
+        event: String,
+        vararg properties: Pair<String, Any>,
+    ) {
+        val emotion = state.emotion ?: return
+        analyticsTracker.track(
+            event,
+            mapOf(AnalyticsProperty.EMOTION to emotion.analyticsValue, *properties),
+        )
     }
 }
