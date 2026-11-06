@@ -43,6 +43,7 @@ datastore = "1.2.1"
 tink = "1.23.0"
 mockk = "1.13.14"
 playAssetDelivery = "2.3.0"
+mixpanel = "8.11.1"
 paging = "3.4.2"
 androidx-core-splashscreen = "1.2.0"
 profileinstaller = "1.4.1"
@@ -137,6 +138,7 @@ androidx-datastore-preferences = { module = "androidx.datastore:datastore-prefer
 google-tink-android = { module = "com.google.crypto.tink:tink-android", version.ref = "tink" }
 mockk = { module = "io.mockk:mockk", version.ref = "mockk" }
 play-asset-delivery = { module = "com.google.android.play:asset-delivery", version.ref = "playAssetDelivery" }
+mixpanel-android = { module = "com.mixpanel.android:mixpanel-android", version.ref = "mixpanel" }
 androidx-paging-common = { group = "androidx.paging", name = "paging-common", version.ref = "paging" }
 androidx-paging-compose = { group = "androidx.paging", name = "paging-compose", version.ref = "paging" }
 
