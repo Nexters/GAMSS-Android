@@ -20,6 +20,9 @@ interface BillingRepository {
     /** 이미 연결됐거나 연결 중이면 아무것도 하지 않는다 — 중복 연결 금지. */
     fun connect()
 
+    /** 앱이 닫힐 때 호출해 연결을 종료한다. 이후 연결 상태는 [BillingConnectionState.CLOSED]가 된다. */
+    fun endConnection()
+
     /**
      * 매 호출마다 Play에 새로 조회한다 — 결과를 멤버 변수 등에 캐시하지 않는다. 오래된
      * ProductDetails로 [launchPurchaseFlow]를 호출하면 실패하기 때문이다.
