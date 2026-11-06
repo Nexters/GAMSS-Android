@@ -7,6 +7,7 @@ import com.gamss.android.core.ui.share.StoryShareResult
 import com.gamss.android.domain.analytics.AnalyticsEvent
 import com.gamss.android.domain.analytics.AnalyticsProperty
 import com.gamss.android.domain.analytics.AnalyticsTracker
+import com.gamss.android.domain.analytics.analyticsValue
 import com.gamss.android.domain.card.Card
 import com.gamss.android.domain.card.GetCardsByMonthAndEmotionUseCase
 import com.gamss.android.domain.card.MonthlyEmotionQuery
@@ -140,13 +141,11 @@ class ArchiveDetailViewModel @Inject constructor(
             is AppResult.Success -> ConversationCard(card = card, messages = result.data.messages)
             is AppResult.Failure -> null
         }
-        var shown = false
         reduce {
             // 기다리는 사이 사용자가 카드를 닫거나 다른 카드를 열었으면 이 응답은 지난 요청의 것이다.
             // 성공이든 실패든 반영하지 않는다.
             val isStale = state.selectedCard?.id != card.id
-            shown = !isStale && conversationCard != null
-            if (!shown) {
+            if (isStale || conversationCard == null) {
                 state.copy(isConversationLoading = false)
             } else {
                 state.copy(
@@ -158,7 +157,9 @@ class ArchiveDetailViewModel @Inject constructor(
             }
         }
 
-        if (shown) trackEvent(AnalyticsEvent.ARCHIVE_CONVERSATION_VIEW)
+        if (conversationCard != null && state.conversationCard == conversationCard) {
+            trackEvent(AnalyticsEvent.ARCHIVE_CONVERSATION_VIEW)
+        }
         // 닫아 버린 카드의 실패를 뒤늦게 알리지 않는다.
         if (conversationCard == null && state.selectedCard?.id == card.id) {
             postSideEffect(ArchiveDetailSideEffect.ConversationLoadFailed)
@@ -178,12 +179,8 @@ class ArchiveDetailViewModel @Inject constructor(
         reduce { state.copy(isShareSheetVisible = false) }
     }
 
-    fun reportKakaoTalkShareClick() = intent {
-        trackEvent(AnalyticsEvent.ARCHIVE_SHARE_CLICK, AnalyticsProperty.TARGET to SHARE_TARGET_KAKAO)
-    }
-
-    fun reportInstagramShareClick() = intent {
-        trackEvent(AnalyticsEvent.ARCHIVE_SHARE_CLICK, AnalyticsProperty.TARGET to SHARE_TARGET_INSTAGRAM)
+    fun reportShareClick(target: ShareTarget) = intent {
+        trackEvent(AnalyticsEvent.ARCHIVE_SHARE_CLICK, AnalyticsProperty.TARGET to target.analyticsValue)
     }
 
     /** [result] 는 항상 실패인 경우만 넘어온다. 호출부가 성공(Shared)까지 올리지 않는다. */
@@ -217,12 +214,7 @@ class ArchiveDetailViewModel @Inject constructor(
         val emotion = state.emotion ?: return
         analyticsTracker.track(
             event,
-            mapOf(AnalyticsProperty.EMOTION to emotion.name.lowercase(), *properties),
+            mapOf(AnalyticsProperty.EMOTION to emotion.analyticsValue, *properties),
         )
-    }
-
-    private companion object {
-        const val SHARE_TARGET_KAKAO = "kakao"
-        const val SHARE_TARGET_INSTAGRAM = "instagram"
     }
 }

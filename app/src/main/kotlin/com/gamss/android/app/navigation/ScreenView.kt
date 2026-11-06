@@ -2,6 +2,8 @@ package com.gamss.android.app.navigation
 
 import androidx.navigation3.runtime.NavKey
 import com.gamss.android.domain.analytics.AnalyticsProperty
+import com.gamss.android.domain.analytics.AnalyticsScope
+import com.gamss.android.domain.analytics.analyticsValue
 import com.gamss.android.feature.archive.navigation.ArchiveDetailKey
 import com.gamss.android.feature.archive.navigation.ArchiveKey
 import com.gamss.android.feature.carddelete.navigation.CardDeleteKey
@@ -14,8 +16,6 @@ import com.gamss.android.feature.setting.navigation.AccountInfoKey
 import com.gamss.android.feature.setting.navigation.NicknameChangeKey
 import com.gamss.android.feature.setting.navigation.SettingKey
 import com.gamss.android.feature.webview.navigation.WebViewKey
-
-const val SCREEN_VIEW_EVENT = "screen_view"
 
 data class ScreenView(
     val name: String,
@@ -37,15 +37,15 @@ private val screenNames: Map<NavKey, String> = mapOf(
 /** 새 화면 key 를 추가하면 여기에도 이름을 붙여야 집계된다. MainKey 는 탭을 담는 틀이라 세지 않는다. */
 fun NavKey.toScreenView(): ScreenView? = screenNames[this]?.let(::ScreenView) ?: when (this) {
     is ChatRoomKey -> ScreenView("chat_room")
-    is ArchiveDetailKey -> ScreenView("archive_detail", mapOf(AnalyticsProperty.EMOTION to emotion.name.lowercase()))
+    is ArchiveDetailKey -> ScreenView("archive_detail", mapOf(AnalyticsProperty.EMOTION to emotion.analyticsValue))
     is CardDeleteKey -> ScreenView(
         name = "card_delete",
         properties = mapOf(
-            AnalyticsProperty.EMOTION to emotion.name.lowercase(),
-            AnalyticsProperty.SCOPE to if (cardId == null) "emotion_all" else "single",
+            AnalyticsProperty.EMOTION to emotion.analyticsValue,
+            AnalyticsProperty.SCOPE to AnalyticsScope.of(cardId),
         ),
     )
     is NicknameChangeKey -> ScreenView("nickname_change")
-    is WebViewKey -> ScreenView("webview", mapOf("page" to page.name.lowercase()))
+    is WebViewKey -> ScreenView("webview", mapOf(AnalyticsProperty.PAGE to page.analyticsValue))
     else -> null
 }

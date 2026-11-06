@@ -541,7 +541,6 @@ class ArchiveDetailViewModelTest {
             expectSideEffect(ArchiveDetailSideEffect.OpenCardDelete(cardId = angerCard.id))
         }
 
-        // 카드 id 처럼 사용자를 특정할 수 있는 값은 속성에 넣지 않는다.
         val emotionOnly = mapOf<String, Any>(AnalyticsProperty.EMOTION to "anger")
         assertEquals(
             listOf(
@@ -564,8 +563,8 @@ class ArchiveDetailViewModelTest {
             expectState { copy(emotion = EmotionCharacter.ANGER) }
             expectState { copy(cards = ArchiveCards.Loaded(listOf(angerCard))) }
 
-            containerHost.reportKakaoTalkShareClick()
-            containerHost.reportInstagramShareClick()
+            containerHost.reportShareClick(ShareTarget.KAKAO)
+            containerHost.reportShareClick(ShareTarget.INSTAGRAM)
             testScope.runCurrent()
             expectNoItems()
         }

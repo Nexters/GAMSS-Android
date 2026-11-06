@@ -12,16 +12,15 @@ class OnboardingViewModel @Inject constructor(
     private val analyticsTracker: AnalyticsTracker,
 ) : ViewModel() {
 
-    // STEP 은 페이저 인덱스가 아니라 사용자가 보던 페이지 번호(1부터)로 보낸다.
-    fun trackNext(currentPage: Int) {
-        analyticsTracker.track(AnalyticsEvent.ONBOARDING_NEXT, mapOf(AnalyticsProperty.STEP to currentPage + 1))
+    fun trackNext(pageIndex: Int) {
+        analyticsTracker.track(AnalyticsEvent.ONBOARDING_NEXT, mapOf(AnalyticsProperty.STEP to pageIndex + 1))
     }
 
-    fun trackSkip(currentPage: Int) {
-        analyticsTracker.track(AnalyticsEvent.ONBOARDING_SKIP, mapOf(AnalyticsProperty.STEP to currentPage + 1))
+    fun trackSkip(pageIndex: Int) {
+        analyticsTracker.track(AnalyticsEvent.ONBOARDING_SKIP, mapOf(AnalyticsProperty.STEP to pageIndex + 1))
     }
 
     fun trackComplete() {
-        analyticsTracker.track(AnalyticsEvent.ONBOARDING_COMPLETE, emptyMap())
+        analyticsTracker.track(AnalyticsEvent.ONBOARDING_COMPLETE)
     }
 }

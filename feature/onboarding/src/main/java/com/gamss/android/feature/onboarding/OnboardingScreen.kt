@@ -105,8 +105,8 @@ fun OnboardingScreen(
 private fun OnboardingContent(
     onComplete: () -> Unit,
     onNotificationPermissionRequest: () -> Unit,
-    onNextClick: (currentPage: Int) -> Unit,
-    onSkipClick: (currentPage: Int) -> Unit,
+    onNextClick: (pageIndex: Int) -> Unit,
+    onSkipClick: (pageIndex: Int) -> Unit,
     onStartConfirm: () -> Unit,
     modifier: Modifier = Modifier,
     initialPage: Int = 0,

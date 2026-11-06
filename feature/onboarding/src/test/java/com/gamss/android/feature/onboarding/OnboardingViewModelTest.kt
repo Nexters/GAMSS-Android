@@ -13,8 +13,8 @@ class OnboardingViewModelTest {
 
     @Test
     fun `다음을 누르면 보던 페이지 번호를 1부터 세어 보낸다`() {
-        viewModel.trackNext(currentPage = 0)
-        viewModel.trackNext(currentPage = 1)
+        viewModel.trackNext(pageIndex = 0)
+        viewModel.trackNext(pageIndex = 1)
 
         assertEquals(
             listOf(
@@ -27,7 +27,7 @@ class OnboardingViewModelTest {
 
     @Test
     fun `건너뛰기를 누르면 보던 페이지 번호를 1부터 세어 보낸다`() {
-        viewModel.trackSkip(currentPage = 1)
+        viewModel.trackSkip(pageIndex = 1)
 
         assertEquals(
             listOf(AnalyticsEvent.ONBOARDING_SKIP to mapOf(AnalyticsProperty.STEP to 2)),

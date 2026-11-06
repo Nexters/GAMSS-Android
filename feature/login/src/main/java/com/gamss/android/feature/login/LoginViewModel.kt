@@ -25,13 +25,13 @@ class LoginViewModel @Inject constructor(
 
         when (val result = loginUseCase(googleIdToken)) {
             is AppResult.Success -> {
-                analyticsTracker.track(AnalyticsEvent.LOGIN_SUCCESS, emptyMap())
+                analyticsTracker.track(AnalyticsEvent.LOGIN_SUCCESS)
                 reduce { state.copy(isLoading = false) }
                 postSideEffect(LoginSideEffect.LoginSucceeded(result.data.isFirstLogin))
             }
 
             is AppResult.Failure -> {
-                analyticsTracker.track(AnalyticsEvent.LOGIN_FAIL, emptyMap())
+                analyticsTracker.track(AnalyticsEvent.LOGIN_FAIL)
                 reduce { state.copy(isLoading = false) }
                 postSideEffect(LoginSideEffect.ShowToast(result.throwable.toLoginFailureMessage()))
             }
@@ -39,7 +39,7 @@ class LoginViewModel @Inject constructor(
     }
 
     fun requestGoogleSignIn() = intent {
-        analyticsTracker.track(AnalyticsEvent.LOGIN_CLICK, emptyMap())
+        analyticsTracker.track(AnalyticsEvent.LOGIN_CLICK)
         reduce {
             state.copy(
                 isLoading = true,
@@ -54,7 +54,7 @@ class LoginViewModel @Inject constructor(
     }
 
     fun onGoogleSignInFailed() = intent {
-        analyticsTracker.track(AnalyticsEvent.LOGIN_FAIL, emptyMap())
+        analyticsTracker.track(AnalyticsEvent.LOGIN_FAIL)
         reduce {
             state.copy(
                 isLoading = false,
@@ -65,7 +65,7 @@ class LoginViewModel @Inject constructor(
     }
 
     fun onGoogleSignInCancelled() = intent {
-        analyticsTracker.track(AnalyticsEvent.LOGIN_CANCEL, emptyMap())
+        analyticsTracker.track(AnalyticsEvent.LOGIN_CANCEL)
         reduce {
             state.copy(
                 isLoading = false,

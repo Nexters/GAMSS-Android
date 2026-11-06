@@ -2,8 +2,9 @@ package com.gamss.android.app.main
 
 import androidx.lifecycle.ViewModel
 import androidx.navigation3.runtime.NavKey
-import com.gamss.android.app.navigation.SCREEN_VIEW_EVENT
 import com.gamss.android.app.navigation.toScreenView
+import com.gamss.android.domain.analytics.AnalyticsEvent
+import com.gamss.android.domain.analytics.AnalyticsProperty
 import com.gamss.android.domain.analytics.AnalyticsTracker
 import com.gamss.android.domain.auth.ObserveSessionStateUseCase
 import com.gamss.android.domain.auth.RestoreSessionUseCase
@@ -56,7 +57,10 @@ class MainViewModel @Inject constructor(
 
     fun trackScreenView(key: NavKey) {
         val screenView = key.toScreenView() ?: return
-        analyticsTracker.track(SCREEN_VIEW_EVENT, screenView.properties + ("screen" to screenView.name))
+        analyticsTracker.track(
+            AnalyticsEvent.SCREEN_VIEW,
+            screenView.properties + (AnalyticsProperty.SCREEN to screenView.name),
+        )
     }
 
     private suspend fun syncDeviceTokenIfAuthenticated(sessionState: SessionState) {

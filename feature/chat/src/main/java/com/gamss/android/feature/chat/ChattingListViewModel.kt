@@ -106,9 +106,8 @@ class ChattingListViewModel @Inject constructor(
     }
 
     fun search() = intent {
-        // 검색어 규칙을 통과해 실제로 조회한 검색만 남긴다. 삭제 뒤 결과를 다시 맞추는 재검색은
-        // 사용자가 검색한 게 아니라서 여기서만 남긴다.
-        if (runSearch()) analyticsTracker.track(AnalyticsEvent.CHAT_SEARCH, emptyMap())
+        // 삭제 뒤 결과를 맞추는 재검색은 사용자가 한 검색이 아니라서 runSearch 가 아닌 여기서 기록한다.
+        if (runSearch()) analyticsTracker.track(AnalyticsEvent.CHAT_SEARCH)
     }
 
     private suspend fun ChattingListSyntax.runSearch(): Boolean {
@@ -147,7 +146,7 @@ class ChattingListViewModel @Inject constructor(
             is ChattingListPhase.Browsing,
             is ChattingListPhase.NetworkError,
             -> {
-                analyticsTracker.track(AnalyticsEvent.CHAT_LIST_CARD_CLICK, emptyMap())
+                analyticsTracker.track(AnalyticsEvent.CHAT_LIST_CARD_CLICK)
                 postSideEffect(ChattingListSideEffect.OpenChatRoom(conversationId))
             }
 
@@ -204,7 +203,7 @@ class ChattingListViewModel @Inject constructor(
     fun onDeleteConfirm() = intent {
         val current = state.phase
         if (current !is ChattingListPhase.Confirming) return@intent
-        analyticsTracker.track(AnalyticsEvent.CHAT_DELETE_CONFIRM, emptyMap())
+        analyticsTracker.track(AnalyticsEvent.CHAT_DELETE_CONFIRM)
         reduce { state.copy(phase = ChattingListPhase.Deleting(current.targetIds)) }
         runDelete(current.targetIds)
     }

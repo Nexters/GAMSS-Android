@@ -119,13 +119,13 @@ class HomeViewModel @Inject constructor(
             if (pending == null) state else state.copy(isSending = true, isEmotionPickerExpanded = false)
         }
         val message = pending ?: return@intent
-        analyticsTracker.track(AnalyticsEvent.HOME_SUBMIT, emptyMap())
+        analyticsTracker.track(AnalyticsEvent.HOME_SUBMIT)
 
         // 대화가 만들어지기 전에 검사한다. CRITICAL 이면 서버로 보내지 않고 입력도 남겨 둔다.
         // WARNING 은 그대로 보내되, 안내를 닫은 뒤에야 대화방으로 넘어간다.
         val detection = detectRiskInText(message)
         if (detection.shouldBlock) {
-            analyticsTracker.track(AnalyticsEvent.HOME_SUBMIT_BLOCKED, emptyMap())
+            analyticsTracker.track(AnalyticsEvent.HOME_SUBMIT_BLOCKED)
             reduce { state.copy(isSending = false, riskDetection = detection) }
             return@intent
         }
@@ -155,7 +155,7 @@ class HomeViewModel @Inject constructor(
             }
             // 입력은 남겨 둔다. 실패한 문구를 다시 치게 하면 안 된다.
             is AppResult.Failure -> {
-                analyticsTracker.track(AnalyticsEvent.HOME_SUBMIT_FAIL, emptyMap())
+                analyticsTracker.track(AnalyticsEvent.HOME_SUBMIT_FAIL)
                 postSideEffect(HomeSideEffect.ShowToast(result.throwable.toSendFailureMessage()))
             }
         }

@@ -4,7 +4,9 @@ import androidx.lifecycle.ViewModel
 import com.gamss.android.core.common.AppResult
 import com.gamss.android.domain.analytics.AnalyticsEvent
 import com.gamss.android.domain.analytics.AnalyticsProperty
+import com.gamss.android.domain.analytics.AnalyticsScope
 import com.gamss.android.domain.analytics.AnalyticsTracker
+import com.gamss.android.domain.analytics.analyticsValue
 import com.gamss.android.domain.card.DeleteCardUseCase
 import com.gamss.android.domain.card.DeleteCardsByEmotionUseCase
 import com.gamss.android.domain.emotion.EmotionCharacter
@@ -36,8 +38,8 @@ class CardDeleteViewModel @Inject constructor(
         val nextTapCount = state.shredTapCount + 1
         reduce { state.copy(shredTapCount = nextTapCount) }
         val properties = mapOf(
-            AnalyticsProperty.EMOTION to emotion.name.lowercase(),
-            AnalyticsProperty.SCOPE to if (cardId == null) SCOPE_EMOTION_ALL else SCOPE_SINGLE,
+            AnalyticsProperty.EMOTION to emotion.analyticsValue,
+            AnalyticsProperty.SCOPE to AnalyticsScope.of(cardId),
         )
         analyticsTracker.track(
             AnalyticsEvent.CARD_SHRED_TAP,
@@ -65,10 +67,5 @@ class CardDeleteViewModel @Inject constructor(
                 postSideEffect(CardDeleteSideEffect.ShredFailure)
             }
         }
-    }
-
-    private companion object {
-        const val SCOPE_SINGLE = "single"
-        const val SCOPE_EMOTION_ALL = "emotion_all"
     }
 }

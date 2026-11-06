@@ -2,6 +2,8 @@ package com.gamss.android.domain.analytics
 
 /** iOS 와 같은 이름을 써야 한 퍼널로 묶인다. 이름을 바꾸면 iOS 에도 알려야 한다. */
 object AnalyticsEvent {
+    const val SCREEN_VIEW = "screen_view"
+
     const val LOGIN_CLICK = "login_click"
     const val LOGIN_SUCCESS = "login_success"
     const val LOGIN_FAIL = "login_fail"
@@ -44,6 +46,8 @@ object AnalyticsEvent {
 }
 
 object AnalyticsProperty {
+    const val SCREEN = "screen"
+    const val PAGE = "page"
     const val EMOTION = "emotion"
     const val SCOPE = "scope"
     const val STEP = "step"
@@ -52,3 +56,12 @@ object AnalyticsProperty {
     const val TARGET = "target"
     const val TAP_COUNT = "tap_count"
 }
+
+object AnalyticsScope {
+    private const val SINGLE = "single"
+    private const val EMOTION_ALL = "emotion_all"
+
+    fun of(cardId: Long?): String = if (cardId == null) EMOTION_ALL else SINGLE
+}
+
+val Enum<*>.analyticsValue: String get() = name.lowercase()
