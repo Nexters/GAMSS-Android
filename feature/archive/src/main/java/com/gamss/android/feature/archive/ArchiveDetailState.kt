@@ -15,7 +15,11 @@ data class ArchiveDetailState(
     val selectedCard: Card? = null,
     val conversationCard: ConversationCard? = null,
     val isConversationLoading: Boolean = false,
-)
+) {
+    /** 감정 칸 전체 카드 수는 알 수 없어, 보고 있는 달에 카드가 있을 때만 비울 수 있다. */
+    val isClearable: Boolean
+        get() = cards is ArchiveCards.Loaded && cards.cards.isNotEmpty()
+}
 
 /** 종이 더미 자리가 가질 수 있는 상태. 셋이 겹칠 수 없어 플래그 조합 대신 하나로 든다. */
 sealed interface ArchiveCards {

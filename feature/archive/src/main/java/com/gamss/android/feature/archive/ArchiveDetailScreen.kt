@@ -146,6 +146,7 @@ private fun ArchiveDetailFrame(
         topBar = {
             ArchiveDetailTopBar(
                 emotion = emotion,
+                isClearEnabled = state.isClearable,
                 onBackClick = onBackClick,
                 onClearClick = onClearClick,
             )
@@ -253,6 +254,7 @@ private fun ClearConfirmDialog(
 @Composable
 private fun ArchiveDetailTopBar(
     emotion: EmotionCharacter,
+    isClearEnabled: Boolean,
     onBackClick: () -> Unit,
     onClearClick: () -> Unit,
 ) {
@@ -282,10 +284,10 @@ private fun ArchiveDetailTopBar(
             Text(
                 text = stringResource(R.string.archive_clear),
                 style = GamssTheme.typography.body4Medium,
-                color = GamssTheme.colors.gray900,
+                color = if (isClearEnabled) GamssTheme.colors.gray900 else GamssTheme.colors.gray300,
                 modifier = Modifier
                     .clip(RoundedCornerShape(ClearRippleRadius))
-                    .clickable(role = Role.Button, onClick = onClearClick)
+                    .clickable(enabled = isClearEnabled, role = Role.Button, onClick = onClearClick)
                     .padding(ClearHitPadding),
             )
         },
