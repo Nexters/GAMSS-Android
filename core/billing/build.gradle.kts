@@ -8,8 +8,6 @@ android {
 }
 
 dependencies {
-    implementation(projects.core.common)
-
     // BillingResult/ProductDetails가 BillingRepository의 공개 시그니처에 그대로 노출되므로 api로 둔다.
     api(libs.billing.ktx)
     implementation(libs.kotlinx.coroutines.android)
