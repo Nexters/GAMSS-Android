@@ -37,9 +37,12 @@ import javax.inject.Inject
 
 /**
  * 디버그/검증 전용 화면. 프로덕션 아님.
- * Google 정적 테스트 상품(android.test.*)으로 BillingClient 연결·상품 조회·구매창 실행·
- * 구매 콜백·미처리 구매 복구 조회·consume 메커니즘을 수동으로 검증한다. 서버 검증·지급 API가
- * 아직 없어 이 화면은 Play 쪽 흐름만 확인한다 — 지급은 다루지 않는다.
+ * Google 정적 테스트 상품(android.test.*)으로 BillingClient 연결·미처리 구매 복구 조회를
+ * 수동으로 검증한다. 현재 Google 공식 문서는 정적 테스트 상품 ID 방식을 더 이상 다루지 않고
+ * License Tester로 실제 등록한 상품을 쓰는 방식만 안내하고 있어서, android.test.* 상품은
+ * queryProductDetailsAsync로 조회되지 않아 상품 조회 결과·구매창 실행·구매 콜백·consume까지는
+ * 확인하지 못했다. 서버 검증·지급 API가 아직 없어 이 화면은 Play 쪽 흐름만 확인한다 — 지급은
+ * 다루지 않는다.
  * 실행: adb shell am start -n com.gamss.android.dev/com.gamss.android.app.debug.BillingDebugActivity
  */
 @AndroidEntryPoint
@@ -58,7 +61,9 @@ class BillingDebugActivity : ComponentActivity() {
     }
 }
 
-/** Play Console 설정 없이 바로 구매 플로우를 태울 수 있는 구글 예약 테스트 상품 ID. */
+/** 과거 Billing API에서 Play Console 설정 없이 쓸 수 있던 구글 예약 테스트 상품 ID. 현재는
+ * 공식 문서가 License Tester + 실제 등록 상품 방식만 안내해서, queryProductDetailsAsync로
+ * 조회되지 않아 구매창 실행까지는 확인하지 못했다. */
 private val STATIC_TEST_PRODUCT_IDS = listOf(
     "android.test.purchased",
     "android.test.canceled",
