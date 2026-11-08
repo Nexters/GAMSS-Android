@@ -61,7 +61,7 @@ class BillingPurchaseOutcomeMapperTest {
     fun `ITEM_ALREADY_OWNED는 AlreadyOwned로 매핑된다`() {
         val outcomes = mapToPurchaseOutcomes(billingResult(BillingResponseCode.ITEM_ALREADY_OWNED), purchases = null)
 
-        assertEquals(listOf(BillingPurchaseOutcome.AlreadyOwned(productIds = emptyList())), outcomes)
+        assertEquals(listOf(BillingPurchaseOutcome.AlreadyOwned), outcomes)
     }
 
     @Test

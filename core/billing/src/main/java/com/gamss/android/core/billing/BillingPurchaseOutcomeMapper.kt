@@ -19,7 +19,7 @@ internal fun mapToPurchaseOutcomes(
     BillingResponseCode.USER_CANCELED -> listOf(BillingPurchaseOutcome.UserCanceled)
     // ITEM_ALREADY_OWNED는 구매 자체가 아니라 launchBillingFlow 실패 코드라 purchases가 비어
     // 온다 — 미처리 구매가 무엇인지는 호출부가 queryUnfinishedPurchases()로 다시 조회해야 한다.
-    BillingResponseCode.ITEM_ALREADY_OWNED -> listOf(BillingPurchaseOutcome.AlreadyOwned(productIds = emptyList()))
+    BillingResponseCode.ITEM_ALREADY_OWNED -> listOf(BillingPurchaseOutcome.AlreadyOwned)
     else -> listOf(
         BillingPurchaseOutcome.Error(
             responseCode = billingResult.responseCode,

@@ -30,6 +30,6 @@ sealed interface BillingPurchaseOutcome {
     data class Purchased(val purchaseToken: String, val productIds: List<String>) : BillingPurchaseOutcome
     data class Pending(val productIds: List<String>) : BillingPurchaseOutcome
     data object UserCanceled : BillingPurchaseOutcome
-    data class AlreadyOwned(val productIds: List<String>) : BillingPurchaseOutcome
+    data object AlreadyOwned : BillingPurchaseOutcome
     data class Error(val responseCode: Int, val message: String) : BillingPurchaseOutcome
 }
