@@ -60,6 +60,7 @@ fun GamssRootNavHost(
             shouldPromptNotificationPermission = mainViewModel::shouldPromptNotificationPermission,
             onNotificationPermissionPrompted = mainViewModel::markNotificationPermissionPrompted,
             onNotificationPermissionResult = mainViewModel::syncDeviceToken,
+            onScreenView = mainViewModel::trackScreenView,
         )
     }
 }
@@ -70,9 +71,14 @@ private fun RootNavDisplay(
     shouldPromptNotificationPermission: suspend () -> Boolean,
     onNotificationPermissionPrompted: () -> Unit,
     onNotificationPermissionResult: () -> Unit,
+    onScreenView: (NavKey) -> Unit,
 ) {
     val initialKey = if (sessionState == SessionState.Authenticated) MainKey else LoginKey
     val backStack = rememberNavBackStack(initialKey)
+    val currentKey = backStack.lastOrNull()
+    LaunchedEffect(currentKey) {
+        currentKey?.let(onScreenView)
+    }
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission(),
         onResult = { onNotificationPermissionResult() },
@@ -140,7 +146,7 @@ private fun RootNavDisplay(
                         requestNotificationPermission()
                     }
                 }
-                MainScreen()
+                MainScreen(onScreenView = onScreenView)
             }
         },
     )

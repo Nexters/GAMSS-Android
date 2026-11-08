@@ -68,6 +68,7 @@ import com.gamss.android.feature.webview.navigation.WebViewKey
 
 @Composable
 fun MainScreen(
+    onScreenView: (NavKey) -> Unit,
     modelDownloadPromptViewModel: ModelDownloadPromptViewModel = hiltViewModel(),
 ) {
     val destinations = remember { topLevelDestinations() }
@@ -81,6 +82,9 @@ fun MainScreen(
 
     ModelDownloadConfirmationEffect(modelDownloadPromptViewModel, snackbarHostState)
     DoubleBackToExitHandler(enabled = { !navigationState.canGoBack })
+    LaunchedEffect(navigationState.currentKey) {
+        onScreenView(navigationState.currentKey)
+    }
 
     // 종이 보드가 상태바와 탭바 뒤까지 이어져야 해서 Scaffold 바깥에 깐다.
     GamssPaperBackground {
