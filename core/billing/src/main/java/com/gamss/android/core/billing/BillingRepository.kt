@@ -41,7 +41,9 @@ interface BillingRepository {
 
     /**
      * INAPP 미처리 구매를 다시 조회한다. 결과는 구매 콜백과 동일한 [purchaseResults]로 흘러간다.
-     * 앱 시작, 구매 화면 진입, 포그라운드 복귀, Billing 연결 성공 시 호출부가 불러야 한다.
+     * 앱 시작, 구매 화면 진입, 포그라운드 복귀 시 호출부가 불러야 한다. Billing 연결 성공 시에는
+     * [connect]가 자체적으로 호출하므로 호출부가 별도로 부를 필요는 없다 — 중복 호출하면 같은
+     * 미처리 구매가 [purchaseResults]로 두 번 전달될 수 있다.
      */
     suspend fun queryUnfinishedPurchases()
 
