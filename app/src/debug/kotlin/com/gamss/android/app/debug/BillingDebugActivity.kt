@@ -116,7 +116,7 @@ private fun BillingDebugScreen(billingRepository: BillingRepository, activity: C
 
             queryResult?.let { result ->
                 Text(
-                    "조회 결과: responseCode=${result.billingResult.responseCode}, " +
+                    "조회 결과: responseCode=${result.callResult.responseCode}, " +
                         "unfetched=${result.unfetchedProductIds}",
                 )
                 result.products.forEach { product ->
@@ -129,7 +129,7 @@ private fun BillingDebugScreen(billingRepository: BillingRepository, activity: C
                                 obfuscatedAccountId = obfuscatedAccountId,
                             )
                             purchaseLog = purchaseLog +
-                                "launchBillingFlow(${product.productDetails.productId}) → " +
+                                "launchBillingFlow(${product.productId}) → " +
                                 "responseCode=${launchResult.responseCode}"
                         },
                     )
@@ -163,7 +163,7 @@ private fun ProductRow(product: BillingProduct, onPurchaseClick: () -> Unit) {
             modifier = Modifier.padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            Text("${product.productDetails.productId} · ${product.formattedPrice}")
+            Text("${product.productId} · ${product.formattedPrice}")
             Button(onClick = onPurchaseClick) {
                 Text("구매")
             }

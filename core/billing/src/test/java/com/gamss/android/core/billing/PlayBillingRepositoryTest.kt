@@ -76,14 +76,15 @@ class PlayBillingRepositoryTest {
     }
 
     @Test
-    fun `queryProductDetails 실패 응답의 billingResult를 그대로 전달한다`() = runTest {
+    fun `queryProductDetails 실패 응답의 responseCode를 그대로 전달한다`() = runTest {
         fakeDataSource.queryProductDetailsResult =
             billingResult(BillingResponseCode.SERVICE_DISCONNECTED) to
             QueryProductDetailsResult.create(emptyList(), emptyList())
 
         val result = repository.queryProductDetails(listOf("p1"))
 
-        assertEquals(BillingResponseCode.SERVICE_DISCONNECTED, result.billingResult.responseCode)
+        assertEquals(BillingResponseCode.SERVICE_DISCONNECTED, result.callResult.responseCode)
+        assertEquals(false, result.callResult.isSuccess)
     }
 
     @Test
@@ -137,12 +138,13 @@ class PlayBillingRepositoryTest {
     }
 
     @Test
-    fun `consumePurchase는 Play의 BillingResult를 그대로 반환한다`() = runTest {
+    fun `consumePurchase는 Play의 응답 코드를 그대로 반환한다`() = runTest {
         fakeDataSource.consumePurchaseResult = ConsumeResult(billingResult(BillingResponseCode.OK), "token-1")
 
         val result = repository.consumePurchase("token-1")
 
         assertEquals(BillingResponseCode.OK, result.responseCode)
+        assertEquals(true, result.isSuccess)
     }
 
     private fun billingResult(responseCode: Int, debugMessage: String = ""): BillingResult =

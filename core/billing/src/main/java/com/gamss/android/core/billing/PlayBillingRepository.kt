@@ -61,12 +61,13 @@ internal class PlayBillingRepository @Inject constructor(
             val offer = productDetails.oneTimePurchaseOfferDetailsList?.firstOrNull() ?: return@mapNotNull null
             BillingProduct(
                 productDetails = productDetails,
+                productId = productDetails.productId,
                 offerToken = offer.offerToken,
                 formattedPrice = offer.formattedPrice,
             )
         }
         return BillingProductQueryResult(
-            billingResult = billingResult,
+            callResult = billingResult.toOperationResult(),
             products = products,
             unfetchedProductIds = result.unfetchedProductList.map { it.productId },
         )
@@ -76,15 +77,21 @@ internal class PlayBillingRepository @Inject constructor(
         activity: Activity,
         product: BillingProduct,
         obfuscatedAccountId: String,
-    ): BillingResult = dataSource.launchBillingFlow(activity, product, obfuscatedAccountId)
+    ): BillingOperationResult =
+        dataSource.launchBillingFlow(activity, product, obfuscatedAccountId).toOperationResult()
 
     override suspend fun queryUnfinishedPurchases() {
         val (billingResult, purchases) = dataSource.queryPurchases()
         emitOutcomes(mapToPurchaseOutcomes(billingResult, purchases))
     }
 
-    override suspend fun consumePurchase(purchaseToken: String): BillingResult =
-        dataSource.consumePurchase(purchaseToken).billingResult
+    override suspend fun consumePurchase(purchaseToken: String): BillingOperationResult =
+        dataSource.consumePurchase(purchaseToken).billingResult.toOperationResult()
+
+    private fun BillingResult.toOperationResult() = BillingOperationResult(
+        isSuccess = responseCode == BillingResponseCode.OK,
+        responseCode = responseCode,
+    )
 
     private fun handleConnectionEvent(event: BillingConnectionEvent) {
         when (event) {

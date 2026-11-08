@@ -1,7 +1,6 @@
 package com.gamss.android.core.billing
 
 import android.app.Activity
-import com.android.billingclient.api.BillingResult
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -27,14 +26,14 @@ interface BillingRepository {
     suspend fun queryProductDetails(productIds: List<String>): BillingProductQueryResult
 
     /**
-     * 메인 스레드에서 호출해야 한다. 즉시 반환되는 [BillingResult]는 결제창 실행 성공/실패일 뿐,
+     * 메인 스레드에서 호출해야 한다. 즉시 반환되는 결과는 결제창 실행 성공/실패일 뿐,
      * 결제 완료 여부가 아니다 — 실제 결과는 [purchaseResults]로 들어온다.
      */
     fun launchPurchaseFlow(
         activity: Activity,
         product: BillingProduct,
         obfuscatedAccountId: String,
-    ): BillingResult
+    ): BillingOperationResult
 
     /**
      * INAPP 미처리 구매를 다시 조회한다. 결과는 구매 콜백과 동일한 [purchaseResults]로 흘러간다.
@@ -44,5 +43,5 @@ interface BillingRepository {
      */
     suspend fun queryUnfinishedPurchases()
 
-    suspend fun consumePurchase(purchaseToken: String): BillingResult
+    suspend fun consumePurchase(purchaseToken: String): BillingOperationResult
 }
