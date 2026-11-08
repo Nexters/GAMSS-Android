@@ -19,7 +19,6 @@ internal interface PlayBillingDataSource {
     val purchaseUpdates: Flow<PurchasesUpdatedEvent>
 
     fun startConnection()
-    fun endConnection()
 
     /** 매 호출마다 Play에 새로 조회한다 — 결과를 캐시하지 않는다. */
     suspend fun queryProductDetails(productIds: List<String>): Pair<BillingResult, QueryProductDetailsResult>

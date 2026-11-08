@@ -57,8 +57,6 @@ internal class PlayBillingDataSourceImpl @Inject constructor(
         })
     }
 
-    override fun endConnection() = billingClient.endConnection()
-
     override suspend fun queryProductDetails(productIds: List<String>): Pair<BillingResult, QueryProductDetailsResult> {
         val params = QueryProductDetailsParams.newBuilder()
             .setProductList(

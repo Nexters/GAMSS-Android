@@ -54,11 +54,6 @@ internal class PlayBillingRepository @Inject constructor(
         dataSource.startConnection()
     }
 
-    override fun endConnection() {
-        dataSource.endConnection()
-        _connectionState.value = BillingConnectionState.CLOSED
-    }
-
     override suspend fun queryProductDetails(productIds: List<String>): BillingProductQueryResult {
         val (billingResult, result) = dataSource.queryProductDetails(productIds)
 

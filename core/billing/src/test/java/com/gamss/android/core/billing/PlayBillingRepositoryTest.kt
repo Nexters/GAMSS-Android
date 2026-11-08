@@ -68,14 +68,6 @@ class PlayBillingRepositoryTest {
     }
 
     @Test
-    fun `endConnection은 데이터소스 연결을 종료하고 상태를 CLOSED로 남긴다`() {
-        repository.endConnection()
-
-        assertEquals(1, fakeDataSource.endConnectionCallCount)
-        assertEquals(BillingConnectionState.CLOSED, repository.connectionState.value)
-    }
-
-    @Test
     fun `queryProductDetails는 호출할 때마다 Play에 새로 조회한다 - 캐시하지 않는다`() = runTest {
         repository.queryProductDetails(listOf("p1"))
         repository.queryProductDetails(listOf("p1"))

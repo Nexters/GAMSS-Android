@@ -28,8 +28,6 @@ internal class FakeBillingDataSource : PlayBillingDataSource {
 
     var startConnectionCallCount = 0
         private set
-    var endConnectionCallCount = 0
-        private set
     var queryProductDetailsCallCount = 0
         private set
     var queryPurchasesCallCount = 0
@@ -46,10 +44,6 @@ internal class FakeBillingDataSource : PlayBillingDataSource {
     override fun startConnection() {
         startConnectionCallCount++
         onStartConnection()
-    }
-
-    override fun endConnection() {
-        endConnectionCallCount++
     }
 
     override suspend fun queryProductDetails(productIds: List<String>): Pair<BillingResult, QueryProductDetailsResult> {

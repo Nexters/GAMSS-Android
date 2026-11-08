@@ -7,7 +7,6 @@ enum class BillingConnectionState {
     DISCONNECTED,
     CONNECTING,
     CONNECTED,
-    CLOSED,
 }
 
 /**
