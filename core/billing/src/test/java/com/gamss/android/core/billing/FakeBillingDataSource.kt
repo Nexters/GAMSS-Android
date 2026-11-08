@@ -3,7 +3,8 @@ package com.gamss.android.core.billing
 import android.app.Activity
 import com.android.billingclient.api.BillingClient.BillingResponseCode
 import com.android.billingclient.api.BillingResult
-import com.android.billingclient.api.Purchase
+import com.android.billingclient.api.ConsumeResult
+import com.android.billingclient.api.PurchasesResult
 import com.android.billingclient.api.QueryProductDetailsResult
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -38,8 +39,8 @@ internal class FakeBillingDataSource : PlayBillingDataSource {
 
     var queryProductDetailsResult: Pair<BillingResult, QueryProductDetailsResult> =
         okResult() to QueryProductDetailsResult.create(emptyList(), emptyList())
-    var queryPurchasesResult: Pair<BillingResult, List<Purchase>> = okResult() to emptyList()
-    var consumePurchaseResult: BillingResult = okResult()
+    var queryPurchasesResult: PurchasesResult = PurchasesResult(okResult(), emptyList())
+    var consumePurchaseResult: ConsumeResult = ConsumeResult(okResult(), "")
     var launchBillingFlowResult: BillingResult = okResult()
 
     override fun startConnection() {
@@ -62,12 +63,12 @@ internal class FakeBillingDataSource : PlayBillingDataSource {
         obfuscatedAccountId: String,
     ): BillingResult = launchBillingFlowResult
 
-    override suspend fun queryPurchases(): Pair<BillingResult, List<Purchase>> {
+    override suspend fun queryPurchases(): PurchasesResult {
         queryPurchasesCallCount++
         return queryPurchasesResult
     }
 
-    override suspend fun consumePurchase(purchaseToken: String): BillingResult {
+    override suspend fun consumePurchase(purchaseToken: String): ConsumeResult {
         consumePurchaseCallCount++
         return consumePurchaseResult
     }

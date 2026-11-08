@@ -2,7 +2,9 @@ package com.gamss.android.core.billing
 
 import com.android.billingclient.api.BillingClient.BillingResponseCode
 import com.android.billingclient.api.BillingResult
+import com.android.billingclient.api.ConsumeResult
 import com.android.billingclient.api.Purchase
+import com.android.billingclient.api.PurchasesResult
 import com.android.billingclient.api.QueryProductDetailsResult
 import io.mockk.every
 import io.mockk.mockk
@@ -120,7 +122,7 @@ class PlayBillingRepositoryTest {
         every { purchase.purchaseState } returns Purchase.PurchaseState.PENDING
         every { purchase.products } returns listOf("p1")
         every { purchase.purchaseToken } returns "token-1"
-        fakeDataSource.queryPurchasesResult = billingResult(BillingResponseCode.OK) to listOf(purchase)
+        fakeDataSource.queryPurchasesResult = PurchasesResult(billingResult(BillingResponseCode.OK), listOf(purchase))
 
         val received = mutableListOf<BillingPurchaseOutcome>()
         val job = launch { repository.purchaseResults.collect { received += it } }
@@ -144,7 +146,7 @@ class PlayBillingRepositoryTest {
 
     @Test
     fun `consumePurchase는 Play의 BillingResult를 그대로 반환한다`() = runTest {
-        fakeDataSource.consumePurchaseResult = billingResult(BillingResponseCode.OK)
+        fakeDataSource.consumePurchaseResult = ConsumeResult(billingResult(BillingResponseCode.OK), "token-1")
 
         val result = repository.consumePurchase("token-1")
 

@@ -7,12 +7,16 @@ import com.android.billingclient.api.BillingClientStateListener
 import com.android.billingclient.api.BillingFlowParams
 import com.android.billingclient.api.BillingResult
 import com.android.billingclient.api.ConsumeParams
+import com.android.billingclient.api.ConsumeResult
 import com.android.billingclient.api.PendingPurchasesParams
 import com.android.billingclient.api.Purchase
+import com.android.billingclient.api.PurchasesResult
 import com.android.billingclient.api.PurchasesUpdatedListener
 import com.android.billingclient.api.QueryProductDetailsParams
 import com.android.billingclient.api.QueryProductDetailsResult
 import com.android.billingclient.api.QueryPurchasesParams
+import com.android.billingclient.api.consumePurchase
+import com.android.billingclient.api.queryPurchasesAsync
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -92,27 +96,18 @@ internal class PlayBillingDataSourceImpl @Inject constructor(
         return billingClient.launchBillingFlow(activity, billingFlowParams)
     }
 
-    override suspend fun queryPurchases(): Pair<BillingResult, List<Purchase>> {
+    override suspend fun queryPurchases(): PurchasesResult {
         val params = QueryPurchasesParams.newBuilder()
             .setProductType(BillingClient.ProductType.INAPP)
             .build()
-
-        return suspendCancellableCoroutine { continuation ->
-            billingClient.queryPurchasesAsync(params) { result, purchaseList ->
-                continuation.resume(result to purchaseList)
-            }
-        }
+        return billingClient.queryPurchasesAsync(params)
     }
 
-    override suspend fun consumePurchase(purchaseToken: String): BillingResult {
+    override suspend fun consumePurchase(purchaseToken: String): ConsumeResult {
         val params = ConsumeParams.newBuilder()
             .setPurchaseToken(purchaseToken)
             .build()
-        return suspendCancellableCoroutine { continuation ->
-            billingClient.consumeAsync(params) { billingResult, _ ->
-                continuation.resume(billingResult)
-            }
-        }
+        return billingClient.consumePurchase(params)
     }
 
     override fun onPurchasesUpdated(billingResult: BillingResult, purchases: List<Purchase>?) {

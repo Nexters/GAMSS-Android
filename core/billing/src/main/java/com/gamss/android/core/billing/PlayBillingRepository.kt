@@ -89,7 +89,7 @@ internal class PlayBillingRepository @Inject constructor(
     }
 
     override suspend fun consumePurchase(purchaseToken: String): BillingResult =
-        dataSource.consumePurchase(purchaseToken)
+        dataSource.consumePurchase(purchaseToken).billingResult
 
     private fun handleConnectionEvent(event: BillingConnectionEvent) {
         when (event) {
