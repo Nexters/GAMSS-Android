@@ -1,17 +1,8 @@
 package com.gamss.android.core.billing
 
 import android.app.Activity
-import com.android.billingclient.api.BillingClient
 import com.android.billingclient.api.BillingClient.BillingResponseCode
-import com.android.billingclient.api.BillingClientStateListener
-import com.android.billingclient.api.BillingFlowParams
 import com.android.billingclient.api.BillingResult
-import com.android.billingclient.api.ConsumeParams
-import com.android.billingclient.api.Purchase
-import com.android.billingclient.api.PurchasesUpdatedListener
-import com.android.billingclient.api.QueryProductDetailsParams
-import com.android.billingclient.api.QueryProductDetailsResult
-import com.android.billingclient.api.QueryPurchasesParams
 import com.gamss.android.core.billing.di.BillingCoroutineScope
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
@@ -21,23 +12,19 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.suspendCancellableCoroutine
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlin.coroutines.resume
 
 /**
- * 모든 비동기 Play 호출(상품 조회·미처리 구매 조회·consume)을 listener 기반 원본 API를 그대로
- * suspendCancellableCoroutine으로 감싸 쓴다 — billing-ktx 의 suspend 확장을 쓰지 않는다. 그래야
- * [BillingClient]를 생성자로 주입받는 그대로 mockk로 대체해, 콜백을 직접 호출시켜 테스트할 수 있다
- * (static/top-level 확장 함수는 mockk로 가로채기 까다롭다).
+ * [PlayBillingDataSource]가 콜백 기반 BillingClient API를 Flow로 감싸 넘겨주면, 여기서는 SDK를
+ * 전혀 모른 채 도메인 판단(연결 중복 방지, 응답코드→[BillingPurchaseOutcome] 매핑, 미처리 구매
+ * 복구 트리거)만 담당한다.
  */
 @Singleton
 internal class PlayBillingRepository @Inject constructor(
-    private val billingClient: BillingClient,
-    forwardingListener: ForwardingPurchasesUpdatedListener,
+    private val dataSource: PlayBillingDataSource,
     @BillingCoroutineScope private val scope: CoroutineScope,
-) : BillingRepository, PurchasesUpdatedListener {
+) : BillingRepository {
 
     private val _connectionState = MutableStateFlow(BillingConnectionState.DISCONNECTED)
     override val connectionState: StateFlow<BillingConnectionState> = _connectionState.asStateFlow()
@@ -47,7 +34,14 @@ internal class PlayBillingRepository @Inject constructor(
     override val purchaseResults: Flow<BillingPurchaseOutcome> = _purchaseResults.asSharedFlow()
 
     init {
-        forwardingListener.delegate = this
+        scope.launch {
+            dataSource.connectionEvents.collect { event -> handleConnectionEvent(event) }
+        }
+        scope.launch {
+            dataSource.purchaseUpdates.collect { event ->
+                emitOutcomes(mapToPurchaseOutcomes(event.billingResult, event.purchases))
+            }
+        }
     }
 
     override fun connect() {
@@ -57,42 +51,16 @@ internal class PlayBillingRepository @Inject constructor(
             return
         }
         _connectionState.value = BillingConnectionState.CONNECTING
-        billingClient.startConnection(object : BillingClientStateListener {
-            override fun onBillingSetupFinished(billingResult: BillingResult) {
-                if (billingResult.responseCode == BillingResponseCode.OK) {
-                    _connectionState.value = BillingConnectionState.CONNECTED
-                    scope.launch { queryUnfinishedPurchases() }
-                } else {
-                    _connectionState.value = BillingConnectionState.DISCONNECTED
-                }
-            }
+        dataSource.startConnection()
+    }
 
-            // 자동 재연결은 호출부가 책임진다(앱 시작·화면 진입·포그라운드 복귀 시 connect() 재호출).
-            override fun onBillingServiceDisconnected() {
-                _connectionState.value = BillingConnectionState.DISCONNECTED
-            }
-        })
+    override fun endConnection() {
+        dataSource.endConnection()
+        _connectionState.value = BillingConnectionState.CLOSED
     }
 
     override suspend fun queryProductDetails(productIds: List<String>): BillingProductQueryResult {
-        val params = QueryProductDetailsParams.newBuilder()
-            .setProductList(
-                productIds.map { productId ->
-                    QueryProductDetailsParams.Product.newBuilder()
-                        .setProductId(productId)
-                        .setProductType(BillingClient.ProductType.INAPP)
-                        .build()
-                },
-            )
-            .build()
-
-        // 매 호출마다 새로 조회한다 — 결과를 캐시해 두지 않는다.
-        val (billingResult, result) =
-            suspendCancellableCoroutine<Pair<BillingResult, QueryProductDetailsResult>> { continuation ->
-                billingClient.queryProductDetailsAsync(params) { resultCode, queryResult ->
-                    continuation.resume(resultCode to queryResult)
-                }
-            }
+        val (billingResult, result) = dataSource.queryProductDetails(productIds)
 
         val products = result.productDetailsList.mapNotNull { productDetails ->
             val offer = productDetails.oneTimePurchaseOfferDetailsList?.firstOrNull() ?: return@mapNotNull null
@@ -113,47 +81,29 @@ internal class PlayBillingRepository @Inject constructor(
         activity: Activity,
         product: BillingProduct,
         obfuscatedAccountId: String,
-    ): BillingResult {
-        val productDetailsParams = BillingFlowParams.ProductDetailsParams.newBuilder()
-            .setProductDetails(product.productDetails)
-            .apply { product.offerToken?.let(::setOfferToken) }
-            .build()
-
-        val billingFlowParams = BillingFlowParams.newBuilder()
-            .setProductDetailsParamsList(listOf(productDetailsParams))
-            .setObfuscatedAccountId(obfuscatedAccountId)
-            .build()
-
-        return billingClient.launchBillingFlow(activity, billingFlowParams)
-    }
+    ): BillingResult = dataSource.launchBillingFlow(activity, product, obfuscatedAccountId)
 
     override suspend fun queryUnfinishedPurchases() {
-        val params = QueryPurchasesParams.newBuilder()
-            .setProductType(BillingClient.ProductType.INAPP)
-            .build()
+        val (billingResult, purchases) = dataSource.queryPurchases()
+        emitOutcomes(mapToPurchaseOutcomes(billingResult, purchases))
+    }
 
-        val (billingResult, purchases) =
-            suspendCancellableCoroutine<Pair<BillingResult, List<Purchase>>> { continuation ->
-                billingClient.queryPurchasesAsync(params) { result, purchaseList ->
-                    continuation.resume(result to purchaseList)
+    override suspend fun consumePurchase(purchaseToken: String): BillingResult =
+        dataSource.consumePurchase(purchaseToken)
+
+    private fun handleConnectionEvent(event: BillingConnectionEvent) {
+        when (event) {
+            is BillingConnectionEvent.SetupFinished -> {
+                if (event.billingResult.responseCode == BillingResponseCode.OK) {
+                    _connectionState.value = BillingConnectionState.CONNECTED
+                    scope.launch { queryUnfinishedPurchases() }
+                } else {
+                    _connectionState.value = BillingConnectionState.DISCONNECTED
                 }
             }
-        emitOutcomes(mapToPurchaseOutcomes(billingResult, purchases))
-    }
-
-    override suspend fun consumePurchase(purchaseToken: String): BillingResult {
-        val params = ConsumeParams.newBuilder()
-            .setPurchaseToken(purchaseToken)
-            .build()
-        return suspendCancellableCoroutine { continuation ->
-            billingClient.consumeAsync(params) { billingResult, _ ->
-                continuation.resume(billingResult)
-            }
+            // 자동 재연결은 호출부가 책임진다(앱 시작·화면 진입·포그라운드 복귀 시 connect() 재호출).
+            BillingConnectionEvent.ServiceDisconnected -> _connectionState.value = BillingConnectionState.DISCONNECTED
         }
-    }
-
-    override fun onPurchasesUpdated(billingResult: BillingResult, purchases: List<Purchase>?) {
-        emitOutcomes(mapToPurchaseOutcomes(billingResult, purchases))
     }
 
     private fun emitOutcomes(outcomes: List<BillingPurchaseOutcome>) {
