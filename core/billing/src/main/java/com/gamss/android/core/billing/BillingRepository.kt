@@ -43,5 +43,9 @@ interface BillingRepository {
      */
     suspend fun queryUnfinishedPurchases()
 
+    /**
+     * 서버 지급 응답을 받은 뒤에만 호출해야 한다 — [BillingPurchaseOutcome.Purchased]를 받자마자
+     * 호출하면 서버 검증·지급 전에 구매가 소비되어, 결제는 됐는데 지급은 안 되는 경로가 생길 수 있다.
+     */
     suspend fun consumePurchase(purchaseToken: String): BillingOperationResult
 }

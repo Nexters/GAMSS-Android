@@ -5,6 +5,7 @@ import com.android.billingclient.api.BillingClient.BillingResponseCode
 import com.android.billingclient.api.BillingResult
 import com.gamss.android.core.billing.di.BillingCoroutineScope
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -29,8 +30,13 @@ internal class PlayBillingRepository @Inject constructor(
     private val _connectionState = MutableStateFlow(BillingConnectionState.DISCONNECTED)
     override val connectionState: StateFlow<BillingConnectionState> = _connectionState.asStateFlow()
 
-    private val _purchaseResults =
-        MutableSharedFlow<BillingPurchaseOutcome>(extraBufferCapacity = PURCHASE_RESULTS_BUFFER)
+    // replay를 둬서, 연결 성공 직후 자동 실행되는 queryUnfinishedPurchases()가 화면이 collect를
+    // 시작하기 전에 결과를 emit해도 늦게 구독한 화면이 최근 결과를 받을 수 있게 한다. DROP_OLDEST라
+    // tryEmit은 항상 성공한다.
+    private val _purchaseResults = MutableSharedFlow<BillingPurchaseOutcome>(
+        replay = PURCHASE_RESULTS_BUFFER,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST,
+    )
     override val purchaseResults: Flow<BillingPurchaseOutcome> = _purchaseResults.asSharedFlow()
 
     init {
