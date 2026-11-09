@@ -6,12 +6,12 @@ import com.android.billingclient.api.BillingResult
 import com.gamss.android.core.billing.di.BillingCoroutineScope
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -30,14 +30,9 @@ internal class PlayBillingRepository @Inject constructor(
     private val _connectionState = MutableStateFlow(BillingConnectionState.DISCONNECTED)
     override val connectionState: StateFlow<BillingConnectionState> = _connectionState.asStateFlow()
 
-    // replay를 둬서, 연결 성공 직후 자동 실행되는 queryUnfinishedPurchases()가 화면이 collect를
-    // 시작하기 전에 결과를 emit해도 늦게 구독한 화면이 최근 결과를 받을 수 있게 한다. DROP_OLDEST라
-    // tryEmit은 항상 성공한다.
-    private val _purchaseResults = MutableSharedFlow<BillingPurchaseOutcome>(
-        replay = PURCHASE_RESULTS_BUFFER,
-        onBufferOverflow = BufferOverflow.DROP_OLDEST,
-    )
-    override val purchaseResults: Flow<BillingPurchaseOutcome> = _purchaseResults.asSharedFlow()
+    private val purchaseResultsChannel =
+        Channel<BillingPurchaseOutcome>(capacity = PURCHASE_RESULTS_BUFFER, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+    override val purchaseResults: Flow<BillingPurchaseOutcome> = purchaseResultsChannel.receiveAsFlow()
 
     init {
         scope.launch {
@@ -116,7 +111,7 @@ internal class PlayBillingRepository @Inject constructor(
 
     private fun emitOutcomes(outcomes: List<BillingPurchaseOutcome>) {
         outcomes.forEach { outcome ->
-            _purchaseResults.tryEmit(outcome)
+            purchaseResultsChannel.trySend(outcome)
             // 미소비 구매가 하나뿐이라고 단정하지 않고, 복구 조회를 다시 돌려 전부 찾아낸다.
             if (outcome is BillingPurchaseOutcome.AlreadyOwned) {
                 scope.launch { queryUnfinishedPurchases() }

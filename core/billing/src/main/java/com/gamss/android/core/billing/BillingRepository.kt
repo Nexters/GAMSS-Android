@@ -12,8 +12,12 @@ import kotlinx.coroutines.flow.StateFlow
 interface BillingRepository {
     val connectionState: StateFlow<BillingConnectionState>
 
-    /** 구매 콜백([com.android.billingclient.api.PurchasesUpdatedListener])과 미처리 구매 복구
-     * 조회([queryUnfinishedPurchases])가 공유하는 단일 처리 경로. */
+    /**
+     * 구매 콜백([com.android.billingclient.api.PurchasesUpdatedListener])과 미처리 구매 복구
+     * 조회([queryUnfinishedPurchases])가 공유하는 단일 처리 경로. 각 결과는 정확히 한 번만
+     * 전달된다 — 동시에 여러 곳에서 collect하면 결과가 그중 한 곳에만 전달되고 나눠진다. 지금은
+     * 호출부가 한 곳에서만 collect한다는 전제로 쓴다.
+     */
     val purchaseResults: Flow<BillingPurchaseOutcome>
 
     /** 이미 연결됐거나 연결 중이면 아무것도 하지 않는다 — 중복 연결 금지. */
