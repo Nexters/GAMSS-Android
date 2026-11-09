@@ -30,8 +30,10 @@ internal class PlayBillingRepository @Inject constructor(
     private val _connectionState = MutableStateFlow(BillingConnectionState.DISCONNECTED)
     override val connectionState: StateFlow<BillingConnectionState> = _connectionState.asStateFlow()
 
-    private val purchaseResultsChannel =
-        Channel<BillingPurchaseOutcome>(capacity = PURCHASE_RESULTS_BUFFER, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+    private val purchaseResultsChannel = Channel<BillingPurchaseOutcome>(
+        capacity = PURCHASE_RESULTS_BUFFER,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST,
+    )
     override val purchaseResults: Flow<BillingPurchaseOutcome> = purchaseResultsChannel.receiveAsFlow()
 
     init {
