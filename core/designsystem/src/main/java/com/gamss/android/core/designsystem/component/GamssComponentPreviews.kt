@@ -63,6 +63,7 @@ private fun GamssExpandingInputBarFilledPreview() {
 }
 
 @Preview(name = "BottomBar", showBackground = true, widthDp = 402)
+@Preview(name = "BottomBar fontScale 2.0", showBackground = true, widthDp = 402, fontScale = 2f)
 @Composable
 @Suppress("UnusedPrivateMember")
 private fun GamssBottomBarPreview() {

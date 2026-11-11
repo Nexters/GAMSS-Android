@@ -7,8 +7,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.selection.selectable
@@ -27,6 +28,9 @@ import com.gamss.android.core.designsystem.theme.GamssTheme
 private val BottomBarHeight = 66.dp
 private val ItemRowWidth = 255.dp
 private val ItemRowHeight = 44.dp
+
+// 시스템 폰트를 키워도 라벨이 잘리지 않고 위아래 여백은 디자인대로 유지해야 해서, 바 높이는 고정하지 않는다.
+private val ItemRowVerticalPadding = (BottomBarHeight - ItemRowHeight) / 2
 private val ItemIconSize = 26.dp
 private val ItemLabelGap = 4.dp
 private val BottomBarStrokeWidth = 1.dp
@@ -49,13 +53,13 @@ fun <T> GamssBottomBar(
                 // 화면 폭을 꽉 채우는 바라 좌우·아래 선은 화면 테두리에 붙어 버린다. 위쪽만 긋는다.
                 drawRect(color = strokeColor, size = Size(size.width, BottomBarStrokeWidth.toPx()))
             }
-            .navigationBarsPadding()
-            .height(BottomBarHeight),
+            .navigationBarsPadding(),
     ) {
         Row(
             modifier = Modifier
                 .width(ItemRowWidth)
-                .height(ItemRowHeight)
+                .padding(vertical = ItemRowVerticalPadding)
+                .heightIn(min = ItemRowHeight)
                 .align(Alignment.Center),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
