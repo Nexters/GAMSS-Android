@@ -114,6 +114,7 @@ class ChatRoomViewModel @Inject constructor(
                 )
             }
             launchCommentReveal()
+            postSideEffect(ChatRoomSideEffect.NewConversationOpened)
             return@intent
         }
 
