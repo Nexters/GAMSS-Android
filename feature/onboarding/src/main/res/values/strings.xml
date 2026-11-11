@@ -11,13 +11,4 @@
     <string name="onboarding_step2_message">6가지의 감정 친구들과\n이야기를 이어가보세요</string>
     <string name="onboarding_step3_description">감정 메모를 비우는 휴지통 그림</string>
     <string name="onboarding_step3_message">안좋았던 감정을\n비워보세요</string>
-
-    <string name="onboarding_permission_title">앱 사용을 위해\n접근 권한을 허용해주세요</string>
-    <string name="onboarding_permission_subtitle">더 나은 서비스 환경을 위해\n아래의 접근 권한 허용이 필요합니다.</string>
-    <string name="onboarding_notification_permission_description">알림 권한</string>
-    <string name="onboarding_notification_permission_name">알림</string>
-    <string name="onboarding_notification_permission_reason">카드 및 대화 알림 시 사용</string>
-    <string name="onboarding_permission_optional">비동의를 해도 앱을 이용할 수 있어요.</string>
-    <string name="onboarding_permission_disagree">비동의</string>
-    <string name="onboarding_permission_agree">동의</string>
 </resources>

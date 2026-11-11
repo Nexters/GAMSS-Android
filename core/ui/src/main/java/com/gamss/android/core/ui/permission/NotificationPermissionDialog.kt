@@ -1,4 +1,4 @@
-package com.gamss.android.feature.onboarding.component
+package com.gamss.android.core.ui.permission
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -25,11 +25,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.gamss.android.core.designsystem.button.GamssButton
-import com.gamss.android.core.designsystem.button.GamssButtonVariant
 import com.gamss.android.core.designsystem.component.GamssIcons
 import com.gamss.android.core.designsystem.component.GamssText
 import com.gamss.android.core.designsystem.theme.GamssTheme
-import com.gamss.android.feature.onboarding.R
+import com.gamss.android.core.ui.R
 
 private val DialogMaxWidth = 360.dp
 private val DialogHorizontalMargin = 20.dp
@@ -38,10 +37,9 @@ private val PermissionIconSize = 24.dp
 private val PermissionInfoIconSize = 20.dp
 
 @Composable
-internal fun NotificationPermissionDialog(
+fun NotificationPermissionDialog(
     onDismiss: () -> Unit,
-    onDisagree: () -> Unit,
-    onAgree: () -> Unit,
+    onConfirm: () -> Unit,
 ) {
     Dialog(
         onDismissRequest = onDismiss,
@@ -53,18 +51,14 @@ internal fun NotificationPermissionDialog(
                 .padding(horizontal = DialogHorizontalMargin),
             contentAlignment = Alignment.Center,
         ) {
-            PermissionDialogContent(
-                onDisagree = onDisagree,
-                onAgree = onAgree,
-            )
+            PermissionDialogContent(onConfirm = onConfirm)
         }
     }
 }
 
 @Composable
 private fun PermissionDialogContent(
-    onDisagree: () -> Unit,
-    onAgree: () -> Unit,
+    onConfirm: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -78,35 +72,25 @@ private fun PermissionDialogContent(
             .padding(GamssTheme.spacing.spacing500),
     ) {
         GamssText(
-            text = stringResource(R.string.onboarding_permission_title),
+            text = stringResource(R.string.notification_permission_title),
             style = GamssTheme.typography.title3,
             color = GamssTheme.colors.gray950,
         )
         Spacer(modifier = Modifier.height(GamssTheme.spacing.spacing200))
         GamssText(
-            text = stringResource(R.string.onboarding_permission_subtitle),
+            text = stringResource(R.string.notification_permission_subtitle),
             style = GamssTheme.typography.body3Medium,
             color = GamssTheme.colors.gray500,
         )
         Spacer(modifier = Modifier.height(PermissionPanelTopSpacing))
         PermissionPanel()
         Spacer(modifier = Modifier.height(GamssTheme.spacing.spacing500))
-        Row(
+        // 거절은 시스템 팝업에서만 받는다. 여기서 따로 받으면 OS 와 다른 거절 이력이 생긴다.
+        GamssButton(
+            label = stringResource(R.string.notification_permission_confirm),
+            onClick = onConfirm,
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(GamssTheme.spacing.spacing100),
-        ) {
-            GamssButton(
-                label = stringResource(R.string.onboarding_permission_disagree),
-                onClick = onDisagree,
-                modifier = Modifier.weight(1f),
-                variant = GamssButtonVariant.Secondary,
-            )
-            GamssButton(
-                label = stringResource(R.string.onboarding_permission_agree),
-                onClick = onAgree,
-                modifier = Modifier.weight(1f),
-            )
-        }
+        )
     }
 }
 
@@ -136,17 +120,17 @@ private fun PermissionPanel() {
         ) {
             Icon(
                 painter = painterResource(GamssIcons.NotificationAlert),
-                contentDescription = stringResource(R.string.onboarding_notification_permission_description),
+                contentDescription = stringResource(R.string.notification_permission_description),
                 tint = GamssTheme.colors.red,
                 modifier = Modifier.size(PermissionIconSize),
             )
             GamssText(
-                text = stringResource(R.string.onboarding_notification_permission_name),
+                text = stringResource(R.string.notification_permission_name),
                 style = GamssTheme.typography.body4Medium,
                 color = GamssTheme.colors.gray900,
             )
             GamssText(
-                text = stringResource(R.string.onboarding_notification_permission_reason),
+                text = stringResource(R.string.notification_permission_reason),
                 style = GamssTheme.typography.body4Medium,
                 color = GamssTheme.colors.gray500,
             )
@@ -162,7 +146,7 @@ private fun PermissionPanel() {
                 modifier = Modifier.size(PermissionInfoIconSize),
             )
             GamssText(
-                text = stringResource(R.string.onboarding_permission_optional),
+                text = stringResource(R.string.notification_permission_optional),
                 style = GamssTheme.typography.caption2,
                 color = GamssTheme.colors.gray400,
             )
@@ -182,7 +166,7 @@ private fun NotificationPermissionDialogPreview() {
                 .padding(DialogHorizontalMargin),
             contentAlignment = Alignment.Center,
         ) {
-            PermissionDialogContent(onDisagree = {}, onAgree = {})
+            PermissionDialogContent(onConfirm = {})
         }
     }
 }

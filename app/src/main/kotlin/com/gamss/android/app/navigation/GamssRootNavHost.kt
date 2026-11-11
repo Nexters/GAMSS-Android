@@ -1,9 +1,5 @@
 package com.gamss.android.app.navigation
 
-import android.Manifest
-import android.os.Build
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -12,9 +8,6 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -57,9 +50,6 @@ fun GamssRootNavHost(
 
         else -> RootNavDisplay(
             sessionState = state.sessionState,
-            shouldPromptNotificationPermission = mainViewModel::shouldPromptNotificationPermission,
-            onNotificationPermissionPrompted = mainViewModel::markNotificationPermissionPrompted,
-            onNotificationPermissionResult = mainViewModel::syncDeviceToken,
             onScreenView = mainViewModel::trackScreenView,
         )
     }
@@ -68,9 +58,6 @@ fun GamssRootNavHost(
 @Composable
 private fun RootNavDisplay(
     sessionState: SessionState,
-    shouldPromptNotificationPermission: suspend () -> Boolean,
-    onNotificationPermissionPrompted: () -> Unit,
-    onNotificationPermissionResult: () -> Unit,
     onScreenView: (NavKey) -> Unit,
 ) {
     val initialKey = if (sessionState == SessionState.Authenticated) MainKey else LoginKey
@@ -78,25 +65,6 @@ private fun RootNavDisplay(
     val currentKey = backStack.lastOrNull()
     LaunchedEffect(currentKey) {
         currentKey?.let(onScreenView)
-    }
-    val notificationPermissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission(),
-        onResult = { onNotificationPermissionResult() },
-    )
-
-    // 저장된 안내 이력은 비동기로 반영되므로, 온보딩에서 메인으로 넘어가는 동안에는 이 상태로 중복 요청을 막는다.
-    var promptedInSession by remember { mutableStateOf(false) }
-
-    fun markNotificationPermissionPrompted() {
-        promptedInSession = true
-        onNotificationPermissionPrompted()
-    }
-
-    fun requestNotificationPermission() {
-        markNotificationPermissionPrompted()
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-        }
     }
 
     fun replaceRoot(destination: NavKey) {
@@ -130,22 +98,9 @@ private fun RootNavDisplay(
                 )
             }
             entry<OnboardingKey> {
-                OnboardingScreen(
-                    onComplete = {
-                        // 권한 안내는 동의/거절 모두 온보딩에서 끝난다. 거절도 결정으로 남겨 메인에서 다시 묻지 않는다.
-                        markNotificationPermissionPrompted()
-                        replaceRoot(MainKey)
-                    },
-                    onNotificationPermissionRequest = { requestNotificationPermission() },
-                )
+                OnboardingScreen(onComplete = { replaceRoot(MainKey) })
             }
             entry<MainKey> {
-                // 온보딩을 거치지 않고 들어오는 기존 사용자에게만 한 번 요청한다.
-                LaunchedEffect(Unit) {
-                    if (!promptedInSession && shouldPromptNotificationPermission()) {
-                        requestNotificationPermission()
-                    }
-                }
                 MainScreen(onScreenView = onScreenView)
             }
         },

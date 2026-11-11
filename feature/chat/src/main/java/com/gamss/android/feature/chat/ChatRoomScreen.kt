@@ -1,7 +1,12 @@
 package com.gamss.android.feature.chat
 
+import android.Manifest
 import android.content.res.Configuration
+import android.os.Build
 import android.widget.Toast
+import androidx.activity.compose.LocalActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.Arrangement
@@ -59,6 +64,7 @@ import com.gamss.android.core.designsystem.topnavigation.GamssTopNavigationIconA
 import com.gamss.android.core.designsystem.topnavigation.GamssTopNavigationTitleAlignment
 import com.gamss.android.core.ui.chat.ChatMessageBubble
 import com.gamss.android.core.ui.chat.rememberReplyQuoteLookup
+import com.gamss.android.core.ui.permission.NotificationPermissionDialog
 import com.gamss.android.core.ui.safety.SupportAgencyDialog
 import com.gamss.android.domain.conversation.Message
 import com.gamss.android.domain.conversation.MessageSender
@@ -93,9 +99,11 @@ fun ChatRoomScreen(
     isActive: Boolean = true,
     modifier: Modifier = Modifier,
     viewModel: ChatRoomViewModel = hiltViewModel(),
+    notificationPermissionViewModel: NotificationPermissionPromptViewModel = hiltViewModel(),
 ) {
     val state by viewModel.collectAsState()
     val context = LocalContext.current
+    val activity = LocalActivity.current
 
     LaunchedEffect(conversationId) { viewModel.start(conversationId) }
 
@@ -110,6 +118,23 @@ fun ChatRoomScreen(
 
     val tokenUsageLowMessage = stringResource(R.string.chat_room_token_usage_low_toast)
     val tokenUsageExhaustedMessage = stringResource(R.string.chat_room_token_usage_exhausted_toast)
+    fun shouldShowNotificationRationale(): Boolean =
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            activity?.shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS) == true
+
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = { granted ->
+            notificationPermissionViewModel.onResult(granted, shouldShowNotificationRationale())
+        },
+    )
+    val isAskingNotificationPermission by notificationPermissionViewModel.collectAsState()
+
+    notificationPermissionViewModel.collectSideEffect {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
 
     viewModel.collectSideEffect { sideEffect ->
         when (sideEffect) {
@@ -123,6 +148,9 @@ fun ChatRoomScreen(
                 }
                 Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
             }
+
+            ChatRoomSideEffect.NewConversationOpened ->
+                notificationPermissionViewModel.onNewConversationOpened(shouldShowNotificationRationale())
         }
     }
 
@@ -162,6 +190,13 @@ fun ChatRoomScreen(
         onCardSetAside = viewModel::onCardSetAside,
         onCardDiscard = onCardDiscard,
     )
+
+    if (isAskingNotificationPermission && isActive) {
+        NotificationPermissionDialog(
+            onDismiss = notificationPermissionViewModel::onDismiss,
+            onConfirm = notificationPermissionViewModel::onConfirm,
+        )
+    }
 }
 
 /** 대화 종료 단계마다 위에 얹히는 창. 카드가 어느 보관함 칸으로 가는지도 여기서 뽑아낸다. */

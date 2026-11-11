@@ -27,6 +27,10 @@ import com.gamss.android.domain.emotion.EmotionCharacter
 import com.gamss.android.domain.emotion.EmotionClassifier
 import com.gamss.android.domain.emotion.EmotionLabel
 import com.gamss.android.domain.model.DailyTokenUsage
+import com.gamss.android.domain.push.DeviceTokenRepository
+import com.gamss.android.domain.push.NotificationPermissionChecker
+import com.gamss.android.domain.push.NotificationPermissionPromptHistory
+import com.gamss.android.domain.push.PushTokenProvider
 import com.gamss.android.domain.repository.TokenUsageAlert
 import com.gamss.android.domain.repository.TokenUsageRefreshNotifier
 import com.gamss.android.domain.safety.DetectRiskInTextUseCase
@@ -87,6 +91,43 @@ internal fun chatRoomViewModel(
         pendingReveal = pendingReveal,
     ),
 )
+
+internal class FakeNotificationPermission(
+    private val granted: Boolean,
+    prompted: Boolean = false,
+) : NotificationPermissionChecker, NotificationPermissionPromptHistory {
+    var prompted: Boolean = prompted
+        private set
+
+    override fun isGranted(): Boolean = granted
+
+    override suspend fun hasPrompted(): Boolean = prompted
+
+    override suspend fun markPrompted() {
+        prompted = true
+    }
+}
+
+internal object FixedPushTokenProvider : PushTokenProvider {
+    override suspend fun getToken(): String = "token"
+}
+
+internal class RecordingDeviceTokenRepository : DeviceTokenRepository {
+    var registerCount = 0
+        private set
+    var unregisterCount = 0
+        private set
+
+    override suspend fun registerToken(token: String): AppResult<Unit> {
+        registerCount++
+        return AppResult.Success(Unit)
+    }
+
+    override suspend fun unregisterToken(token: String): AppResult<Unit> {
+        unregisterCount++
+        return AppResult.Success(Unit)
+    }
+}
 
 internal val EmptyRiskLexicon = RiskLexicon(
     version = 0,
