@@ -33,6 +33,7 @@ include(":models:emotion-pack")
 include(":models:summary-pack")
 
 include(":core:common")
+include(":core:billing")
 include(":core:ui")
 include(":feature:home")
 include(":feature:chat")
