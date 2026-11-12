@@ -3,6 +3,9 @@ package com.gamss.android.feature.archive
 import androidx.paging.PagingData
 import com.gamss.android.core.common.AppResult
 import com.gamss.android.core.common.util.KoreanTimeZone
+import com.gamss.android.domain.analytics.AnalyticsEvent
+import com.gamss.android.domain.analytics.AnalyticsProperty
+import com.gamss.android.domain.analytics.AnalyticsTracker
 import com.gamss.android.domain.card.Card
 import com.gamss.android.domain.card.CardRepository
 import com.gamss.android.domain.card.GetCardsByMonthAndEmotionUseCase
@@ -312,9 +315,11 @@ class ArchiveDetailViewModelTest {
     @Test
     fun `대화 조회에 실패하면 감정 카드를 그대로 두고 실패를 알린다`() = runTest {
         val repository = FakeCardRepository(AppResult.Success(listOf(angerCard)))
+        val tracker = RecordingAnalyticsTracker()
         val viewModel = viewModel(
             repository,
             FakeConversationRepository(AppResult.Failure(IllegalStateException("network"))),
+            analyticsTracker = tracker,
         )
 
         viewModel.test(this) {
@@ -330,6 +335,7 @@ class ArchiveDetailViewModelTest {
             expectState { copy(isConversationLoading = false) }
             expectSideEffect(ArchiveDetailSideEffect.ConversationLoadFailed)
         }
+        assertEquals(listOf(AnalyticsEvent.ARCHIVE_CARD_OPEN), tracker.events.map { it.first })
     }
 
     @Test
@@ -457,6 +463,152 @@ class ArchiveDetailViewModelTest {
     }
 
     @Test
+    fun `다른 달을 고르면 감정과 그 달을 함께 기록한다`() = runTest {
+        val tracker = RecordingAnalyticsTracker()
+        val viewModel = viewModel(FakeCardRepository(AppResult.Success(listOf(angerCard))), analyticsTracker = tracker)
+        val previousMonth = YearMonth.of(2026, 7)
+
+        viewModel.test(this) {
+            containerHost.load(EmotionCharacter.ANGER)
+            expectState { copy(emotion = EmotionCharacter.ANGER) }
+            expectState { copy(cards = ArchiveCards.Loaded(listOf(angerCard))) }
+
+            containerHost.selectMonth(previousMonth)
+            expectState { copy(yearMonth = previousMonth, cards = ArchiveCards.Loading) }
+            expectState { copy(cards = ArchiveCards.Loaded(listOf(angerCard))) }
+        }
+
+        assertEquals(
+            listOf(
+                AnalyticsEvent.ARCHIVE_MONTH_CHANGE to mapOf(
+                    AnalyticsProperty.EMOTION to "anger",
+                    AnalyticsProperty.YEAR_MONTH to "2026-07",
+                ),
+            ),
+            tracker.events,
+        )
+    }
+
+    @Test
+    fun `보고 있는 달을 다시 고르면 달 변경을 기록하지 않는다`() = runTest {
+        val tracker = RecordingAnalyticsTracker()
+        val viewModel = viewModel(FakeCardRepository(AppResult.Success(listOf(angerCard))), analyticsTracker = tracker)
+
+        viewModel.test(this) {
+            containerHost.load(EmotionCharacter.ANGER)
+            expectState { copy(emotion = EmotionCharacter.ANGER) }
+            expectState { copy(cards = ArchiveCards.Loaded(listOf(angerCard))) }
+
+            containerHost.showMonthPicker()
+            expectState { copy(isMonthPickerVisible = true) }
+
+            containerHost.selectMonth(YearMonth.now(KoreanTimeZone))
+            expectState { copy(isMonthPickerVisible = false) }
+        }
+
+        assertEquals(emptyList<Pair<String, Map<String, Any>>>(), tracker.events)
+    }
+
+    @Test
+    fun `카드를 열고 대화를 보고 버리면 각각 감정과 함께 기록한다`() = runTest {
+        val tracker = RecordingAnalyticsTracker()
+        val viewModel = viewModel(
+            FakeCardRepository(AppResult.Success(listOf(angerCard))),
+            FakeConversationRepository(AppResult.Success(conversationDetail(angerCard.conversationId))),
+            analyticsTracker = tracker,
+        )
+        val conversationCard = ConversationCard(card = angerCard, messages = listOf(userMessage, characterMessage))
+
+        viewModel.test(this) {
+            containerHost.load(EmotionCharacter.ANGER)
+            expectState { copy(emotion = EmotionCharacter.ANGER) }
+            expectState { copy(cards = ArchiveCards.Loaded(listOf(angerCard))) }
+
+            containerHost.selectCard(angerCard)
+            expectState { copy(selectedCard = angerCard) }
+
+            containerHost.viewSelectedConversation()
+            expectState { copy(isConversationLoading = true) }
+            expectState {
+                copy(isConversationLoading = false, selectedCard = null, conversationCard = conversationCard)
+            }
+
+            containerHost.dismissConversationCard()
+            expectState { copy(conversationCard = null, selectedCard = angerCard) }
+
+            containerHost.discardSelectedCard()
+            expectState { copy(selectedCard = null) }
+            expectSideEffect(ArchiveDetailSideEffect.OpenCardDelete(cardId = angerCard.id))
+        }
+
+        val emotionOnly = mapOf<String, Any>(AnalyticsProperty.EMOTION to "anger")
+        assertEquals(
+            listOf(
+                AnalyticsEvent.ARCHIVE_CARD_OPEN to emotionOnly,
+                AnalyticsEvent.ARCHIVE_CONVERSATION_VIEW to emotionOnly,
+                AnalyticsEvent.ARCHIVE_CARD_DISCARD to emotionOnly,
+            ),
+            tracker.events,
+        )
+    }
+
+    @Test
+    fun `공유 대상을 고르면 그 대상을 기록한다`() = runTest {
+        val tracker = RecordingAnalyticsTracker()
+        val viewModel = viewModel(FakeCardRepository(AppResult.Success(listOf(angerCard))), analyticsTracker = tracker)
+        val testScope = this
+
+        viewModel.test(this) {
+            containerHost.load(EmotionCharacter.ANGER)
+            expectState { copy(emotion = EmotionCharacter.ANGER) }
+            expectState { copy(cards = ArchiveCards.Loaded(listOf(angerCard))) }
+
+            containerHost.reportShareClick(ShareTarget.KAKAO)
+            containerHost.reportShareClick(ShareTarget.INSTAGRAM)
+            testScope.runCurrent()
+            expectNoItems()
+        }
+
+        assertEquals(
+            listOf(
+                AnalyticsEvent.ARCHIVE_SHARE_CLICK to mapOf(
+                    AnalyticsProperty.EMOTION to "anger",
+                    AnalyticsProperty.TARGET to "kakao",
+                ),
+                AnalyticsEvent.ARCHIVE_SHARE_CLICK to mapOf(
+                    AnalyticsProperty.EMOTION to "anger",
+                    AnalyticsProperty.TARGET to "instagram",
+                ),
+            ),
+            tracker.events,
+        )
+    }
+
+    @Test
+    fun `비우기를 확인하면 감정과 함께 기록한다`() = runTest {
+        val tracker = RecordingAnalyticsTracker()
+        val viewModel = viewModel(FakeCardRepository(AppResult.Success(listOf(angerCard))), analyticsTracker = tracker)
+
+        viewModel.test(this) {
+            containerHost.load(EmotionCharacter.ANGER)
+            expectState { copy(emotion = EmotionCharacter.ANGER) }
+            expectState { copy(cards = ArchiveCards.Loaded(listOf(angerCard))) }
+
+            containerHost.showClearDialog()
+            expectState { copy(isClearDialogVisible = true) }
+
+            containerHost.confirmClear()
+            expectState { copy(isClearDialogVisible = false) }
+            expectSideEffect(ArchiveDetailSideEffect.OpenCardDelete(cardId = null))
+        }
+
+        assertEquals(
+            listOf(AnalyticsEvent.ARCHIVE_CLEAR to mapOf<String, Any>(AnalyticsProperty.EMOTION to "anger")),
+            tracker.events,
+        )
+    }
+
+    @Test
     fun `보고 있는 달에 카드가 없으면 비우기 다이얼로그를 띄우지 않는다`() = runTest {
         val viewModel = viewModel(FakeCardRepository(AppResult.Success(emptyList())))
         val testScope = this
@@ -520,9 +672,11 @@ class ArchiveDetailViewModelTest {
     private fun viewModel(
         repository: FakeCardRepository,
         conversationRepository: FakeConversationRepository = FakeConversationRepository(),
+        analyticsTracker: AnalyticsTracker = RecordingAnalyticsTracker(),
     ) = ArchiveDetailViewModel(
         getCardsByMonthAndEmotion = GetCardsByMonthAndEmotionUseCase(repository),
         getConversation = GetConversationUseCase(conversationRepository),
+        analyticsTracker = analyticsTracker,
     )
 
     private companion object {
@@ -603,6 +757,14 @@ private class FakeCardRepository(
         error("보관함 테스트에서 쓰지 않는다")
 
     override suspend fun clearCache() = error("보관함 테스트에서 쓰지 않는다")
+}
+
+private class RecordingAnalyticsTracker : AnalyticsTracker {
+    val events = mutableListOf<Pair<String, Map<String, Any>>>()
+
+    override fun track(event: String, properties: Map<String, Any>) {
+        events += event to properties
+    }
 }
 
 private class FakeConversationRepository(

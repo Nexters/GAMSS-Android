@@ -2,6 +2,11 @@ package com.gamss.android.feature.carddelete
 
 import androidx.lifecycle.ViewModel
 import com.gamss.android.core.common.AppResult
+import com.gamss.android.domain.analytics.AnalyticsEvent
+import com.gamss.android.domain.analytics.AnalyticsProperty
+import com.gamss.android.domain.analytics.AnalyticsScope
+import com.gamss.android.domain.analytics.AnalyticsTracker
+import com.gamss.android.domain.analytics.analyticsValue
 import com.gamss.android.domain.card.DeleteCardUseCase
 import com.gamss.android.domain.card.DeleteCardsByEmotionUseCase
 import com.gamss.android.domain.emotion.EmotionCharacter
@@ -17,6 +22,7 @@ import javax.inject.Inject
 class CardDeleteViewModel @Inject constructor(
     private val deleteCardsByEmotion: DeleteCardsByEmotionUseCase,
     private val deleteCard: DeleteCardUseCase,
+    private val analyticsTracker: AnalyticsTracker,
 ) : ViewModel(), ContainerHost<CardDeleteState, CardDeleteSideEffect> {
 
     override val container = container<CardDeleteState, CardDeleteSideEffect>(CardDeleteState())
@@ -31,6 +37,14 @@ class CardDeleteViewModel @Inject constructor(
 
         val nextTapCount = state.shredTapCount + 1
         reduce { state.copy(shredTapCount = nextTapCount) }
+        val properties = mapOf(
+            AnalyticsProperty.EMOTION to emotion.analyticsValue,
+            AnalyticsProperty.SCOPE to AnalyticsScope.of(cardId),
+        )
+        analyticsTracker.track(
+            AnalyticsEvent.CARD_SHRED_TAP,
+            properties + (AnalyticsProperty.TAP_COUNT to nextTapCount),
+        )
         if (nextTapCount < SHRED_TOTAL_TAPS) return@intent
 
         reduce { state.copy(isDeleting = true) }
@@ -43,11 +57,13 @@ class CardDeleteViewModel @Inject constructor(
         when (result) {
             is AppResult.Success -> {
                 reduce { state.copy(isDeleting = false, isCompleted = true) }
+                analyticsTracker.track(AnalyticsEvent.CARD_SHRED_SUCCESS, properties)
                 postSideEffect(CardDeleteSideEffect.ShredSuccess)
             }
 
             is AppResult.Failure -> {
                 reduce { state.copy(isDeleting = false, shredTapCount = 0) }
+                analyticsTracker.track(AnalyticsEvent.CARD_SHRED_FAIL, properties)
                 postSideEffect(CardDeleteSideEffect.ShredFailure)
             }
         }
