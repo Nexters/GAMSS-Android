@@ -608,6 +608,67 @@ class ArchiveDetailViewModelTest {
         )
     }
 
+    @Test
+    fun `보고 있는 달에 카드가 없으면 비우기 다이얼로그를 띄우지 않는다`() = runTest {
+        val viewModel = viewModel(FakeCardRepository(AppResult.Success(emptyList())))
+        val testScope = this
+
+        viewModel.test(this) {
+            containerHost.load(EmotionCharacter.ANGER)
+            expectState { copy(emotion = EmotionCharacter.ANGER) }
+            expectState { copy(cards = ArchiveCards.Loaded(emptyList())) }
+
+            containerHost.showClearDialog()
+            testScope.runCurrent()
+            expectNoItems()
+        }
+    }
+
+    @Test
+    fun `카드 조회에 실패하면 비우기 다이얼로그를 띄우지 않는다`() = runTest {
+        val viewModel = viewModel(FakeCardRepository(AppResult.Failure(IllegalStateException("network"))))
+        val testScope = this
+
+        viewModel.test(this) {
+            containerHost.load(EmotionCharacter.ANGER)
+            expectState { copy(emotion = EmotionCharacter.ANGER) }
+            expectState { copy(cards = ArchiveCards.LoadFailed) }
+
+            containerHost.showClearDialog()
+            testScope.runCurrent()
+            expectNoItems()
+        }
+    }
+
+    @Test
+    fun `다른 달 카드를 받아 오는 중에는 비우기 다이얼로그를 띄우지 않는다`() = runTest {
+        val slowMonth = YearMonth.now(KoreanTimeZone).minusMonths(1)
+        val slowMonthGate = CompletableDeferred<Unit>()
+        val repository = FakeCardRepository(
+            monthResult = AppResult.Success(listOf(angerCard)),
+            monthGates = mapOf(slowMonth to slowMonthGate),
+        )
+        val viewModel = viewModel(repository)
+        val testScope = this
+
+        viewModel.test(this) {
+            containerHost.load(EmotionCharacter.ANGER)
+            expectState { copy(emotion = EmotionCharacter.ANGER) }
+            expectState { copy(cards = ArchiveCards.Loaded(listOf(angerCard))) }
+
+            // 직전 달에 카드가 있었어도 새 달 목록이 오기 전에는 비울 수 없다.
+            containerHost.selectMonth(slowMonth)
+            expectState { copy(yearMonth = slowMonth, cards = ArchiveCards.Loading) }
+
+            containerHost.showClearDialog()
+            testScope.runCurrent()
+            expectNoItems()
+
+            slowMonthGate.complete(Unit)
+            expectState { copy(cards = ArchiveCards.Loaded(listOf(angerCard))) }
+        }
+    }
+
     private fun viewModel(
         repository: FakeCardRepository,
         conversationRepository: FakeConversationRepository = FakeConversationRepository(),

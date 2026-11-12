@@ -24,6 +24,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -147,6 +148,7 @@ private fun ArchiveDetailFrame(
         topBar = {
             ArchiveDetailTopBar(
                 emotion = emotion,
+                isClearEnabled = state.isClearable,
                 onBackClick = onBackClick,
                 onClearClick = onClearClick,
             )
@@ -256,6 +258,7 @@ private fun ClearConfirmDialog(
 @Composable
 private fun ArchiveDetailTopBar(
     emotion: EmotionCharacter,
+    isClearEnabled: Boolean,
     onBackClick: () -> Unit,
     onClearClick: () -> Unit,
 ) {
@@ -285,10 +288,10 @@ private fun ArchiveDetailTopBar(
             Text(
                 text = stringResource(R.string.archive_clear),
                 style = GamssTheme.typography.body4Medium,
-                color = GamssTheme.colors.gray900,
+                color = if (isClearEnabled) GamssTheme.colors.gray900 else GamssTheme.colors.gray300,
                 modifier = Modifier
                     .clip(RoundedCornerShape(ClearRippleRadius))
-                    .clickable(role = Role.Button, onClick = onClearClick)
+                    .clickable(enabled = isClearEnabled, role = Role.Button, onClick = onClearClick)
                     .padding(ClearHitPadding),
             )
         },
@@ -305,8 +308,10 @@ private fun ArchiveDetailCards(
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         when (cardsState) {
             ArchiveCards.Loading -> CircularProgressIndicator(color = GamssTheme.colors.gray700)
-            ArchiveCards.LoadFailed -> EmptyMessage(textRes = R.string.archive_cards_load_failed)
-            // 카드가 없으면 아무것도 그리지 않는다. 빈 종이판이 그대로 보이는 것이 이 화면의 빈 상태다.
+            ArchiveCards.LoadFailed -> EmptyMessage(
+                textRes = R.string.archive_cards_load_failed,
+                style = GamssTheme.typography.body4Medium,
+            )
             is ArchiveCards.Loaded -> if (cardsState.cards.isNotEmpty()) {
                 PaperPile(
                     cards = cardsState.cards,
@@ -314,16 +319,22 @@ private fun ArchiveDetailCards(
                     onDropConsumed = onDropConsumed,
                     onPaperClick = onPaperClick,
                 )
+            } else {
+                // 조회 실패 문구와 구분되도록 iOS 와 같은 스타일을 쓴다.
+                EmptyMessage(
+                    textRes = R.string.archive_cards_empty,
+                    style = GamssTheme.typography.body3Regular,
+                )
             }
         }
     }
 }
 
 @Composable
-private fun EmptyMessage(@StringRes textRes: Int) {
+private fun EmptyMessage(@StringRes textRes: Int, style: TextStyle) {
     Text(
         text = stringResource(textRes),
-        style = GamssTheme.typography.body4Medium,
+        style = style,
         color = GamssTheme.colors.gray500,
     )
 }

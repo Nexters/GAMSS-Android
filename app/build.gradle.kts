@@ -74,7 +74,12 @@ android {
             resValue("string", "app_name", "GAMSS Dev")
         }
         getByName("release") {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
             if (hasCompleteReleaseSigningConfig) {
                 signingConfig = signingConfigs.getByName("release")
             }
@@ -115,6 +120,7 @@ dependencies {
     implementation(projects.domain)
     implementation(projects.data)
     implementation(projects.core.common)
+    implementation(projects.core.billing)
     implementation(projects.core.ui)
     implementation(projects.core.designsystem)
     implementation(projects.feature.home)

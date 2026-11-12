@@ -55,6 +55,7 @@ class ArchiveDetailViewModel @Inject constructor(
     }
 
     fun showClearDialog() = intent {
+        if (!state.isClearable) return@intent
         reduce { state.copy(isClearDialogVisible = true) }
     }
 
