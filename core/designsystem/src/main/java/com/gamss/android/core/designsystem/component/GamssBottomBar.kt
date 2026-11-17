@@ -25,7 +25,7 @@ import androidx.compose.ui.unit.dp
 import com.gamss.android.core.designsystem.theme.GamssTheme
 
 private val BottomBarHeight = 66.dp
-private val ItemRowWidth = 255.dp
+private val ItemRowWidth = 312.dp
 private val ItemRowHeight = 44.dp
 private val ItemIconSize = 26.dp
 private val ItemLabelGap = 4.dp

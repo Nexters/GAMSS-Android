@@ -27,6 +27,9 @@ object GamssIcons {
     val TabChat: Int = R.drawable.ic_tab_chat
 
     @DrawableRes
+    val TabGame: Int = R.drawable.ic_tab_game
+
+    @DrawableRes
     val RightChevron: Int = R.drawable.ic_right_chevron
 
     /** 선으로만 그린 X. 원형으로 채운 지우기 버튼(ic_close)과 다른 에셋이다. */

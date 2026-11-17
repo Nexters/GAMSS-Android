@@ -30,6 +30,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation3.runtime.EntryProviderScope
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.scene.Scene
@@ -54,6 +55,10 @@ import com.gamss.android.feature.chat.ChatRoomScreen
 import com.gamss.android.feature.chat.ChattingListScreen
 import com.gamss.android.feature.chat.navigation.ChatKey
 import com.gamss.android.feature.chat.navigation.ChatRoomKey
+import com.gamss.android.feature.game.GameListScreen
+import com.gamss.android.feature.game.clicker.ClickerGameScreen
+import com.gamss.android.feature.game.navigation.ClickerGameKey
+import com.gamss.android.feature.game.navigation.GameKey
 import com.gamss.android.feature.home.HomeScreen
 import com.gamss.android.feature.home.navigation.HomeKey
 import com.gamss.android.feature.setting.accountinfo.AccountInfoScreen
@@ -112,7 +117,7 @@ fun MainScreen(
                     .padding(innerPadding)
                     .statusBarsPadding(),
                 entries = navigationState.toEntries(entryProvider = entries),
-                // 최상위 탭(홈/보관함/대화) 전환 기본값. 탭은 위계 없는 형제 화면이라
+                // 최상위 탭(홈/보관함/대화/오락) 전환 기본값. 탭은 위계 없는 형제 화면이라
                 // 방향성 있는 슬라이드 대신 fade-through를 쓴다. 상세 화면은 아래 entry의
                 // metadata(detailTransition)가 이 기본값을 덮어쓴다.
                 transitionSpec = tabFadeThroughSpec,
@@ -192,6 +197,7 @@ private fun mainEntryProvider(navigator: Navigator) = entryProvider {
     entry<WebViewKey>(metadata = detailSlideTransition) { key ->
         WebViewScreen(page = key.page, onBackClick = navigator::goBack)
     }
+    gameEntries(navigator)
     entry<ChatKey> {
         ChattingListScreen(
             onChatClick = { navigator.navigate(ChatRoomKey(it)) },
@@ -211,8 +217,20 @@ private fun mainEntryProvider(navigator: Navigator) = entryProvider {
     }
 }
 
+private fun EntryProviderScope<NavKey>.gameEntries(navigator: Navigator) {
+    entry<GameKey> {
+        GameListScreen(
+            onNavigateToSetting = { navigator.navigate(SettingKey) },
+            onClickerGameClick = { navigator.navigate(ClickerGameKey) },
+        )
+    }
+    entry<ClickerGameKey>(metadata = detailSlideTransition) {
+        ClickerGameScreen(onBackClick = navigator::goBack)
+    }
+}
+
 /**
- * 최상위 탭(홈/보관함/대화) 간 전환에 쓰는 기본 트랜지션.
+ * 최상위 탭(홈/보관함/대화/오락) 간 전환에 쓰는 기본 트랜지션.
  * 탭은 위계 없는 형제 화면이라 방향성 있는 슬라이드 대신 fade-through를 쓴다.
  */
 private val tabFadeThroughSpec: AnimatedContentTransitionScope<Scene<NavKey>>.() -> ContentTransform = {
