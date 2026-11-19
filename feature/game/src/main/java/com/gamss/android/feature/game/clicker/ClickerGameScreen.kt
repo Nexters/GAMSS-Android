@@ -87,7 +87,6 @@ private fun ClickerGameContent(
         GaugeArea(
             gauge = { game.gauge },
             gaugeProgress = { game.gaugeProgress },
-            isIdle = { game.isIdle },
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f),
@@ -104,7 +103,6 @@ private fun ClickerGameContent(
 private fun GaugeArea(
     gauge: () -> Float,
     gaugeProgress: () -> Float,
-    isIdle: () -> Boolean,
     modifier: Modifier = Modifier,
 ) {
     val progress = gaugeProgress()
@@ -122,7 +120,6 @@ private fun GaugeArea(
         Box(modifier = Modifier.size(ClickerGaugeNoteSize * scale)) {
             ClickerGaugeNote(
                 gauge = gauge,
-                isIdle = isIdle(),
                 modifier = Modifier
                     .requiredSize(ClickerGaugeNoteSize)
                     .graphicsLayer {

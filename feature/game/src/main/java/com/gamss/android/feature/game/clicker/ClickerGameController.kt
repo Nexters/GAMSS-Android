@@ -22,7 +22,6 @@ internal class ClickerGameController(initial: ClickerGameState = ClickerGameStat
     var state by mutableStateOf(initial)
         private set
 
-    val isIdle by derivedStateOf { state.phase == ClickerGamePhase.Ready }
     val isPlaying by derivedStateOf { state.phase == ClickerGamePhase.Playing }
     val score by derivedStateOf { state.score }
     val remainingTenths by derivedStateOf { state.remainingTenths }

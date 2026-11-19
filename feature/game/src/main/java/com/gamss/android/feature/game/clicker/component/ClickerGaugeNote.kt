@@ -24,12 +24,12 @@ import com.gamss.android.feature.game.R
 internal val ClickerGaugeNoteSize = DpSize(366.dp, 347.dp)
 
 /**
- * 대기 중에는 시안의 대기 그림을, 시작한 뒤에는 진행 중 그림을 쓴다. 두 그림은 표정과 크기가 다르다.
- * 채움 실루엣을 외곽선 아래에 깔아야 눈·입의 흰 칠과 손그림 선이 채움 위에 그대로 남는다. */
+ * 시안의 대기 그림 하나로 그린다. 채움은 그림 아래에, 흰 눈·입은 위에 깔고 둘 다 게이지 높이까지만 보인다.
+ * 그래서 0% 는 대기 시안과 같고, 채움에 덮인 눈·입만 흰색이 된다.
+ */
 @Composable
 internal fun ClickerGaugeNote(
     gauge: () -> Float,
-    isIdle: Boolean,
     modifier: Modifier = Modifier,
 ) {
     Box(modifier = modifier.size(ClickerGaugeNoteSize)) {
@@ -46,31 +46,24 @@ internal fun ClickerGaugeNote(
                 .background(GamssTheme.colors.white)
                 .border(NoteBorderWidth, GamssTheme.colors.gray950),
         )
-        if (isIdle) {
-            Image(
-                painter = painterResource(R.drawable.game_clicker_character_idle),
-                contentDescription = null,
-                contentScale = ContentScale.FillBounds,
-                modifier = IdleCharacterModifier,
-            )
-        } else {
-            Image(
-                painter = painterResource(R.drawable.game_clicker_character_fill),
-                contentDescription = null,
-                contentScale = ContentScale.FillBounds,
-                modifier = CharacterModifier.drawWithContent {
-                    clipRect(top = size.height * (1f - gauge().coerceIn(0f, 1f))) {
-                        this@drawWithContent.drawContent()
-                    }
-                },
-            )
-            Image(
-                painter = painterResource(R.drawable.game_clicker_character_outline),
-                contentDescription = null,
-                contentScale = ContentScale.FillBounds,
-                modifier = CharacterModifier,
-            )
-        }
+        Image(
+            painter = painterResource(R.drawable.game_clicker_character_fill),
+            contentDescription = null,
+            contentScale = ContentScale.FillBounds,
+            modifier = CharacterModifier.clipGauge(gauge),
+        )
+        Image(
+            painter = painterResource(R.drawable.game_clicker_character),
+            contentDescription = null,
+            contentScale = ContentScale.FillBounds,
+            modifier = CharacterModifier,
+        )
+        Image(
+            painter = painterResource(R.drawable.game_clicker_character_eyes),
+            contentDescription = null,
+            contentScale = ContentScale.FillBounds,
+            modifier = CharacterModifier.clipGauge(gauge),
+        )
         Tape(center = CenterOffset(x = 290.27.dp, y = 36.26.dp), rotation = RIGHT_TAPE_ROTATION)
         Tape(center = CenterOffset(x = 49.9.dp, y = 54.93.dp), rotation = LEFT_TAPE_ROTATION)
     }
@@ -119,10 +112,13 @@ private const val RIGHT_TAPE_ROTATION = -15f
 private const val LEFT_TAPE_ROTATION = 90f
 
 // 시안 노드(200x189.84, 83,79.08)보다 내보낸 그림이 선 두께만큼 커서 가운데를 맞춘다.
-private val IdleCharacterModifier = Modifier
+private val CharacterModifier = Modifier
     .offset(x = 81.88.dp, y = 77.53.dp)
     .size(width = 202.25.dp, height = 192.93.dp)
 
-private val CharacterModifier = Modifier
-    .offset(x = 69.85.dp, y = 80.43.dp)
-    .size(width = 229.54.dp, height = 223.81.dp)
+// 게이지는 매 프레임 바뀌므로 그리기 단계에서만 읽는다.
+private fun Modifier.clipGauge(gauge: () -> Float): Modifier = drawWithContent {
+    clipRect(top = size.height * (1f - gauge().coerceIn(0f, 1f))) {
+        this@drawWithContent.drawContent()
+    }
+}

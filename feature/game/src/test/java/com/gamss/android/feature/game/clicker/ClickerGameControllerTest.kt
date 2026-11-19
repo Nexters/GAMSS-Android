@@ -13,7 +13,6 @@ class ClickerGameControllerTest {
 
         assertTrue(game.tap())
         assertEquals(1, game.score)
-        assertFalse(game.isIdle)
         assertTrue(game.isPlaying)
     }
 
@@ -33,7 +32,6 @@ class ClickerGameControllerTest {
         game.replay()
 
         assertEquals(ClickerGameState(), game.state)
-        assertTrue(game.isIdle)
     }
 
     @Test
