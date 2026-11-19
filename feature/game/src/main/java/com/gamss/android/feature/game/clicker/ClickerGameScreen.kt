@@ -39,6 +39,7 @@ import com.gamss.android.feature.game.clicker.component.ClickerGaugeNote
 import com.gamss.android.feature.game.clicker.component.ClickerGaugeNoteSize
 import com.gamss.android.feature.game.clicker.component.ClickerKeyCap
 import com.gamss.android.feature.game.clicker.component.ClickerScoreBoard
+import com.gamss.android.feature.game.clicker.component.rememberClickerKeySound
 
 // 화면이 가려지면 프레임이 멈춘다. 돌아왔을 때 그 공백을 한 프레임으로 몰아 받으면 시간이
 // 한꺼번에 흘러가 버리므로, 한 프레임에 반영하는 시간을 제한해 가려진 동안은 멈춘 것으로 친다.
@@ -63,6 +64,7 @@ fun ClickerGameScreen(
     modifier: Modifier = Modifier,
 ) {
     var game by rememberSaveable(stateSaver = ClickerGameStateSaver) { mutableStateOf(ClickerGameState()) }
+    val keySound = rememberClickerKeySound()
 
     LaunchedEffect(game.phase) {
         if (game.phase != ClickerGamePhase.Playing) return@LaunchedEffect
@@ -77,7 +79,11 @@ fun ClickerGameScreen(
     ClickerGameContent(
         game = game,
         onBackClick = onBackClick,
-        onKeyPress = { game = game.tap() },
+        onKeyPress = {
+            val next = game.tap()
+            if (next != game) keySound.play()
+            game = next
+        },
         onReplayClick = { game = ClickerGameState() },
         modifier = modifier,
     )
@@ -112,6 +118,7 @@ private fun ClickerGameContent(
         )
         GaugeArea(
             gauge = game.gauge,
+            isIdle = game.phase == ClickerGamePhase.Ready,
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f),
@@ -127,6 +134,7 @@ private fun ClickerGameContent(
 @Composable
 private fun GaugeArea(
     gauge: Float,
+    isIdle: Boolean,
     modifier: Modifier = Modifier,
 ) {
     BoxWithConstraints(
@@ -141,6 +149,7 @@ private fun GaugeArea(
         Box(modifier = Modifier.size(ClickerGaugeNoteSize * scale)) {
             ClickerGaugeNote(
                 gauge = gauge,
+                isIdle = isIdle,
                 modifier = Modifier
                     .requiredSize(ClickerGaugeNoteSize)
                     .graphicsLayer {
