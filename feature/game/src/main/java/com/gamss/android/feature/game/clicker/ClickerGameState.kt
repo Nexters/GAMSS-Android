@@ -10,10 +10,10 @@ private const val MS_PER_HUNDREDTH = 10L
 // 0.02f 를 50번 더하면 float 오차로 1.0 에 조금 못 미친다.
 private const val GAUGE_FULL_TOLERANCE = 0.0001f
 
-enum class ClickerGamePhase { Ready, Playing, Finished }
+internal enum class ClickerGamePhase { Ready, Playing, Finished }
 
 /** 진행 중에는 0.1초 단위로 흐르는 시간을, 끝나면 0.01초 단위 기록이나 시간 초과를 보여 준다. */
-sealed interface ClickerRecord {
+internal sealed interface ClickerRecord {
     data class Running(val tenths: Long) : ClickerRecord
     data class Cleared(val hundredths: Long) : ClickerRecord
     data object TimeOver : ClickerRecord
@@ -23,7 +23,7 @@ sealed interface ClickerRecord {
  * 첫 탭부터 시간이 흐르고, 게이지는 진행 중 내내 빠진다. 가득 채우면 걸린 시간이 기록이 된다.
  * 빠지는 속도보다 느리게 누르면 끝없이 이어지므로 제한 시간이 지나면 시간 초과로 끝낸다.
  */
-data class ClickerGameState(
+internal data class ClickerGameState(
     val phase: ClickerGamePhase = ClickerGamePhase.Ready,
     val gauge: Float = 0f,
     val elapsedMs: Long = 0L,

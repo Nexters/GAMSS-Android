@@ -116,7 +116,6 @@ private val CharacterModifier = Modifier
     .offset(x = 81.88.dp, y = 77.53.dp)
     .size(width = 202.25.dp, height = 192.93.dp)
 
-// 게이지는 매 프레임 바뀌므로 그리기 단계에서만 읽는다.
 private fun Modifier.clipGauge(gauge: () -> Float): Modifier = drawWithContent {
     clipRect(top = size.height * (1f - gauge().coerceIn(0f, 1f))) {
         this@drawWithContent.drawContent()
