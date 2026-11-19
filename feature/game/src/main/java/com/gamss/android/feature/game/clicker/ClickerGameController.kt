@@ -23,8 +23,7 @@ internal class ClickerGameController(initial: ClickerGameState = ClickerGameStat
         private set
 
     val isPlaying by derivedStateOf { state.phase == ClickerGamePhase.Playing }
-    val score by derivedStateOf { state.score }
-    val remainingTenths by derivedStateOf { state.remainingTenths }
+    val record by derivedStateOf { state.record }
 
     // 접근성 값이 매 프레임 바뀌지 않도록 1% 단위로 끊는다.
     val gaugeProgress by derivedStateOf { (state.gauge * PERCENT).roundToInt() / PERCENT }
@@ -53,14 +52,13 @@ internal class ClickerGameController(initial: ClickerGameState = ClickerGameStat
 
     companion object {
         val Saver = listSaver<ClickerGameController, Any>(
-            save = { with(it.state) { listOf(phase.name, score, gauge, elapsedMs) } },
+            save = { with(it.state) { listOf(phase.name, gauge, elapsedMs) } },
             restore = {
                 ClickerGameController(
                     ClickerGameState(
                         phase = ClickerGamePhase.valueOf(it[0] as String),
-                        score = it[1] as Int,
-                        gauge = it[2] as Float,
-                        elapsedMs = it[3] as Long,
+                        gauge = it[1] as Float,
+                        elapsedMs = it[2] as Long,
                     ),
                 )
             },

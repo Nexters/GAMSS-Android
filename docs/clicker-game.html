@@ -71,6 +71,7 @@ body {
   font-variant-numeric: tabular-nums;
 }
 .labeled svg { width: 24px; height: 24px; }
+.side { width: 62px; flex: none; }
 button.labeled {
   background: none;
   border: 0;
@@ -84,12 +85,11 @@ button.labeled {
   border-radius: 8px;
 }
 button.labeled:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
-.score {
+.record {
   min-width: 142px;
   box-sizing: border-box;
   display: flex;
-  justify-content: flex-end;
-  gap: 8px;
+  justify-content: center;
   padding: 15px 16px;
   background: var(--card);
   border: 1.5px solid var(--ink);
@@ -165,11 +165,8 @@ button.labeled:focus-visible { outline: 2px solid var(--ink); outline-offset: 2p
   <h1 class="title">눌러눌러</h1>
 
   <div class="board">
-    <div class="labeled" aria-live="off">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><g transform="translate(1 1)"><path d="M11 4.5L11 11H16"/><circle cx="11" cy="11" r="10.25"/></g></svg>
-      <span id="time">30.0초</span>
-    </div>
-    <div class="score" aria-label="점수"><span id="score">00000</span><span>점</span></div>
+    <div class="side" aria-hidden="true"></div>
+    <div class="record" id="record" role="timer" aria-label="기록">0.0초</div>
     <button class="labeled" id="replay" type="button" style="gap:2px">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g transform="translate(3.75 3.75)"><path d="M1.59 5.29C3.05 2.95 5.64 1.39 8.6 1.39c4.56 0 8.25 3.69 8.25 8.25s-3.69 8.25-8.25 8.25c-3.67 0-6.78-2.39-7.85-5.7"/><path d="M1.51.75v4.71h4.71"/></g></svg>
       <span>다시하기</span>
@@ -196,23 +193,24 @@ button.labeled:focus-visible { outline: 2px solid var(--ink); outline-offset: 2p
     <button class="key" type="button" aria-label="누르기"></button>
     <button class="key" type="button" aria-label="누르기"></button>
   </div>
-  <p class="hint">30초 안에 게이지를 가득 채우세요. 키보드의 아무 키나 눌러도 됩니다.</p>
+  <p class="hint">최대한 빨리 게이지를 가득 채우세요. 키보드의 아무 키나 눌러도 됩니다.</p>
 </main>
 
 <script>
 (() => {
   const DURATION_MS = 30000;
-  const GAUGE_PER_TAP = 0.02;
-  const DRAIN_PER_SECOND = 0.05;
+  // 마우스로도 할 만하도록 앱보다 쉽게 둔다. 1초에 5번 누르면 약 7초에 찬다.
+  const GAUGE_PER_TAP = 0.04;
+  const DRAIN_PER_SECOND = 0.06;
   const FULL_TOLERANCE = 0.0001;
   const MAX_FRAME_DELTA_MS = 100;
 
-  const initial = () => ({ phase: "ready", score: 0, gauge: 0, elapsedMs: 0 });
+  const initial = () => ({ phase: "ready", gauge: 0, elapsedMs: 0 });
 
   function tap(s) {
     if (s.phase === "finished") return s;
     const full = s.gauge + GAUGE_PER_TAP >= 1 - FULL_TOLERANCE;
-    return { ...s, phase: full ? "finished" : "playing", score: s.score + 1, gauge: full ? 1 : s.gauge + GAUGE_PER_TAP };
+    return { ...s, phase: full ? "finished" : "playing", gauge: full ? 1 : s.gauge + GAUGE_PER_TAP };
   }
 
   function advance(s, deltaMs) {
@@ -253,11 +251,20 @@ button.labeled:focus-visible { outline: 2px solid var(--ink); outline-offset: 2p
     } catch (_) {}
   }
 
-  const remainingTenths = (s) => Math.ceil((DURATION_MS - s.elapsedMs) / 100);
+  function recordText(s) {
+    if (s.phase !== "finished") {
+      const t = Math.floor(s.elapsedMs / 100);
+      return `${Math.floor(t / 10)}.${t % 10}초`;
+    }
+    if (s.gauge >= 1) {
+      const h = Math.floor(s.elapsedMs / 10);
+      return `${Math.floor(h / 100)}.${String(h % 100).padStart(2, "0")}초`;
+    }
+    return "시간 초과";
+  }
 
   const el = {
-    time: document.getElementById("time"),
-    score: document.getElementById("score"),
+    record: document.getElementById("record"),
     status: document.getElementById("status"),
     note: document.getElementById("note"),
     character: document.getElementById("character"),
@@ -265,7 +272,8 @@ button.labeled:focus-visible { outline: 2px solid var(--ink); outline-offset: 2p
     keys: [...document.querySelectorAll(".key")],
   };
 
-  let state = window.claude?.hot?.data?.state ?? initial();
+  const saved = window.claude?.hot?.data?.state;
+  let state = saved && !("score" in saved) ? saved : initial();
   let lastFrame = null;
   let lastStatus = "";
 
@@ -274,17 +282,13 @@ button.labeled:focus-visible { outline: 2px solid var(--ink); outline-offset: 2p
   function statusText(s) {
     if (s.phase === "ready") return "키를 누르면 시작합니다";
     if (s.phase === "playing") return "멈추면 게이지가 빠집니다";
-    if (s.gauge >= 1) {
-      const t = remainingTenths(s);
-      return `가득 채웠습니다. ${Math.floor(t / 10)}.${t % 10}초 남기고 ${s.score}번 눌렀습니다`;
-    }
-    return `시간이 끝났습니다. 게이지 ${Math.round(s.gauge * 100)}%`;
+    if (s.gauge >= 1) return `${recordText(s)} 만에 가득 채웠습니다`;
+    return `${DURATION_MS / 1000}초 안에 채우지 못했습니다. 게이지 ${Math.round(s.gauge * 100)}%`;
   }
 
   function render() {
-    const t = remainingTenths(state);
-    el.time.textContent = `${Math.floor(t / 10)}.${t % 10}초`;
-    el.score.textContent = String(state.score).padStart(5, "0");
+    const record = recordText(state);
+    if (el.record.textContent !== record) el.record.textContent = record;
     el.character.style.setProperty("--empty", `${(1 - state.gauge) * 100}%`);
     const pct = Math.round(state.gauge * 100);
     if (el.note.getAttribute("aria-valuenow") !== String(pct)) el.note.setAttribute("aria-valuenow", pct);
