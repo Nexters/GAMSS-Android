@@ -24,6 +24,8 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.util.fastAny
+import androidx.compose.ui.util.fastForEach
 import com.gamss.android.feature.game.R
 
 private const val PRESSED_SCALE = 0.94f
@@ -53,7 +55,7 @@ internal fun ClickerKeyCap(
         contentScale = ContentScale.Crop,
         modifier = modifier
             // 눌려 작아진 모양을 따라 터치 영역까지 줄면 가장자리 연타가 빗나간다.
-            .pointerInput(Unit) { detectEachDown(interactionSource) { currentOnPress() } }
+            .pointerInput(interactionSource) { detectEachDown(interactionSource) { currentOnPress() } }
             .semantics {
                 role = Role.Button
                 this.contentDescription = contentDescription
@@ -82,11 +84,13 @@ private suspend fun PointerInputScope.detectEachDown(
         onDown()
         do {
             val event = awaitPointerEvent()
-            event.changes.filter { it.changedToDown() }.forEach {
-                it.consume()
-                onDown()
+            event.changes.fastForEach {
+                if (it.changedToDown()) {
+                    it.consume()
+                    onDown()
+                }
             }
-        } while (event.changes.any { it.pressed })
+        } while (event.changes.fastAny { it.pressed })
         interactionSource.tryEmit(PressInteraction.Release(press))
     }
 }

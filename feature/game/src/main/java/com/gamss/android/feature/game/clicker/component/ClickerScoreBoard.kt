@@ -28,8 +28,8 @@ private const val TENTHS_PER_SECOND = 10
 
 @Composable
 internal fun ClickerScoreBoard(
-    remainingTenths: Long,
-    score: Int,
+    remainingTenths: () -> Long,
+    score: () -> Int,
     onReplayClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -38,12 +38,13 @@ internal fun ClickerScoreBoard(
         horizontalArrangement = Arrangement.spacedBy(ItemGap),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        val tenths = remainingTenths()
         LabeledIcon(
             iconRes = R.drawable.game_ic_clock,
             label = stringResource(
                 R.string.game_clicker_remaining_time,
-                remainingTenths / TENTHS_PER_SECOND,
-                remainingTenths % TENTHS_PER_SECOND,
+                tenths / TENTHS_PER_SECOND,
+                tenths % TENTHS_PER_SECOND,
             ),
             iconLabelGap = 3.dp,
         )
@@ -56,7 +57,7 @@ internal fun ClickerScoreBoard(
             horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
         ) {
             Text(
-                text = stringResource(R.string.game_clicker_score, score),
+                text = stringResource(R.string.game_clicker_score, score()),
                 style = GamssTheme.typography.title2,
                 color = GamssTheme.colors.gray900,
             )

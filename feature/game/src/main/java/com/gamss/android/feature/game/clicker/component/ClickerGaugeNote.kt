@@ -28,7 +28,7 @@ internal val ClickerGaugeNoteSize = DpSize(366.dp, 347.dp)
  * 채움 실루엣을 외곽선 아래에 깔아야 눈·입의 흰 칠과 손그림 선이 채움 위에 그대로 남는다. */
 @Composable
 internal fun ClickerGaugeNote(
-    gauge: Float,
+    gauge: () -> Float,
     isIdle: Boolean,
     modifier: Modifier = Modifier,
 ) {
@@ -59,7 +59,7 @@ internal fun ClickerGaugeNote(
                 contentDescription = null,
                 contentScale = ContentScale.FillBounds,
                 modifier = CharacterModifier.drawWithContent {
-                    clipRect(top = size.height * (1f - gauge.coerceIn(0f, 1f))) {
+                    clipRect(top = size.height * (1f - gauge().coerceIn(0f, 1f))) {
                         this@drawWithContent.drawContent()
                     }
                 },
