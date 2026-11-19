@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="game_logo_description">감쓰</string>
+    <string name="game_setting_description">설정</string>
+    <string name="game_clicker_title">눌러눌러</string>
+
+    <string name="game_clicker_back_description">뒤로 가기</string>
+    <string name="game_clicker_elapsed_time">%1$d.%2$d초</string>
+    <string name="game_clicker_record">%1$d.%2$02d초</string>
+    <string name="game_clicker_time_over">시간 초과</string>
+    <string name="game_clicker_replay">다시하기</string>
+    <string name="game_clicker_key_description">누르기</string>
+</resources>

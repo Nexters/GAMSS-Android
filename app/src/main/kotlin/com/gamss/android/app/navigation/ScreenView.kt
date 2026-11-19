@@ -9,6 +9,8 @@ import com.gamss.android.feature.archive.navigation.ArchiveKey
 import com.gamss.android.feature.carddelete.navigation.CardDeleteKey
 import com.gamss.android.feature.chat.navigation.ChatKey
 import com.gamss.android.feature.chat.navigation.ChatRoomKey
+import com.gamss.android.feature.game.navigation.ClickerGameKey
+import com.gamss.android.feature.game.navigation.GameKey
 import com.gamss.android.feature.home.navigation.HomeKey
 import com.gamss.android.feature.login.navigation.LoginKey
 import com.gamss.android.feature.onboarding.navigation.OnboardingKey
@@ -32,6 +34,8 @@ private val screenNames: Map<NavKey, String> = mapOf(
     ArchiveKey to "archive",
     SettingKey to "setting",
     AccountInfoKey to "account_info",
+    GameKey to "game_list",
+    ClickerGameKey to "clicker_game",
 )
 
 /** 새 화면 key 를 추가하면 여기에도 이름을 붙여야 집계된다. MainKey 는 탭을 담는 틀이라 세지 않는다. */
