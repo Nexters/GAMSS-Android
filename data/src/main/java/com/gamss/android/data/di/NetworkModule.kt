@@ -8,6 +8,7 @@ import com.gamss.android.data.auth.TokenAuthenticator
 import com.gamss.android.data.auth.TokenInterceptor
 import com.gamss.android.data.remote.auth.AuthService
 import com.gamss.android.data.remote.gamssJson
+import com.gamss.android.data.remote.payment.PaymentService
 import com.gamss.android.data.remote.push.DeviceTokenService
 import com.gamss.android.data.remote.user.UserService
 import dagger.Module
@@ -122,6 +123,11 @@ internal object NetworkModule {
     fun provideDeviceTokenService(retrofit: Retrofit): DeviceTokenService =
         retrofit.create(DeviceTokenService::class.java)
 
+    @Provides
+    @Singleton
+    fun providePaymentService(retrofit: Retrofit): PaymentService =
+        retrofit.create(PaymentService::class.java)
+
     private fun String.redactTokenValues(): String =
         TOKEN_JSON_PATTERN.replace(this) { matchResult ->
             "${matchResult.groupValues[1]}<redacted>${matchResult.groupValues[2]}"
@@ -129,5 +135,5 @@ internal object NetworkModule {
 
     private const val HTTP_LOG_TAG = "GamssHttp"
     private val TOKEN_JSON_PATTERN =
-        Regex("(\"(?:idToken|accessToken|refreshToken)\"\\s*:\\s*\")[^\"]*(\")")
+        Regex("(\"(?:idToken|accessToken|refreshToken|purchaseToken|accountToken)\"\\s*:\\s*\")[^\"]*(\")")
 }
