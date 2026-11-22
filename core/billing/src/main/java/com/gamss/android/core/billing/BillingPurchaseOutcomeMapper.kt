@@ -14,8 +14,9 @@ import com.android.billingclient.api.Purchase
 internal fun mapToPurchaseOutcomes(
     billingResult: BillingResult,
     purchases: List<Purchase>?,
+    errorSource: BillingErrorSource = BillingErrorSource.PURCHASE_UPDATE,
 ): List<BillingPurchaseOutcome> = when (billingResult.responseCode) {
-    BillingResponseCode.OK -> purchases.orEmpty().map { it.toOutcome() }
+    BillingResponseCode.OK -> purchases.orEmpty().map { it.toOutcome(errorSource) }
     BillingResponseCode.USER_CANCELED -> listOf(BillingPurchaseOutcome.UserCanceled)
     // ITEM_ALREADY_OWNED는 구매 자체가 아니라 launchBillingFlow 실패 코드라 purchases가 비어
     // 온다 — 미처리 구매가 무엇인지는 호출부가 queryUnfinishedPurchases()로 다시 조회해야 한다.
@@ -24,11 +25,12 @@ internal fun mapToPurchaseOutcomes(
         BillingPurchaseOutcome.Error(
             responseCode = billingResult.responseCode,
             message = billingResult.debugMessage,
+            source = errorSource,
         ),
     )
 }
 
-private fun Purchase.toOutcome(): BillingPurchaseOutcome = when (purchaseState) {
+private fun Purchase.toOutcome(errorSource: BillingErrorSource): BillingPurchaseOutcome = when (purchaseState) {
     Purchase.PurchaseState.PURCHASED -> BillingPurchaseOutcome.Purchased(
         purchaseToken = purchaseToken,
         productIds = products,
@@ -37,5 +39,6 @@ private fun Purchase.toOutcome(): BillingPurchaseOutcome = when (purchaseState) 
     else -> BillingPurchaseOutcome.Error(
         responseCode = BillingResponseCode.ERROR,
         message = "Unknown purchase state($purchaseState) for order $orderId",
+        source = errorSource,
     )
 }

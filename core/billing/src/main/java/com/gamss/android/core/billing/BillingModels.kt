@@ -43,5 +43,14 @@ sealed interface BillingPurchaseOutcome {
     data class Pending(val productIds: List<String>) : BillingPurchaseOutcome
     data object UserCanceled : BillingPurchaseOutcome
     data object AlreadyOwned : BillingPurchaseOutcome
-    data class Error(val responseCode: Int, val message: String) : BillingPurchaseOutcome
+    data class Error(
+        val responseCode: Int,
+        val message: String,
+        val source: BillingErrorSource = BillingErrorSource.PURCHASE_UPDATE,
+    ) : BillingPurchaseOutcome
+}
+
+enum class BillingErrorSource {
+    PURCHASE_UPDATE,
+    RESTORE_QUERY,
 }
