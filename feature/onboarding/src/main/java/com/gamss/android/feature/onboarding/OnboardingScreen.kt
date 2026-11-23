@@ -31,6 +31,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.gamss.android.core.designsystem.button.GamssButton
 import com.gamss.android.core.designsystem.button.GamssButtonVariant
 import com.gamss.android.core.designsystem.component.GamssText
@@ -81,9 +82,13 @@ private enum class OnboardingPage(
 fun OnboardingScreen(
     onComplete: () -> Unit,
     modifier: Modifier = Modifier,
+    viewModel: OnboardingViewModel = hiltViewModel(),
 ) {
     OnboardingContent(
         onComplete = onComplete,
+        onNextClick = viewModel::trackNext,
+        onSkipClick = viewModel::trackSkip,
+        onStartClick = viewModel::trackComplete,
         modifier = modifier,
     )
 }
@@ -91,6 +96,9 @@ fun OnboardingScreen(
 @Composable
 private fun OnboardingContent(
     onComplete: () -> Unit,
+    onNextClick: (pageIndex: Int) -> Unit,
+    onSkipClick: (pageIndex: Int) -> Unit,
+    onStartClick: () -> Unit,
     modifier: Modifier = Modifier,
     initialPage: Int = 0,
 ) {
@@ -118,7 +126,10 @@ private fun OnboardingContent(
             onBackClick = {
                 coroutineScope.launch { pagerState.animateScrollToPage(pagerState.currentPage - 1) }
             },
-            onSkipClick = onComplete,
+            onSkipClick = {
+                onSkipClick(pagerState.currentPage)
+                onComplete()
+            },
             modifier = Modifier.align(Alignment.TopCenter),
         )
 
@@ -138,9 +149,13 @@ private fun OnboardingContent(
             OnboardingActionButton(
                 isLastPage = pagerState.currentPage == pages.lastIndex,
                 onNextClick = {
+                    onNextClick(pagerState.currentPage)
                     coroutineScope.launch { pagerState.animateScrollToPage(pagerState.currentPage + 1) }
                 },
-                onStartClick = onComplete,
+                onStartClick = {
+                    onStartClick()
+                    onComplete()
+                },
             )
         }
     }
@@ -277,6 +292,9 @@ private fun OnboardingStep1Preview() {
     GamssTheme {
         OnboardingContent(
             onComplete = {},
+            onNextClick = {},
+            onSkipClick = {},
+            onStartClick = {},
         )
     }
 }
@@ -288,6 +306,9 @@ private fun OnboardingStep3Preview() {
     GamssTheme {
         OnboardingContent(
             onComplete = {},
+            onNextClick = {},
+            onSkipClick = {},
+            onStartClick = {},
             initialPage = OnboardingPage.entries.lastIndex,
         )
     }

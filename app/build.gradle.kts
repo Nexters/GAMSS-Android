@@ -120,6 +120,7 @@ dependencies {
     implementation(projects.domain)
     implementation(projects.data)
     implementation(projects.core.common)
+    implementation(projects.core.billing)
     implementation(projects.core.ui)
     implementation(projects.core.designsystem)
     implementation(projects.feature.home)

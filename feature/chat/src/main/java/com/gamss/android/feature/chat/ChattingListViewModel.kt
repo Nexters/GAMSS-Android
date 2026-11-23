@@ -7,6 +7,8 @@ import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import com.gamss.android.core.common.AppResult
 import com.gamss.android.core.common.network.ApiException
+import com.gamss.android.domain.analytics.AnalyticsEvent
+import com.gamss.android.domain.analytics.AnalyticsTracker
 import com.gamss.android.domain.auth.SessionExpiredException
 import com.gamss.android.domain.conversation.DeleteConversationsResult
 import com.gamss.android.domain.conversation.DeleteConversationsUseCase
@@ -35,6 +37,7 @@ class ChattingListViewModel @Inject constructor(
     private val getOngoingConversations: GetOngoingConversationsUseCase,
     private val deleteConversations: DeleteConversationsUseCase,
     private val searchChattingRooms: SearchChattingRoomsUseCase,
+    private val analyticsTracker: AnalyticsTracker,
 ) : ViewModel(),
     ContainerHost<ChattingListState, ChattingListSideEffect> {
 
@@ -102,13 +105,16 @@ class ChattingListViewModel @Inject constructor(
         reduce { state.copy(search = state.search.copy(keyword = keyword)) }
     }
 
-    fun search() = intent { runSearch() }
+    fun search() = intent {
+        // 삭제 뒤 결과를 맞추는 재검색은 사용자가 한 검색이 아니라서 runSearch 가 아닌 여기서 기록한다.
+        if (runSearch()) analyticsTracker.track(AnalyticsEvent.CHAT_SEARCH)
+    }
 
-    private suspend fun ChattingListSyntax.runSearch() {
+    private suspend fun ChattingListSyntax.runSearch(): Boolean {
         val keyword = state.search.keyword.text.trim()
         val nextGeneration = state.search.searchGeneration + 1
 
-        when (val result = searchChattingRooms(keyword)) {
+        return when (val result = searchChattingRooms(keyword)) {
             is AppResult.Success -> {
                 reduce {
                     state.copy(
@@ -119,6 +125,7 @@ class ChattingListViewModel @Inject constructor(
                     )
                 }
                 searchResults.value = result.data
+                true
             }
 
             is AppResult.Failure -> {
@@ -129,6 +136,7 @@ class ChattingListViewModel @Inject constructor(
                         result.throwable.toSearchFailureReason(),
                     ),
                 )
+                false
             }
         }
     }
@@ -137,7 +145,10 @@ class ChattingListViewModel @Inject constructor(
         when (val current = state.phase) {
             is ChattingListPhase.Browsing,
             is ChattingListPhase.NetworkError,
-            -> postSideEffect(ChattingListSideEffect.OpenChatRoom(conversationId))
+            -> {
+                analyticsTracker.track(AnalyticsEvent.CHAT_LIST_CARD_CLICK)
+                postSideEffect(ChattingListSideEffect.OpenChatRoom(conversationId))
+            }
 
             is ChattingListPhase.Selecting -> reduce {
                 state.copy(phase = ChattingListPhase.Selecting(current.selectedIds.toggle(conversationId)))
@@ -192,6 +203,7 @@ class ChattingListViewModel @Inject constructor(
     fun onDeleteConfirm() = intent {
         val current = state.phase
         if (current !is ChattingListPhase.Confirming) return@intent
+        analyticsTracker.track(AnalyticsEvent.CHAT_DELETE_CONFIRM)
         reduce { state.copy(phase = ChattingListPhase.Deleting(current.targetIds)) }
         runDelete(current.targetIds)
     }

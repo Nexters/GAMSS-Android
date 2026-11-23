@@ -33,6 +33,7 @@ import com.gamss.android.core.ui.share.shareBitmapToInstagramStory
 import com.gamss.android.core.ui.share.shareTextToKakaoTalk
 import com.gamss.android.domain.card.Card
 import com.gamss.android.feature.archive.R
+import com.gamss.android.feature.archive.ShareTarget
 import kotlinx.coroutines.launch
 
 @Composable
@@ -44,6 +45,7 @@ internal fun CardDetailDialog(
     onViewConversationClick: () -> Unit,
     onShareClick: () -> Unit,
     onShareSheetDismiss: () -> Unit,
+    onShareTargetClick: (ShareTarget) -> Unit,
     onInstagramShareFailed: (StoryShareResult) -> Unit,
     onKakaoTalkShareFailed: () -> Unit,
 ) {
@@ -114,13 +116,15 @@ internal fun CardDetailDialog(
         ShareTargetSheet(
             onKakaoTalkClick = {
                 onShareSheetDismiss()
-                if (consumeShareTap() && !context.shareTextToKakaoTalk(kakaoTalkText)) {
-                    onKakaoTalkShareFailed()
+                if (consumeShareTap()) {
+                    onShareTargetClick(ShareTarget.KAKAO)
+                    if (!context.shareTextToKakaoTalk(kakaoTalkText)) onKakaoTalkShareFailed()
                 }
             },
             onInstagramStoryClick = {
                 onShareSheetDismiss()
                 if (consumeShareTap() && !isSharingInstagramStory) {
+                    onShareTargetClick(ShareTarget.INSTAGRAM)
                     isSharingInstagramStory = true
                     scope.launch {
                         try {

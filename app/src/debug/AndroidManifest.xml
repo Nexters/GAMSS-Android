@@ -11,10 +11,22 @@
             android:name="local_testing_dir"
             android:value="local_testing" />
 
-        <!-- 디버그/검증 전용 화면. adb 로만 실행. -->
+        <!--
+            디버그/검증 전용 화면. adb 로만 실행(launcher intent-filter 없음). 실기기(user 빌드)에서는
+            adb shell(uid=shell)이 exported=false 액티비티를 시작할 권한이 없어 exported=true 로 둔다.
+        -->
         <activity
             android:name=".debug.CardDebugActivity"
-            android:exported="false"
+            android:exported="true"
+            android:theme="@style/Theme.GAMSS" />
+
+        <!--
+            디버그/검증 전용 화면. adb 로만 실행(launcher intent-filter 없음). 실기기(user 빌드)에서는
+            adb shell(uid=shell)이 exported=false 액티비티를 시작할 권한이 없어 exported=true 로 둔다.
+        -->
+        <activity
+            android:name=".debug.BillingDebugActivity"
+            android:exported="true"
             android:theme="@style/Theme.GAMSS" />
 
     </application>

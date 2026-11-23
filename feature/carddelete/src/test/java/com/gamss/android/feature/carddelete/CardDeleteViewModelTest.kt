@@ -1,6 +1,9 @@
 package com.gamss.android.feature.carddelete
 
 import com.gamss.android.core.common.AppResult
+import com.gamss.android.domain.analytics.AnalyticsEvent
+import com.gamss.android.domain.analytics.AnalyticsProperty
+import com.gamss.android.domain.analytics.AnalyticsTracker
 import com.gamss.android.domain.card.DeleteCardUseCase
 import com.gamss.android.domain.card.DeleteCardsByEmotionUseCase
 import com.gamss.android.domain.emotion.EmotionCharacter
@@ -10,6 +13,7 @@ import io.mockk.mockk
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.orbitmvi.orbit.test.test
 
@@ -19,7 +23,9 @@ class CardDeleteViewModelTest {
     private val deleteCardsByEmotion: DeleteCardsByEmotionUseCase = mockk()
     private val deleteCard: DeleteCardUseCase = mockk()
 
-    private fun viewModel() = CardDeleteViewModel(deleteCardsByEmotion, deleteCard)
+    private val analyticsTracker = RecordingAnalyticsTracker()
+
+    private fun viewModel() = CardDeleteViewModel(deleteCardsByEmotion, deleteCard, analyticsTracker)
 
     @Test
     fun `여섯 번째 탭에서 그 감정 칸을 한 번 비우고 완료 상태가 된다`() = runTest {
@@ -97,8 +103,79 @@ class CardDeleteViewModelTest {
         coVerify(exactly = 0) { deleteCardsByEmotion(any()) }
     }
 
+    @Test
+    fun `한 장을 파쇄하면 탭마다 횟수를 기록하고 성공을 기록한다`() = runTest {
+        coEvery { deleteCard(CARD_ID) } returns AppResult.Success(Unit)
+
+        viewModel().test(this) {
+            repeat(SHRED_TOTAL_TAPS) { containerHost.onShredTap(emotion = EMOTION, cardId = CARD_ID) }
+            repeat(SHRED_TOTAL_TAPS) { tapIndex -> expectState { copy(shredTapCount = tapIndex + 1) } }
+            expectState { copy(shredTapCount = SHRED_TOTAL_TAPS, isDeleting = true) }
+            advanceTimeBy(SHRED_COMPLETE_HOLD_MS)
+            expectState { copy(isDeleting = false, isCompleted = true) }
+            expectSideEffect(CardDeleteSideEffect.ShredSuccess)
+        }
+
+        val singleScope = mapOf(AnalyticsProperty.EMOTION to "anger", AnalyticsProperty.SCOPE to "single")
+        val expectedTaps = (1..SHRED_TOTAL_TAPS).map { tapCount ->
+            AnalyticsEvent.CARD_SHRED_TAP to singleScope + (AnalyticsProperty.TAP_COUNT to tapCount)
+        }
+        assertEquals(expectedTaps + (AnalyticsEvent.CARD_SHRED_SUCCESS to singleScope), analyticsTracker.events)
+    }
+
+    @Test
+    fun `칸 비우기에 실패하면 실패를 기록한다`() = runTest {
+        coEvery { deleteCardsByEmotion(EMOTION) } returns AppResult.Failure(IllegalStateException("실패"))
+
+        viewModel().test(this) {
+            repeat(SHRED_TOTAL_TAPS) { containerHost.onShredTap(emotion = EMOTION, cardId = null) }
+            repeat(SHRED_TOTAL_TAPS) { tapIndex -> expectState { copy(shredTapCount = tapIndex + 1) } }
+            expectState { copy(shredTapCount = SHRED_TOTAL_TAPS, isDeleting = true) }
+            advanceTimeBy(SHRED_COMPLETE_HOLD_MS)
+            expectState { CardDeleteState() }
+            expectSideEffect(CardDeleteSideEffect.ShredFailure)
+        }
+
+        assertEquals(
+            AnalyticsEvent.CARD_SHRED_FAIL to mapOf(
+                AnalyticsProperty.EMOTION to "anger",
+                AnalyticsProperty.SCOPE to "emotion_all",
+            ),
+            analyticsTracker.events.last(),
+        )
+    }
+
+    @Test
+    fun `삭제를 기다리는 동안 누른 탭은 기록하지 않는다`() = runTest {
+        coEvery { deleteCardsByEmotion(EMOTION) } returns AppResult.Success(Unit)
+
+        viewModel().test(this) {
+            repeat(SHRED_TOTAL_TAPS) { containerHost.onShredTap(emotion = EMOTION, cardId = null) }
+            repeat(SHRED_TOTAL_TAPS) { tapIndex -> expectState { copy(shredTapCount = tapIndex + 1) } }
+            expectState { copy(shredTapCount = SHRED_TOTAL_TAPS, isDeleting = true) }
+
+            containerHost.onShredTap(emotion = EMOTION, cardId = null)
+            advanceTimeBy(SHRED_COMPLETE_HOLD_MS)
+            expectState { copy(isDeleting = false, isCompleted = true) }
+            expectSideEffect(CardDeleteSideEffect.ShredSuccess)
+        }
+
+        assertEquals(
+            SHRED_TOTAL_TAPS,
+            analyticsTracker.events.count { (event, _) -> event == AnalyticsEvent.CARD_SHRED_TAP },
+        )
+    }
+
     private companion object {
         const val CARD_ID = 7L
         val EMOTION = EmotionCharacter.ANGER
+    }
+}
+
+private class RecordingAnalyticsTracker : AnalyticsTracker {
+    val events = mutableListOf<Pair<String, Map<String, Any>>>()
+
+    override fun track(event: String, properties: Map<String, Any>) {
+        events += event to properties
     }
 }

@@ -2,6 +2,7 @@ package com.gamss.android.feature.home
 
 import com.gamss.android.core.common.AppResult
 import com.gamss.android.core.common.network.ApiException
+import com.gamss.android.domain.analytics.AnalyticsEvent
 import com.gamss.android.domain.conversation.ConversationRepository
 import com.gamss.android.domain.conversation.MAX_MESSAGE_LENGTH
 import com.gamss.android.domain.emotion.EmotionCharacter
@@ -30,11 +31,12 @@ class HomeViewModelTest {
 
     private val getUserInfoUseCase: GetUserInfoUseCase = mockk()
     private val repository = RecordingConversationRepository()
+    private val analyticsTracker = RecordingAnalyticsTracker()
 
     private fun viewModel(
         repository: ConversationRepository = this.repository,
         detectRisk: DetectRiskInTextUseCase = riskDetector(),
-    ) = HomeViewModel(getUserInfoUseCase, conversationSession(repository), detectRisk)
+    ) = HomeViewModel(getUserInfoUseCase, conversationSession(repository), detectRisk, analyticsTracker)
 
     @Test
     fun `유저 정보를 받아오면 인사말에 쓸 닉네임이 채워진다`() = runTest {
@@ -544,6 +546,72 @@ class HomeViewModelTest {
             containerHost.navigateToSetting()
             expectSideEffect(HomeSideEffect.NavigateToSetting)
         }
+    }
+
+    @Test
+    fun `보내면 홈 전송 이벤트를 남긴다`() = runTest {
+        viewModel().test(this) {
+            containerHost.onInputChange(WORRY)
+            expectState { copy(input = WORRY) }
+
+            containerHost.onSubmit()
+            expectState { copy(isSending = true) }
+            expectState { copy(isSending = false) }
+            expectState { copy(input = "") }
+        }
+        assertEquals(listOf(AnalyticsEvent.HOME_SUBMIT to emptyMap<String, Any>()), analyticsTracker.events)
+    }
+
+    @Test
+    fun `빈 입력으로 보내면 이벤트를 남기지 않는다`() = runTest {
+        viewModel().test(this) {
+            containerHost.onInputChange(BLANK)
+            expectState { copy(input = BLANK) }
+
+            containerHost.onSubmit()
+            expectNoItems()
+        }
+        assertEquals(emptyList<Pair<String, Map<String, Any>>>(), analyticsTracker.events)
+    }
+
+    @Test
+    fun `위험 신호로 막히면 전송 이벤트 뒤에 차단 이벤트를 남긴다`() = runTest {
+        viewModel(detectRisk = riskDetector(RiskTerm(CRITICAL_TERM, RiskLevel.CRITICAL))).test(this) {
+            containerHost.onInputChange(CRITICAL_WORRY)
+            expectState { copy(input = CRITICAL_WORRY) }
+
+            containerHost.onSubmit()
+            expectState { copy(isSending = true) }
+            awaitState()
+        }
+        assertEquals(
+            listOf(
+                AnalyticsEvent.HOME_SUBMIT to emptyMap<String, Any>(),
+                AnalyticsEvent.HOME_SUBMIT_BLOCKED to emptyMap(),
+            ),
+            analyticsTracker.events,
+        )
+    }
+
+    @Test
+    fun `전송에 실패하면 전송 이벤트 뒤에 실패 이벤트를 남긴다`() = runTest {
+        val failing = RecordingConversationRepository(sendFailure = IllegalStateException("send failed"))
+        viewModel(failing).test(this) {
+            containerHost.onInputChange(WORRY)
+            expectState { copy(input = WORRY) }
+
+            containerHost.onSubmit()
+            expectState { copy(isSending = true) }
+            expectState { copy(isSending = false) }
+            expectSideEffect(HomeSideEffect.ShowToast(SEND_FAILED))
+        }
+        assertEquals(
+            listOf(
+                AnalyticsEvent.HOME_SUBMIT to emptyMap<String, Any>(),
+                AnalyticsEvent.HOME_SUBMIT_FAIL to emptyMap(),
+            ),
+            analyticsTracker.events,
+        )
     }
 
     private fun givenNetworkFailure() {

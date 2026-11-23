@@ -1,6 +1,8 @@
 package com.gamss.android.feature.login
 
 import com.gamss.android.core.common.AppResult
+import com.gamss.android.domain.analytics.AnalyticsEvent
+import com.gamss.android.domain.analytics.AnalyticsTracker
 import com.gamss.android.domain.auth.LoginResult
 import com.gamss.android.domain.auth.LoginUseCase
 import io.mockk.coEvery
@@ -22,7 +24,9 @@ class LoginViewModelTest {
 
     private val loginUseCase: LoginUseCase = mockk()
 
-    private fun viewModel() = LoginViewModel(loginUseCase)
+    private val analyticsTracker = RecordingAnalyticsTracker()
+
+    private fun viewModel() = LoginViewModel(loginUseCase, analyticsTracker)
 
     @Test
     fun `Google 로그인을 요청하면 로딩 상태와 함께 요청 id가 발급된다`() = runTest {
@@ -106,5 +110,80 @@ class LoginViewModelTest {
         }
 
         coVerify(exactly = 0) { loginUseCase(any()) }
+    }
+
+    @Test
+    fun `Google 로그인 버튼을 누르면 로그인 클릭 이벤트를 보낸다`() = runTest {
+        viewModel().test(this) {
+            containerHost.requestGoogleSignIn()
+            expectState { copy(isLoading = true, googleSignInRequestId = 1L) }
+        }
+
+        assertEquals(listOf(AnalyticsEvent.LOGIN_CLICK to emptyMap<String, Any>()), analyticsTracker.events)
+    }
+
+    @Test
+    fun `로그인에 성공하면 로그인 성공 이벤트를 보낸다`() = runTest {
+        coEvery { loginUseCase(any()) } returns AppResult.Success(LoginResult(isFirstLogin = false))
+
+        viewModel().test(this) {
+            containerHost.onGoogleCredentialResolved("google-id-token")
+            expectState { copy(isLoading = true) }
+            expectState { copy(isLoading = false) }
+            expectSideEffect(LoginSideEffect.LoginSucceeded(isFirstLogin = false))
+        }
+
+        assertEquals(listOf(AnalyticsEvent.LOGIN_SUCCESS to emptyMap<String, Any>()), analyticsTracker.events)
+    }
+
+    @Test
+    fun `로그인 요청이 실패하면 로그인 실패 이벤트를 보낸다`() = runTest {
+        coEvery { loginUseCase(any()) } returns AppResult.Failure(IllegalStateException())
+
+        viewModel().test(this) {
+            containerHost.onGoogleCredentialResolved("google-id-token")
+            expectState { copy(isLoading = true) }
+            expectState { copy(isLoading = false) }
+            expectSideEffect(LoginSideEffect.ShowToast("로그인에 실패했어요"))
+        }
+
+        assertEquals(listOf(AnalyticsEvent.LOGIN_FAIL to emptyMap<String, Any>()), analyticsTracker.events)
+    }
+
+    @Test
+    fun `Credential 요청이 실패하면 로그인 실패 이벤트를 보낸다`() = runTest {
+        viewModel().test(this) {
+            containerHost.onGoogleSignInFailed()
+            expectSideEffect(LoginSideEffect.ShowToast("Google 로그인에 실패했어요"))
+        }
+
+        assertEquals(listOf(AnalyticsEvent.LOGIN_FAIL to emptyMap<String, Any>()), analyticsTracker.events)
+    }
+
+    @Test
+    fun `Credential 요청이 취소되면 로그인 취소 이벤트를 보낸다`() = runTest {
+        viewModel().test(this) {
+            containerHost.requestGoogleSignIn()
+            expectState { copy(isLoading = true, googleSignInRequestId = 1L) }
+
+            containerHost.onGoogleSignInCancelled()
+            expectState { copy(isLoading = false, googleSignInRequestId = null) }
+        }
+
+        assertEquals(
+            listOf(
+                AnalyticsEvent.LOGIN_CLICK to emptyMap<String, Any>(),
+                AnalyticsEvent.LOGIN_CANCEL to emptyMap<String, Any>(),
+            ),
+            analyticsTracker.events,
+        )
+    }
+}
+
+private class RecordingAnalyticsTracker : AnalyticsTracker {
+    val events = mutableListOf<Pair<String, Map<String, Any>>>()
+
+    override fun track(event: String, properties: Map<String, Any>) {
+        events += event to properties
     }
 }
