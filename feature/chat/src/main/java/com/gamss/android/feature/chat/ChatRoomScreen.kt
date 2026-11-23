@@ -21,6 +21,8 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -90,12 +92,14 @@ fun ChatRoomScreen(
     conversationId: Long,
     onCardDiscard: (EmotionCharacter, Long) -> Unit,
     onBackClick: () -> Unit,
+    onPurchaseClick: () -> Unit,
     isActive: Boolean = true,
     modifier: Modifier = Modifier,
     viewModel: ChatRoomViewModel = hiltViewModel(),
 ) {
     val state by viewModel.collectAsState()
     val context = LocalContext.current
+    var showPurchaseDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(conversationId) { viewModel.start(conversationId) }
 
@@ -121,9 +125,30 @@ fun ChatRoomScreen(
                     TokenUsageAlert.LOW -> tokenUsageLowMessage
                     TokenUsageAlert.EXHAUSTED -> tokenUsageExhaustedMessage
                 }
-                Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                if (sideEffect.alert == TokenUsageAlert.EXHAUSTED) showPurchaseDialog = true
+                else Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
             }
         }
+    }
+
+    if (showPurchaseDialog) {
+        AlertDialog(
+            onDismissRequest = { showPurchaseDialog = false },
+            text = { Text(tokenUsageExhaustedMessage) },
+            confirmButton = {
+                TextButton(onClick = {
+                    showPurchaseDialog = false
+                    onPurchaseClick()
+                }) {
+                    Text(stringResource(R.string.chat_room_buy_tokens))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showPurchaseDialog = false }) {
+                    Text(stringResource(R.string.chat_room_buy_later))
+                }
+            },
+        )
     }
 
     val actions = remember(viewModel) {

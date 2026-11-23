@@ -15,13 +15,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import com.gamss.android.app.R
-import com.gamss.android.app.payment.PendingPurchaseVerifier
 import com.gamss.android.app.payment.PurchaseScreen
-import com.gamss.android.app.payment.observePaymentRecovery
 import com.gamss.android.core.designsystem.component.GamssPaperBackground
 import com.gamss.android.core.designsystem.theme.GamssTheme
 import com.gamss.android.domain.auth.AuthRepository
 import com.gamss.android.domain.auth.SessionState
+import com.gamss.android.core.billing.BillingRepository
+import com.gamss.android.core.billing.BillingProduct
 import com.gamss.android.feature.login.LoginScreen
 import dagger.Lazy
 import dagger.hilt.android.AndroidEntryPoint
@@ -32,15 +32,14 @@ import javax.inject.Inject
 @AndroidEntryPoint
 class BillingDebugActivity : ComponentActivity() {
     @Inject
-    lateinit var verifier: Lazy<PendingPurchaseVerifier>
+    lateinit var auth: Lazy<AuthRepository>
 
     @Inject
-    lateinit var auth: Lazy<AuthRepository>
+    lateinit var billing: BillingRepository
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        observePaymentRecovery(verifier, auth)
         lifecycleScope.launch {
             if (auth.get().sessionState.value == SessionState.Loading) auth.get().restoreSession()
         }
@@ -55,7 +54,13 @@ class BillingDebugActivity : ComponentActivity() {
                                 googleWebClientId = stringResource(R.string.default_web_client_id),
                                 onLoginSuccess = { _ -> },
                             )
-                            SessionState.Authenticated -> PurchaseScreen(onBackClick = ::finish)
+                            SessionState.Authenticated -> PurchaseScreen(
+                                onBackClick = ::finish,
+                                launchBillingFlow = { product, account ->
+                                    if (isFinishing || isDestroyed || product !is BillingProduct) null
+                                    else billing.launchPurchaseFlow(this@BillingDebugActivity, product, account)
+                                },
+                            )
                         }
                     }
                 }

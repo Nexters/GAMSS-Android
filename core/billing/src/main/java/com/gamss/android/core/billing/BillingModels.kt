@@ -1,12 +1,10 @@
 package com.gamss.android.core.billing
 
 import com.android.billingclient.api.ProductDetails
+import com.gamss.android.domain.payment.StoreProduct
+import com.gamss.android.domain.payment.StoreConnectionState
 
-enum class BillingConnectionState {
-    DISCONNECTED,
-    CONNECTING,
-    CONNECTED,
-}
+typealias BillingConnectionState = StoreConnectionState
 
 /**
  * [productDetails]는 방금 끝난 [BillingRepository.queryProductDetails] 호출이 돌려준 인스턴스 그대로다 —
@@ -17,10 +15,10 @@ enum class BillingConnectionState {
  */
 data class BillingProduct(
     internal val productDetails: ProductDetails,
-    val productId: String,
+    override val productId: String,
     val offerToken: String?,
-    val formattedPrice: String,
-)
+    override val formattedPrice: String,
+) : StoreProduct
 
 /**
  * 성공 여부는 [core:billing] 안에서 이미 판정해서 담아준다 — 호출부는 [isSuccess]만 보고

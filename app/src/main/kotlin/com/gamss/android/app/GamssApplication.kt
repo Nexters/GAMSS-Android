@@ -8,6 +8,7 @@ import android.util.Log
 import androidx.core.content.getSystemService
 import com.gamss.android.domain.config.InitializeRemoteConfigUseCase
 import com.gamss.android.domain.safety.RefreshRiskLexiconUseCase
+import com.gamss.android.app.payment.PendingPurchaseVerifier
 import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
@@ -27,6 +28,9 @@ class GamssApplication : Application() {
     @Inject
     lateinit var initializeRemoteConfig: InitializeRemoteConfigUseCase
 
+    @Inject
+    lateinit var pendingPurchaseVerifier: PendingPurchaseVerifier
+
     private val applicationScope = CoroutineScope(
         SupervisorJob() + Dispatchers.IO +
             CoroutineExceptionHandler { _, throwable ->
@@ -36,6 +40,7 @@ class GamssApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        pendingPurchaseVerifier.start()
         createNotificationChannel()
         applicationScope.launch { refreshRiskLexicon() }
         applicationScope.launch { initializeRemoteConfig() }

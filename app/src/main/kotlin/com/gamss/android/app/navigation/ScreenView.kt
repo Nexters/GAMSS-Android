@@ -4,6 +4,7 @@ import androidx.navigation3.runtime.NavKey
 import com.gamss.android.domain.analytics.AnalyticsProperty
 import com.gamss.android.domain.analytics.AnalyticsScope
 import com.gamss.android.domain.analytics.analyticsValue
+import com.gamss.android.app.payment.PurchaseKey
 import com.gamss.android.feature.archive.navigation.ArchiveDetailKey
 import com.gamss.android.feature.archive.navigation.ArchiveKey
 import com.gamss.android.feature.carddelete.navigation.CardDeleteKey
@@ -32,6 +33,7 @@ private val screenNames: Map<NavKey, String> = mapOf(
     ArchiveKey to "archive",
     SettingKey to "setting",
     AccountInfoKey to "account_info",
+    PurchaseKey to "purchase",
 )
 
 /** 새 화면 key 를 추가하면 여기에도 이름을 붙여야 집계된다. MainKey 는 탭을 담는 틀이라 세지 않는다. */

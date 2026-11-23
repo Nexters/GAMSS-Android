@@ -11,11 +11,14 @@ import com.gamss.android.domain.auth.SessionState
 import com.gamss.android.domain.payment.PaymentGrant
 import com.gamss.android.domain.payment.PaymentStatus
 import com.gamss.android.domain.payment.VerifyGooglePurchaseUseCase
+import com.gamss.android.domain.repository.TokenUsageRefreshNotifier
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.test.TestScope
@@ -31,6 +34,7 @@ class PendingPurchaseVerifierTest {
     private val billing = mockk<BillingRepository>(relaxed = true)
     private val verifyGooglePurchase = mockk<VerifyGooglePurchaseUseCase>()
     private val auth = mockk<AuthRepository>()
+    private val notifier = mockk<TokenUsageRefreshNotifier>(relaxed = true)
     private val session = MutableStateFlow<SessionState>(SessionState.Authenticated)
     private val outcomes = Channel<BillingPurchaseOutcome>(Channel.UNLIMITED)
 
@@ -38,7 +42,7 @@ class PendingPurchaseVerifierTest {
         every { auth.sessionState } returns session
         every { billing.purchaseResults } returns outcomes.receiveAsFlow()
         every { billing.connectionState } returns MutableStateFlow(BillingConnectionState.CONNECTED)
-        return PendingPurchaseVerifier(billing, verifyGooglePurchase, auth, backgroundScope)
+        return PendingPurchaseVerifier(billing, verifyGooglePurchase, auth, notifier, backgroundScope)
     }
 
     @Test
@@ -52,6 +56,7 @@ class PendingPurchaseVerifierTest {
         runCurrent()
         assertEquals(600000L, verifier.state.value.paidBalance)
         assertEquals("300000 토큰 지급 완료", verifier.state.value.message)
+        verify(exactly = 1) { notifier.requestRefresh() }
     }
 
     @Test
@@ -65,6 +70,7 @@ class PendingPurchaseVerifierTest {
         runCurrent()
         assertNull(verifier.state.value.paidBalance)
         assertFalse(verifier.state.value.isVerifying)
+        verify(exactly = 0) { notifier.requestRefresh() }
     }
 
     @Test
@@ -78,9 +84,9 @@ class PendingPurchaseVerifierTest {
         outcomes.send(purchased())
         runCurrent()
         coVerify(exactly = 1) { verifyGooglePurchase(any()) }
-        verifier.onResume()
+        verifier.requestRecovery()
         runCurrent()
-        coVerify(exactly = 1) { billing.queryUnfinishedPurchases() }
+        coVerify(exactly = 2) { billing.queryUnfinishedPurchases() }
         outcomes.send(purchased())
         runCurrent()
         coVerify(exactly = 2) { verifyGooglePurchase(any()) }
@@ -96,15 +102,36 @@ class PendingPurchaseVerifierTest {
     }
 
     @Test
+    fun `검증 중 복귀는 같은 구매를 즉시 재검증하지 않고 다음 복귀에서 재시도한다`() = runTest {
+        val pending = CompletableDeferred<AppResult<PaymentGrant>>()
+        coEvery { verifyGooglePurchase(any()) } coAnswers { pending.await() }
+        val verifier = verifier()
+        runCurrent()
+        outcomes.send(purchased())
+        runCurrent()
+        verifier.requestRecovery()
+        runCurrent()
+        outcomes.send(purchased())
+        pending.complete(AppResult.Failure(IllegalStateException()))
+        runCurrent()
+        coVerify(exactly = 1) { verifyGooglePurchase(any()) }
+        verifier.requestRecovery()
+        runCurrent()
+        outcomes.send(purchased())
+        runCurrent()
+        coVerify(exactly = 2) { verifyGooglePurchase(any()) }
+    }
+
+    @Test
     fun `로그아웃 후에는 복구 조회와 검증을 진행하지 않는다`() = runTest {
         val verifier = verifier()
         runCurrent()
         session.value = SessionState.Unauthenticated
         runCurrent()
-        verifier.onResume()
+        verifier.requestRecovery()
         outcomes.send(purchased())
         runCurrent()
-        coVerify(exactly = 0) { billing.queryUnfinishedPurchases() }
+        coVerify(exactly = 1) { billing.queryUnfinishedPurchases() }
         coVerify(exactly = 0) { verifyGooglePurchase(any()) }
     }
 
@@ -116,10 +143,10 @@ class PendingPurchaseVerifierTest {
         runCurrent()
         assertEquals("previous checkout error", verifier.state.value.billingError?.message)
 
-        verifier.onResume()
+        verifier.requestRecovery()
         runCurrent()
         assertNull(verifier.state.value.billingError)
-        coVerify(exactly = 1) { billing.queryUnfinishedPurchases() }
+        coVerify(exactly = 2) { billing.queryUnfinishedPurchases() }
 
         val recoveryError = BillingPurchaseOutcome.Error(5, "restore error", BillingErrorSource.RESTORE_QUERY)
         outcomes.send(recoveryError)

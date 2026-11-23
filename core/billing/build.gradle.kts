@@ -8,6 +8,7 @@ android {
 }
 
 dependencies {
+    api(projects.domain)
     implementation(libs.billing.ktx)
     implementation(libs.kotlinx.coroutines.android)
 

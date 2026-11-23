@@ -1,5 +1,8 @@
 package com.gamss.android.app.payment
 
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.ProcessLifecycleOwner
 import com.gamss.android.core.billing.BillingConnectionState
 import com.gamss.android.core.billing.BillingPurchaseOutcome
 import com.gamss.android.core.billing.BillingRepository
@@ -8,6 +11,7 @@ import com.gamss.android.domain.auth.AuthRepository
 import com.gamss.android.domain.auth.SessionState
 import com.gamss.android.domain.payment.PaymentStatus
 import com.gamss.android.domain.payment.VerifyGooglePurchaseUseCase
+import com.gamss.android.domain.repository.TokenUsageRefreshNotifier
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -23,17 +27,19 @@ import javax.inject.Inject
 import javax.inject.Qualifier
 import javax.inject.Singleton
 
-/** 구매 화면을 떠나도 결과를 받는 유일한 purchaseResults 소비자. 소비/승인은 서버에서만 한다. */
+/** 앱 프로세스에서 구매 결과를 수신하고 서버 검증과 복구를 담당한다. */
 @Singleton
 class PendingPurchaseVerifier @Inject constructor(
     private val billing: BillingRepository,
     private val verifyGooglePurchase: VerifyGooglePurchaseUseCase,
     private val auth: AuthRepository,
+    private val tokenUsageRefreshNotifier: TokenUsageRefreshNotifier,
     @PaymentScope private val scope: CoroutineScope,
 ) {
     private val mutableState = MutableStateFlow(PaymentState())
     val state = mutableState.asStateFlow()
     private val attemptedPurchases = mutableSetOf<Pair<String, String>>()
+    private var recoveryInProgress = false
 
     init {
         scope.launch {
@@ -41,19 +47,35 @@ class PendingPurchaseVerifier @Inject constructor(
                 attemptedPurchases.clear()
                 mutableState.value = PaymentState()
                 if (session == SessionState.Authenticated) {
+                    requestRecovery()
                     billing.purchaseResults.collect { handleOutcome(it) }
                 }
             }
         }
     }
 
-    fun onResume() {
+    /** Application에서 한 번 호출한다. 최초 onStart와 이후 포그라운드 복귀를 처리한다. */
+    fun start() {
+        ProcessLifecycleOwner.get().lifecycle.addObserver(object : DefaultLifecycleObserver {
+            override fun onStart(owner: LifecycleOwner) = requestRecovery()
+        })
+    }
+
+    fun requestRecovery() {
         if (auth.sessionState.value != SessionState.Authenticated) return
+        if (recoveryInProgress) return
         // 실패한 구매도 다음 복귀에는 다시 조회한다. 같은 복귀 내 중복 콜백은 재전송하지 않는다.
         attemptedPurchases.clear()
         mutableState.value = state.value.copy(billingError = null)
         if (billing.connectionState.value == BillingConnectionState.CONNECTED) {
-            scope.launch { billing.queryUnfinishedPurchases() }
+            recoveryInProgress = true
+            scope.launch {
+                try {
+                    billing.queryUnfinishedPurchases()
+                } finally {
+                    recoveryInProgress = false
+                }
+            }
         } else {
             billing.connect() // 연결 완료 시 repository가 미처리 구매를 조회한다.
         }
@@ -67,7 +89,7 @@ class PendingPurchaseVerifier @Inject constructor(
                 }
             }
             is BillingPurchaseOutcome.Pending -> showMessage("결제 대기 중입니다. 결제가 완료되면 다시 확인합니다.")
-            BillingPurchaseOutcome.UserCanceled -> showMessage("구매를 취소했습니다.")
+            BillingPurchaseOutcome.UserCanceled -> mutableState.value = state.value.copy(message = null, billingError = null)
             BillingPurchaseOutcome.AlreadyOwned -> showMessage("미처리 구매를 확인하고 있습니다.")
             is BillingPurchaseOutcome.Error -> {
                 mutableState.value = state.value.copy(message = null, billingError = outcome)
@@ -86,6 +108,7 @@ class PendingPurchaseVerifier @Inject constructor(
             is AppResult.Success -> {
                 val grant = result.data
                 mutableState.value = if (grant.status == PaymentStatus.GRANTED) {
+                    tokenUsageRefreshNotifier.requestRefresh()
                     PaymentState(
                         paidBalance = grant.paidBalance,
                         message = "${grant.grantedTokens} 토큰 지급 완료",
