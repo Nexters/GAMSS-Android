@@ -71,24 +71,16 @@ class PurchaseViewModel @Inject constructor(
     private suspend fun Syntax<PurchaseState, PurchaseSideEffect>.loadPrices(
         serverProducts: List<TokenProduct>,
     ) {
-        // TEMP: 서버 상품 설정이 Play Console ID로 수정되면 이 보정을 제거한다.
-        val products = serverProducts.map {
-            if (BuildConfig.BUILD_TYPE == "debug") {
-                it.copy(productId = PLAY_TEST_PRODUCT_IDS[it.productId] ?: it.productId)
-            } else {
-                it
-            }
-        }
-        if (products.isEmpty()) {
+        if (serverProducts.isEmpty()) {
             reduce { state.copy(isLoading = false, products = emptyList(), error = "판매 중인 상품이 없습니다.") }
             return
         }
-        val result = getBillingProducts(products.map { it.productId })
+        val result = getBillingProducts(serverProducts.map { it.productId })
         val prices = result.products.associateBy { it.productId }
         reduce {
             state.copy(
                 isLoading = false,
-                products = products.sortedBy { it.tokenAmount }.map { PurchaseProduct(it, prices[it.productId]) },
+                products = serverProducts.sortedBy { it.tokenAmount }.map { PurchaseProduct(it, prices[it.productId]) },
                 error = if (result.isSuccess) null else "Google Play 상품 조회에 실패했습니다.",
             )
         }
@@ -141,10 +133,4 @@ data class PurchaseState(
     val isPreparing: Boolean = false,
     val payment: PaymentState = PaymentState(),
     val error: String? = null,
-)
-
-private val PLAY_TEST_PRODUCT_IDS = mapOf(
-    "token_300000" to "token_300k",
-    "token_500000" to "token_500k",
-    "token_1000000" to "token_1m",
 )

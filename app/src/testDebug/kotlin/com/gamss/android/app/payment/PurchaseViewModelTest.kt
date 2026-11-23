@@ -75,8 +75,8 @@ class PurchaseViewModelTest {
         coEvery { getPaymentProducts() } returns AppResult.Success(
             listOf(TokenProduct(productId = "token_300000", tokenAmount = 300_000)),
         )
-        val billingProduct = billingProduct("token_300k")
-        coEvery { getBillingProducts(listOf("token_300k")) } returns StoreProductQueryResult(
+        val billingProduct = billingProduct("token_300000")
+        coEvery { getBillingProducts(listOf("token_300000")) } returns StoreProductQueryResult(
             isSuccess = true,
             products = listOf(billingProduct),
         )
@@ -89,7 +89,7 @@ class PurchaseViewModelTest {
             expectState {
                 copy(
                     isLoading = false,
-                    products = listOf(PurchaseProduct(TokenProduct("token_300k", 300_000), billingProduct)),
+                    products = listOf(PurchaseProduct(TokenProduct("token_300000", 300_000), billingProduct)),
                     error = null,
                 )
             }
@@ -128,7 +128,7 @@ class PurchaseViewModelTest {
         coEvery { getPaymentProducts() } returns AppResult.Success(
             listOf(TokenProduct(productId = "token_300000", tokenAmount = 300_000)),
         )
-        coEvery { getBillingProducts(listOf("token_300k")) } returns StoreProductQueryResult(
+        coEvery { getBillingProducts(listOf("token_300000")) } returns StoreProductQueryResult(
             isSuccess = false,
             products = emptyList(),
         )
@@ -141,7 +141,7 @@ class PurchaseViewModelTest {
             expectState {
                 copy(
                     isLoading = false,
-                    products = listOf(PurchaseProduct(TokenProduct("token_300k", 300_000), null)),
+                    products = listOf(PurchaseProduct(TokenProduct("token_300000", 300_000), null)),
                     error = "Google Play 상품 조회에 실패했습니다.",
                 )
             }
@@ -153,7 +153,7 @@ class PurchaseViewModelTest {
         coEvery { getPaymentAccountToken() } returns AppResult.Failure(IllegalStateException())
 
         viewModel().test(this) {
-            containerHost.purchase("token_300k")
+            containerHost.purchase("token_300000")
 
             expectState { copy(isPreparing = true, error = null) }
             expectState { copy(isPreparing = false, error = "구매 정보를 불러오지 못했습니다. 잠시 후 다시 확인해 주세요.") }
@@ -164,13 +164,13 @@ class PurchaseViewModelTest {
     @Test
     fun `구매 직전 상품 정보를 찾지 못하면 결제창을 열지 않는다`() = runTest {
         coEvery { getPaymentAccountToken() } returns AppResult.Success("account-token")
-        coEvery { getBillingProducts(listOf("token_300k")) } returns StoreProductQueryResult(
+        coEvery { getBillingProducts(listOf("token_300000")) } returns StoreProductQueryResult(
             isSuccess = true,
             products = emptyList(),
         )
 
         viewModel().test(this) {
-            containerHost.purchase("token_300k")
+            containerHost.purchase("token_300000")
 
             expectState { copy(isPreparing = true, error = null) }
             expectState { copy(isPreparing = false, error = "구매 가능한 상품 정보를 찾지 못했습니다.") }
@@ -179,15 +179,15 @@ class PurchaseViewModelTest {
 
     @Test
     fun `결제창 실행 요청을 전달하고 실패 결과를 표시한다`() = runTest {
-        val product = billingProduct("token_300k")
+        val product = billingProduct("token_300000")
         coEvery { getPaymentAccountToken() } returns AppResult.Success("account-token")
-        coEvery { getBillingProducts(listOf("token_300k")) } returns StoreProductQueryResult(
+        coEvery { getBillingProducts(listOf("token_300000")) } returns StoreProductQueryResult(
             isSuccess = true,
             products = listOf(product),
         )
 
         viewModel().test(this) {
-            containerHost.purchase("token_300k")
+            containerHost.purchase("token_300000")
             expectState { copy(isPreparing = true, error = null) }
             expectSideEffect(PurchaseSideEffect.LaunchBillingFlow(product, "account-token"))
             containerHost.onBillingFlowResult(BillingOperationResult(isSuccess = false, responseCode = 6))
