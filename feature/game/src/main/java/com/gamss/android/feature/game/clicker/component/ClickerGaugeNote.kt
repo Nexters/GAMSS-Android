@@ -1,8 +1,6 @@
 package com.gamss.android.feature.game.clicker.component
 
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
@@ -10,14 +8,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
-import com.gamss.android.core.designsystem.theme.GamssTheme
 import com.gamss.android.feature.game.R
 
 /** 시안의 game_main 프레임 크기. 아래 좌표는 모두 이 프레임 기준이다. */
@@ -33,18 +29,13 @@ internal fun ClickerGaugeNote(
     modifier: Modifier = Modifier,
 ) {
     Box(modifier = modifier.size(ClickerGaugeNoteSize)) {
-        NotePaper(
-            center = CenterOffset(x = 180.11.dp, y = 178.79.dp),
-            rotation = SHADOW_ROTATION,
+        Image(
+            painter = painterResource(R.drawable.game_clicker_note_paper),
+            contentDescription = null,
+            contentScale = ContentScale.FillBounds,
             modifier = Modifier
-                .background(NoteShadowColor.copy(alpha = NOTE_SHADOW_ALPHA)),
-        )
-        NotePaper(
-            center = CenterOffset(x = 182.21.dp, y = 170.76.dp),
-            rotation = NOTE_ROTATION,
-            modifier = Modifier
-                .background(GamssTheme.colors.white)
-                .border(NoteBorderWidth, GamssTheme.colors.gray950),
+                .offset(x = 34.93.dp, y = 24.96.dp)
+                .size(width = 290.dp, height = 303.67.dp),
         )
         Image(
             painter = painterResource(R.drawable.game_clicker_character_fill),
@@ -72,21 +63,6 @@ internal fun ClickerGaugeNote(
 private data class CenterOffset(val x: Dp, val y: Dp)
 
 @Composable
-private fun NotePaper(
-    center: CenterOffset,
-    rotation: Float,
-    modifier: Modifier = Modifier,
-) {
-    Box(
-        modifier = Modifier
-            .offset(x = center.x - NotePaperSize.width / 2, y = center.y - NotePaperSize.height / 2)
-            .size(NotePaperSize)
-            .rotate(rotation)
-            .then(modifier),
-    )
-}
-
-@Composable
 private fun Tape(center: CenterOffset, rotation: Float) {
     Image(
         painter = painterResource(R.drawable.game_clicker_tape),
@@ -97,15 +73,6 @@ private fun Tape(center: CenterOffset, rotation: Float) {
             .rotate(rotation),
     )
 }
-
-private val NotePaperSize = DpSize(260.dp, 270.dp)
-private val NoteBorderWidth = 2.dp
-private const val NOTE_ROTATION = -4.97f
-private const val SHADOW_ROTATION = -3.55f
-
-// 시안의 그림자 색이 팔레트에 없는 값이라 그대로 옮긴다.
-private val NoteShadowColor = Color(0xFFC4C4C4)
-private const val NOTE_SHADOW_ALPHA = 0.6f
 
 private val TapeSize = DpSize(41.86.dp, 41.83.dp)
 private const val RIGHT_TAPE_ROTATION = -15f
