@@ -306,7 +306,11 @@ button.labeled:focus-visible { outline: 2px solid var(--ink); outline-offset: 2p
 
   function press() {
     const next = tap(state);
-    if (next !== state) playKeySound();
+    if (next !== state) {
+      playKeySound();
+      // 진동을 지원하는 브라우저에서만 짧게 울린다.
+      try { if (navigator.vibrate) navigator.vibrate(10); } catch (_) {}
+    }
     state = next;
     render();
   }

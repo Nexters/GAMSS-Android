@@ -19,6 +19,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.progressBarRangeInfo
@@ -44,6 +46,7 @@ fun ClickerGameScreen(
 ) {
     val game = rememberClickerGameController()
     val keySound = rememberClickerKeySound()
+    val haptic = LocalHapticFeedback.current
 
     LaunchedEffect(game.isPlaying) {
         if (game.isPlaying) game.runClock()
@@ -52,7 +55,13 @@ fun ClickerGameScreen(
     ClickerGameContent(
         game = game,
         onBackClick = onBackClick,
-        onKeyPress = { if (game.tap()) keySound.play() },
+        // 소리와 진동은 점수에 반영된 입력에만 낸다.
+        onKeyPress = {
+            if (game.tap()) {
+                keySound.play()
+                haptic.performHapticFeedback(HapticFeedbackType.KeyboardTap)
+            }
+        },
         modifier = modifier,
     )
 }
