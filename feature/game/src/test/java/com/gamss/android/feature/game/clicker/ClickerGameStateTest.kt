@@ -11,74 +11,60 @@ class ClickerGameStateTest {
         val state = ClickerGameState().advance(1_000L)
 
         assertEquals(ClickerGameState(), state)
-        assertEquals(ClickerRecord.Running(0L), state.record)
     }
 
     @Test
-    fun `첫 탭에 게임이 시작되고 게이지가 오른다`() {
+    fun `첫 탭에 게임이 시작되고 점수가 오른다`() {
         val state = ClickerGameState().tap()
 
         assertEquals(ClickerGamePhase.Playing, state.phase)
-        assertEquals(GAUGE_PER_TAP, state.gauge, DELTA)
+        assertEquals(1, state.score)
     }
 
     @Test
-    fun `진행 중에는 시간에 따라 게이지가 줄고 0 아래로 내려가지 않는다`() {
-        val tapped = ClickerGameState().tap()
+    fun `게이지는 시간이 흘러도 빠지지 않는다`() {
+        val state = ClickerGameState(phase = ClickerGamePhase.Playing, score = 100).advance(5_000L)
 
-        val drained = tapped.advance(100L)
-        assertEquals(GAUGE_PER_TAP - GAUGE_DRAIN_PER_SECOND * 0.1f, drained.gauge, DELTA)
-        assertEquals(100L, drained.elapsedMs)
-
-        assertEquals(0f, tapped.advance(5_000L).gauge, DELTA)
+        assertEquals(100f / FULL_GAUGE_SCORE, state.gauge, DELTA)
     }
 
     @Test
-    fun `진행 중 기록은 흐른 시간을 0점1초 단위로 내림한다`() {
-        val state = ClickerGameState(phase = ClickerGamePhase.Playing, elapsedMs = 12_399L)
-
-        assertEquals(ClickerRecord.Running(123L), state.record)
+    fun `시안의 232점은 게이지 절반이다`() {
+        assertEquals(0.5f, ClickerGameState(score = 232).gauge, DELTA)
     }
 
     @Test
-    fun `가득 채우면 걸린 시간을 0점01초 단위 기록으로 남긴다`() {
-        val state = ClickerGameState(
-            phase = ClickerGamePhase.Playing,
-            gauge = 1f - GAUGE_PER_TAP,
-            elapsedMs = 12_345L,
-        ).tap()
+    fun `게이지가 가득 차도 점수는 계속 오른다`() {
+        val state = ClickerGameState(phase = ClickerGamePhase.Playing, score = FULL_GAUGE_SCORE).tap()
 
-        assertEquals(ClickerGamePhase.Finished, state.phase)
-        assertEquals(1f, state.gauge, DELTA)
-        assertEquals(ClickerRecord.Cleared(1_234L), state.record)
-    }
-
-    @Test
-    fun `시간이 흐르지 않으면 50번 만에 가득 찬다`() {
-        var state = ClickerGameState()
-        repeat(49) { state = state.tap() }
         assertEquals(ClickerGamePhase.Playing, state.phase)
-
-        state = state.tap()
-        assertEquals(ClickerGamePhase.Finished, state.phase)
+        assertEquals(FULL_GAUGE_SCORE + 1, state.score)
         assertEquals(1f, state.gauge, DELTA)
     }
 
     @Test
-    fun `제한 시간이 지나면 시간 초과로 끝난다`() {
+    fun `30초가 지나면 끝나고 남은 시간은 0초다`() {
         val state = ClickerGameState().tap().advance(GAME_DURATION_MS + 500L)
 
         assertEquals(ClickerGamePhase.Finished, state.phase)
         assertEquals(GAME_DURATION_MS, state.elapsedMs)
-        assertEquals(ClickerRecord.TimeOver, state.record)
+        assertEquals(0L, state.remainingTenths)
     }
 
     @Test
     fun `끝난 뒤에는 탭도 시간도 반영하지 않는다`() {
-        val finished = ClickerGameState(phase = ClickerGamePhase.Finished, gauge = 0.4f, elapsedMs = GAME_DURATION_MS)
+        val finished = ClickerGameState(phase = ClickerGamePhase.Finished, score = 10, elapsedMs = GAME_DURATION_MS)
 
         assertSame(finished, finished.tap())
         assertSame(finished, finished.advance(100L))
+    }
+
+    @Test
+    fun `남은 시간은 0점1초 단위로 올림한다`() {
+        assertEquals(300L, ClickerGameState().remainingTenths)
+        assertEquals(300L, ClickerGameState(elapsedMs = 1L).remainingTenths)
+        assertEquals(299L, ClickerGameState(elapsedMs = 100L).remainingTenths)
+        assertEquals(1L, ClickerGameState(elapsedMs = GAME_DURATION_MS - 1L).remainingTenths)
     }
 
     private companion object {

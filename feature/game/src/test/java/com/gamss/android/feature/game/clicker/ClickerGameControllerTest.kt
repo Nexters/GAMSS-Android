@@ -12,13 +12,13 @@ class ClickerGameControllerTest {
         val game = ClickerGameController()
 
         assertTrue(game.tap())
-        assertEquals(GAUGE_PER_TAP, game.gauge, 0.0001f)
+        assertEquals(1, game.score)
         assertTrue(game.isPlaying)
     }
 
     @Test
     fun `끝난 뒤의 입력은 false 를 돌려주고 상태를 바꾸지 않는다`() {
-        val finished = ClickerGameState(phase = ClickerGamePhase.Finished, gauge = 1f)
+        val finished = ClickerGameState(phase = ClickerGamePhase.Finished, score = 10, elapsedMs = GAME_DURATION_MS)
         val game = ClickerGameController(finished)
 
         assertFalse(game.tap())
@@ -27,7 +27,7 @@ class ClickerGameControllerTest {
 
     @Test
     fun `다시하기는 대기 상태로 되돌린다`() {
-        val game = ClickerGameController(ClickerGameState(phase = ClickerGamePhase.Playing, gauge = 0.3f))
+        val game = ClickerGameController(ClickerGameState(phase = ClickerGamePhase.Playing, score = 5))
 
         game.replay()
 
@@ -36,8 +36,9 @@ class ClickerGameControllerTest {
 
     @Test
     fun `접근성 게이지 값은 1퍼센트 단위로 반올림한다`() {
-        val game = ClickerGameController(ClickerGameState(phase = ClickerGamePhase.Playing, gauge = 0.346f))
+        val game = ClickerGameController(ClickerGameState(phase = ClickerGamePhase.Playing, score = 160))
 
-        assertEquals(0.35f, game.gaugeProgress, 0.0001f)
+        // 160 / 464 = 0.3448...
+        assertEquals(0.34f, game.gaugeProgress, 0.0001f)
     }
 }

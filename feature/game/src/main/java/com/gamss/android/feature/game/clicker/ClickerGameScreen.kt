@@ -32,7 +32,7 @@ import com.gamss.android.feature.game.R
 import com.gamss.android.feature.game.clicker.component.ClickerGaugeNote
 import com.gamss.android.feature.game.clicker.component.ClickerGaugeNoteSize
 import com.gamss.android.feature.game.clicker.component.ClickerKeyCap
-import com.gamss.android.feature.game.clicker.component.ClickerRecordBoard
+import com.gamss.android.feature.game.clicker.component.ClickerScoreBoard
 import com.gamss.android.feature.game.clicker.component.rememberClickerKeySound
 
 private const val KEY_COUNT = 2
@@ -57,7 +57,7 @@ fun ClickerGameScreen(
     )
 }
 
-/** 매 프레임 바뀌는 값은 람다로 넘겨 실제로 쓰는 곳에서만 읽는다. */
+/** 자주 바뀌는 값은 람다로 넘겨 실제로 쓰는 곳에서만 읽는다. */
 @Composable
 private fun ClickerGameContent(
     game: ClickerGameController,
@@ -78,10 +78,11 @@ private fun ClickerGameContent(
             leftIconContentDescription = stringResource(R.string.game_clicker_back_description),
             onLeftIconClick = onBackClick,
         )
-        ClickerRecordBoard(
-            record = { game.record },
+        ClickerScoreBoard(
+            remainingTenths = { game.remainingTenths },
+            score = { game.score },
             onReplayClick = game::replay,
-            modifier = Modifier.padding(top = RecordBoardTopPadding),
+            modifier = Modifier.padding(top = ScoreBoardTopPadding),
         )
         GaugeArea(
             gauge = { game.gauge },
@@ -155,7 +156,7 @@ private fun KeyRow(
     }
 }
 
-private val RecordBoardTopPadding = 30.dp
+private val ScoreBoardTopPadding = 30.dp
 private val GaugeNoteHorizontalMargin = 18.dp
 private val KeyRowTopPadding = 14.dp
 private val KeyRowBottomPadding = 42.dp
@@ -183,7 +184,7 @@ private fun ClickerGameReadyPreview() {
 @Suppress("UnusedPrivateMember")
 private fun ClickerGamePlayingPreview() {
     ClickerGamePreview(
-        ClickerGameState(phase = ClickerGamePhase.Playing, gauge = 0.5f, elapsedMs = 12_300L),
+        ClickerGameState(phase = ClickerGamePhase.Playing, score = 232, elapsedMs = 12_300L),
     )
 }
 
@@ -191,5 +192,5 @@ private fun ClickerGamePlayingPreview() {
 @Composable
 @Suppress("UnusedPrivateMember")
 private fun ClickerGameSmallPreview() {
-    ClickerGamePreview(ClickerGameState(phase = ClickerGamePhase.Playing, gauge = 0.3f))
+    ClickerGamePreview(ClickerGameState(phase = ClickerGamePhase.Playing, score = 80))
 }

@@ -16,19 +16,20 @@ import kotlin.math.roundToInt
 private const val MAX_FRAME_DELTA_MS = 100L
 private const val PERCENT = 100f
 
-/** [gauge] 는 매 프레임 바뀌므로 그리기 단계에서만 읽는다. */
+/** 시간은 매 프레임 흐르므로 화면에는 바뀐 단위로만 알리는 파생 값을 내보낸다. */
 @Stable
 internal class ClickerGameController(initial: ClickerGameState = ClickerGameState()) {
     var state by mutableStateOf(initial)
         private set
 
     val isPlaying by derivedStateOf { state.phase == ClickerGamePhase.Playing }
-    val record by derivedStateOf { state.record }
+    val score by derivedStateOf { state.score }
+    val remainingTenths by derivedStateOf { state.remainingTenths }
 
     // 접근성 값이 매 프레임 바뀌지 않도록 1% 단위로 끊는다.
     val gaugeProgress by derivedStateOf { (state.gauge * PERCENT).roundToInt() / PERCENT }
 
-    val gauge: Float get() = state.gauge
+    val gauge by derivedStateOf { state.gauge }
 
     fun tap(): Boolean {
         val next = state.tap()
@@ -52,12 +53,12 @@ internal class ClickerGameController(initial: ClickerGameState = ClickerGameStat
 
     companion object {
         val Saver = listSaver<ClickerGameController, Any>(
-            save = { with(it.state) { listOf(phase.name, gauge, elapsedMs) } },
+            save = { with(it.state) { listOf(phase.name, score, elapsedMs) } },
             restore = {
                 ClickerGameController(
                     ClickerGameState(
                         phase = ClickerGamePhase.valueOf(it[0] as String),
-                        gauge = it[1] as Float,
+                        score = it[1] as Int,
                         elapsedMs = it[2] as Long,
                     ),
                 )
