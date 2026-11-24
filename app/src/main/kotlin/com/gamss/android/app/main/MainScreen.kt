@@ -62,6 +62,8 @@ import com.gamss.android.feature.setting.navigation.AccountInfoKey
 import com.gamss.android.feature.setting.navigation.NicknameChangeKey
 import com.gamss.android.feature.setting.navigation.SettingKey
 import com.gamss.android.feature.setting.nicknamechange.NicknameChangeScreen
+import com.gamss.android.feature.store.StoreScreen
+import com.gamss.android.feature.store.navigation.StoreKey
 import com.gamss.android.feature.webview.GamssWebPage
 import com.gamss.android.feature.webview.WebViewScreen
 import com.gamss.android.feature.webview.navigation.WebViewKey
@@ -129,6 +131,9 @@ fun MainScreen(
 }
 
 private fun mainEntryProvider(navigator: Navigator) = entryProvider {
+    entry<StoreKey> {
+        StoreScreen()
+    }
     entry<HomeKey> {
         HomeScreen(
             onNavigateToSetting = { navigator.navigate(SettingKey) },

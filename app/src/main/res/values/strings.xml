@@ -2,6 +2,7 @@
 <resources>
     <string name="app_name">GAMSS</string>
 
+    <string name="tab_store">상점</string>
     <string name="tab_archive">보관함</string>
     <string name="tab_home">홈</string>
     <string name="tab_chat">대화</string>

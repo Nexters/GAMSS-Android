@@ -11,6 +11,7 @@ import com.gamss.android.core.designsystem.component.GamssIcons
 import com.gamss.android.feature.archive.navigation.ArchiveKey
 import com.gamss.android.feature.chat.navigation.ChatKey
 import com.gamss.android.feature.home.navigation.HomeKey
+import com.gamss.android.feature.store.navigation.StoreKey
 
 data class TopLevelDestination(
     val key: NavKey,
@@ -19,6 +20,7 @@ data class TopLevelDestination(
 )
 
 fun topLevelDestinations(): List<TopLevelDestination> = listOf(
+    TopLevelDestination(key = StoreKey, iconRes = GamssIcons.TabStore, labelRes = R.string.tab_store),
     TopLevelDestination(key = ArchiveKey, iconRes = GamssIcons.TabArchive, labelRes = R.string.tab_archive),
     TopLevelDestination(key = HomeKey, iconRes = GamssIcons.TabHome, labelRes = R.string.tab_home),
     TopLevelDestination(key = ChatKey, iconRes = GamssIcons.TabChat, labelRes = R.string.tab_chat),
