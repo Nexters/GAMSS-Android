@@ -42,9 +42,6 @@ import com.gamss.android.app.navigation.keys
 import com.gamss.android.app.navigation.rememberNavigationState
 import com.gamss.android.app.navigation.toEntries
 import com.gamss.android.app.navigation.topLevelDestinations
-import com.gamss.android.app.payment.BillingFlowLauncher
-import com.gamss.android.app.payment.PurchaseKey
-import com.gamss.android.app.payment.PurchaseScreen
 import com.gamss.android.core.designsystem.component.GamssBottomBar
 import com.gamss.android.core.designsystem.component.GamssPaperBackground
 import com.gamss.android.feature.archive.ArchiveDetailScreen
@@ -204,13 +201,6 @@ private fun mainEntryProvider(navigator: Navigator) = entryProvider {
     entry<ChatRoomKey>(metadata = detailSlideTransition) { key ->
         ChatRoomRoute(key, navigator)
     }
-    entry<PurchaseKey>(metadata = detailSlideTransition) {
-        val launcher = LocalActivity.current as? BillingFlowLauncher
-        PurchaseScreen(
-            onBackClick = navigator::goBack,
-            launchBillingFlow = { product, account -> launcher?.launchBillingFlow(product, account) },
-        )
-    }
 }
 
 @Composable
@@ -222,7 +212,6 @@ private fun ChatRoomRoute(key: ChatRoomKey, navigator: Navigator) {
             navigator.openDroppedCard(ArchiveKey, ArchiveDetailKey(emotion), cardId)
         },
         onBackClick = navigator::goBack,
-        onPurchaseClick = { navigator.navigate(PurchaseKey) },
         isActive = navigator.state.currentKey == key,
     )
 }

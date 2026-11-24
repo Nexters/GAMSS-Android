@@ -17,8 +17,6 @@
     <string name="chat_room_check_token_usage_button_label">재시도</string>
     <string name="chat_room_token_usage_low_toast">오늘 사용 가능한 토큰이 10% 남았어요.</string>
     <string name="chat_room_token_usage_exhausted_toast">오늘 사용 가능한 토큰을 전부 사용했어요.</string>
-    <string name="chat_room_buy_tokens">토큰 구매</string>
-    <string name="chat_room_buy_later">나중에</string>
     <string name="chat_room_message_writing_label">입력 중</string>
     <string name="chat_room_card_fold_guide">종이를 눌러 2번 접어주세요!</string>
     <string name="chat_room_card_fold_discard_guide">내려서 버려주세요</string>
