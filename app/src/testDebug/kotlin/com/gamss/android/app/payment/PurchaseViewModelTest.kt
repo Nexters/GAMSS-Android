@@ -31,12 +31,11 @@ class PurchaseViewModelTest {
     private val observeBillingConnection: ObserveBillingConnectionUseCase = mockk()
     private val connectBilling: ConnectBillingUseCase = mockk(relaxed = true)
     private val getBillingProducts: GetBillingProductsUseCase = mockk()
-    private val observePaymentState: ObservePaymentStateUseCase = mockk()
-    private val requestPaymentRecovery: RequestPaymentRecoveryUseCase = mockk(relaxed = true)
+    private val paymentVerifier: PendingPurchaseVerifier = mockk(relaxed = true)
     private val paymentState = MutableStateFlow(PaymentState())
 
     init {
-        every { observePaymentState() } returns paymentState
+        every { paymentVerifier.state } returns paymentState
     }
 
     @Test
@@ -52,12 +51,23 @@ class PurchaseViewModelTest {
 
     private fun viewModel(
         connectionState: MutableStateFlow<StoreConnectionState> = MutableStateFlow(StoreConnectionState.DISCONNECTED),
+        isLicensedPackage: Boolean = true,
     ): PurchaseViewModel {
         every { observeBillingConnection() } returns connectionState
         return PurchaseViewModel(
             getPaymentProducts, getPaymentAccountToken, observeBillingConnection, connectBilling, getBillingProducts,
-            observePaymentState, requestPaymentRecovery,
+            paymentVerifier, isLicensedPackage,
         )
+    }
+
+    @Test
+    fun `라이선스 테스트 패키지가 아니면 구매를 진행하지 않는다`() = runTest {
+        viewModel(isLicensedPackage = false).test(this) {
+            containerHost.purchase("token_300000")
+            runCurrent()
+            expectNoItems()
+        }
+        coVerify(exactly = 0) { getPaymentAccountToken() }
     }
 
     @Test

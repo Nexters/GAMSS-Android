@@ -42,7 +42,7 @@ class PendingPurchaseVerifierTest {
         every { auth.sessionState } returns session
         every { billing.purchaseResults } returns outcomes.receiveAsFlow()
         every { billing.connectionState } returns MutableStateFlow(BillingConnectionState.CONNECTED)
-        return PendingPurchaseVerifier(billing, verifyGooglePurchase, auth, notifier, backgroundScope)
+        return PendingPurchaseVerifierImpl(billing, verifyGooglePurchase, auth, notifier, backgroundScope)
     }
 
     @Test

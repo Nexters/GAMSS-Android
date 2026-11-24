@@ -6,33 +6,55 @@ import com.gamss.android.core.billing.BillingOperationResult
 import com.gamss.android.core.common.AppResult
 import com.gamss.android.domain.payment.ConnectBillingUseCase
 import com.gamss.android.domain.payment.GetBillingProductsUseCase
+import com.gamss.android.domain.payment.GetPaymentAccountTokenUseCase
+import com.gamss.android.domain.payment.GetPaymentProductsUseCase
 import com.gamss.android.domain.payment.ObserveBillingConnectionUseCase
 import com.gamss.android.domain.payment.StoreConnectionState
 import com.gamss.android.domain.payment.StoreProduct
-import com.gamss.android.domain.payment.GetPaymentAccountTokenUseCase
-import com.gamss.android.domain.payment.GetPaymentProductsUseCase
 import com.gamss.android.domain.payment.TokenProduct
+import dagger.Module
+import dagger.Provides
+import dagger.hilt.InstallIn
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.Job
 import org.orbitmvi.orbit.ContainerHost
 import org.orbitmvi.orbit.syntax.Syntax
 import org.orbitmvi.orbit.viewmodel.container
 import javax.inject.Inject
+import javax.inject.Qualifier
 
+/** Play 라이선스 테스트가 가능한, Play Console에 등록된 패키지(com.gamss.android)로 설치됐는지. */
+@Qualifier
+@Retention(AnnotationRetention.BINARY)
+annotation class LicensedPackage
+
+@Module
+@InstallIn(SingletonComponent::class)
+object PurchaseConfigModule {
+    @Provides
+    @LicensedPackage
+    fun provideIsLicensedPackage(): Boolean = BuildConfig.APPLICATION_ID == "com.gamss.android"
+}
+
+// 개별 UseCase의 생성자 주입을 유지하기 위해 이 생성자에만 인자 수 제한을 제외한다.
 @HiltViewModel
-class PurchaseViewModel @Inject constructor(
+class PurchaseViewModel
+@Suppress("LongParameterList")
+@Inject
+constructor(
     private val getPaymentProducts: GetPaymentProductsUseCase,
     private val getPaymentAccountToken: GetPaymentAccountTokenUseCase,
     observeBillingConnection: ObserveBillingConnectionUseCase,
     private val connectBilling: ConnectBillingUseCase,
     private val getBillingProducts: GetBillingProductsUseCase,
-    observePaymentState: ObservePaymentStateUseCase,
-    private val requestPaymentRecovery: RequestPaymentRecoveryUseCase,
+    private val paymentVerifier: PendingPurchaseVerifier,
+    @LicensedPackage private val isLicensedPackage: Boolean,
 ) : ViewModel(), ContainerHost<PurchaseState, PurchaseSideEffect> {
 
     override val container = container<PurchaseState, PurchaseSideEffect>(PurchaseState())
     val connectionState = observeBillingConnection()
-    private val paymentState = observePaymentState()
+    private val paymentState = paymentVerifier.state
     private var paymentObserver: Job? = null
 
     init {
@@ -47,7 +69,7 @@ class PurchaseViewModel @Inject constructor(
                 paymentState.collect { payment -> reduce { state.copy(payment = payment) } }
             }
         }
-        requestPaymentRecovery()
+        paymentVerifier.requestRecovery()
     }
 
     fun stopObservingPayment() {
@@ -87,7 +109,7 @@ class PurchaseViewModel @Inject constructor(
     }
 
     fun purchase(productId: String) = intent {
-        if (BuildConfig.APPLICATION_ID != "com.gamss.android") return@intent
+        if (!isLicensedPackage) return@intent
         if (state.isPreparing || state.isLoading || paymentState.value.isVerifying) return@intent
         reduce { state.copy(isPreparing = true, error = null) }
         preparePurchase(productId)
@@ -97,7 +119,12 @@ class PurchaseViewModel @Inject constructor(
         productId: String,
     ) {
         when (val account = getPaymentAccountToken()) {
-            is AppResult.Failure -> reduce { state.copy(isPreparing = false, error = account.throwable.paymentMessage()) }
+            is AppResult.Failure -> reduce {
+                state.copy(
+                    isPreparing = false,
+                    error = account.throwable.paymentMessage(),
+                )
+            }
             is AppResult.Success -> {
                 // 결제 직전 새 ProductDetails를 조회한다. 화면에 저장한 오래된 참조를 사용하지 않는다.
                 val query = getBillingProducts(listOf(productId))
