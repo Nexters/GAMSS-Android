@@ -21,10 +21,10 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gamss.android.app.BuildConfig
 import com.gamss.android.core.billing.BillingOperationResult
-import com.gamss.android.domain.payment.StoreConnectionState
-import com.gamss.android.domain.payment.StoreProduct
 import com.gamss.android.core.designsystem.component.GamssText
 import com.gamss.android.core.designsystem.component.GamssTopBar
+import com.gamss.android.domain.payment.StoreConnectionState
+import com.gamss.android.domain.payment.StoreProduct
 import org.orbitmvi.orbit.compose.collectAsState
 import org.orbitmvi.orbit.compose.collectSideEffect
 import java.text.NumberFormat

@@ -20,12 +20,12 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.TextButton
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
@@ -121,12 +121,10 @@ fun ChatRoomScreen(
                 Toast.makeText(context, sideEffect.message, Toast.LENGTH_SHORT).show()
 
             is ChatRoomSideEffect.ShowTokenUsageAlert -> {
-                val message = when (sideEffect.alert) {
-                    TokenUsageAlert.LOW -> tokenUsageLowMessage
-                    TokenUsageAlert.EXHAUSTED -> tokenUsageExhaustedMessage
+                when (sideEffect.alert) {
+                    TokenUsageAlert.LOW -> Toast.makeText(context, tokenUsageLowMessage, Toast.LENGTH_SHORT).show()
+                    TokenUsageAlert.EXHAUSTED -> showPurchaseDialog = true
                 }
-                if (sideEffect.alert == TokenUsageAlert.EXHAUSTED) showPurchaseDialog = true
-                else Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
             }
         }
     }

@@ -6,9 +6,9 @@ import android.app.NotificationManager
 import android.os.Build
 import android.util.Log
 import androidx.core.content.getSystemService
+import com.gamss.android.app.payment.PendingPurchaseVerifier
 import com.gamss.android.domain.config.InitializeRemoteConfigUseCase
 import com.gamss.android.domain.safety.RefreshRiskLexiconUseCase
-import com.gamss.android.app.payment.PendingPurchaseVerifier
 import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope

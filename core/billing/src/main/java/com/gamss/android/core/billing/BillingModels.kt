@@ -1,8 +1,8 @@
 package com.gamss.android.core.billing
 
 import com.android.billingclient.api.ProductDetails
-import com.gamss.android.domain.payment.StoreProduct
 import com.gamss.android.domain.payment.StoreConnectionState
+import com.gamss.android.domain.payment.StoreProduct
 
 typealias BillingConnectionState = StoreConnectionState
 

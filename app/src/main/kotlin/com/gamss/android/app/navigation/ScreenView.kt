@@ -1,10 +1,10 @@
 package com.gamss.android.app.navigation
 
 import androidx.navigation3.runtime.NavKey
+import com.gamss.android.app.payment.PurchaseKey
 import com.gamss.android.domain.analytics.AnalyticsProperty
 import com.gamss.android.domain.analytics.AnalyticsScope
 import com.gamss.android.domain.analytics.analyticsValue
-import com.gamss.android.app.payment.PurchaseKey
 import com.gamss.android.feature.archive.navigation.ArchiveDetailKey
 import com.gamss.android.feature.archive.navigation.ArchiveKey
 import com.gamss.android.feature.carddelete.navigation.CardDeleteKey
