@@ -132,7 +132,7 @@ fun MainScreen(
 
 private fun mainEntryProvider(navigator: Navigator) = entryProvider {
     entry<StoreKey> {
-        StoreScreen()
+        StoreScreen(onNavigateToSetting = { navigator.navigate(SettingKey) })
     }
     entry<HomeKey> {
         HomeScreen(

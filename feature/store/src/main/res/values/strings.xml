@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="store_logo_description">감쓰</string>
+    <string name="store_setting_description">설정</string>
+
+    <string name="store_token_label_30">30만 토큰</string>
+    <string name="store_token_label_50">50만 토큰</string>
+    <string name="store_token_label_100">100만 토큰</string>
+</resources>
