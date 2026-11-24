@@ -21,8 +21,14 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
+import androidx.compose.material3.SnackbarVisuals
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
@@ -37,6 +43,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -47,9 +54,11 @@ import androidx.compose.ui.window.PopupProperties
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import com.gamss.android.core.common.util.formatConversationDate
+import com.gamss.android.core.designsystem.component.GamssIcons
 import com.gamss.android.core.designsystem.component.GamssScrollToBottomButton
 import com.gamss.android.core.designsystem.component.GamssTokenUsageTooltip
 import com.gamss.android.core.designsystem.modifier.addFocusCleaner
+import com.gamss.android.core.designsystem.snackbar.GamssSnackBar
 import com.gamss.android.core.designsystem.theme.GamssTheme
 import com.gamss.android.core.designsystem.topnavigation.GamssTopNavigation
 import com.gamss.android.core.designsystem.topnavigation.GamssTopNavigationHeight
@@ -111,18 +120,32 @@ fun ChatRoomScreen(
 
     val tokenUsageLowMessage = stringResource(R.string.chat_room_token_usage_low_toast)
     val tokenUsageExhaustedMessage = stringResource(R.string.chat_room_token_usage_exhausted_toast)
+    val tokenUsagePurchaseLabel = stringResource(R.string.chat_room_token_usage_purchase_button_label)
+    val snackbarHostState = remember { SnackbarHostState() }
 
     viewModel.collectSideEffect { sideEffect ->
         when (sideEffect) {
             is ChatRoomSideEffect.ShowToast ->
                 Toast.makeText(context, sideEffect.message, Toast.LENGTH_SHORT).show()
 
-            is ChatRoomSideEffect.ShowTokenUsageAlert -> {
-                val message = when (sideEffect.alert) {
-                    TokenUsageAlert.LOW -> tokenUsageLowMessage
-                    TokenUsageAlert.EXHAUSTED -> tokenUsageExhaustedMessage
+            is ChatRoomSideEffect.ShowTokenUsageAlert -> when (sideEffect.alert) {
+                TokenUsageAlert.LOW ->
+                    snackbarHostState.showSnackbar(
+                        TokenUsageSnackbarVisuals(message = tokenUsageLowMessage, showIcon = false),
+                    )
+
+                TokenUsageAlert.EXHAUSTED -> {
+                    val result = snackbarHostState.showSnackbar(
+                        TokenUsageSnackbarVisuals(
+                            message = tokenUsageExhaustedMessage,
+                            actionLabel = tokenUsagePurchaseLabel,
+                            showIcon = true,
+                        ),
+                    )
+                    if (result == SnackbarResult.ActionPerformed) {
+                        onNavigateToStore()
+                    }
                 }
-                Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -146,6 +169,7 @@ fun ChatRoomScreen(
         modifier = modifier,
         onBackClick = onBackClick,
         onNavigateToStore = onNavigateToStore,
+        snackbarHostState = snackbarHostState,
     )
 
     state.riskDetection?.let { detection ->
@@ -204,6 +228,16 @@ private fun ChatRoomEndFlowHost(
     }
 }
 
+/** 토큰 사용량 알림 종류별로 스낵바 아이콘 노출 여부([showIcon])를 함께 들고 다닌다. */
+private data class TokenUsageSnackbarVisuals(
+    override val message: String,
+    val showIcon: Boolean,
+    override val actionLabel: String? = null,
+) : SnackbarVisuals {
+    override val withDismissAction: Boolean = false
+    override val duration: SnackbarDuration = SnackbarDuration.Short
+}
+
 @Immutable
 private data class ChatRoomActions(
     val onInputChange: (String) -> Unit,
@@ -223,6 +257,7 @@ private fun ChatRoomContent(
     modifier: Modifier = Modifier,
     onBackClick: () -> Unit,
     onNavigateToStore: () -> Unit,
+    snackbarHostState: SnackbarHostState,
 ) {
     val listState = rememberLazyListState()
     val focusManager = LocalFocusManager.current
@@ -283,6 +318,30 @@ private fun ChatRoomContent(
         },
         // 상위 Scaffold 가 인셋을 이미 적용해, imePadding 을 그대로 쓰면 이중 적용된다.
         contentWindowInsets = WindowInsets(0),
+        snackbarHost = {
+            SnackbarHost(snackbarHostState) { data ->
+                val visuals = data.visuals as? TokenUsageSnackbarVisuals
+                GamssSnackBar(
+                    message = data.visuals.message,
+                    actionLabel = data.visuals.actionLabel,
+                    onActionClick = { data.performAction() },
+                    snackBarIcon = if (visuals?.showIcon == true) {
+                        {
+                            Icon(
+                                painter = painterResource(GamssIcons.InfoFilled),
+                                contentDescription = null,
+                                tint = GamssTheme.colors.red,
+                            )
+                        }
+                    } else {
+                        null
+                    },
+                    modifier = Modifier
+                        .windowInsetsPadding(WindowInsets.navigationBars)
+                        .padding(horizontal = GamssTheme.spacing.spacing300, vertical = GamssTheme.spacing.spacing200),
+                )
+            }
+        },
     ) { innerPadding ->
         Column(
             modifier = Modifier
@@ -606,5 +665,6 @@ private fun ChatRoomPreviewContent() {
         actions = actions,
         onBackClick = {},
         onNavigateToStore = {},
+        snackbarHostState = remember { SnackbarHostState() },
     )
 }
