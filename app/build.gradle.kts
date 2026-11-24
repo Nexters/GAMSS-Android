@@ -69,11 +69,7 @@ android {
 
     buildTypes {
         getByName("debug") {
-            // FIXME: Play Console에 release 패키지(com.gamss.android)만 등록돼 있어, 원래 쓰던
-            // ".dev" 접미사 패키지로는 상품 조회·구매 자체가 Play에서 "item unavailable"로 막힌다.
-            // 결제 테스트가 되도록 임시로 release와 같은 패키지를 쓴다. Console에 테스트용 패키지를
-            // 따로 등록하거나 release 서명 빌드로 테스트할 수 있게 되면 ".dev"로 되돌린다.
-            applicationIdSuffix = ""
+            applicationIdSuffix = ".dev"
             versionNameSuffix = "-dev"
             resValue("string", "app_name", "GAMSS Dev")
         }
