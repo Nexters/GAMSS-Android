@@ -15,6 +15,7 @@
     <string name="chat_room_token_usage_reset_time">오전 5:00에 초기화됩니다</string>
     <string name="chat_room_check_token_usage_fail">사용량을 불러오지 못했어요.</string>
     <string name="chat_room_check_token_usage_button_label">재시도</string>
+    <string name="chat_room_token_usage_purchase_button_label">구매하기</string>
     <string name="chat_room_token_usage_low_toast">오늘 사용 가능한 토큰이 10% 남았어요.</string>
     <string name="chat_room_token_usage_exhausted_toast">오늘 사용 가능한 토큰을 전부 사용했어요.</string>
     <string name="chat_room_message_writing_label">입력 중</string>

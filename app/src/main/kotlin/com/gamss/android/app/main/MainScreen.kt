@@ -211,6 +211,7 @@ private fun mainEntryProvider(navigator: Navigator) = entryProvider {
                 navigator.openDroppedCard(ArchiveKey, ArchiveDetailKey(emotion), cardId)
             },
             onBackClick = navigator::goBack,
+            onNavigateToStore = { navigator.navigate(StoreKey) },
             isActive = navigator.state.currentKey == key,
         )
     }

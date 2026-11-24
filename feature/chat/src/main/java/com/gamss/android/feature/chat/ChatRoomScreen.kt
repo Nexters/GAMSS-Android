@@ -90,6 +90,7 @@ fun ChatRoomScreen(
     conversationId: Long,
     onCardDiscard: (EmotionCharacter, Long) -> Unit,
     onBackClick: () -> Unit,
+    onNavigateToStore: () -> Unit,
     isActive: Boolean = true,
     modifier: Modifier = Modifier,
     viewModel: ChatRoomViewModel = hiltViewModel(),
@@ -144,6 +145,7 @@ fun ChatRoomScreen(
         actions = actions,
         modifier = modifier,
         onBackClick = onBackClick,
+        onNavigateToStore = onNavigateToStore,
     )
 
     state.riskDetection?.let { detection ->
@@ -220,6 +222,7 @@ private fun ChatRoomContent(
     actions: ChatRoomActions,
     modifier: Modifier = Modifier,
     onBackClick: () -> Unit,
+    onNavigateToStore: () -> Unit,
 ) {
     val listState = rememberLazyListState()
     val focusManager = LocalFocusManager.current
@@ -270,7 +273,14 @@ private fun ChatRoomContent(
 
     Scaffold(
         modifier = modifier.addFocusCleaner(focusManager),
-        topBar = { ChatRoomTopBar(state = state, actions = actions, onBackClick = onBackClick) },
+        topBar = {
+            ChatRoomTopBar(
+                state = state,
+                actions = actions,
+                onBackClick = onBackClick,
+                onNavigateToStore = onNavigateToStore,
+            )
+        },
         // 상위 Scaffold 가 인셋을 이미 적용해, imePadding 을 그대로 쓰면 이중 적용된다.
         contentWindowInsets = WindowInsets(0),
     ) { innerPadding ->
@@ -311,6 +321,7 @@ private fun ChatRoomTopBar(
     state: ChatRoomState,
     actions: ChatRoomActions,
     onBackClick: () -> Unit,
+    onNavigateToStore: () -> Unit,
 ) {
     Box {
         GamssTopNavigation(
@@ -350,6 +361,7 @@ private fun ChatRoomTopBar(
                 isLoading = state.isTokenUsageLoading,
                 onDismissRequest = actions.onTokenUsageToggle,
                 onRetryClick = actions.onTokenUsageRetry,
+                onPurchaseClick = onNavigateToStore,
             )
         }
     }
@@ -365,6 +377,7 @@ private fun TokenUsagePopup(
     isLoading: Boolean,
     onDismissRequest: () -> Unit,
     onRetryClick: () -> Unit,
+    onPurchaseClick: () -> Unit,
 ) {
     val popupOffset = with(LocalDensity.current) {
         IntOffset(
@@ -392,7 +405,9 @@ private fun TokenUsagePopup(
             resetTimeLabel = stringResource(R.string.chat_room_token_usage_reset_time),
             failMessage = stringResource(R.string.chat_room_check_token_usage_fail),
             retryLabel = stringResource(R.string.chat_room_check_token_usage_button_label),
+            purchaseLable = stringResource(R.string.chat_room_token_usage_purchase_button_label),
             onRetryClick = onRetryClick,
+            onPurchaseClick = onPurchaseClick,
             isLoading = isLoading,
         )
     }
@@ -590,5 +605,6 @@ private fun ChatRoomPreviewContent() {
         state = state,
         actions = actions,
         onBackClick = {},
+        onNavigateToStore = {},
     )
 }
