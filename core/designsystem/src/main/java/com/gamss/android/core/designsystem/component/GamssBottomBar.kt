@@ -26,7 +26,7 @@ import androidx.compose.ui.unit.dp
 import com.gamss.android.core.designsystem.theme.GamssTheme
 
 private val BottomBarHeight = 66.dp
-private val ItemRowWidth = 255.dp
+private val ItemRowWidth = 312.dp
 private val ItemRowHeight = 44.dp
 
 // 시스템 폰트를 키워도 라벨이 잘리지 않고 위아래 여백은 디자인대로 유지해야 해서, 바 높이는 고정하지 않는다.
