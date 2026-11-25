@@ -85,11 +85,8 @@ internal class PlayBillingRepository @Inject constructor(
 
     override suspend fun queryUnfinishedPurchases() {
         val (billingResult, purchases) = dataSource.queryPurchases()
-        emitOutcomes(mapToPurchaseOutcomes(billingResult, purchases))
+        emitOutcomes(mapToPurchaseOutcomes(billingResult, purchases, BillingErrorSource.RESTORE_QUERY))
     }
-
-    override suspend fun consumePurchase(purchaseToken: String): BillingOperationResult =
-        dataSource.consumePurchase(purchaseToken).billingResult.toOperationResult()
 
     private fun BillingResult.toOperationResult() = BillingOperationResult(
         isSuccess = responseCode == BillingResponseCode.OK,

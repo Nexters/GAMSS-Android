@@ -121,6 +121,7 @@ dependencies {
     implementation(projects.data)
     implementation(projects.core.common)
     implementation(projects.core.billing)
+    implementation(libs.androidx.lifecycle.process)
     implementation(projects.core.ui)
     implementation(projects.core.designsystem)
     implementation(projects.feature.home)
@@ -164,6 +165,9 @@ dependencies {
     baselineProfile(projects.baselineprofile)
 
     testImplementation(libs.junit)
+    testImplementation(libs.mockk)
+    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.orbit.test)
 
     androidTestImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

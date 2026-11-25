@@ -4,6 +4,8 @@ import com.gamss.android.core.billing.BillingRepository
 import com.gamss.android.core.billing.PlayBillingDataSource
 import com.gamss.android.core.billing.PlayBillingDataSourceImpl
 import com.gamss.android.core.billing.PlayBillingRepository
+import com.gamss.android.core.billing.StoreBillingRepositoryImpl
+import com.gamss.android.domain.payment.StoreBillingRepository
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -29,6 +31,9 @@ internal abstract class BillingModule {
 
     @Binds
     abstract fun bindBillingRepository(playBillingRepository: PlayBillingRepository): BillingRepository
+
+    @Binds
+    abstract fun bindStoreBillingRepository(repository: StoreBillingRepositoryImpl): StoreBillingRepository
 
     companion object {
         @Provides

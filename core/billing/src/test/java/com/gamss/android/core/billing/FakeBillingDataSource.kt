@@ -3,7 +3,6 @@ package com.gamss.android.core.billing
 import android.app.Activity
 import com.android.billingclient.api.BillingClient.BillingResponseCode
 import com.android.billingclient.api.BillingResult
-import com.android.billingclient.api.ConsumeResult
 import com.android.billingclient.api.PurchasesResult
 import com.android.billingclient.api.QueryProductDetailsResult
 import kotlinx.coroutines.flow.Flow
@@ -32,13 +31,10 @@ internal class FakeBillingDataSource : PlayBillingDataSource {
         private set
     var queryPurchasesCallCount = 0
         private set
-    var consumePurchaseCallCount = 0
-        private set
 
     var queryProductDetailsResult: Pair<BillingResult, QueryProductDetailsResult> =
         okResult() to QueryProductDetailsResult.create(emptyList(), emptyList())
     var queryPurchasesResult: PurchasesResult = PurchasesResult(okResult(), emptyList())
-    var consumePurchaseResult: ConsumeResult = ConsumeResult(okResult(), "")
     var launchBillingFlowResult: BillingResult = okResult()
 
     override fun startConnection() {
@@ -60,11 +56,6 @@ internal class FakeBillingDataSource : PlayBillingDataSource {
     override suspend fun queryPurchases(): PurchasesResult {
         queryPurchasesCallCount++
         return queryPurchasesResult
-    }
-
-    override suspend fun consumePurchase(purchaseToken: String): ConsumeResult {
-        consumePurchaseCallCount++
-        return consumePurchaseResult
     }
 
     fun emitConnectionEvent(event: BillingConnectionEvent) = connectionEventsFlow.tryEmit(event)

@@ -2,7 +2,6 @@ package com.gamss.android.core.billing
 
 import com.android.billingclient.api.BillingClient.BillingResponseCode
 import com.android.billingclient.api.BillingResult
-import com.android.billingclient.api.ConsumeResult
 import com.android.billingclient.api.Purchase
 import com.android.billingclient.api.PurchasesResult
 import com.android.billingclient.api.QueryProductDetailsResult
@@ -138,13 +137,25 @@ class PlayBillingRepositoryTest {
     }
 
     @Test
-    fun `consumePurchase는 Play의 응답 코드를 그대로 반환한다`() = runTest {
-        fakeDataSource.consumePurchaseResult = ConsumeResult(billingResult(BillingResponseCode.OK), "token-1")
+    fun `같은 오류 코드라도 결제 콜백과 복구 조회의 출처를 구분한다`() = runTest {
+        val result = billingResult(BillingResponseCode.DEVELOPER_ERROR, "configuration error")
+        fakeDataSource.queryPurchasesResult = PurchasesResult(result, emptyList())
+        val received = mutableListOf<BillingPurchaseOutcome>()
+        val job = launch { repository.purchaseResults.collect { received += it } }
+        runCurrent()
 
-        val result = repository.consumePurchase("token-1")
+        fakeDataSource.emitPurchaseUpdate(PurchasesUpdatedEvent(result, null))
+        repository.queryUnfinishedPurchases()
+        runCurrent()
 
-        assertEquals(BillingResponseCode.OK, result.responseCode)
-        assertEquals(true, result.isSuccess)
+        assertEquals(
+            listOf(
+                BillingPurchaseOutcome.Error(5, "configuration error", BillingErrorSource.PURCHASE_UPDATE),
+                BillingPurchaseOutcome.Error(5, "configuration error", BillingErrorSource.RESTORE_QUERY),
+            ),
+            received,
+        )
+        job.cancel()
     }
 
     private fun billingResult(responseCode: Int, debugMessage: String = ""): BillingResult =

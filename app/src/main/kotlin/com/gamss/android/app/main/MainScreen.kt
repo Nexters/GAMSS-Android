@@ -202,7 +202,6 @@ private fun mainEntryProvider(navigator: Navigator) = entryProvider {
     entry<WebViewKey>(metadata = detailSlideTransition) { key ->
         WebViewScreen(page = key.page, onBackClick = navigator::goBack)
     }
-    gameEntries(navigator)
     entry<ChatKey> {
         ChattingListScreen(
             onChatClick = { navigator.navigate(ChatRoomKey(it)) },
