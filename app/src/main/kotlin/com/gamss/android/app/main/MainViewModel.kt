@@ -9,8 +9,6 @@ import com.gamss.android.domain.analytics.AnalyticsTracker
 import com.gamss.android.domain.auth.ObserveSessionStateUseCase
 import com.gamss.android.domain.auth.RestoreSessionUseCase
 import com.gamss.android.domain.auth.SessionState
-import com.gamss.android.domain.push.MarkNotificationPermissionPromptedUseCase
-import com.gamss.android.domain.push.ShouldPromptNotificationPermissionUseCase
 import com.gamss.android.domain.push.SyncDeviceTokenUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import org.orbitmvi.orbit.ContainerHost
@@ -22,8 +20,6 @@ class MainViewModel @Inject constructor(
     private val restoreSessionUseCase: RestoreSessionUseCase,
     private val observeSessionStateUseCase: ObserveSessionStateUseCase,
     private val syncDeviceTokenUseCase: SyncDeviceTokenUseCase,
-    private val shouldPromptNotificationPermissionUseCase: ShouldPromptNotificationPermissionUseCase,
-    private val markNotificationPermissionPromptedUseCase: MarkNotificationPermissionPromptedUseCase,
     private val analyticsTracker: AnalyticsTracker,
 ) : ViewModel(), ContainerHost<MainState, Unit> {
 
@@ -47,12 +43,6 @@ class MainViewModel @Inject constructor(
 
     fun syncDeviceToken() = intent {
         syncDeviceTokenIfAuthenticated(state.sessionState)
-    }
-
-    suspend fun shouldPromptNotificationPermission(): Boolean = shouldPromptNotificationPermissionUseCase()
-
-    fun markNotificationPermissionPrompted() = intent {
-        markNotificationPermissionPromptedUseCase()
     }
 
     fun trackScreenView(key: NavKey) {

@@ -18,11 +18,7 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -42,7 +38,6 @@ import com.gamss.android.core.designsystem.component.GamssText
 import com.gamss.android.core.designsystem.theme.GamssTheme
 import com.gamss.android.core.designsystem.topnavigation.GamssTopNavigation
 import com.gamss.android.core.designsystem.topnavigation.GamssTopNavigationContent
-import com.gamss.android.feature.onboarding.component.NotificationPermissionDialog
 import kotlinx.coroutines.launch
 
 private val IllustrationMaxWidth = 340.dp
@@ -81,22 +76,19 @@ private enum class OnboardingPage(
 /**
  * GAMSS의 첫 사용 흐름입니다.
  *
- * 알림 런타임 권한 요청은 Activity가 소유하도록 [onNotificationPermissionRequest]로 위임하고,
- * 온보딩 종료 시점은 권한 선택과 무관하게 [onComplete]로 알립니다.
+ * 앱을 써 보기 전이라 알림 권한은 묻지 않고, 새 대화를 만들 때 묻는다.
  */
 @Composable
 fun OnboardingScreen(
     onComplete: () -> Unit,
-    onNotificationPermissionRequest: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: OnboardingViewModel = hiltViewModel(),
 ) {
     OnboardingContent(
         onComplete = onComplete,
-        onNotificationPermissionRequest = onNotificationPermissionRequest,
         onNextClick = viewModel::trackNext,
         onSkipClick = viewModel::trackSkip,
-        onStartConfirm = viewModel::trackComplete,
+        onStartClick = viewModel::trackComplete,
         modifier = modifier,
     )
 }
@@ -104,34 +96,15 @@ fun OnboardingScreen(
 @Composable
 private fun OnboardingContent(
     onComplete: () -> Unit,
-    onNotificationPermissionRequest: () -> Unit,
     onNextClick: (pageIndex: Int) -> Unit,
     onSkipClick: (pageIndex: Int) -> Unit,
-    onStartConfirm: () -> Unit,
+    onStartClick: () -> Unit,
     modifier: Modifier = Modifier,
     initialPage: Int = 0,
 ) {
     val pages = OnboardingPage.entries
     val pagerState = rememberPagerState(initialPage = initialPage) { pages.size }
     val coroutineScope = rememberCoroutineScope()
-    var showPermissionDialog by remember { mutableStateOf(false) }
-
-    if (showPermissionDialog) {
-        NotificationPermissionDialog(
-            onDismiss = { showPermissionDialog = false },
-            onDisagree = {
-                showPermissionDialog = false
-                onStartConfirm()
-                onComplete()
-            },
-            onAgree = {
-                showPermissionDialog = false
-                onStartConfirm()
-                onNotificationPermissionRequest()
-                onComplete()
-            },
-        )
-    }
 
     Box(
         modifier = modifier
@@ -179,7 +152,10 @@ private fun OnboardingContent(
                     onNextClick(pagerState.currentPage)
                     coroutineScope.launch { pagerState.animateScrollToPage(pagerState.currentPage + 1) }
                 },
-                onStartClick = { showPermissionDialog = true },
+                onStartClick = {
+                    onStartClick()
+                    onComplete()
+                },
             )
         }
     }
@@ -316,10 +292,9 @@ private fun OnboardingStep1Preview() {
     GamssTheme {
         OnboardingContent(
             onComplete = {},
-            onNotificationPermissionRequest = {},
             onNextClick = {},
             onSkipClick = {},
-            onStartConfirm = {},
+            onStartClick = {},
         )
     }
 }
@@ -331,10 +306,9 @@ private fun OnboardingStep3Preview() {
     GamssTheme {
         OnboardingContent(
             onComplete = {},
-            onNotificationPermissionRequest = {},
             onNextClick = {},
             onSkipClick = {},
-            onStartConfirm = {},
+            onStartClick = {},
             initialPage = OnboardingPage.entries.lastIndex,
         )
     }
