@@ -43,6 +43,7 @@ import com.gamss.android.app.navigation.keys
 import com.gamss.android.app.navigation.rememberNavigationState
 import com.gamss.android.app.navigation.toEntries
 import com.gamss.android.app.navigation.topLevelDestinations
+import com.gamss.android.core.billing.BillingFlowLauncher
 import com.gamss.android.core.designsystem.component.GamssBottomBar
 import com.gamss.android.core.designsystem.component.GamssPaperBackground
 import com.gamss.android.feature.archive.ArchiveDetailScreen
@@ -137,7 +138,11 @@ fun MainScreen(
 
 private fun mainEntryProvider(navigator: Navigator) = entryProvider {
     entry<StoreKey> {
-        StoreScreen(onNavigateToSetting = { navigator.navigate(SettingKey) })
+        val launcher = LocalActivity.current as? BillingFlowLauncher
+        StoreScreen(
+            onNavigateToSetting = { navigator.navigate(SettingKey) },
+            launchBillingFlow = { product, accountToken -> launcher?.launchBillingFlow(product, accountToken) },
+        )
     }
     entry<HomeKey> {
         HomeScreen(

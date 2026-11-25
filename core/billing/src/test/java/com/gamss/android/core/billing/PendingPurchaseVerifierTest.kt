@@ -1,9 +1,5 @@
-package com.gamss.android.app.payment
+package com.gamss.android.core.billing
 
-import com.gamss.android.core.billing.BillingConnectionState
-import com.gamss.android.core.billing.BillingErrorSource
-import com.gamss.android.core.billing.BillingPurchaseOutcome
-import com.gamss.android.core.billing.BillingRepository
 import com.gamss.android.core.common.AppResult
 import com.gamss.android.core.common.network.ApiException
 import com.gamss.android.domain.auth.AuthRepository

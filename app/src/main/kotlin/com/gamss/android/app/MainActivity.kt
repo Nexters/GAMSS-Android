@@ -11,7 +11,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.lifecycleScope
 import com.gamss.android.app.navigation.GamssRootNavHost
-import com.gamss.android.app.payment.BillingFlowLauncher
+import com.gamss.android.core.billing.BillingFlowLauncher
 import com.gamss.android.core.billing.BillingProduct
 import com.gamss.android.core.billing.BillingRepository
 import com.gamss.android.core.designsystem.theme.GamssTheme

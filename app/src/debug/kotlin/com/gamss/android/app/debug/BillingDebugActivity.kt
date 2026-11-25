@@ -28,14 +28,11 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import com.gamss.android.app.R
-import com.gamss.android.app.payment.PaymentState
-import com.gamss.android.app.payment.PurchaseProduct
-import com.gamss.android.app.payment.PurchaseSideEffect
-import com.gamss.android.app.payment.PurchaseViewModel
-import com.gamss.android.app.payment.paymentMessage
 import com.gamss.android.core.billing.BillingOperationResult
 import com.gamss.android.core.billing.BillingProduct
 import com.gamss.android.core.billing.BillingRepository
+import com.gamss.android.core.billing.PaymentState
+import com.gamss.android.core.billing.paymentMessage
 import com.gamss.android.core.designsystem.component.GamssPaperBackground
 import com.gamss.android.core.designsystem.component.GamssText
 import com.gamss.android.core.designsystem.component.GamssTopBar
@@ -45,6 +42,9 @@ import com.gamss.android.domain.auth.SessionState
 import com.gamss.android.domain.payment.StoreConnectionState
 import com.gamss.android.domain.payment.StoreProduct
 import com.gamss.android.feature.login.LoginScreen
+import com.gamss.android.feature.store.StoreSideEffect
+import com.gamss.android.feature.store.StoreTokenProduct
+import com.gamss.android.feature.store.StoreViewModel
 import dagger.Lazy
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
@@ -56,7 +56,7 @@ import javax.inject.Inject
 /**
  * 디버그/검증 전용 화면. 프로덕션 아님.
  * 라이선스 테스트 패키지(com.gamss.android)로 설치해 실제 서버 검증까지 포함한 결제 흐름을 확인한다.
- * 로직은 프로덕션과 같은 [PurchaseViewModel]을 그대로 쓰고, 화면만 이 Activity 전용으로 둔다.
+ * 로직은 프로덕션과 같은 [StoreViewModel]을 그대로 쓰고, 화면만 이 Activity 전용으로 둔다.
  * 실행: adb shell am start -n com.gamss.android/com.gamss.android.app.debug.BillingDebugActivity
  */
 @AndroidEntryPoint
@@ -103,7 +103,7 @@ class BillingDebugActivity : ComponentActivity() {
 private fun BillingDebugScreen(
     onBackClick: () -> Unit,
     launchBillingFlow: (StoreProduct, String) -> BillingOperationResult?,
-    viewModel: PurchaseViewModel = hiltViewModel(),
+    viewModel: StoreViewModel = hiltViewModel(),
 ) {
     val state by viewModel.collectAsState()
     val connection by viewModel.connectionState.collectAsStateWithLifecycle()
@@ -116,8 +116,9 @@ private fun BillingDebugScreen(
 
     viewModel.collectSideEffect { effect ->
         when (effect) {
-            is PurchaseSideEffect.LaunchBillingFlow ->
+            is StoreSideEffect.LaunchBillingFlow ->
                 viewModel.onBillingFlowResult(launchBillingFlow(effect.product, effect.accountToken))
+            is StoreSideEffect.NavigateToSetting -> Unit
         }
     }
 
@@ -135,7 +136,7 @@ private fun BillingDebugScreen(
             state.error?.let { GamssText(it) }
             if (busy) CircularProgressIndicator()
             TextButton(onClick = viewModel::loadProducts, enabled = !busy) { GamssText("상품 새로고침") }
-            state.products.forEach { item ->
+            state.tokenProducts.forEach { item ->
                 BillingDebugProductCard(
                     item = item,
                     enabled = !busy && connection == StoreConnectionState.CONNECTED,
@@ -154,7 +155,7 @@ private fun BillingDebugStatus(payment: PaymentState) {
 }
 
 @Composable
-private fun BillingDebugProductCard(item: PurchaseProduct, enabled: Boolean, onPurchase: () -> Unit) {
+private fun BillingDebugProductCard(item: StoreTokenProduct, enabled: Boolean, onPurchase: () -> Unit) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             GamssText("${item.product.tokenAmount.formatted()} 토큰")

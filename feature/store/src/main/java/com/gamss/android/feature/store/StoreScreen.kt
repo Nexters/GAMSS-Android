@@ -1,8 +1,10 @@
 package com.gamss.android.feature.store
 
+import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,6 +18,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -25,31 +28,50 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.gamss.android.core.billing.BillingOperationResult
 import com.gamss.android.core.designsystem.component.GamssIconButton
 import com.gamss.android.core.designsystem.component.GamssIcons
 import com.gamss.android.core.designsystem.component.GamssLogo
 import com.gamss.android.core.designsystem.component.GamssTopBar
 import com.gamss.android.core.designsystem.theme.GamssTheme
+import com.gamss.android.domain.payment.StoreConnectionState
+import com.gamss.android.domain.payment.StoreProduct
 import org.orbitmvi.orbit.compose.collectAsState
 import org.orbitmvi.orbit.compose.collectSideEffect
 
 @Composable
 fun StoreScreen(
     onNavigateToSetting: () -> Unit,
+    launchBillingFlow: (StoreProduct, String) -> BillingOperationResult?,
     modifier: Modifier = Modifier,
     viewModel: StoreViewModel = hiltViewModel(),
 ) {
     val state by viewModel.collectAsState()
+    val connection by viewModel.connectionState.collectAsStateWithLifecycle()
+    val activity = LocalActivity.current
+
+    DisposableEffect(viewModel) {
+        viewModel.requestRecovery()
+        onDispose { viewModel.stopObservingPayment() }
+    }
 
     viewModel.collectSideEffect { sideEffect ->
         when (sideEffect) {
             is StoreSideEffect.NavigateToSetting -> onNavigateToSetting()
+            is StoreSideEffect.LaunchBillingFlow ->
+                viewModel.onBillingFlowResult(launchBillingFlow(sideEffect.product, sideEffect.accountToken))
         }
     }
 
+    val busy = state.isLoading || state.isPreparing || state.payment.isVerifying
+    val purchaseEnabled = activity != null && !busy && connection == StoreConnectionState.CONNECTED
+
     StoreContent(
         state = state,
+        purchaseEnabled = purchaseEnabled,
         onSettingClick = viewModel::navigateToSetting,
+        onPurchaseClick = viewModel::purchase,
         modifier = modifier,
     )
 }
@@ -57,7 +79,9 @@ fun StoreScreen(
 @Composable
 private fun StoreContent(
     state: StoreState,
+    purchaseEnabled: Boolean,
     onSettingClick: () -> Unit,
+    onPurchaseClick: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.fillMaxSize()) {
@@ -83,6 +107,8 @@ private fun StoreContent(
                 StoreTokenCard(
                     product = product,
                     pinRotation = PinRotations[index % PinRotations.size],
+                    enabled = purchaseEnabled && product.billingProduct != null,
+                    onClick = { onPurchaseClick(product.product.productId) },
                     modifier = Modifier.weight(1f),
                 )
             }
@@ -98,9 +124,11 @@ private fun StoreContent(
 private fun StoreTokenCard(
     product: StoreTokenProduct,
     pinRotation: Float,
+    enabled: Boolean,
+    onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Box(modifier = modifier) {
+    Box(modifier = modifier.clickable(enabled = enabled, onClick = onClick)) {
         Box(
             modifier = Modifier
                 .padding(top = PinOverlapHeight)
@@ -164,7 +192,7 @@ private val PinRotations = listOf(45f, -75f, 75f)
 @Suppress("UnusedPrivateMember")
 private fun StoreContentLightPreview() {
     GamssTheme(darkTheme = false) {
-        StoreContent(state = StoreState(), onSettingClick = {})
+        StoreContent(state = StoreState(), purchaseEnabled = true, onSettingClick = {}, onPurchaseClick = {})
     }
 }
 
@@ -173,6 +201,6 @@ private fun StoreContentLightPreview() {
 @Suppress("UnusedPrivateMember")
 private fun StoreContentDarkPreview() {
     GamssTheme(darkTheme = true) {
-        StoreContent(state = StoreState(), onSettingClick = {})
+        StoreContent(state = StoreState(), purchaseEnabled = true, onSettingClick = {}, onPurchaseClick = {})
     }
 }

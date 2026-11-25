@@ -1,11 +1,9 @@
-package com.gamss.android.app.payment
+package com.gamss.android.core.billing
 
-import com.gamss.android.core.billing.BillingErrorSource
-import com.gamss.android.core.billing.BillingPurchaseOutcome
 import com.gamss.android.core.common.network.ApiException
 import com.gamss.android.domain.auth.SessionExpiredException
 
-internal fun Throwable.paymentMessage(): String = when (this) {
+fun Throwable.paymentMessage(): String = when (this) {
     is SessionExpiredException -> "로그인이 필요합니다. 다시 로그인해 주세요."
     is ApiException.Network -> "서버에 연결할 수 없습니다. 잠시 후 다시 확인해 주세요."
     is ApiException.Http -> when (code) {
@@ -21,7 +19,7 @@ internal fun Throwable.paymentMessage(): String = when (this) {
     else -> "구매 정보를 불러오지 못했습니다. 잠시 후 다시 확인해 주세요."
 }
 
-internal fun BillingPurchaseOutcome.Error.paymentMessage(): String {
+fun BillingPurchaseOutcome.Error.paymentMessage(): String {
     val operation = when (source) {
         BillingErrorSource.PURCHASE_UPDATE -> "Google Play 결제 실패"
         BillingErrorSource.RESTORE_QUERY -> "Google Play 미처리 구매 조회 실패"

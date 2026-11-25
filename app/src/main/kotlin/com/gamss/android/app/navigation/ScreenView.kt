@@ -1,7 +1,6 @@
 package com.gamss.android.app.navigation
 
 import androidx.navigation3.runtime.NavKey
-import com.gamss.android.app.payment.PurchaseKey
 import com.gamss.android.domain.analytics.AnalyticsProperty
 import com.gamss.android.domain.analytics.AnalyticsScope
 import com.gamss.android.domain.analytics.analyticsValue
@@ -18,6 +17,7 @@ import com.gamss.android.feature.onboarding.navigation.OnboardingKey
 import com.gamss.android.feature.setting.navigation.AccountInfoKey
 import com.gamss.android.feature.setting.navigation.NicknameChangeKey
 import com.gamss.android.feature.setting.navigation.SettingKey
+import com.gamss.android.feature.store.navigation.StoreKey
 import com.gamss.android.feature.webview.navigation.WebViewKey
 
 data class ScreenView(
@@ -37,7 +37,7 @@ private val screenNames: Map<NavKey, String> = mapOf(
     AccountInfoKey to "account_info",
     GameKey to "game_list",
     ClickerGameKey to "clicker_game",
-    PurchaseKey to "purchase",
+    StoreKey to "store",
 )
 
 /** 새 화면 key 를 추가하면 여기에도 이름을 붙여야 집계된다. MainKey 는 탭을 담는 틀이라 세지 않는다. */

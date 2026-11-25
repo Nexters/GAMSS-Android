@@ -1,15 +1,17 @@
-package com.gamss.android.app.payment
+package com.gamss.android.feature.store
 
-import com.gamss.android.domain.payment.StoreConnectionState
 import com.gamss.android.core.billing.BillingOperationResult
-import com.gamss.android.domain.payment.StoreProduct
-import com.gamss.android.domain.payment.StoreProductQueryResult
+import com.gamss.android.core.billing.PaymentState
+import com.gamss.android.core.billing.PendingPurchaseVerifier
+import com.gamss.android.core.common.AppResult
 import com.gamss.android.domain.payment.ConnectBillingUseCase
 import com.gamss.android.domain.payment.GetBillingProductsUseCase
-import com.gamss.android.domain.payment.ObserveBillingConnectionUseCase
-import com.gamss.android.core.common.AppResult
 import com.gamss.android.domain.payment.GetPaymentAccountTokenUseCase
 import com.gamss.android.domain.payment.GetPaymentProductsUseCase
+import com.gamss.android.domain.payment.ObserveBillingConnectionUseCase
+import com.gamss.android.domain.payment.StoreConnectionState
+import com.gamss.android.domain.payment.StoreProduct
+import com.gamss.android.domain.payment.StoreProductQueryResult
 import com.gamss.android.domain.payment.TokenProduct
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -18,13 +20,13 @@ import io.mockk.mockk
 import io.mockk.verify
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.runCurrent
+import kotlinx.coroutines.test.runTest
 import org.junit.Test
 import org.orbitmvi.orbit.test.test
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class PurchaseViewModelTest {
+class StoreViewModelTest {
 
     private val getPaymentProducts: GetPaymentProductsUseCase = mockk()
     private val getPaymentAccountToken: GetPaymentAccountTokenUseCase = mockk()
@@ -52,9 +54,9 @@ class PurchaseViewModelTest {
     private fun viewModel(
         connectionState: MutableStateFlow<StoreConnectionState> = MutableStateFlow(StoreConnectionState.DISCONNECTED),
         isLicensedPackage: Boolean = true,
-    ): PurchaseViewModel {
+    ): StoreViewModel {
         every { observeBillingConnection() } returns connectionState
-        return PurchaseViewModel(
+        return StoreViewModel(
             getPaymentProducts, getPaymentAccountToken, observeBillingConnection, connectBilling, getBillingProducts,
             paymentVerifier, isLicensedPackage,
         )
@@ -99,7 +101,9 @@ class PurchaseViewModelTest {
             expectState {
                 copy(
                     isLoading = false,
-                    products = listOf(PurchaseProduct(TokenProduct("token_300000", 300_000), billingProduct)),
+                    tokenProducts = listOf(
+                        storeTokenProduct(TokenProduct("token_300000", 300_000), billingProduct),
+                    ),
                     error = null,
                 )
             }
@@ -128,7 +132,7 @@ class PurchaseViewModelTest {
             connectionState.value = StoreConnectionState.CONNECTED
 
             expectState { copy(isLoading = true, error = null) }
-            expectState { copy(isLoading = false, products = emptyList(), error = "판매 중인 상품이 없습니다.") }
+            expectState { copy(isLoading = false, tokenProducts = emptyList(), error = "판매 중인 상품이 없습니다.") }
         }
         coVerify(exactly = 0) { getBillingProducts(any()) }
     }
@@ -151,7 +155,9 @@ class PurchaseViewModelTest {
             expectState {
                 copy(
                     isLoading = false,
-                    products = listOf(PurchaseProduct(TokenProduct("token_300000", 300_000), null)),
+                    tokenProducts = listOf(
+                        storeTokenProduct(TokenProduct("token_300000", 300_000), null),
+                    ),
                     error = "Google Play 상품 조회에 실패했습니다.",
                 )
             }
@@ -199,7 +205,7 @@ class PurchaseViewModelTest {
         viewModel().test(this) {
             containerHost.purchase("token_300000")
             expectState { copy(isPreparing = true, error = null) }
-            expectSideEffect(PurchaseSideEffect.LaunchBillingFlow(product, "account-token"))
+            expectSideEffect(StoreSideEffect.LaunchBillingFlow(product, "account-token"))
             containerHost.onBillingFlowResult(BillingOperationResult(isSuccess = false, responseCode = 6))
             expectState { copy(isPreparing = false, error = "결제창을 열 수 없습니다. (코드: 6)") }
         }
@@ -207,5 +213,16 @@ class PurchaseViewModelTest {
 
     private fun billingProduct(productId: String): StoreProduct = mockk {
         every { this@mockk.productId } returns productId
+    }
+
+    private fun storeTokenProduct(product: TokenProduct, billingProduct: StoreProduct?): StoreTokenProduct {
+        val visual = TokenProductVisuals.first()
+        return StoreTokenProduct(
+            product = product,
+            billingProduct = billingProduct,
+            labelRes = visual.labelRes,
+            iconRes = visual.iconRes,
+            iconSize = visual.iconSize,
+        )
     }
 }

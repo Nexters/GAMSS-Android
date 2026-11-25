@@ -1,6 +1,5 @@
-package com.gamss.android.app.payment
+package com.gamss.android.core.billing
 
-import com.gamss.android.core.billing.BillingOperationResult
 import com.gamss.android.domain.payment.StoreProduct
 
 interface BillingFlowLauncher {
