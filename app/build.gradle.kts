@@ -132,6 +132,7 @@ dependencies {
     implementation(projects.feature.setting)
     implementation(projects.feature.carddelete)
     implementation(projects.feature.webview)
+    implementation(projects.feature.game)
 
     implementation(libs.compose.material.icons.core)
     implementation(libs.androidx.activity.compose)

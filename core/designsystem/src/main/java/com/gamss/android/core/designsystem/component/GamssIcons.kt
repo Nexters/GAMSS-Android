@@ -27,6 +27,9 @@ object GamssIcons {
     val TabChat: Int = R.drawable.ic_tab_chat
 
     @DrawableRes
+    val TabGame: Int = R.drawable.ic_tab_game
+
+    @DrawableRes
     val TabStore: Int = R.drawable.ic_tab_store
 
     @DrawableRes

@@ -6,6 +6,8 @@ import com.gamss.android.feature.archive.navigation.ArchiveKey
 import com.gamss.android.feature.carddelete.navigation.CardDeleteKey
 import com.gamss.android.feature.chat.navigation.ChatKey
 import com.gamss.android.feature.chat.navigation.ChatRoomKey
+import com.gamss.android.feature.game.navigation.ClickerGameKey
+import com.gamss.android.feature.game.navigation.GameKey
 import com.gamss.android.feature.home.navigation.HomeKey
 import com.gamss.android.feature.login.navigation.LoginKey
 import com.gamss.android.feature.onboarding.navigation.OnboardingKey
@@ -41,6 +43,8 @@ class ScreenViewTest {
             AccountInfoKey,
             NicknameChangeKey("감쓰"),
             WebViewKey(GamssWebPage.ServiceTerms),
+            GameKey,
+            ClickerGameKey,
         )
         keys.forEach { assertNotNull("$it", it.toScreenView()) }
     }
