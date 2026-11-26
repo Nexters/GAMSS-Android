@@ -24,4 +24,6 @@
     <string name="store_load_fail_title">상품을 불러오지 못했어요.</string>
     <string name="store_load_fail_description">잠시 후 다시 시도해 주세요.</string>
     <string name="store_load_fail_retry">재시도</string>
+    <string name="store_billing_unavailable_title">Google Play에 연결하지 못했어요.</string>
+    <string name="store_billing_unavailable_description">Play 스토어 로그인 상태를 확인한 뒤 다시 시도해 주세요.</string>
 </resources>

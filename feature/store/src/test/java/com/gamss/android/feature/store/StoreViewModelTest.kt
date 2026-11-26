@@ -210,6 +210,44 @@ class StoreViewModelTest {
     }
 
     @Test
+    fun `상품을 불러오기 전에 Play 연결에 실패하면 재시도 안내를 표시하고 재시도하면 다시 연결한다`() = runTest {
+        val connectionState = MutableStateFlow(StoreConnectionState.CONNECTING)
+
+        viewModel(connectionState).test(this) {
+            connectionState.value = StoreConnectionState.FAILED
+            expectState { copy(loadFailure = StoreLoadFailure.BILLING_UNAVAILABLE) }
+
+            containerHost.loadProducts()
+            runCurrent()
+            verify(exactly = 1) { connectBilling() }
+
+            // 다시 연결을 시작하면 실패 안내를 내리고 진행 상태로 넘어간다.
+            connectionState.value = StoreConnectionState.CONNECTING
+            expectState { copy(loadFailure = null) }
+        }
+    }
+
+    @Test
+    fun `상품을 불러온 뒤 Play 연결에 실패하면 카드를 유지하고 재시도 안내를 띄우지 않는다`() = runTest {
+        coEvery { getPaymentProducts() } returns AppResult.Success(
+            listOf(TokenProduct(productId = "token_300k", tokenAmount = 300_000)),
+        )
+        coEvery { getBillingProducts(any()) } returns StoreProductQueryResult(isSuccess = true, products = emptyList())
+        val connectionState = MutableStateFlow(StoreConnectionState.DISCONNECTED)
+
+        viewModel(connectionState).test(this) {
+            connectionState.value = StoreConnectionState.CONNECTED
+            expectState { copy(isLoading = true) }
+            val loaded = awaitState()
+            assertEquals(1, loaded.tokenProducts.size)
+
+            connectionState.value = StoreConnectionState.FAILED
+            runCurrent()
+            expectNoItems()
+        }
+    }
+
+    @Test
     fun `판매 중인 상품이 없으면 Play 조회를 하지 않고 안내만 표시한다`() = runTest {
         coEvery { getPaymentProducts() } returns AppResult.Success(emptyList())
         val connectionState = MutableStateFlow(StoreConnectionState.DISCONNECTED)

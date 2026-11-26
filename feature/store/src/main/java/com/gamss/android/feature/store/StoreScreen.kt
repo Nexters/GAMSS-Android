@@ -81,7 +81,9 @@ fun StoreScreen(
         }
     }
 
-    val busy = state.isLoading || state.isPreparing || state.payment.isVerifying
+    // 연결 중에도 진행 표시를 보여줘, 재시도를 누른 뒤 빈 화면처럼 보이지 않게 한다.
+    val busy = state.isLoading || state.isPreparing || state.payment.isVerifying ||
+        connection == StoreConnectionState.CONNECTING
     val purchaseEnabled = activity != null && !busy && connection == StoreConnectionState.CONNECTED
 
     Box(modifier = modifier.fillMaxSize()) {
@@ -129,6 +131,13 @@ private fun StoreContent(
             state.loadFailure == StoreLoadFailure.UNKNOWN -> StoreMessageContent(
                 title = stringResource(R.string.store_load_fail_title),
                 description = stringResource(R.string.store_load_fail_description),
+                actionLabel = stringResource(R.string.store_load_fail_retry),
+                onAction = onRetryClick,
+                modifier = messageModifier,
+            )
+            state.loadFailure == StoreLoadFailure.BILLING_UNAVAILABLE -> StoreMessageContent(
+                title = stringResource(R.string.store_billing_unavailable_title),
+                description = stringResource(R.string.store_billing_unavailable_description),
                 actionLabel = stringResource(R.string.store_load_fail_retry),
                 onAction = onRetryClick,
                 modifier = messageModifier,

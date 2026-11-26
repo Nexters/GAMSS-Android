@@ -36,6 +36,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -86,6 +87,7 @@ import com.gamss.android.feature.chat.util.rememberChatScrollState
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.launch
 import org.orbitmvi.orbit.compose.collectAsState
 import org.orbitmvi.orbit.compose.collectSideEffect
 import kotlin.coroutines.cancellation.CancellationException
@@ -122,28 +124,33 @@ fun ChatRoomScreen(
     val tokenUsageExhaustedMessage = stringResource(R.string.chat_room_token_usage_exhausted_toast)
     val tokenUsagePurchaseLabel = stringResource(R.string.chat_room_token_usage_purchase_button_label)
     val snackbarHostState = remember { SnackbarHostState() }
+    val snackbarScope = rememberCoroutineScope()
 
     viewModel.collectSideEffect { sideEffect ->
         when (sideEffect) {
             is ChatRoomSideEffect.ShowToast ->
                 Toast.makeText(context, sideEffect.message, Toast.LENGTH_SHORT).show()
 
-            is ChatRoomSideEffect.ShowTokenUsageAlert -> when (sideEffect.alert) {
-                TokenUsageAlert.LOW ->
-                    snackbarHostState.showSnackbar(
-                        TokenUsageSnackbarVisuals(message = tokenUsageLowMessage, showIcon = false),
-                    )
+            // showSnackbar는 스낵바가 사라질 때까지 반환되지 않는다. 여기서 기다리면 그동안 다음 SideEffect(ShowToast 등)가
+            // 처리되지 않으므로 별도 코루틴으로 띄운다. 스낵바끼리는 SnackbarHostState가 순서대로 하나씩 보여준다.
+            is ChatRoomSideEffect.ShowTokenUsageAlert -> snackbarScope.launch {
+                when (sideEffect.alert) {
+                    TokenUsageAlert.LOW ->
+                        snackbarHostState.showSnackbar(
+                            TokenUsageSnackbarVisuals(message = tokenUsageLowMessage, showIcon = false),
+                        )
 
-                TokenUsageAlert.EXHAUSTED -> {
-                    val result = snackbarHostState.showSnackbar(
-                        TokenUsageSnackbarVisuals(
-                            message = tokenUsageExhaustedMessage,
-                            actionLabel = tokenUsagePurchaseLabel,
-                            showIcon = true,
-                        ),
-                    )
-                    if (result == SnackbarResult.ActionPerformed) {
-                        onNavigateToStore()
+                    TokenUsageAlert.EXHAUSTED -> {
+                        val result = snackbarHostState.showSnackbar(
+                            TokenUsageSnackbarVisuals(
+                                message = tokenUsageExhaustedMessage,
+                                actionLabel = tokenUsagePurchaseLabel,
+                                showIcon = true,
+                            ),
+                        )
+                        if (result == SnackbarResult.ActionPerformed) {
+                            onNavigateToStore()
+                        }
                     }
                 }
             }

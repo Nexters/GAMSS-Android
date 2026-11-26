@@ -48,7 +48,22 @@ constructor(
 
     init {
         intent {
-            connectionState.collect { if (it == StoreConnectionState.CONNECTED) loadProducts() }
+            connectionState.collect { connection -> onConnectionStateChanged(connection) }
+        }
+    }
+
+    private fun onConnectionStateChanged(connection: StoreConnectionState) = intent {
+        when (connection) {
+            StoreConnectionState.CONNECTED -> loadProducts()
+            // 상품을 아직 못 불러온 상태에서 연결에 실패하면 빈 화면 대신 재시도 안내를 보여준다.
+            // 이미 불러온 뒤라면 카드는 그대로 두고 비활성화한다.
+            StoreConnectionState.FAILED -> if (state.tokenProducts.isEmpty()) {
+                reduce { state.copy(loadFailure = StoreLoadFailure.BILLING_UNAVAILABLE) }
+            }
+            StoreConnectionState.CONNECTING -> if (state.loadFailure == StoreLoadFailure.BILLING_UNAVAILABLE) {
+                reduce { state.copy(loadFailure = null) }
+            }
+            StoreConnectionState.DISCONNECTED -> Unit
         }
     }
 

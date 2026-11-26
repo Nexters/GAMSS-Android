@@ -75,7 +75,7 @@ class PlayBillingRepositoryTest {
     }
 
     @Test
-    fun `연결 실패 시 DISCONNECTED로 남는다`() {
+    fun `연결 설정에 실패하면 끊김과 구분되는 FAILED가 되고 다시 연결할 수 있다`() {
         fakeDataSource.onStartConnection = {
             fakeDataSource.emitConnectionEvent(
                 BillingConnectionEvent.SetupFinished(billingResult(BillingResponseCode.BILLING_UNAVAILABLE)),
@@ -83,6 +83,21 @@ class PlayBillingRepositoryTest {
         }
 
         repository.connect()
+        assertEquals(BillingConnectionState.FAILED, repository.connectionState.value)
+
+        repository.connect()
+        assertEquals(2, fakeDataSource.startConnectionCallCount)
+    }
+
+    @Test
+    fun `연결된 뒤 서비스가 끊기면 FAILED가 아닌 DISCONNECTED가 된다`() {
+        fakeDataSource.onStartConnection = {
+            val event = BillingConnectionEvent.SetupFinished(billingResult(BillingResponseCode.OK))
+            fakeDataSource.emitConnectionEvent(event)
+        }
+        repository.connect()
+
+        fakeDataSource.emitConnectionEvent(BillingConnectionEvent.ServiceDisconnected)
 
         assertEquals(BillingConnectionState.DISCONNECTED, repository.connectionState.value)
     }

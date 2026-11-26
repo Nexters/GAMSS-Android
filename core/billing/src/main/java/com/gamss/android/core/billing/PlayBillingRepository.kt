@@ -51,7 +51,8 @@ internal class PlayBillingRepository @Inject constructor(
     override fun connect() {
         // 상태 확인과 변경만 락 안에서 하고, SDK 호출은 락 밖에서 한다.
         val shouldStart = synchronized(connectLock) {
-            if (_connectionState.value != BillingConnectionState.DISCONNECTED) {
+            val current = _connectionState.value
+            if (current != BillingConnectionState.DISCONNECTED && current != BillingConnectionState.FAILED) {
                 false
             } else {
                 _connectionState.value = BillingConnectionState.CONNECTING
@@ -110,7 +111,8 @@ internal class PlayBillingRepository @Inject constructor(
                     _connectionState.value = BillingConnectionState.CONNECTED
                     scope.launch { queryUnfinishedPurchases() }
                 } else {
-                    _connectionState.value = BillingConnectionState.DISCONNECTED
+                    // 끊김(DISCONNECTED)과 구분해야 화면이 연결 실패 안내를 보여줄 수 있다.
+                    _connectionState.value = BillingConnectionState.FAILED
                 }
             }
             // SDK 자동 재연결은 API 호출 시점에만 동작하고 이 상태를 갱신하지 않는다. 상태 복구는 호출부가

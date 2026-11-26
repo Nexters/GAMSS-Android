@@ -21,8 +21,11 @@ data class StoreState(
     val error: String? = null,
 )
 
-/** 서버 상품 조회 실패 종류. 네트워크 오류는 공용 네트워크 오류 화면을, 그 외에는 상점 전용 안내를 보여준다. */
-enum class StoreLoadFailure { NETWORK, UNKNOWN }
+/**
+ * 상품 목록을 보여줄 수 없는 이유. [NETWORK]는 공용 네트워크 오류 화면을, [UNKNOWN]과 [BILLING_UNAVAILABLE]은
+ * 상점 전용 안내를 보여준다. [BILLING_UNAVAILABLE]은 Google Play 연결 자체가 실패해 서버 상품 조회를 시작하지 못한 경우다.
+ */
+enum class StoreLoadFailure { NETWORK, UNKNOWN, BILLING_UNAVAILABLE }
 
 /**
  * [labelAmountInTenThousands]는 카드 라벨("30만 토큰")에 쓰는 만 단위 수량으로, 서버가 내려준 실제 지급량
