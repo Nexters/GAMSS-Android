@@ -1,0 +1,206 @@
+package com.gamss.android.feature.store
+
+import android.util.Log
+import androidx.annotation.StringRes
+import androidx.lifecycle.ViewModel
+import com.gamss.android.core.billing.BillingOperationResult
+import com.gamss.android.core.billing.BillingResultStatus
+import com.gamss.android.core.billing.LicensedPackage
+import com.gamss.android.core.billing.PaymentFailureReason
+import com.gamss.android.core.billing.PendingPurchaseVerifier
+import com.gamss.android.core.billing.paymentFailureReason
+import com.gamss.android.core.billing.paymentMessage
+import com.gamss.android.core.common.AppResult
+import com.gamss.android.core.common.network.ApiException
+import com.gamss.android.domain.payment.ConnectBillingUseCase
+import com.gamss.android.domain.payment.GetBillingProductsUseCase
+import com.gamss.android.domain.payment.GetPaymentAccountTokenUseCase
+import com.gamss.android.domain.payment.GetPaymentProductsUseCase
+import com.gamss.android.domain.payment.ObserveBillingConnectionUseCase
+import com.gamss.android.domain.payment.StoreConnectionState
+import com.gamss.android.domain.payment.TokenProduct
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
+import org.orbitmvi.orbit.ContainerHost
+import org.orbitmvi.orbit.syntax.Syntax
+import org.orbitmvi.orbit.viewmodel.container
+import javax.inject.Inject
+
+// 개별 UseCase의 생성자 주입을 유지하기 위해 이 생성자에만 인자 수 제한을 제외한다.
+@HiltViewModel
+class StoreViewModel
+@Suppress("LongParameterList")
+@Inject
+constructor(
+    private val getPaymentProducts: GetPaymentProductsUseCase,
+    private val getPaymentAccountToken: GetPaymentAccountTokenUseCase,
+    observeBillingConnection: ObserveBillingConnectionUseCase,
+    private val connectBilling: ConnectBillingUseCase,
+    private val getBillingProducts: GetBillingProductsUseCase,
+    private val paymentVerifier: PendingPurchaseVerifier,
+    @LicensedPackage private val isLicensedPackage: Boolean,
+) : ViewModel(), ContainerHost<StoreState, StoreSideEffect> {
+
+    override val container = container<StoreState, StoreSideEffect>(StoreState())
+    val connectionState = observeBillingConnection()
+    private val paymentState = paymentVerifier.state
+    private var paymentObserver: Job? = null
+
+    init {
+        intent {
+            connectionState.collect { connection -> onConnectionStateChanged(connection) }
+        }
+    }
+
+    private fun onConnectionStateChanged(connection: StoreConnectionState) = intent {
+        when (connection) {
+            StoreConnectionState.CONNECTED -> loadProducts()
+            // 상품을 아직 못 불러온 상태에서 연결에 실패하면 빈 화면 대신 재시도 안내를 보여준다.
+            // 이미 불러온 뒤라면 카드는 그대로 두고 비활성화한다.
+            StoreConnectionState.FAILED -> if (state.tokenProducts.isEmpty()) {
+                reduce { state.copy(loadFailure = StoreLoadFailure.BILLING_UNAVAILABLE) }
+            }
+            StoreConnectionState.CONNECTING -> if (state.loadFailure == StoreLoadFailure.BILLING_UNAVAILABLE) {
+                reduce { state.copy(loadFailure = null) }
+            }
+            StoreConnectionState.DISCONNECTED -> Unit
+        }
+    }
+
+    fun navigateToSetting() = intent {
+        postSideEffect(StoreSideEffect.NavigateToSetting)
+    }
+
+    fun requestRecovery() {
+        if (paymentObserver?.isActive != true) {
+            paymentObserver = intent {
+                paymentState.collect { payment -> reduce { state.copy(payment = payment) } }
+            }
+        }
+        paymentVerifier.requestRecovery()
+    }
+
+    /** 결제 결과 안내([com.gamss.android.core.billing.PaymentState.notices])를 화면에 표시한 뒤 호출한다. */
+    fun onPaymentNoticeShown(noticeId: Long) = paymentVerifier.onNoticeShown(noticeId)
+
+    fun stopObservingPayment() {
+        paymentObserver?.cancel()
+        paymentObserver = null
+    }
+
+    fun loadProducts() = intent {
+        if (state.isLoading || state.isPreparing) return@intent
+        if (connectionState.value != StoreConnectionState.CONNECTED) {
+            connectBilling()
+            return@intent
+        }
+        reduce { state.copy(isLoading = true, loadFailure = null, isEmpty = false, error = null) }
+        when (val result = getPaymentProducts()) {
+            is AppResult.Success -> loadPrices(result.data)
+            is AppResult.Failure -> reduce {
+                state.copy(
+                    isLoading = false,
+                    loadFailure = if (result.throwable is ApiException.Network) {
+                        StoreLoadFailure.NETWORK
+                    } else {
+                        StoreLoadFailure.UNKNOWN
+                    },
+                    error = result.throwable.paymentMessage(),
+                )
+            }
+        }
+    }
+
+    private suspend fun Syntax<StoreState, StoreSideEffect>.loadPrices(
+        serverProducts: List<TokenProduct>,
+    ) {
+        if (serverProducts.isEmpty()) {
+            reduce { state.copy(isLoading = false, tokenProducts = emptyList(), isEmpty = true) }
+            return
+        }
+        val result = getBillingProducts(serverProducts.map { it.productId })
+        val prices = result.products.associateBy { it.productId }
+        reduce {
+            state.copy(
+                isLoading = false,
+                tokenProducts = serverProducts.sortedBy { it.tokenAmount }
+                    .mapIndexed { index, product ->
+                        val icon = TokenProductIcons.getOrElse(index) { TokenProductIcons.last() }
+                        StoreTokenProduct(
+                            product = product,
+                            billingProduct = prices[product.productId],
+                            labelAmountInTenThousands = product.labelAmountInTenThousands(),
+                            iconRes = icon.iconRes,
+                            iconSize = icon.iconSize,
+                        )
+                    },
+                error = if (result.isSuccess) null else "Google Play 상품 조회에 실패했습니다.",
+            )
+        }
+        // 카드는 비활성으로 남고, 왜 누를 수 없는지 한 번 안내한다.
+        if (!result.isSuccess) postSideEffect(StoreSideEffect.ShowToast(R.string.store_product_info_unavailable_toast))
+    }
+
+    fun purchase(productId: String) = intent {
+        if (!isLicensedPackage) {
+            // Play Console에 등록되지 않은 패키지(예: .dev)는 결제할 수 없다. 개발 확인용이라 화면 안내 없이 로그만 남긴다.
+            Log.w(TAG, "라이선스 테스트 패키지가 아니라 구매를 진행하지 않습니다: productId=$productId")
+            return@intent
+        }
+        if (state.isPreparing || state.isLoading || paymentState.value.isVerifying) return@intent
+        reduce { state.copy(isPreparing = true, error = null) }
+        preparePurchase(productId)
+    }
+
+    private suspend fun Syntax<StoreState, StoreSideEffect>.preparePurchase(
+        productId: String,
+    ) {
+        when (val account = getPaymentAccountToken()) {
+            is AppResult.Failure -> {
+                reduce { state.copy(isPreparing = false, error = account.throwable.paymentMessage()) }
+                postSideEffect(StoreSideEffect.ShowToast(account.throwable.prepareFailureMessageRes()))
+            }
+            is AppResult.Success -> {
+                // 결제 직전 새 ProductDetails를 조회한다. 화면에 저장한 오래된 참조를 사용하지 않는다.
+                val query = getBillingProducts(listOf(productId))
+                val product = query.products.firstOrNull { it.productId == productId }
+                if (!query.isSuccess || product == null) {
+                    reduce { state.copy(isPreparing = false, error = "구매 가능한 상품 정보를 찾지 못했습니다.") }
+                    postSideEffect(StoreSideEffect.ShowToast(R.string.store_product_info_unavailable_toast))
+                } else {
+                    postSideEffect(StoreSideEffect.LaunchBillingFlow(product, account.data))
+                }
+            }
+        }
+    }
+
+    /** 즉시 반환된 결과다. OK는 결제 완료가 아니라 결제창 실행 성공이며, 실제 결과는 구매 콜백으로 들어온다. */
+    fun onBillingFlowResult(result: BillingOperationResult?) = intent {
+        when (result?.status) {
+            BillingResultStatus.OK, BillingResultStatus.USER_CANCELED ->
+                reduce { state.copy(isPreparing = false, error = null) }
+            BillingResultStatus.ITEM_ALREADY_OWNED -> {
+                reduce { state.copy(isPreparing = false, error = null) }
+                // 미소비 구매가 하나뿐이라고 단정하지 않고 복구 조회로 전부 다시 찾는다.
+                paymentVerifier.requestRecovery()
+            }
+            BillingResultStatus.ERROR, null -> {
+                val code = result?.let { " (코드: ${it.responseCode})" }.orEmpty()
+                reduce { state.copy(isPreparing = false, error = "결제창을 열 수 없습니다.$code") }
+                postSideEffect(StoreSideEffect.ShowToast(R.string.store_billing_launch_fail_toast))
+            }
+        }
+    }
+
+    /** 결제 직전 계정 토큰 조회 실패 안내. 다시 시도로 해결되지 않는 원인만 따로 안내한다. */
+    @StringRes
+    private fun Throwable.prepareFailureMessageRes(): Int = when (paymentFailureReason()) {
+        PaymentFailureReason.LOGIN_REQUIRED -> R.string.store_purchase_login_required_toast
+        PaymentFailureReason.WITHDRAWN_MEMBER -> R.string.store_purchase_withdrawn_member_toast
+        else -> R.string.store_purchase_prepare_fail_toast
+    }
+
+    private companion object {
+        const val TAG = "StoreViewModel"
+    }
+}

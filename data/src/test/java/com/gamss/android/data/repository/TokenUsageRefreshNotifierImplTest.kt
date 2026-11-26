@@ -55,6 +55,36 @@ class TokenUsageRefreshNotifierImplTest {
     }
 
     @Test
+    fun `유료 잔액이 충분하면 무료 한도를 거의 다 써도 LOW를 흘려보내지 않는다`() = runTest {
+        // 무료 95/100(95%)만 보면 LOW 기준(90%)을 넘기지만, 유료 잔액 900을 더한
+        // 전체 995/1000은 아직 10%에 한참 못 미친다.
+        coEvery { userRepository.getDailyTokenUsage() } returns
+            AppResult.Success(usage(usedTokens = 95, dailyLimit = 100, exceeded = false, paidBalance = 900))
+        val notifier = newNotifier()
+        val received = collectAlerts(notifier)
+
+        notifier.requestRefresh()
+        advanceUntilIdle()
+
+        assertEquals(emptyList<TokenUsageAlert>(), received)
+    }
+
+    @Test
+    fun `무료 한도를 넘어 유료 잔액까지 거의 소진되면 LOW를 흘려보낸다`() = runTest {
+        // 무료 100 + 유료 45 = 145 사용, 유료 잔액 5 남음. 하루 총 가용량(100+45+5=150) 기준
+        // 145/150(약 97%)이라 LOW 기준을 넘긴다.
+        coEvery { userRepository.getDailyTokenUsage() } returns
+            AppResult.Success(usage(usedTokens = 145, dailyLimit = 100, exceeded = false, paidBalance = 5))
+        val notifier = newNotifier()
+        val received = collectAlerts(notifier)
+
+        notifier.requestRefresh()
+        advanceUntilIdle()
+
+        assertEquals(listOf(TokenUsageAlert.LOW), received)
+    }
+
+    @Test
     fun `소진 이후 사용량이 리셋되면 10퍼센트 미만 남음 알림이 다시 발행된다`() = runTest {
         val notifier = newNotifier()
         val received = collectAlerts(notifier)
@@ -129,9 +159,11 @@ class TokenUsageRefreshNotifierImplTest {
         return received
     }
 
-    private fun usage(usedTokens: Long, dailyLimit: Long?, exceeded: Boolean) = DailyTokenUsage(
-        usedTokens = usedTokens,
-        dailyLimit = dailyLimit,
-        exceeded = exceeded,
-    )
+    private fun usage(usedTokens: Long, dailyLimit: Long?, exceeded: Boolean, paidBalance: Long? = null) =
+        DailyTokenUsage(
+            usedTokens = usedTokens,
+            dailyLimit = dailyLimit,
+            exceeded = exceeded,
+            paidBalance = paidBalance,
+        )
 }

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="store_logo_description">감쓰</string>
+    <string name="store_setting_description">설정</string>
+
+    <!-- 서버 상품의 지급량(만 단위). 예: 30 → "30만 토큰" -->
+    <string name="store_token_label">%1$d만 토큰</string>
+
+    <string name="store_purchase_complete_toast">토큰 구매가 완료됐어요.</string>
+    <string name="store_billing_launch_fail_toast">결제창을 열지 못했어요. 잠시 후 다시 시도해 주세요.</string>
+    <string name="store_purchase_verify_fail_toast">구매를 확인하지 못했어요. 잠시 후 다시 시도해 주세요.</string>
+    <string name="store_purchase_login_required_toast">로그인이 필요해요. 다시 로그인해 주세요.</string>
+    <string name="store_purchase_account_mismatch_toast">구매한 계정과 현재 계정이 달라요. 구매한 계정으로 로그인해 주세요.</string>
+    <string name="store_purchase_withdrawn_member_toast">탈퇴한 계정으로는 구매할 수 없어요.</string>
+    <string name="store_purchase_cancelled_toast">취소되었거나 환불된 구매예요.</string>
+    <string name="store_purchase_product_unavailable_toast">현재 판매 중인 상품이 아니에요.</string>
+    <string name="store_purchase_invalid_toast">구매 정보를 확인할 수 없어요.</string>
+    <string name="store_purchase_failed_toast">결제를 완료하지 못했어요. 잠시 후 다시 시도해 주세요.</string>
+    <string name="store_purchase_prepare_fail_toast">구매를 준비하지 못했어요. 잠시 후 다시 시도해 주세요.</string>
+    <string name="store_product_info_unavailable_toast">상품 정보를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.</string>
+
+    <!-- 상품 목록 대신 보여주는 안내 -->
+    <string name="store_empty_products">구매할 수 있는 토큰이 없습니다.</string>
+    <string name="store_load_fail_title">상품을 불러오지 못했어요.</string>
+    <string name="store_load_fail_description">잠시 후 다시 시도해 주세요.</string>
+    <string name="store_load_fail_retry">재시도</string>
+    <string name="store_billing_unavailable_title">Google Play에 연결하지 못했어요.</string>
+    <string name="store_billing_unavailable_description">Play 스토어 로그인 상태를 확인한 뒤 다시 시도해 주세요.</string>
+</resources>

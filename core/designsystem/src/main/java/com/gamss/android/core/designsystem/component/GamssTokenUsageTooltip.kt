@@ -18,6 +18,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.gamss.android.core.designsystem.modifier.gamssShadow
@@ -48,7 +49,9 @@ fun GamssTokenUsageTooltip(
     resetTimeLabel: String,
     failMessage: String,
     retryLabel: String,
+    purchaseLabel: String,
     onRetryClick: () -> Unit,
+    onPurchaseClick: () -> Unit,
     modifier: Modifier = Modifier,
     isLoading: Boolean = false,
 ) {
@@ -97,10 +100,10 @@ fun GamssTokenUsageTooltip(
 
             TokenUsageProgressBar(percent = usagePercent)
 
-            GamssText(
-                text = resetTimeLabel,
-                style = GamssTheme.typography.body6Regular,
-                color = GamssTheme.colors.gray500,
+            TokenUsageFooter(
+                resetTimeLabel = resetTimeLabel,
+                purchaseLabel = purchaseLabel,
+                onPurchaseClick = onPurchaseClick,
             )
         } else {
             Text(
@@ -123,6 +126,31 @@ fun GamssTokenUsageTooltip(
                     .noRippleClickableIfNotNull(onRetryClick),
             )
         }
+    }
+}
+
+@Composable
+private fun TokenUsageFooter(
+    resetTimeLabel: String,
+    purchaseLabel: String,
+    onPurchaseClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        GamssText(
+            text = resetTimeLabel,
+            style = GamssTheme.typography.body6Regular,
+            color = GamssTheme.colors.gray500,
+        )
+        Text(
+            modifier = Modifier.noRippleClickableIfNotNull(onPurchaseClick),
+            text = purchaseLabel,
+            style = GamssTheme.typography.body5Medium.copy(color = GamssTheme.colors.gray900),
+            textDecoration = TextDecoration.Underline,
+        )
     }
 }
 
@@ -159,7 +187,9 @@ private fun GamssTokenUsageTooltipPreview() {
                 resetTimeLabel = "오전 5:00에 초기화됩니다",
                 failMessage = "",
                 retryLabel = "",
+                purchaseLabel = "구매하기",
                 onRetryClick = {},
+                onPurchaseClick = {},
             )
             GamssTokenUsageTooltip(
                 title = "토큰 사용량",
@@ -168,7 +198,9 @@ private fun GamssTokenUsageTooltipPreview() {
                 resetTimeLabel = "",
                 failMessage = "사용량을 불러오지 못했어요",
                 retryLabel = "재시도",
+                purchaseLabel = "구매하기",
                 onRetryClick = {},
+                onPurchaseClick = {},
             )
         }
     }

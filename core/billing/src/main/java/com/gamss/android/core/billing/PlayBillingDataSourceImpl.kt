@@ -2,12 +2,12 @@ package com.gamss.android.core.billing
 
 import android.app.Activity
 import android.content.Context
+import android.os.Looper
+import android.util.Log
 import com.android.billingclient.api.BillingClient
 import com.android.billingclient.api.BillingClientStateListener
 import com.android.billingclient.api.BillingFlowParams
 import com.android.billingclient.api.BillingResult
-import com.android.billingclient.api.ConsumeParams
-import com.android.billingclient.api.ConsumeResult
 import com.android.billingclient.api.PendingPurchasesParams
 import com.android.billingclient.api.Purchase
 import com.android.billingclient.api.PurchasesResult
@@ -15,7 +15,6 @@ import com.android.billingclient.api.PurchasesUpdatedListener
 import com.android.billingclient.api.QueryProductDetailsParams
 import com.android.billingclient.api.QueryProductDetailsResult
 import com.android.billingclient.api.QueryPurchasesParams
-import com.android.billingclient.api.consumePurchase
 import com.android.billingclient.api.queryPurchasesAsync
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
@@ -43,6 +42,9 @@ internal class PlayBillingDataSourceImpl @Inject constructor(
     private val billingClient: BillingClient = BillingClient.newBuilder(context)
         .setListener(this)
         .enablePendingPurchases(PendingPurchasesParams.newBuilder().enableOneTimeProducts().build())
+        // 연결이 끊긴 상태에서 API를 호출하면 SDK가 호출 전에 다시 연결한다. 끊김 직후 즉시 재연결하는
+        // 것은 아니므로, 앱 시작·화면 진입·포그라운드 복귀 시 connect() 호출은 그대로 유지한다.
+        .enableAutoServiceReconnection()
         .build()
 
     override fun startConnection() {
@@ -81,6 +83,7 @@ internal class PlayBillingDataSourceImpl @Inject constructor(
         product: BillingProduct,
         obfuscatedAccountId: String,
     ): BillingResult {
+        logPurchaseParameters(product, obfuscatedAccountId)
         val productDetailsParams = BillingFlowParams.ProductDetailsParams.newBuilder()
             .setProductDetails(product.productDetails)
             .apply { product.offerToken?.let(::setOfferToken) }
@@ -91,28 +94,51 @@ internal class PlayBillingDataSourceImpl @Inject constructor(
             .setObfuscatedAccountId(obfuscatedAccountId)
             .build()
 
-        return billingClient.launchBillingFlow(activity, billingFlowParams)
+        return billingClient.launchBillingFlow(activity, billingFlowParams).also {
+            logResult("launchBillingFlow", it)
+        }
     }
 
     override suspend fun queryPurchases(): PurchasesResult {
         val params = QueryPurchasesParams.newBuilder()
             .setProductType(BillingClient.ProductType.INAPP)
             .build()
-        return billingClient.queryPurchasesAsync(params)
-    }
-
-    override suspend fun consumePurchase(purchaseToken: String): ConsumeResult {
-        val params = ConsumeParams.newBuilder()
-            .setPurchaseToken(purchaseToken)
-            .build()
-        return billingClient.consumePurchase(params)
+        return billingClient.queryPurchasesAsync(params).also {
+            logResult("queryPurchasesAsync", it.billingResult)
+        }
     }
 
     override fun onPurchasesUpdated(billingResult: BillingResult, purchases: List<Purchase>?) {
+        logResult("onPurchasesUpdated", billingResult)
         purchaseUpdatesFlow.tryEmit(PurchasesUpdatedEvent(billingResult, purchases))
     }
 
+    // adb의 log.tag.GamssBilling을 DEBUG로 설정했을 때만 활성화한다. 토큰 원문은 기록하지 않는다.
+    private fun logPurchaseParameters(product: BillingProduct, accountId: String) {
+        if (!Log.isLoggable(DIAGNOSTIC_TAG, Log.DEBUG)) return
+        val details = product.productDetails
+        val offerMatches = details.oneTimePurchaseOfferDetailsList.orEmpty().any {
+            it.offerToken == product.offerToken
+        }
+        Log.d(
+            DIAGNOSTIC_TAG,
+            "purchase parameters: productId=${details.productId}, type=${details.productType}, " +
+                "productIdMatches=${details.productId == product.productId}, productCount=1, " +
+                "offerMatches=$offerMatches, accountIdLength=${accountId.length}, " +
+                "accountIdIsUuid=${UUID_PATTERN.matches(accountId)}, " +
+                "isReady=${billingClient.isReady}, mainThread=${Looper.myLooper() == Looper.getMainLooper()}",
+        )
+    }
+
+    private fun logResult(operation: String, result: BillingResult) {
+        if (Log.isLoggable(DIAGNOSTIC_TAG, Log.DEBUG)) {
+            Log.d(DIAGNOSTIC_TAG, "$operation: code=${result.responseCode}, detail=${result.debugMessage}")
+        }
+    }
+
     private companion object {
+        const val DIAGNOSTIC_TAG = "GamssBilling"
+        val UUID_PATTERN = Regex("[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}")
         const val PURCHASE_UPDATES_BUFFER = 8
     }
 }

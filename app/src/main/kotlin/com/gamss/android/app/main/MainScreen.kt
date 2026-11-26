@@ -43,6 +43,7 @@ import com.gamss.android.app.navigation.keys
 import com.gamss.android.app.navigation.rememberNavigationState
 import com.gamss.android.app.navigation.toEntries
 import com.gamss.android.app.navigation.topLevelDestinations
+import com.gamss.android.core.billing.BillingFlowLauncher
 import com.gamss.android.core.designsystem.component.GamssBottomBar
 import com.gamss.android.core.designsystem.component.GamssPaperBackground
 import com.gamss.android.feature.archive.ArchiveDetailScreen
@@ -67,6 +68,8 @@ import com.gamss.android.feature.setting.navigation.AccountInfoKey
 import com.gamss.android.feature.setting.navigation.NicknameChangeKey
 import com.gamss.android.feature.setting.navigation.SettingKey
 import com.gamss.android.feature.setting.nicknamechange.NicknameChangeScreen
+import com.gamss.android.feature.store.StoreScreen
+import com.gamss.android.feature.store.navigation.StoreKey
 import com.gamss.android.feature.webview.GamssWebPage
 import com.gamss.android.feature.webview.WebViewScreen
 import com.gamss.android.feature.webview.navigation.WebViewKey
@@ -133,7 +136,16 @@ fun MainScreen(
     }
 }
 
+// 화면 entry를 한곳에서 보이도록 나열하기 위해 이 함수에만 길이 제한을 제외한다.
+@Suppress("LongMethod")
 private fun mainEntryProvider(navigator: Navigator) = entryProvider {
+    entry<StoreKey> {
+        val launcher = LocalActivity.current as? BillingFlowLauncher
+        StoreScreen(
+            onNavigateToSetting = { navigator.navigate(SettingKey) },
+            launchBillingFlow = { product, accountToken -> launcher?.launchBillingFlow(product, accountToken) },
+        )
+    }
     entry<HomeKey> {
         HomeScreen(
             onNavigateToSetting = { navigator.navigate(SettingKey) },
@@ -212,6 +224,7 @@ private fun mainEntryProvider(navigator: Navigator) = entryProvider {
                 navigator.openDroppedCard(ArchiveKey, ArchiveDetailKey(emotion), cardId)
             },
             onBackClick = navigator::goBack,
+            onNavigateToStore = { navigator.navigate(StoreKey) },
             isActive = navigator.state.currentKey == key,
         )
     }

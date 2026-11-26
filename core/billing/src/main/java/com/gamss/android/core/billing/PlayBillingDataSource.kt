@@ -2,7 +2,6 @@ package com.gamss.android.core.billing
 
 import android.app.Activity
 import com.android.billingclient.api.BillingResult
-import com.android.billingclient.api.ConsumeResult
 import com.android.billingclient.api.PurchasesResult
 import com.android.billingclient.api.QueryProductDetailsResult
 import kotlinx.coroutines.flow.Flow
@@ -31,6 +30,4 @@ internal interface PlayBillingDataSource {
     ): BillingResult
 
     suspend fun queryPurchases(): PurchasesResult
-
-    suspend fun consumePurchase(purchaseToken: String): ConsumeResult
 }

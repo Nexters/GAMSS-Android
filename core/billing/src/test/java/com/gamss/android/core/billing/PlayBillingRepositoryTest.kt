@@ -2,7 +2,6 @@ package com.gamss.android.core.billing
 
 import com.android.billingclient.api.BillingClient.BillingResponseCode
 import com.android.billingclient.api.BillingResult
-import com.android.billingclient.api.ConsumeResult
 import com.android.billingclient.api.Purchase
 import com.android.billingclient.api.PurchasesResult
 import com.android.billingclient.api.QueryProductDetailsResult
@@ -17,6 +16,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
+import java.util.concurrent.CountDownLatch
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class PlayBillingRepositoryTest {
@@ -42,6 +42,26 @@ class PlayBillingRepositoryTest {
     }
 
     @Test
+    fun `여러 스레드에서 동시에 connect를 호출해도 startConnection은 한 번만 호출한다`() {
+        val threadCount = 16
+        val ready = CountDownLatch(threadCount)
+        val go = CountDownLatch(1)
+        val threads = List(threadCount) {
+            Thread {
+                ready.countDown()
+                go.await()
+                repository.connect()
+            }.apply { start() }
+        }
+        ready.await()
+        go.countDown()
+        threads.forEach { it.join() }
+
+        assertEquals(1, fakeDataSource.startConnectionCallCount)
+        assertEquals(BillingConnectionState.CONNECTING, repository.connectionState.value)
+    }
+
+    @Test
     fun `연결 성공 시 CONNECTED가 되고 미처리 구매를 자동으로 재조회한다`() {
         fakeDataSource.onStartConnection = {
             val event = BillingConnectionEvent.SetupFinished(billingResult(BillingResponseCode.OK))
@@ -55,7 +75,7 @@ class PlayBillingRepositoryTest {
     }
 
     @Test
-    fun `연결 실패 시 DISCONNECTED로 남는다`() {
+    fun `연결 설정에 실패하면 끊김과 구분되는 FAILED가 되고 다시 연결할 수 있다`() {
         fakeDataSource.onStartConnection = {
             fakeDataSource.emitConnectionEvent(
                 BillingConnectionEvent.SetupFinished(billingResult(BillingResponseCode.BILLING_UNAVAILABLE)),
@@ -63,6 +83,21 @@ class PlayBillingRepositoryTest {
         }
 
         repository.connect()
+        assertEquals(BillingConnectionState.FAILED, repository.connectionState.value)
+
+        repository.connect()
+        assertEquals(2, fakeDataSource.startConnectionCallCount)
+    }
+
+    @Test
+    fun `연결된 뒤 서비스가 끊기면 FAILED가 아닌 DISCONNECTED가 된다`() {
+        fakeDataSource.onStartConnection = {
+            val event = BillingConnectionEvent.SetupFinished(billingResult(BillingResponseCode.OK))
+            fakeDataSource.emitConnectionEvent(event)
+        }
+        repository.connect()
+
+        fakeDataSource.emitConnectionEvent(BillingConnectionEvent.ServiceDisconnected)
 
         assertEquals(BillingConnectionState.DISCONNECTED, repository.connectionState.value)
     }
@@ -138,13 +173,43 @@ class PlayBillingRepositoryTest {
     }
 
     @Test
-    fun `consumePurchase는 Play의 응답 코드를 그대로 반환한다`() = runTest {
-        fakeDataSource.consumePurchaseResult = ConsumeResult(billingResult(BillingResponseCode.OK), "token-1")
+    fun `같은 오류 코드라도 결제 콜백과 복구 조회의 출처를 구분한다`() = runTest {
+        val result = billingResult(BillingResponseCode.DEVELOPER_ERROR, "configuration error")
+        fakeDataSource.queryPurchasesResult = PurchasesResult(result, emptyList())
+        val received = mutableListOf<BillingPurchaseOutcome>()
+        val job = launch { repository.purchaseResults.collect { received += it } }
+        runCurrent()
 
-        val result = repository.consumePurchase("token-1")
+        fakeDataSource.emitPurchaseUpdate(PurchasesUpdatedEvent(result, null))
+        repository.queryUnfinishedPurchases()
+        runCurrent()
 
-        assertEquals(BillingResponseCode.OK, result.responseCode)
-        assertEquals(true, result.isSuccess)
+        assertEquals(
+            listOf(
+                BillingPurchaseOutcome.Error(5, "configuration error", BillingErrorSource.PURCHASE_UPDATE),
+                BillingPurchaseOutcome.Error(5, "configuration error", BillingErrorSource.RESTORE_QUERY),
+            ),
+            received,
+        )
+        job.cancel()
+    }
+
+    @Test
+    fun `결제창 실행 즉시 결과의 응답 코드를 호출부가 분기할 상태로 분류한다`() {
+        val product = BillingProduct(mockk(), productId = "p1", offerToken = null, formattedPrice = "")
+        val expected = mapOf(
+            BillingResponseCode.OK to BillingResultStatus.OK,
+            BillingResponseCode.USER_CANCELED to BillingResultStatus.USER_CANCELED,
+            BillingResponseCode.ITEM_ALREADY_OWNED to BillingResultStatus.ITEM_ALREADY_OWNED,
+            BillingResponseCode.DEVELOPER_ERROR to BillingResultStatus.ERROR,
+        )
+
+        expected.forEach { (responseCode, status) ->
+            fakeDataSource.launchBillingFlowResult = billingResult(responseCode)
+            val result = repository.launchPurchaseFlow(mockk(), product, "account-token")
+            assertEquals(status, result.status)
+            assertEquals(responseCode == BillingResponseCode.OK, result.isSuccess)
+        }
     }
 
     private fun billingResult(responseCode: Int, debugMessage: String = ""): BillingResult =

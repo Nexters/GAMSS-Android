@@ -53,10 +53,11 @@ android {
         // app 의 `internal` buildType(Firebase App Distribution 배포)과 짝을 맞춘다. app 은 이
         // buildType 에 matchingFallbacks("release")를 두지만, 그건 internal variant 가 아예 없는
         // 라이브러리에만 적용된다 — 이 모듈처럼 진짜 internal variant 를 선언하면 그게 우선한다.
-        // BASE_URL 은 release 와 동일(운영 서버 대상 QA 배포). Mixpanel 은 QA 기록이 운영 지표에
+        // BASE_URL 은 운영 서버 대상 QA 배포로 유지한다. Mixpanel 은 QA 기록이 운영 지표에
         // 섞이지 않도록 개발 프로젝트로 보낸다.
         create("internal") {
             initWith(getByName("release"))
+            buildConfigField("String", "BASE_URL", "\"$prodBaseUrl\"")
             buildConfigField("String", "MIXPANEL_TOKEN", "\"$devMixpanelToken\"")
         }
     }

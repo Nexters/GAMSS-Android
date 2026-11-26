@@ -21,8 +21,14 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
+import androidx.compose.material3.SnackbarVisuals
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
@@ -30,6 +36,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -37,6 +44,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -47,9 +55,11 @@ import androidx.compose.ui.window.PopupProperties
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import com.gamss.android.core.common.util.formatConversationDate
+import com.gamss.android.core.designsystem.component.GamssIcons
 import com.gamss.android.core.designsystem.component.GamssScrollToBottomButton
 import com.gamss.android.core.designsystem.component.GamssTokenUsageTooltip
 import com.gamss.android.core.designsystem.modifier.addFocusCleaner
+import com.gamss.android.core.designsystem.snackbar.GamssSnackBar
 import com.gamss.android.core.designsystem.theme.GamssTheme
 import com.gamss.android.core.designsystem.topnavigation.GamssTopNavigation
 import com.gamss.android.core.designsystem.topnavigation.GamssTopNavigationHeight
@@ -77,6 +87,7 @@ import com.gamss.android.feature.chat.util.rememberChatScrollState
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.launch
 import org.orbitmvi.orbit.compose.collectAsState
 import org.orbitmvi.orbit.compose.collectSideEffect
 import kotlin.coroutines.cancellation.CancellationException
@@ -90,6 +101,7 @@ fun ChatRoomScreen(
     conversationId: Long,
     onCardDiscard: (EmotionCharacter, Long) -> Unit,
     onBackClick: () -> Unit,
+    onNavigateToStore: () -> Unit,
     isActive: Boolean = true,
     modifier: Modifier = Modifier,
     viewModel: ChatRoomViewModel = hiltViewModel(),
@@ -110,18 +122,37 @@ fun ChatRoomScreen(
 
     val tokenUsageLowMessage = stringResource(R.string.chat_room_token_usage_low_toast)
     val tokenUsageExhaustedMessage = stringResource(R.string.chat_room_token_usage_exhausted_toast)
+    val tokenUsagePurchaseLabel = stringResource(R.string.chat_room_token_usage_purchase_button_label)
+    val snackbarHostState = remember { SnackbarHostState() }
+    val snackbarScope = rememberCoroutineScope()
 
     viewModel.collectSideEffect { sideEffect ->
         when (sideEffect) {
             is ChatRoomSideEffect.ShowToast ->
                 Toast.makeText(context, sideEffect.message, Toast.LENGTH_SHORT).show()
 
-            is ChatRoomSideEffect.ShowTokenUsageAlert -> {
-                val message = when (sideEffect.alert) {
-                    TokenUsageAlert.LOW -> tokenUsageLowMessage
-                    TokenUsageAlert.EXHAUSTED -> tokenUsageExhaustedMessage
+            // showSnackbar는 스낵바가 사라질 때까지 반환되지 않는다. 여기서 기다리면 그동안 다음 SideEffect(ShowToast 등)가
+            // 처리되지 않으므로 별도 코루틴으로 띄운다. 스낵바끼리는 SnackbarHostState가 순서대로 하나씩 보여준다.
+            is ChatRoomSideEffect.ShowTokenUsageAlert -> snackbarScope.launch {
+                when (sideEffect.alert) {
+                    TokenUsageAlert.LOW ->
+                        snackbarHostState.showSnackbar(
+                            TokenUsageSnackbarVisuals(message = tokenUsageLowMessage, showIcon = false),
+                        )
+
+                    TokenUsageAlert.EXHAUSTED -> {
+                        val result = snackbarHostState.showSnackbar(
+                            TokenUsageSnackbarVisuals(
+                                message = tokenUsageExhaustedMessage,
+                                actionLabel = tokenUsagePurchaseLabel,
+                                showIcon = true,
+                            ),
+                        )
+                        if (result == SnackbarResult.ActionPerformed) {
+                            onNavigateToStore()
+                        }
+                    }
                 }
-                Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -135,6 +166,7 @@ fun ChatRoomScreen(
             onEndClick = viewModel::onEndRequest,
             onCardReopenClick = viewModel::onCardReopen,
             onTokenUsageToggle = viewModel::onTokenUsageToggle,
+            onTokenUsagePopupDismiss = viewModel::onTokenUsagePopupDismiss,
             onTokenUsageRetry = viewModel::onTokenUsageRetry
         )
     }
@@ -144,6 +176,8 @@ fun ChatRoomScreen(
         actions = actions,
         modifier = modifier,
         onBackClick = onBackClick,
+        onNavigateToStore = onNavigateToStore,
+        snackbarHostState = snackbarHostState,
     )
 
     state.riskDetection?.let { detection ->
@@ -202,6 +236,42 @@ private fun ChatRoomEndFlowHost(
     }
 }
 
+/** 토큰 사용량 알림 종류별로 스낵바 아이콘 노출 여부([showIcon])를 함께 들고 다닌다. */
+private data class TokenUsageSnackbarVisuals(
+    override val message: String,
+    val showIcon: Boolean,
+    override val actionLabel: String? = null,
+) : SnackbarVisuals {
+    override val withDismissAction: Boolean = false
+    override val duration: SnackbarDuration = SnackbarDuration.Short
+}
+
+@Composable
+private fun TokenUsageSnackbarHost(snackbarHostState: SnackbarHostState) {
+    SnackbarHost(snackbarHostState) { data ->
+        val visuals = data.visuals as? TokenUsageSnackbarVisuals
+        GamssSnackBar(
+            message = data.visuals.message,
+            actionLabel = data.visuals.actionLabel,
+            onActionClick = { data.performAction() },
+            snackBarIcon = if (visuals?.showIcon == true) {
+                {
+                    Icon(
+                        painter = painterResource(GamssIcons.InfoFilled),
+                        contentDescription = null,
+                        tint = GamssTheme.colors.red,
+                    )
+                }
+            } else {
+                null
+            },
+            modifier = Modifier
+                .windowInsetsPadding(WindowInsets.navigationBars)
+                .padding(horizontal = GamssTheme.spacing.spacing300, vertical = GamssTheme.spacing.spacing200),
+        )
+    }
+}
+
 @Immutable
 private data class ChatRoomActions(
     val onInputChange: (String) -> Unit,
@@ -211,6 +281,7 @@ private data class ChatRoomActions(
     val onEndClick: () -> Unit,
     val onCardReopenClick: () -> Unit,
     val onTokenUsageToggle: () -> Unit,
+    val onTokenUsagePopupDismiss: () -> Unit,
     val onTokenUsageRetry: () -> Unit,
 )
 
@@ -220,6 +291,8 @@ private fun ChatRoomContent(
     actions: ChatRoomActions,
     modifier: Modifier = Modifier,
     onBackClick: () -> Unit,
+    onNavigateToStore: () -> Unit,
+    snackbarHostState: SnackbarHostState,
 ) {
     val listState = rememberLazyListState()
     val focusManager = LocalFocusManager.current
@@ -270,9 +343,17 @@ private fun ChatRoomContent(
 
     Scaffold(
         modifier = modifier.addFocusCleaner(focusManager),
-        topBar = { ChatRoomTopBar(state = state, actions = actions, onBackClick = onBackClick) },
+        topBar = {
+            ChatRoomTopBar(
+                state = state,
+                actions = actions,
+                onBackClick = onBackClick,
+                onNavigateToStore = onNavigateToStore,
+            )
+        },
         // 상위 Scaffold 가 인셋을 이미 적용해, imePadding 을 그대로 쓰면 이중 적용된다.
         contentWindowInsets = WindowInsets(0),
+        snackbarHost = { TokenUsageSnackbarHost(snackbarHostState) },
     ) { innerPadding ->
         Column(
             modifier = Modifier
@@ -311,6 +392,7 @@ private fun ChatRoomTopBar(
     state: ChatRoomState,
     actions: ChatRoomActions,
     onBackClick: () -> Unit,
+    onNavigateToStore: () -> Unit,
 ) {
     Box {
         GamssTopNavigation(
@@ -350,6 +432,11 @@ private fun ChatRoomTopBar(
                 isLoading = state.isTokenUsageLoading,
                 onDismissRequest = actions.onTokenUsageToggle,
                 onRetryClick = actions.onTokenUsageRetry,
+                onPurchaseClick = {
+                    // 팝업을 닫고 이동해야 대화방으로 돌아왔을 때 열린 채로 남지 않는다.
+                    actions.onTokenUsagePopupDismiss()
+                    onNavigateToStore()
+                },
             )
         }
     }
@@ -365,6 +452,7 @@ private fun TokenUsagePopup(
     isLoading: Boolean,
     onDismissRequest: () -> Unit,
     onRetryClick: () -> Unit,
+    onPurchaseClick: () -> Unit,
 ) {
     val popupOffset = with(LocalDensity.current) {
         IntOffset(
@@ -392,7 +480,9 @@ private fun TokenUsagePopup(
             resetTimeLabel = stringResource(R.string.chat_room_token_usage_reset_time),
             failMessage = stringResource(R.string.chat_room_check_token_usage_fail),
             retryLabel = stringResource(R.string.chat_room_check_token_usage_button_label),
+            purchaseLabel = stringResource(R.string.chat_room_token_usage_purchase_button_label),
             onRetryClick = onRetryClick,
+            onPurchaseClick = onPurchaseClick,
             isLoading = isLoading,
         )
     }
@@ -584,11 +674,14 @@ private fun ChatRoomPreviewContent() {
         onEndClick = {},
         onCardReopenClick = {},
         onTokenUsageToggle = {},
+        onTokenUsagePopupDismiss = {},
         onTokenUsageRetry = {}
     )
     ChatRoomContent(
         state = state,
         actions = actions,
         onBackClick = {},
+        onNavigateToStore = {},
+        snackbarHostState = remember { SnackbarHostState() },
     )
 }

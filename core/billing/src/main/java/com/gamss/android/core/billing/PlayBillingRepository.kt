@@ -27,6 +27,7 @@ internal class PlayBillingRepository @Inject constructor(
     @BillingCoroutineScope private val scope: CoroutineScope,
 ) : BillingRepository {
 
+    private val connectLock = Any()
     private val _connectionState = MutableStateFlow(BillingConnectionState.DISCONNECTED)
     override val connectionState: StateFlow<BillingConnectionState> = _connectionState.asStateFlow()
 
@@ -48,13 +49,17 @@ internal class PlayBillingRepository @Inject constructor(
     }
 
     override fun connect() {
-        if (_connectionState.value == BillingConnectionState.CONNECTED ||
-            _connectionState.value == BillingConnectionState.CONNECTING
-        ) {
-            return
+        // 상태 확인과 변경만 락 안에서 하고, SDK 호출은 락 밖에서 한다.
+        val shouldStart = synchronized(connectLock) {
+            val current = _connectionState.value
+            if (current != BillingConnectionState.DISCONNECTED && current != BillingConnectionState.FAILED) {
+                false
+            } else {
+                _connectionState.value = BillingConnectionState.CONNECTING
+                true
+            }
         }
-        _connectionState.value = BillingConnectionState.CONNECTING
-        dataSource.startConnection()
+        if (shouldStart) dataSource.startConnection()
     }
 
     override suspend fun queryProductDetails(productIds: List<String>): BillingProductQueryResult {
@@ -85,15 +90,18 @@ internal class PlayBillingRepository @Inject constructor(
 
     override suspend fun queryUnfinishedPurchases() {
         val (billingResult, purchases) = dataSource.queryPurchases()
-        emitOutcomes(mapToPurchaseOutcomes(billingResult, purchases))
+        emitOutcomes(mapToPurchaseOutcomes(billingResult, purchases, BillingErrorSource.RESTORE_QUERY))
     }
-
-    override suspend fun consumePurchase(purchaseToken: String): BillingOperationResult =
-        dataSource.consumePurchase(purchaseToken).billingResult.toOperationResult()
 
     private fun BillingResult.toOperationResult() = BillingOperationResult(
         isSuccess = responseCode == BillingResponseCode.OK,
         responseCode = responseCode,
+        status = when (responseCode) {
+            BillingResponseCode.OK -> BillingResultStatus.OK
+            BillingResponseCode.USER_CANCELED -> BillingResultStatus.USER_CANCELED
+            BillingResponseCode.ITEM_ALREADY_OWNED -> BillingResultStatus.ITEM_ALREADY_OWNED
+            else -> BillingResultStatus.ERROR
+        },
     )
 
     private fun handleConnectionEvent(event: BillingConnectionEvent) {
@@ -103,10 +111,12 @@ internal class PlayBillingRepository @Inject constructor(
                     _connectionState.value = BillingConnectionState.CONNECTED
                     scope.launch { queryUnfinishedPurchases() }
                 } else {
-                    _connectionState.value = BillingConnectionState.DISCONNECTED
+                    // 끊김(DISCONNECTED)과 구분해야 화면이 연결 실패 안내를 보여줄 수 있다.
+                    _connectionState.value = BillingConnectionState.FAILED
                 }
             }
-            // 자동 재연결은 호출부가 책임진다(앱 시작·화면 진입·포그라운드 복귀 시 connect() 재호출).
+            // SDK 자동 재연결은 API 호출 시점에만 동작하고 이 상태를 갱신하지 않는다. 상태 복구는 호출부가
+            // 책임진다(앱 시작·화면 진입·포그라운드 복귀 시 connect() 재호출).
             BillingConnectionEvent.ServiceDisconnected -> _connectionState.value = BillingConnectionState.DISCONNECTED
         }
     }

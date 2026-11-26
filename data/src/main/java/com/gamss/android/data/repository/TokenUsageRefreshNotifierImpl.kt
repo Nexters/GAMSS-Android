@@ -1,7 +1,7 @@
 package com.gamss.android.data.repository
 
 import com.gamss.android.core.common.AppResult
-import com.gamss.android.core.common.util.calculateTokenUsagePercent
+import com.gamss.android.core.common.util.calculateCombinedTokenUsagePercent
 import com.gamss.android.data.di.ApplicationScope
 import com.gamss.android.domain.repository.TokenUsageAlert
 import com.gamss.android.domain.repository.TokenUsageRefreshNotifier
@@ -68,7 +68,9 @@ internal class TokenUsageRefreshNotifierImpl @Inject constructor(
         val result = userRepository.getDailyTokenUsage()
         if (result !is AppResult.Success) return
         val usage = result.data
-        val percent = calculateTokenUsagePercent(usage.usedTokens, usage.dailyLimit)
+        // LOW 경고(90%)도 소진 게이트(exceeded)와 같은 기준으로 봐야 한다 — 무료 한도만 보고
+        // 계산하면, 유료 잔액이 남아 있는 사용자에게도 "곧 소진된다"고 잘못 경고하게 된다.
+        val percent = calculateCombinedTokenUsagePercent(usage.usedTokens, usage.dailyLimit, usage.paidBalance)
 
         // 이전보다 사용량이 줄었거나(서버가 오전 5시에 리셋) 더 이상 소진 상태가 아니라면
         // 새 하루로 보고 알림 상태를 초기화한다 — 클라이언트가 리셋 시각을 직접 계산하지 않는다.
