@@ -1,5 +1,6 @@
 package com.gamss.android.data.repository
 
+import android.util.Log
 import com.gamss.android.core.common.AppResult
 import com.gamss.android.core.common.network.ApiException
 import com.gamss.android.data.remote.model.response.ApiResponse
@@ -11,7 +12,11 @@ import com.gamss.android.data.remote.payment.model.response.TokenProductResponse
 import com.gamss.android.domain.auth.SessionExpiredException
 import com.gamss.android.domain.payment.PaymentStatus
 import io.mockk.coEvery
+import io.mockk.every
 import io.mockk.mockk
+import io.mockk.mockkStatic
+import io.mockk.unmockkStatic
+import io.mockk.verify
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.test.runTest
 import okhttp3.MediaType.Companion.toMediaType
@@ -104,6 +109,26 @@ class PaymentRepositoryImplTest {
         assertEquals(PaymentStatus.PENDING, grant.status)
         assertEquals(0L, grant.grantedTokens)
         assertEquals(0L, grant.paidBalance)
+    }
+
+    @Test
+    fun `앱이 모르는 상태값은 실패로 처리하지 않고 UNKNOWN으로 변환해 로그를 남긴다`() = runTest {
+        // unit test 환경(android.jar 스텁)에서 Log.w가 "not mocked" 예외를 던지지 않도록 스텁 처리한다.
+        mockkStatic(Log::class)
+        every { Log.w(any<String>(), any<String>()) } returns 0
+        try {
+            coEvery { paymentService.verifyGooglePurchase(any()) } returns ApiResponse(
+                success = true,
+                data = PaymentGrantResponse(status = "REVOKED", productId = "token_300k"),
+            )
+
+            val result = repository.verifyGooglePurchase("token_300k", "receipt")
+
+            assertEquals(PaymentStatus.UNKNOWN, (result as AppResult.Success).data.status)
+            verify(exactly = 1) { Log.w(any<String>(), match<String> { "REVOKED" in it }) }
+        } finally {
+            unmockkStatic(Log::class)
+        }
     }
 
     @Test

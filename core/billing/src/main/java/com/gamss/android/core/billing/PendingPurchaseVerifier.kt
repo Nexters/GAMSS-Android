@@ -147,16 +147,24 @@ internal class PendingPurchaseVerifierImpl @Inject constructor(
         when (val result = verifyGooglePurchase(params)) {
             is AppResult.Success -> {
                 val grant = result.data
-                mutableState.value = if (grant.status == PaymentStatus.GRANTED) {
-                    tokenUsageRefreshNotifier.requestRefresh()
-                    // 아직 표시하지 않은 이전 안내는 유지한다.
-                    PaymentState(
-                        paidBalance = grant.paidBalance,
-                        message = "${grant.grantedTokens} 토큰 지급 완료",
-                        notices = state.value.notices,
-                    ).withNoticeOnce(purchaseToken, PaymentEvent.Granted(grant.grantedTokens))
-                } else {
-                    state.value.copy(isVerifying = false, message = "결제 대기 중입니다. 아직 토큰이 지급되지 않았습니다.")
+                mutableState.value = when (grant.status) {
+                    PaymentStatus.GRANTED -> {
+                        tokenUsageRefreshNotifier.requestRefresh()
+                        // 아직 표시하지 않은 이전 안내는 유지한다.
+                        PaymentState(
+                            paidBalance = grant.paidBalance,
+                            message = "${grant.grantedTokens} 토큰 지급 완료",
+                            notices = state.value.notices,
+                        ).withNoticeOnce(purchaseToken, PaymentEvent.Granted(grant.grantedTokens))
+                    }
+                    PaymentStatus.PENDING ->
+                        state.value.copy(isVerifying = false, message = "결제 대기 중입니다. 아직 토큰이 지급되지 않았습니다.")
+                    // 정상 응답이라 지급됐을 수 있다. 실패로 안내하지 않고 사용량만 갱신해 실제 잔액을 보여준 뒤,
+                    // 재검증 대상에서 빼지 않아 다음 복구 때 다시 검증한다.
+                    PaymentStatus.UNKNOWN -> {
+                        tokenUsageRefreshNotifier.requestRefresh()
+                        state.value.copy(isVerifying = false, message = "구매 상태를 확인하고 있습니다.")
+                    }
                 }
             }
             is AppResult.Failure -> {

@@ -298,6 +298,26 @@ class PendingPurchaseVerifierTest {
     }
 
     @Test
+    fun `서버가 모르는 상태값을 주면 실패로 안내하지 않고 사용량만 갱신한 뒤 다음 복구 때 다시 검증한다`() = runTest {
+        coEvery { verifyGooglePurchase(any()) } returns AppResult.Success(
+            PaymentGrant(PaymentStatus.UNKNOWN, "token_300k", 0, 0),
+        )
+        val verifier = verifier()
+        runCurrent()
+        outcomes.send(purchased())
+        runCurrent()
+        verify(exactly = 1) { notifier.requestRefresh() }
+        assertEquals(emptyList<PaymentNotice>(), verifier.state.value.notices)
+        assertFalse(verifier.state.value.isVerifying)
+
+        verifier.requestRecovery()
+        runCurrent()
+        outcomes.send(purchased())
+        runCurrent()
+        coVerify(exactly = 2) { verifyGooglePurchase(any()) }
+    }
+
+    @Test
     fun `서버 PENDING 응답은 완료나 실패 안내를 쌓지 않는다`() = runTest {
         coEvery { verifyGooglePurchase(any()) } returns AppResult.Success(
             PaymentGrant(PaymentStatus.PENDING, "token_300k", 0, 0),
