@@ -25,8 +25,8 @@ data class StoreState(
 enum class StoreLoadFailure { NETWORK, UNKNOWN }
 
 /**
- * [labelAmountInTenThousands]는 카드 라벨("30만 토큰")에 쓰는 만 단위 수량이다. 서버가 내려준 실제 지급량
- * [TokenProduct.tokenAmount]에서 계산하므로, 카드에 적힌 수량과 실제 지급량이 항상 일치한다.
+ * [labelAmountInTenThousands]는 카드 라벨("30만 토큰")에 쓰는 만 단위 수량으로, 서버가 내려준 실제 지급량
+ * [TokenProduct.tokenAmount]에서 계산한다.
  */
 data class StoreTokenProduct(
     val product: TokenProduct,
