@@ -1,8 +1,8 @@
 package com.gamss.android.feature.store
 
 import androidx.annotation.StringRes
-import com.gamss.android.core.billing.PaymentEvent
-import com.gamss.android.core.billing.PaymentFailureReason
+import com.gamss.android.domain.payment.PaymentEvent
+import com.gamss.android.domain.payment.PaymentFailureReason
 
 /** 결제 결과 안내 문구. 다시 시도로 해결되는 실패만 재시도 문구를 쓰고, 나머지는 원인을 그대로 안내한다. */
 @StringRes

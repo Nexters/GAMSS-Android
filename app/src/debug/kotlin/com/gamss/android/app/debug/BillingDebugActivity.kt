@@ -31,10 +31,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import com.gamss.android.app.R
-import com.gamss.android.core.billing.BillingOperationResult
 import com.gamss.android.core.billing.BillingProduct
 import com.gamss.android.core.billing.BillingRepository
-import com.gamss.android.core.billing.PaymentState
 import com.gamss.android.core.billing.paymentMessage
 import com.gamss.android.core.designsystem.component.GamssPaperBackground
 import com.gamss.android.core.designsystem.component.GamssText
@@ -42,6 +40,8 @@ import com.gamss.android.core.designsystem.component.GamssTopBar
 import com.gamss.android.core.designsystem.theme.GamssTheme
 import com.gamss.android.domain.auth.AuthRepository
 import com.gamss.android.domain.auth.SessionState
+import com.gamss.android.domain.payment.BillingOperationResult
+import com.gamss.android.domain.payment.PaymentState
 import com.gamss.android.domain.payment.StoreConnectionState
 import com.gamss.android.domain.payment.StoreProduct
 import com.gamss.android.feature.login.LoginScreen

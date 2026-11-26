@@ -3,7 +3,7 @@ package com.gamss.android.feature.store
 import androidx.annotation.DrawableRes
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
-import com.gamss.android.core.billing.PaymentState
+import com.gamss.android.domain.payment.PaymentState
 import com.gamss.android.domain.payment.StoreProduct
 import com.gamss.android.domain.payment.TokenProduct
 

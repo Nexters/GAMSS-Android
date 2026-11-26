@@ -43,9 +43,9 @@ import com.gamss.android.app.navigation.keys
 import com.gamss.android.app.navigation.rememberNavigationState
 import com.gamss.android.app.navigation.toEntries
 import com.gamss.android.app.navigation.topLevelDestinations
-import com.gamss.android.core.billing.BillingFlowLauncher
 import com.gamss.android.core.designsystem.component.GamssBottomBar
 import com.gamss.android.core.designsystem.component.GamssPaperBackground
+import com.gamss.android.domain.payment.BillingFlowLauncher
 import com.gamss.android.feature.archive.ArchiveDetailScreen
 import com.gamss.android.feature.archive.ArchiveScreen
 import com.gamss.android.feature.archive.navigation.ArchiveDetailKey

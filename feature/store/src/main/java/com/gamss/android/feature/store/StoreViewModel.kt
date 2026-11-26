@@ -3,22 +3,22 @@ package com.gamss.android.feature.store
 import android.util.Log
 import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
-import com.gamss.android.core.billing.BillingOperationResult
-import com.gamss.android.core.billing.BillingResultStatus
-import com.gamss.android.core.billing.LicensedPackage
-import com.gamss.android.core.billing.PaymentFailureReason
-import com.gamss.android.core.billing.PendingPurchaseVerifier
-import com.gamss.android.core.billing.paymentFailureReason
-import com.gamss.android.core.billing.paymentMessage
 import com.gamss.android.core.common.AppResult
 import com.gamss.android.core.common.network.ApiException
+import com.gamss.android.domain.payment.BillingOperationResult
+import com.gamss.android.domain.payment.BillingResultStatus
 import com.gamss.android.domain.payment.ConnectBillingUseCase
 import com.gamss.android.domain.payment.GetBillingProductsUseCase
 import com.gamss.android.domain.payment.GetPaymentAccountTokenUseCase
 import com.gamss.android.domain.payment.GetPaymentProductsUseCase
+import com.gamss.android.domain.payment.LicensedPackage
 import com.gamss.android.domain.payment.ObserveBillingConnectionUseCase
+import com.gamss.android.domain.payment.PaymentFailureReason
+import com.gamss.android.domain.payment.PendingPurchaseVerifier
 import com.gamss.android.domain.payment.StoreConnectionState
 import com.gamss.android.domain.payment.TokenProduct
+import com.gamss.android.domain.payment.paymentFailureReason
+import com.gamss.android.domain.payment.paymentMessage
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import org.orbitmvi.orbit.ContainerHost
@@ -80,7 +80,7 @@ constructor(
         paymentVerifier.requestRecovery()
     }
 
-    /** 결제 결과 안내([com.gamss.android.core.billing.PaymentState.notices])를 화면에 표시한 뒤 호출한다. */
+    /** 결제 결과 안내([com.gamss.android.domain.payment.PaymentState.notices])를 화면에 표시한 뒤 호출한다. */
     fun onPaymentNoticeShown(noticeId: Long) = paymentVerifier.onNoticeShown(noticeId)
 
     fun stopObservingPayment() {
