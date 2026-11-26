@@ -49,7 +49,7 @@ fun GamssTokenUsageTooltip(
     resetTimeLabel: String,
     failMessage: String,
     retryLabel: String,
-    purchaseLable: String,
+    purchaseLabel: String,
     onRetryClick: () -> Unit,
     onPurchaseClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -102,7 +102,7 @@ fun GamssTokenUsageTooltip(
 
             TokenUsageFooter(
                 resetTimeLabel = resetTimeLabel,
-                purchaseLabel = purchaseLable,
+                purchaseLabel = purchaseLabel,
                 onPurchaseClick = onPurchaseClick,
             )
         } else {
@@ -187,7 +187,7 @@ private fun GamssTokenUsageTooltipPreview() {
                 resetTimeLabel = "오전 5:00에 초기화됩니다",
                 failMessage = "",
                 retryLabel = "",
-                purchaseLable = "구매하기",
+                purchaseLabel = "구매하기",
                 onRetryClick = {},
                 onPurchaseClick = {},
             )
@@ -198,7 +198,7 @@ private fun GamssTokenUsageTooltipPreview() {
                 resetTimeLabel = "",
                 failMessage = "사용량을 불러오지 못했어요",
                 retryLabel = "재시도",
-                purchaseLable = "구매하기",
+                purchaseLabel = "구매하기",
                 onRetryClick = {},
                 onPurchaseClick = {},
             )

@@ -467,7 +467,7 @@ private fun TokenUsagePopup(
             resetTimeLabel = stringResource(R.string.chat_room_token_usage_reset_time),
             failMessage = stringResource(R.string.chat_room_check_token_usage_fail),
             retryLabel = stringResource(R.string.chat_room_check_token_usage_button_label),
-            purchaseLable = stringResource(R.string.chat_room_token_usage_purchase_button_label),
+            purchaseLabel = stringResource(R.string.chat_room_token_usage_purchase_button_label),
             onRetryClick = onRetryClick,
             onPurchaseClick = onPurchaseClick,
             isLoading = isLoading,
