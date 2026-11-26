@@ -1,9 +1,10 @@
 package com.gamss.android.feature.store
 
 import androidx.lifecycle.ViewModel
-import com.gamss.android.core.billing.LicensedPackage
-import com.gamss.android.core.billing.PendingPurchaseVerifier
 import com.gamss.android.core.billing.BillingOperationResult
+import com.gamss.android.core.billing.LicensedPackage
+import com.gamss.android.core.billing.PaymentEvent
+import com.gamss.android.core.billing.PendingPurchaseVerifier
 import com.gamss.android.core.billing.paymentMessage
 import com.gamss.android.core.common.AppResult
 import com.gamss.android.domain.payment.ConnectBillingUseCase
@@ -15,6 +16,8 @@ import com.gamss.android.domain.payment.StoreConnectionState
 import com.gamss.android.domain.payment.TokenProduct
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 import org.orbitmvi.orbit.ContainerHost
 import org.orbitmvi.orbit.syntax.Syntax
 import org.orbitmvi.orbit.viewmodel.container
@@ -53,11 +56,21 @@ constructor(
     fun requestRecovery() {
         if (paymentObserver?.isActive != true) {
             paymentObserver = intent {
-                paymentState.collect { payment -> reduce { state.copy(payment = payment) } }
+                coroutineScope {
+                    launch { paymentState.collect { payment -> reduce { state.copy(payment = payment) } } }
+                    launch { paymentVerifier.events.collect { event -> postSideEffect(event.toToast()) } }
+                }
             }
         }
         paymentVerifier.requestRecovery()
     }
+
+    private fun PaymentEvent.toToast() = StoreSideEffect.ShowToast(
+        when (this) {
+            is PaymentEvent.Granted -> R.string.store_purchase_complete_toast
+            PaymentEvent.VerificationFailed -> R.string.store_purchase_verify_fail_toast
+        },
+    )
 
     fun stopObservingPayment() {
         paymentObserver?.cancel()
@@ -136,11 +149,17 @@ constructor(
     }
 
     fun onBillingFlowResult(result: BillingOperationResult?) = intent {
+        val launched = result?.isSuccess == true
         reduce {
             state.copy(
                 isPreparing = false,
-                error = if (result == null || result.isSuccess) null else "결제창을 열 수 없습니다. (코드: ${result.responseCode})",
+                error = when {
+                    launched -> null
+                    result == null -> "결제창을 열 수 없습니다."
+                    else -> "결제창을 열 수 없습니다. (코드: ${result.responseCode})"
+                },
             )
         }
+        if (!launched) postSideEffect(StoreSideEffect.ShowToast(R.string.store_billing_launch_fail_toast))
     }
 }

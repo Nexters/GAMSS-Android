@@ -1,6 +1,7 @@
 package com.gamss.android.feature.store
 
 import com.gamss.android.core.billing.BillingOperationResult
+import com.gamss.android.core.billing.PaymentEvent
 import com.gamss.android.core.billing.PaymentState
 import com.gamss.android.core.billing.PendingPurchaseVerifier
 import com.gamss.android.core.common.AppResult
@@ -19,6 +20,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
@@ -35,9 +37,11 @@ class StoreViewModelTest {
     private val getBillingProducts: GetBillingProductsUseCase = mockk()
     private val paymentVerifier: PendingPurchaseVerifier = mockk(relaxed = true)
     private val paymentState = MutableStateFlow(PaymentState())
+    private val paymentEvents = MutableSharedFlow<PaymentEvent>(extraBufferCapacity = 1)
 
     init {
         every { paymentVerifier.state } returns paymentState
+        every { paymentVerifier.events } returns paymentEvents
     }
 
     @Test
@@ -208,6 +212,48 @@ class StoreViewModelTest {
             expectSideEffect(StoreSideEffect.LaunchBillingFlow(product, "account-token"))
             containerHost.onBillingFlowResult(BillingOperationResult(isSuccess = false, responseCode = 6))
             expectState { copy(isPreparing = false, error = "결제창을 열 수 없습니다. (코드: 6)") }
+            expectSideEffect(StoreSideEffect.ShowToast(R.string.store_billing_launch_fail_toast))
+        }
+    }
+
+    @Test
+    fun `결제창 실행에 성공하면 구매 준비 상태만 해제하고 안내하지 않는다`() = runTest {
+        val product = billingProduct("token_300000")
+        coEvery { getPaymentAccountToken() } returns AppResult.Success("account-token")
+        coEvery { getBillingProducts(listOf("token_300000")) } returns StoreProductQueryResult(
+            isSuccess = true,
+            products = listOf(product),
+        )
+
+        viewModel().test(this) {
+            containerHost.purchase("token_300000")
+            expectState { copy(isPreparing = true, error = null) }
+            expectSideEffect(StoreSideEffect.LaunchBillingFlow(product, "account-token"))
+            containerHost.onBillingFlowResult(BillingOperationResult(isSuccess = true, responseCode = 0))
+            expectState { copy(isPreparing = false, error = null) }
+            expectNoItems()
+        }
+    }
+
+    @Test
+    fun `서버 지급이 완료되면 구매 완료를 안내한다`() = runTest {
+        viewModel().test(this) {
+            containerHost.requestRecovery()
+            runCurrent()
+            paymentEvents.emit(PaymentEvent.Granted(grantedTokens = 300_000))
+            expectSideEffect(StoreSideEffect.ShowToast(R.string.store_purchase_complete_toast))
+            containerHost.stopObservingPayment()
+        }
+    }
+
+    @Test
+    fun `서버 검증에 실패하면 다시 시도하라고 안내한다`() = runTest {
+        viewModel().test(this) {
+            containerHost.requestRecovery()
+            runCurrent()
+            paymentEvents.emit(PaymentEvent.VerificationFailed)
+            expectSideEffect(StoreSideEffect.ShowToast(R.string.store_purchase_verify_fail_toast))
+            containerHost.stopObservingPayment()
         }
     }
 

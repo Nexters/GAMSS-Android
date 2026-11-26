@@ -1,5 +1,6 @@
 package com.gamss.android.feature.store
 
+import android.widget.Toast
 import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -16,6 +17,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -23,6 +25,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
@@ -50,6 +53,7 @@ fun StoreScreen(
     val state by viewModel.collectAsState()
     val connection by viewModel.connectionState.collectAsStateWithLifecycle()
     val activity = LocalActivity.current
+    val context = LocalContext.current
 
     DisposableEffect(viewModel) {
         viewModel.requestRecovery()
@@ -61,19 +65,25 @@ fun StoreScreen(
             is StoreSideEffect.NavigateToSetting -> onNavigateToSetting()
             is StoreSideEffect.LaunchBillingFlow ->
                 viewModel.onBillingFlowResult(launchBillingFlow(sideEffect.product, sideEffect.accountToken))
+            is StoreSideEffect.ShowToast ->
+                Toast.makeText(context, sideEffect.messageRes, Toast.LENGTH_SHORT).show()
         }
     }
 
     val busy = state.isLoading || state.isPreparing || state.payment.isVerifying
     val purchaseEnabled = activity != null && !busy && connection == StoreConnectionState.CONNECTED
 
-    StoreContent(
-        state = state,
-        purchaseEnabled = purchaseEnabled,
-        onSettingClick = viewModel::navigateToSetting,
-        onPurchaseClick = viewModel::purchase,
-        modifier = modifier,
-    )
+    Box(modifier = modifier.fillMaxSize()) {
+        StoreContent(
+            state = state,
+            purchaseEnabled = purchaseEnabled,
+            onSettingClick = viewModel::navigateToSetting,
+            onPurchaseClick = viewModel::purchase,
+        )
+        if (busy) {
+            CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+        }
+    }
 }
 
 @Composable

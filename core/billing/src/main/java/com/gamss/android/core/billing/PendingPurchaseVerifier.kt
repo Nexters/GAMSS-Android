@@ -17,8 +17,11 @@ import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -29,6 +32,9 @@ import javax.inject.Singleton
 /** 앱 프로세스에서 구매 결과를 수신하고 서버 검증과 복구를 담당한다. */
 interface PendingPurchaseVerifier {
     val state: StateFlow<PaymentState>
+
+    /** 서버 검증 결과처럼 한 번만 안내할 이벤트. 구독자가 없을 때 발생한 이벤트는 버린다. */
+    val events: Flow<PaymentEvent>
 
     /** Application에서 한 번 호출한다. 최초 onStart와 이후 포그라운드 복귀를 처리한다. */
     fun start()
@@ -46,6 +52,8 @@ internal class PendingPurchaseVerifierImpl @Inject constructor(
 ) : PendingPurchaseVerifier {
     private val mutableState = MutableStateFlow(PaymentState())
     override val state = mutableState.asStateFlow()
+    private val mutableEvents = MutableSharedFlow<PaymentEvent>(extraBufferCapacity = PAYMENT_EVENTS_BUFFER)
+    override val events: Flow<PaymentEvent> = mutableEvents.asSharedFlow()
     private val attemptedPurchases = mutableSetOf<Pair<String, String>>()
     private var recoveryInProgress = false
 
@@ -118,6 +126,7 @@ internal class PendingPurchaseVerifierImpl @Inject constructor(
                 val grant = result.data
                 mutableState.value = if (grant.status == PaymentStatus.GRANTED) {
                     tokenUsageRefreshNotifier.requestRefresh()
+                    mutableEvents.tryEmit(PaymentEvent.Granted(grant.grantedTokens))
                     PaymentState(
                         paidBalance = grant.paidBalance,
                         message = "${grant.grantedTokens} 토큰 지급 완료",
@@ -128,6 +137,7 @@ internal class PendingPurchaseVerifierImpl @Inject constructor(
             }
             is AppResult.Failure -> {
                 mutableState.value = state.value.copy(isVerifying = false, message = result.throwable.paymentMessage())
+                mutableEvents.tryEmit(PaymentEvent.VerificationFailed)
             }
         }
         attemptedPurchases.add(purchaseToken to productId)
@@ -136,6 +146,15 @@ internal class PendingPurchaseVerifierImpl @Inject constructor(
     private fun showMessage(message: String) {
         mutableState.value = state.value.copy(message = message, billingError = null)
     }
+
+    private companion object {
+        const val PAYMENT_EVENTS_BUFFER = 8
+    }
+}
+
+sealed interface PaymentEvent {
+    data class Granted(val grantedTokens: Long) : PaymentEvent
+    data object VerificationFailed : PaymentEvent
 }
 
 data class PaymentState(

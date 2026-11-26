@@ -13,10 +13,12 @@ import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
-import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
@@ -151,6 +153,36 @@ class PendingPurchaseVerifierTest {
         assertEquals("Google Play 미처리 구매 조회 실패 (코드: 5)\nrestore error", recoveryError.paymentMessage())
         assertNull(verifier.state.value.paidBalance)
         coVerify(exactly = 0) { verifyGooglePurchase(any()) }
+    }
+
+    @Test
+    fun `서버 지급 완료와 검증 실패를 일회성 이벤트로 알린다`() = runTest {
+        coEvery { verifyGooglePurchase(any()) } returnsMany listOf(
+            AppResult.Success(PaymentGrant(PaymentStatus.GRANTED, "token_300000", 300000, 600000)),
+            AppResult.Failure(IllegalStateException()),
+        )
+        val verifier = verifier()
+        val events = mutableListOf<PaymentEvent>()
+        backgroundScope.launch { verifier.events.toList(events) }
+        runCurrent()
+        outcomes.send(BillingPurchaseOutcome.Purchased("receipt-1", listOf("token_300000")))
+        outcomes.send(BillingPurchaseOutcome.Purchased("receipt-2", listOf("token_300000")))
+        runCurrent()
+        assertEquals(listOf(PaymentEvent.Granted(300000), PaymentEvent.VerificationFailed), events)
+    }
+
+    @Test
+    fun `서버 PENDING 응답은 완료나 실패 이벤트를 보내지 않는다`() = runTest {
+        coEvery { verifyGooglePurchase(any()) } returns AppResult.Success(
+            PaymentGrant(PaymentStatus.PENDING, "token_300000", 0, 0),
+        )
+        val verifier = verifier()
+        val events = mutableListOf<PaymentEvent>()
+        backgroundScope.launch { verifier.events.toList(events) }
+        runCurrent()
+        outcomes.send(purchased())
+        runCurrent()
+        assertEquals(emptyList<PaymentEvent>(), events)
     }
 
     private fun purchased() = BillingPurchaseOutcome.Purchased("receipt", listOf("token_300000"))

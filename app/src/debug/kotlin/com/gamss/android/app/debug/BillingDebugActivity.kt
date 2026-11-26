@@ -118,7 +118,7 @@ private fun BillingDebugScreen(
         when (effect) {
             is StoreSideEffect.LaunchBillingFlow ->
                 viewModel.onBillingFlowResult(launchBillingFlow(effect.product, effect.accountToken))
-            is StoreSideEffect.NavigateToSetting -> Unit
+            is StoreSideEffect.NavigateToSetting, is StoreSideEffect.ShowToast -> Unit
         }
     }
 
