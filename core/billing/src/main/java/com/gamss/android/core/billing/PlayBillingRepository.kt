@@ -27,6 +27,7 @@ internal class PlayBillingRepository @Inject constructor(
     @BillingCoroutineScope private val scope: CoroutineScope,
 ) : BillingRepository {
 
+    private val connectLock = Any()
     private val _connectionState = MutableStateFlow(BillingConnectionState.DISCONNECTED)
     override val connectionState: StateFlow<BillingConnectionState> = _connectionState.asStateFlow()
 
@@ -48,13 +49,17 @@ internal class PlayBillingRepository @Inject constructor(
     }
 
     override fun connect() {
-        if (_connectionState.value == BillingConnectionState.CONNECTED ||
-            _connectionState.value == BillingConnectionState.CONNECTING
-        ) {
-            return
+        
+        // 상태 확인과 변경만 락 안에서 하고, SDK 호출은 락 밖에서 한다.
+        val shouldStart = synchronized(connectLock) {
+            if (_connectionState.value != BillingConnectionState.DISCONNECTED) {
+                false
+            } else {
+                _connectionState.value = BillingConnectionState.CONNECTING
+                true
+            }
         }
-        _connectionState.value = BillingConnectionState.CONNECTING
-        dataSource.startConnection()
+        if (shouldStart) dataSource.startConnection()
     }
 
     override suspend fun queryProductDetails(productIds: List<String>): BillingProductQueryResult {

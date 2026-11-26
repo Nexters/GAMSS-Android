@@ -187,6 +187,7 @@ class PendingPurchaseVerifierTest {
         runCurrent()
 
         verifier.onNoticeShown(verifier.state.value.notices.first().id)
+        runCurrent()
 
         assertEquals(
             listOf(PaymentEvent.VerificationFailed(PaymentFailureReason.RETRYABLE)),
@@ -211,6 +212,22 @@ class PendingPurchaseVerifierTest {
         runCurrent()
 
         assertEquals(emptyList<PaymentNotice>(), verifier.state.value.notices)
+    }
+
+    @Test
+    fun `다른 스레드에서 복구를 요청해도 호출 스레드가 아닌 verifier 스코프에서 처리한다`() = runTest {
+        val verifier = verifier()
+        runCurrent()
+        coVerify(exactly = 1) { billing.queryUnfinishedPurchases() }
+
+        // Orbit intent처럼 메인이 아닌 스레드에서 호출되는 상황.
+        val caller = Thread { verifier.requestRecovery() }
+        caller.start()
+        caller.join()
+        coVerify(exactly = 1) { billing.queryUnfinishedPurchases() }
+
+        runCurrent()
+        coVerify(exactly = 2) { billing.queryUnfinishedPurchases() }
     }
 
     @Test

@@ -27,7 +27,10 @@ import javax.inject.Inject
 import javax.inject.Qualifier
 import javax.inject.Singleton
 
-/** 앱 프로세스에서 구매 결과를 수신하고 서버 검증과 복구를 담당한다. */
+/**
+ * 앱 프로세스에서 구매 결과를 수신하고 서버 검증과 복구를 담당한다. 모든 메서드는 어느 스레드에서 호출해도
+ * 된다 — 내부 상태 변경은 항상 [PaymentScope](메인 스레드) 안에서만 일어난다.
+ */
 interface PendingPurchaseVerifier {
     val state: StateFlow<PaymentState>
 
@@ -48,6 +51,8 @@ internal class PendingPurchaseVerifierImpl @Inject constructor(
     private val tokenUsageRefreshNotifier: TokenUsageRefreshNotifier,
     @PaymentScope private val scope: CoroutineScope,
 ) : PendingPurchaseVerifier {
+    // 아래 상태는 모두 [scope](Main) 안에서만 읽고 쓴다. 외부 진입점은 scope로 넘겨 처리해 스레드 경합을 막는다.
+    // (Orbit intent 등 Default 스레드에서도 호출된다.)
     private val mutableState = MutableStateFlow(PaymentState())
     override val state = mutableState.asStateFlow()
     private var nextNoticeId = 0L
@@ -60,7 +65,7 @@ internal class PendingPurchaseVerifierImpl @Inject constructor(
                 attemptedPurchases.clear()
                 mutableState.value = PaymentState()
                 if (session == SessionState.Authenticated) {
-                    requestRecovery()
+                    recover()
                     billing.purchaseResults.collect { handleOutcome(it) }
                 }
             }
@@ -74,6 +79,10 @@ internal class PendingPurchaseVerifierImpl @Inject constructor(
     }
 
     override fun requestRecovery() {
+        scope.launch { recover() }
+    }
+
+    private fun recover() {
         if (auth.sessionState.value != SessionState.Authenticated) return
         if (recoveryInProgress) return
         // 실패한 구매도 다음 복귀에는 다시 조회한다. 같은 복귀 내 중복 콜백은 재전송하지 않는다.
@@ -143,7 +152,9 @@ internal class PendingPurchaseVerifierImpl @Inject constructor(
     }
 
     override fun onNoticeShown(noticeId: Long) {
-        mutableState.update { current -> current.copy(notices = current.notices.filterNot { it.id == noticeId }) }
+        scope.launch {
+            mutableState.update { current -> current.copy(notices = current.notices.filterNot { it.id == noticeId }) }
+        }
     }
 
     private fun showMessage(message: String) {

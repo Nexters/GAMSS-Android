@@ -16,6 +16,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
+import java.util.concurrent.CountDownLatch
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class PlayBillingRepositoryTest {
@@ -38,6 +39,26 @@ class PlayBillingRepositoryTest {
         fakeDataSource.emitConnectionEvent(BillingConnectionEvent.SetupFinished(billingResult(BillingResponseCode.OK)))
         repository.connect() // 이미 CONNECTED 상태라 재호출되지 않아야 한다.
         assertEquals(1, fakeDataSource.startConnectionCallCount)
+    }
+
+    @Test
+    fun `여러 스레드에서 동시에 connect를 호출해도 startConnection은 한 번만 호출한다`() {
+        val threadCount = 16
+        val ready = CountDownLatch(threadCount)
+        val go = CountDownLatch(1)
+        val threads = List(threadCount) {
+            Thread {
+                ready.countDown()
+                go.await()
+                repository.connect()
+            }.apply { start() }
+        }
+        ready.await()
+        go.countDown()
+        threads.forEach { it.join() }
+
+        assertEquals(1, fakeDataSource.startConnectionCallCount)
+        assertEquals(BillingConnectionState.CONNECTING, repository.connectionState.value)
     }
 
     @Test
