@@ -96,13 +96,13 @@ constructor(
                 isLoading = false,
                 tokenProducts = serverProducts.sortedBy { it.tokenAmount }
                     .mapIndexed { index, product ->
-                        val visual = TokenProductVisuals.getOrElse(index) { TokenProductVisuals.last() }
+                        val icon = TokenProductIcons.getOrElse(index) { TokenProductIcons.last() }
                         StoreTokenProduct(
                             product = product,
                             billingProduct = prices[product.productId],
-                            labelRes = visual.labelRes,
-                            iconRes = visual.iconRes,
-                            iconSize = visual.iconSize,
+                            labelAmountInTenThousands = product.labelAmountInTenThousands(),
+                            iconRes = icon.iconRes,
+                            iconSize = icon.iconSize,
                         )
                     },
                 error = if (result.isSuccess) null else "Google Play 상품 조회에 실패했습니다.",

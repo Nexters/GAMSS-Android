@@ -34,15 +34,15 @@ class PaymentRepositoryImplTest {
         coEvery { paymentService.getProducts() } returns ApiResponse(
             success = true,
             data = listOf(
-                TokenProductResponse(productId = "token_300000", tokenAmount = 300_000),
-                TokenProductResponse(productId = "token_500000", tokenAmount = 500_000),
+                TokenProductResponse(productId = "token_300k", tokenAmount = 300_000),
+                TokenProductResponse(productId = "token_500k", tokenAmount = 500_000),
             ),
         )
 
         val result = repository.getProducts()
 
         val products = (result as AppResult.Success).data
-        assertEquals(listOf("token_300000", "token_500000"), products.map { it.productId })
+        assertEquals(listOf("token_300k", "token_500k"), products.map { it.productId })
         assertEquals(listOf(300_000L, 500_000L), products.map { it.tokenAmount })
     }
 
@@ -72,18 +72,18 @@ class PaymentRepositoryImplTest {
     @Test
     fun `GRANTED 응답을 지급 완료로 변환한다`() = runTest {
         coEvery {
-            paymentService.verifyGooglePurchase(GooglePurchaseRequest("token_300000", "receipt"))
+            paymentService.verifyGooglePurchase(GooglePurchaseRequest("token_300k", "receipt"))
         } returns ApiResponse(
             success = true,
             data = PaymentGrantResponse(
                 status = "GRANTED",
-                productId = "token_300000",
+                productId = "token_300k",
                 grantedTokens = 300_000,
                 paidBalance = 600_000,
             ),
         )
 
-        val result = repository.verifyGooglePurchase("token_300000", "receipt")
+        val result = repository.verifyGooglePurchase("token_300k", "receipt")
 
         val grant = (result as AppResult.Success).data
         assertEquals(PaymentStatus.GRANTED, grant.status)
@@ -95,10 +95,10 @@ class PaymentRepositoryImplTest {
     fun `PENDING 응답은 지급되지 않은 상태로 변환한다`() = runTest {
         coEvery { paymentService.verifyGooglePurchase(any()) } returns ApiResponse(
             success = true,
-            data = PaymentGrantResponse(status = "PENDING", productId = "token_300000"),
+            data = PaymentGrantResponse(status = "PENDING", productId = "token_300k"),
         )
 
-        val result = repository.verifyGooglePurchase("token_300000", "receipt")
+        val result = repository.verifyGooglePurchase("token_300k", "receipt")
 
         val grant = (result as AppResult.Success).data
         assertEquals(PaymentStatus.PENDING, grant.status)
@@ -110,10 +110,10 @@ class PaymentRepositoryImplTest {
     fun `서버가 요청과 다른 상품을 돌려주면 실패로 처리한다`() = runTest {
         coEvery { paymentService.verifyGooglePurchase(any()) } returns ApiResponse(
             success = true,
-            data = PaymentGrantResponse(status = "GRANTED", productId = "token_500000", grantedTokens = 500_000),
+            data = PaymentGrantResponse(status = "GRANTED", productId = "token_500k", grantedTokens = 500_000),
         )
 
-        val result = repository.verifyGooglePurchase("token_300000", "receipt")
+        val result = repository.verifyGooglePurchase("token_300k", "receipt")
 
         assertTrue((result as AppResult.Failure).throwable is IllegalStateException)
     }
@@ -122,7 +122,7 @@ class PaymentRepositoryImplTest {
     fun `구매 검증의 401 응답은 세션 만료로 변환한다`() = runTest {
         coEvery { paymentService.verifyGooglePurchase(any()) } throws httpException("EXPIRED_TOKEN", UNAUTHORIZED)
 
-        val result = repository.verifyGooglePurchase("token_300000", "receipt")
+        val result = repository.verifyGooglePurchase("token_300k", "receipt")
 
         assertTrue((result as AppResult.Failure).throwable is SessionExpiredException)
     }
@@ -144,7 +144,7 @@ class PaymentRepositoryImplTest {
         codes.forEach { code ->
             coEvery { paymentService.verifyGooglePurchase(any()) } throws httpException(code)
 
-            val result = repository.verifyGooglePurchase("token_300000", "receipt")
+            val result = repository.verifyGooglePurchase("token_300k", "receipt")
 
             val throwable = (result as AppResult.Failure).throwable
             assertTrue("$code 는 ApiException.Http로 유지돼야 한다", throwable is ApiException.Http)
@@ -157,7 +157,7 @@ class PaymentRepositoryImplTest {
         val cause = IOException("offline")
         coEvery { paymentService.verifyGooglePurchase(any()) } throws cause
 
-        val result = repository.verifyGooglePurchase("token_300000", "receipt")
+        val result = repository.verifyGooglePurchase("token_300k", "receipt")
 
         val throwable = (result as AppResult.Failure).throwable
         assertTrue(throwable is ApiException.Network)
@@ -168,7 +168,7 @@ class PaymentRepositoryImplTest {
     fun `취소는 실패로 변환하지 않고 전파한다`() = runTest {
         coEvery { paymentService.verifyGooglePurchase(any()) } throws CancellationException()
 
-        repository.verifyGooglePurchase("token_300000", "receipt")
+        repository.verifyGooglePurchase("token_300k", "receipt")
     }
 
     private fun httpException(code: String, statusCode: Int = BAD_REQUEST): HttpException {

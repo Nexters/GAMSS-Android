@@ -82,7 +82,7 @@ class StoreViewModelTest {
         every { Log.w(any<String>(), any<String>()) } returns 0
         try {
             viewModel(isLicensedPackage = false).test(this) {
-                containerHost.purchase("token_300000")
+                containerHost.purchase("token_300k")
                 runCurrent()
                 expectNoItems()
             }
@@ -106,10 +106,10 @@ class StoreViewModelTest {
     @Test
     fun `Play 연결이 완료되면 상품 목록을 가격과 함께 표시한다`() = runTest {
         coEvery { getPaymentProducts() } returns AppResult.Success(
-            listOf(TokenProduct(productId = "token_300000", tokenAmount = 300_000)),
+            listOf(TokenProduct(productId = "token_300k", tokenAmount = 300_000)),
         )
-        val billingProduct = billingProduct("token_300000")
-        coEvery { getBillingProducts(listOf("token_300000")) } returns StoreProductQueryResult(
+        val billingProduct = billingProduct("token_300k")
+        coEvery { getBillingProducts(listOf("token_300k")) } returns StoreProductQueryResult(
             isSuccess = true,
             products = listOf(billingProduct),
         )
@@ -123,11 +123,46 @@ class StoreViewModelTest {
                 copy(
                     isLoading = false,
                     tokenProducts = listOf(
-                        storeTokenProduct(TokenProduct("token_300000", 300_000), billingProduct),
+                        storeTokenProduct(TokenProduct("token_300k", 300_000), billingProduct),
                     ),
                     error = null,
                 )
             }
+        }
+    }
+
+    @Test
+    fun `카드 라벨은 서버 지급량으로 만들고 아이콘은 지급량 순서대로 고른다`() = runTest {
+        val serverProducts = listOf(
+            TokenProduct(productId = "token_1m", tokenAmount = 1_000_000),
+            TokenProduct(productId = "token_300k", tokenAmount = 300_000),
+            TokenProduct(productId = "token_2m", tokenAmount = 2_000_000),
+            TokenProduct(productId = "token_500k", tokenAmount = 500_000),
+        )
+        coEvery { getPaymentProducts() } returns AppResult.Success(serverProducts)
+        coEvery { getBillingProducts(any()) } returns StoreProductQueryResult(isSuccess = true, products = emptyList())
+        val connectionState = MutableStateFlow(StoreConnectionState.DISCONNECTED)
+
+        viewModel(connectionState).test(this) {
+            connectionState.value = StoreConnectionState.CONNECTED
+
+            expectState { copy(isLoading = true, error = null) }
+            val loaded = awaitState()
+            assertEquals(
+                listOf("token_300k", "token_500k", "token_1m", "token_2m"),
+                loaded.tokenProducts.map { it.product.productId },
+            )
+            assertEquals(listOf(30L, 50L, 100L, 200L), loaded.tokenProducts.map { it.labelAmountInTenThousands })
+            // 상품이 아이콘보다 많으면 마지막 아이콘을 반복한다.
+            assertEquals(
+                listOf(
+                    R.drawable.img_store_coin_small,
+                    R.drawable.img_store_coin_medium,
+                    R.drawable.img_store_coin_large,
+                    R.drawable.img_store_coin_large,
+                ),
+                loaded.tokenProducts.map { it.iconRes },
+            )
         }
     }
 
@@ -161,9 +196,9 @@ class StoreViewModelTest {
     @Test
     fun `Play 상품 조회가 실패하면 에러 메시지를 표시한다`() = runTest {
         coEvery { getPaymentProducts() } returns AppResult.Success(
-            listOf(TokenProduct(productId = "token_300000", tokenAmount = 300_000)),
+            listOf(TokenProduct(productId = "token_300k", tokenAmount = 300_000)),
         )
-        coEvery { getBillingProducts(listOf("token_300000")) } returns StoreProductQueryResult(
+        coEvery { getBillingProducts(listOf("token_300k")) } returns StoreProductQueryResult(
             isSuccess = false,
             products = emptyList(),
         )
@@ -177,7 +212,7 @@ class StoreViewModelTest {
                 copy(
                     isLoading = false,
                     tokenProducts = listOf(
-                        storeTokenProduct(TokenProduct("token_300000", 300_000), null),
+                        storeTokenProduct(TokenProduct("token_300k", 300_000), null),
                     ),
                     error = "Google Play 상품 조회에 실패했습니다.",
                 )
@@ -190,7 +225,7 @@ class StoreViewModelTest {
         coEvery { getPaymentAccountToken() } returns AppResult.Failure(IllegalStateException())
 
         viewModel().test(this) {
-            containerHost.purchase("token_300000")
+            containerHost.purchase("token_300k")
 
             expectState { copy(isPreparing = true, error = null) }
             expectState { copy(isPreparing = false, error = "구매 정보를 불러오지 못했습니다. 잠시 후 다시 확인해 주세요.") }
@@ -201,13 +236,13 @@ class StoreViewModelTest {
     @Test
     fun `구매 직전 상품 정보를 찾지 못하면 결제창을 열지 않는다`() = runTest {
         coEvery { getPaymentAccountToken() } returns AppResult.Success("account-token")
-        coEvery { getBillingProducts(listOf("token_300000")) } returns StoreProductQueryResult(
+        coEvery { getBillingProducts(listOf("token_300k")) } returns StoreProductQueryResult(
             isSuccess = true,
             products = emptyList(),
         )
 
         viewModel().test(this) {
-            containerHost.purchase("token_300000")
+            containerHost.purchase("token_300k")
 
             expectState { copy(isPreparing = true, error = null) }
             expectState { copy(isPreparing = false, error = "구매 가능한 상품 정보를 찾지 못했습니다.") }
@@ -216,15 +251,15 @@ class StoreViewModelTest {
 
     @Test
     fun `결제창 실행 요청을 전달하고 실패 결과를 표시한다`() = runTest {
-        val product = billingProduct("token_300000")
+        val product = billingProduct("token_300k")
         coEvery { getPaymentAccountToken() } returns AppResult.Success("account-token")
-        coEvery { getBillingProducts(listOf("token_300000")) } returns StoreProductQueryResult(
+        coEvery { getBillingProducts(listOf("token_300k")) } returns StoreProductQueryResult(
             isSuccess = true,
             products = listOf(product),
         )
 
         viewModel().test(this) {
-            containerHost.purchase("token_300000")
+            containerHost.purchase("token_300k")
             expectState { copy(isPreparing = true, error = null) }
             expectSideEffect(StoreSideEffect.LaunchBillingFlow(product, "account-token"))
             containerHost.onBillingFlowResult(BillingOperationResult(isSuccess = false, responseCode = 6))
@@ -235,15 +270,15 @@ class StoreViewModelTest {
 
     @Test
     fun `결제창 실행에 성공하면 구매 준비 상태만 해제하고 안내하지 않는다`() = runTest {
-        val product = billingProduct("token_300000")
+        val product = billingProduct("token_300k")
         coEvery { getPaymentAccountToken() } returns AppResult.Success("account-token")
-        coEvery { getBillingProducts(listOf("token_300000")) } returns StoreProductQueryResult(
+        coEvery { getBillingProducts(listOf("token_300k")) } returns StoreProductQueryResult(
             isSuccess = true,
             products = listOf(product),
         )
 
         viewModel().test(this) {
-            containerHost.purchase("token_300000")
+            containerHost.purchase("token_300k")
             expectState { copy(isPreparing = true, error = null) }
             expectSideEffect(StoreSideEffect.LaunchBillingFlow(product, "account-token"))
             containerHost.onBillingFlowResult(BillingOperationResult(isSuccess = true, responseCode = 0))
@@ -329,14 +364,18 @@ class StoreViewModelTest {
         every { this@mockk.productId } returns productId
     }
 
-    private fun storeTokenProduct(product: TokenProduct, billingProduct: StoreProduct?): StoreTokenProduct {
-        val visual = TokenProductVisuals.first()
+    private fun storeTokenProduct(
+        product: TokenProduct,
+        billingProduct: StoreProduct?,
+        index: Int = 0,
+    ): StoreTokenProduct {
+        val icon = TokenProductIcons[index]
         return StoreTokenProduct(
             product = product,
             billingProduct = billingProduct,
-            labelRes = visual.labelRes,
-            iconRes = visual.iconRes,
-            iconSize = visual.iconSize,
+            labelAmountInTenThousands = product.labelAmountInTenThousands(),
+            iconRes = icon.iconRes,
+            iconSize = icon.iconSize,
         )
     }
 }

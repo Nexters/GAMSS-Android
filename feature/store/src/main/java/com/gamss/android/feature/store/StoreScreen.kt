@@ -175,7 +175,7 @@ private fun StoreTokenCard(
                 )
                 Spacer(modifier = Modifier.height(CardLabelGap))
                 Text(
-                    text = stringResource(product.labelRes),
+                    text = stringResource(R.string.store_token_label, product.labelAmountInTenThousands),
                     style = GamssTheme.typography.body4Medium,
                     color = GamssTheme.colors.gray950,
                 )

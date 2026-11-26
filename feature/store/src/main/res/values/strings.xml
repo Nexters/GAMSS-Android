@@ -3,9 +3,8 @@
     <string name="store_logo_description">감쓰</string>
     <string name="store_setting_description">설정</string>
 
-    <string name="store_token_label_30">30만 토큰</string>
-    <string name="store_token_label_50">50만 토큰</string>
-    <string name="store_token_label_100">100만 토큰</string>
+    <!-- 서버 상품의 지급량(만 단위). 예: 30 → "30만 토큰" -->
+    <string name="store_token_label">%1$d만 토큰</string>
 
     <string name="store_purchase_complete_toast">토큰 구매가 완료됐어요.</string>
     <string name="store_billing_launch_fail_toast">결제창을 열지 못했어요. 잠시 후 다시 시도해 주세요.</string>

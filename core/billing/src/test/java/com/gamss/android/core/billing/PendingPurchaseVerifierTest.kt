@@ -44,8 +44,8 @@ class PendingPurchaseVerifierTest {
     @Test
     fun `서버 지급 완료만 잔액에 반영한다`() = runTest {
         coEvery {
-            verifyGooglePurchase(VerifyGooglePurchaseUseCase.Params("token_300000", "receipt"))
-        } returns AppResult.Success(PaymentGrant(PaymentStatus.GRANTED, "token_300000", 300000, 600000))
+            verifyGooglePurchase(VerifyGooglePurchaseUseCase.Params("token_300k", "receipt"))
+        } returns AppResult.Success(PaymentGrant(PaymentStatus.GRANTED, "token_300k", 300000, 600000))
         val verifier = verifier()
         runCurrent()
         outcomes.send(purchased())
@@ -58,7 +58,7 @@ class PendingPurchaseVerifierTest {
     @Test
     fun `서버 PENDING 응답은 지급 완료나 잔액으로 표시하지 않는다`() = runTest {
         coEvery { verifyGooglePurchase(any()) } returns AppResult.Success(
-            PaymentGrant(PaymentStatus.PENDING, "token_300000", 0, 0),
+            PaymentGrant(PaymentStatus.PENDING, "token_300k", 0, 0),
         )
         val verifier = verifier()
         runCurrent()
@@ -92,7 +92,7 @@ class PendingPurchaseVerifierTest {
     fun `Play 결제 대기는 서버에 지급 요청하지 않는다`() = runTest {
         verifier()
         runCurrent()
-        outcomes.send(BillingPurchaseOutcome.Pending(listOf("token_300000")))
+        outcomes.send(BillingPurchaseOutcome.Pending(listOf("token_300k")))
         runCurrent()
         coVerify(exactly = 0) { verifyGooglePurchase(any()) }
     }
@@ -156,13 +156,13 @@ class PendingPurchaseVerifierTest {
     @Test
     fun `서버 지급 완료와 검증 실패를 표시 전까지 유지되는 안내로 쌓는다`() = runTest {
         coEvery { verifyGooglePurchase(any()) } returnsMany listOf(
-            AppResult.Success(PaymentGrant(PaymentStatus.GRANTED, "token_300000", 300000, 600000)),
+            AppResult.Success(PaymentGrant(PaymentStatus.GRANTED, "token_300k", 300000, 600000)),
             AppResult.Failure(IllegalStateException()),
         )
         val verifier = verifier()
         runCurrent()
-        outcomes.send(BillingPurchaseOutcome.Purchased("receipt-1", listOf("token_300000")))
-        outcomes.send(BillingPurchaseOutcome.Purchased("receipt-2", listOf("token_300000")))
+        outcomes.send(BillingPurchaseOutcome.Purchased("receipt-1", listOf("token_300k")))
+        outcomes.send(BillingPurchaseOutcome.Purchased("receipt-2", listOf("token_300k")))
         runCurrent()
 
         assertEquals(
@@ -177,13 +177,13 @@ class PendingPurchaseVerifierTest {
     @Test
     fun `표시한 안내만 제거하고 나머지는 유지한다`() = runTest {
         coEvery { verifyGooglePurchase(any()) } returnsMany listOf(
-            AppResult.Success(PaymentGrant(PaymentStatus.GRANTED, "token_300000", 300000, 600000)),
+            AppResult.Success(PaymentGrant(PaymentStatus.GRANTED, "token_300k", 300000, 600000)),
             AppResult.Failure(IllegalStateException()),
         )
         val verifier = verifier()
         runCurrent()
-        outcomes.send(BillingPurchaseOutcome.Purchased("receipt-1", listOf("token_300000")))
-        outcomes.send(BillingPurchaseOutcome.Purchased("receipt-2", listOf("token_300000")))
+        outcomes.send(BillingPurchaseOutcome.Purchased("receipt-1", listOf("token_300k")))
+        outcomes.send(BillingPurchaseOutcome.Purchased("receipt-2", listOf("token_300k")))
         runCurrent()
 
         verifier.onNoticeShown(verifier.state.value.notices.first().id)
@@ -197,7 +197,7 @@ class PendingPurchaseVerifierTest {
     @Test
     fun `세션이 바뀌면 이전 계정의 안내는 표시하지 않고 비운다`() = runTest {
         coEvery { verifyGooglePurchase(any()) } returns AppResult.Success(
-            PaymentGrant(PaymentStatus.GRANTED, "token_300000", 300000, 600000),
+            PaymentGrant(PaymentStatus.GRANTED, "token_300k", 300000, 600000),
         )
         val verifier = verifier()
         runCurrent()
@@ -216,7 +216,7 @@ class PendingPurchaseVerifierTest {
     @Test
     fun `서버 PENDING 응답은 완료나 실패 안내를 쌓지 않는다`() = runTest {
         coEvery { verifyGooglePurchase(any()) } returns AppResult.Success(
-            PaymentGrant(PaymentStatus.PENDING, "token_300000", 0, 0),
+            PaymentGrant(PaymentStatus.PENDING, "token_300k", 0, 0),
         )
         val verifier = verifier()
         runCurrent()
@@ -241,5 +241,5 @@ class PendingPurchaseVerifierTest {
         expected.forEach { (throwable, reason) -> assertEquals(reason, throwable.paymentFailureReason()) }
     }
 
-    private fun purchased() = BillingPurchaseOutcome.Purchased("receipt", listOf("token_300000"))
+    private fun purchased() = BillingPurchaseOutcome.Purchased("receipt", listOf("token_300k"))
 }
