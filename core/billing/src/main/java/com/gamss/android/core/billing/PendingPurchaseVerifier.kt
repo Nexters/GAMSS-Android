@@ -57,12 +57,22 @@ internal class PendingPurchaseVerifierImpl @Inject constructor(
     override val state = mutableState.asStateFlow()
     private var nextNoticeId = 0L
     private val attemptedPurchases = mutableSetOf<Pair<String, String>>()
+
+    // 같은 구매의 같은 결과는 세션 안에서 한 번만 안내한다. 미처리 구매는 복구 조회마다 다시 검증되므로,
+    // 이 기록이 없으면 포그라운드 복귀 때마다 같은 안내가 쌓인다. 복구 조회 때 비우지 않고 세션이 바뀔 때만 비운다.
+    private val announcedResults = mutableSetOf<Pair<String, PaymentEvent>>()
+
+    // 다시 시도해도 결과가 같은 실패(계정 불일치·탈퇴 등)는 세션 안에서 다시 검증하지 않는다. 구매한 계정으로
+    // 다시 로그인하면 세션이 바뀌어 기록이 비워지고 다시 검증한다.
+    private val settledFailures = mutableSetOf<Pair<String, String>>()
     private var recoveryInProgress = false
 
     init {
         scope.launch {
             auth.sessionState.collectLatest { session ->
                 attemptedPurchases.clear()
+                announcedResults.clear()
+                settledFailures.clear()
                 mutableState.value = PaymentState()
                 if (session == SessionState.Authenticated) {
                     recover()
@@ -105,7 +115,8 @@ internal class PendingPurchaseVerifierImpl @Inject constructor(
     private suspend fun handleOutcome(outcome: BillingPurchaseOutcome) {
         when (outcome) {
             is BillingPurchaseOutcome.Purchased -> outcome.productIds.forEach { productId ->
-                if (attemptedPurchases.add(outcome.purchaseToken to productId)) {
+                val purchase = outcome.purchaseToken to productId
+                if (purchase !in settledFailures && attemptedPurchases.add(purchase)) {
                     verify(productId, outcome.purchaseToken)
                 }
             }
@@ -143,15 +154,17 @@ internal class PendingPurchaseVerifierImpl @Inject constructor(
                         paidBalance = grant.paidBalance,
                         message = "${grant.grantedTokens} 토큰 지급 완료",
                         notices = state.value.notices,
-                    ).withNotice(PaymentEvent.Granted(grant.grantedTokens))
+                    ).withNoticeOnce(purchaseToken, PaymentEvent.Granted(grant.grantedTokens))
                 } else {
                     state.value.copy(isVerifying = false, message = "결제 대기 중입니다. 아직 토큰이 지급되지 않았습니다.")
                 }
             }
             is AppResult.Failure -> {
+                val reason = result.throwable.paymentFailureReason()
+                if (reason != PaymentFailureReason.RETRYABLE) settledFailures.add(purchaseToken to productId)
                 mutableState.value = state.value
                     .copy(isVerifying = false, message = result.throwable.paymentMessage())
-                    .withNotice(PaymentEvent.VerificationFailed(result.throwable.paymentFailureReason()))
+                    .withNoticeOnce(purchaseToken, PaymentEvent.VerificationFailed(reason))
             }
         }
         attemptedPurchases.add(purchaseToken to productId)
@@ -166,6 +179,9 @@ internal class PendingPurchaseVerifierImpl @Inject constructor(
     private fun showMessage(message: String) {
         mutableState.value = state.value.copy(message = message, billingError = null)
     }
+
+    private fun PaymentState.withNoticeOnce(purchaseToken: String, event: PaymentEvent) =
+        if (announcedResults.add(purchaseToken to event)) withNotice(event) else this
 
     private fun PaymentState.withNotice(event: PaymentEvent) =
         copy(notices = notices + PaymentNotice(id = nextNoticeId++, event = event))

@@ -70,7 +70,7 @@ class PendingPurchaseVerifierTest {
     }
 
     @Test
-    fun `403 중복 콜백은 즉시 재시도하지 않고 다음 복귀 때 다시 검증한다`() = runTest {
+    fun `다시 시도해도 같은 실패는 세션 안에서 재검증하지 않고 세션이 바뀌면 다시 검증한다`() = runTest {
         coEvery { verifyGooglePurchase(any()) } returns AppResult.Failure(
             ApiException.Http(403, "PURCHASE_ACCESS_DENIED", "denied"),
         )
@@ -80,12 +80,66 @@ class PendingPurchaseVerifierTest {
         outcomes.send(purchased())
         runCurrent()
         coVerify(exactly = 1) { verifyGooglePurchase(any()) }
-        verifier.requestRecovery()
+
+        // 포그라운드 복귀가 반복돼도 서버에 다시 보내지 않고 안내도 한 번뿐이다.
+        repeat(3) {
+            verifier.requestRecovery()
+            runCurrent()
+            outcomes.send(purchased())
+            runCurrent()
+        }
+        coVerify(exactly = 1) { verifyGooglePurchase(any()) }
+        assertEquals(
+            listOf(PaymentEvent.VerificationFailed(PaymentFailureReason.ACCOUNT_MISMATCH)),
+            verifier.state.value.notices.map { it.event },
+        )
+
+        // 구매한 계정으로 다시 로그인하면 세션이 바뀌어 다시 검증한다.
+        session.value = SessionState.Unauthenticated
         runCurrent()
-        coVerify(exactly = 2) { billing.queryUnfinishedPurchases() }
+        session.value = SessionState.Authenticated
+        runCurrent()
         outcomes.send(purchased())
         runCurrent()
         coVerify(exactly = 2) { verifyGooglePurchase(any()) }
+    }
+
+    @Test
+    fun `일시적 실패는 복구 때마다 다시 검증하되 같은 실패 안내는 한 번만 쌓는다`() = runTest {
+        coEvery { verifyGooglePurchase(any()) } returns AppResult.Failure(
+            ApiException.Network(IllegalStateException()),
+        )
+        val verifier = verifier()
+        runCurrent()
+        repeat(3) {
+            verifier.requestRecovery()
+            runCurrent()
+            outcomes.send(purchased())
+            runCurrent()
+        }
+        coVerify(exactly = 3) { verifyGooglePurchase(any()) }
+        assertEquals(
+            listOf(PaymentEvent.VerificationFailed(PaymentFailureReason.RETRYABLE)),
+            verifier.state.value.notices.map { it.event },
+        )
+    }
+
+    @Test
+    fun `같은 구매에 지급 완료 응답이 반복돼도 완료 안내는 한 번이고 사용량은 매번 갱신한다`() = runTest {
+        coEvery { verifyGooglePurchase(any()) } returns AppResult.Success(
+            PaymentGrant(PaymentStatus.GRANTED, "token_300k", 300000, 600000),
+        )
+        val verifier = verifier()
+        runCurrent()
+        repeat(2) {
+            verifier.requestRecovery()
+            runCurrent()
+            outcomes.send(purchased())
+            runCurrent()
+        }
+        coVerify(exactly = 2) { verifyGooglePurchase(any()) }
+        verify(exactly = 2) { notifier.requestRefresh() }
+        assertEquals(listOf(PaymentEvent.Granted(300000)), verifier.state.value.notices.map { it.event })
     }
 
     @Test
