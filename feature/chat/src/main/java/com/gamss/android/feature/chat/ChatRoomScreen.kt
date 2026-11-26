@@ -159,6 +159,7 @@ fun ChatRoomScreen(
             onEndClick = viewModel::onEndRequest,
             onCardReopenClick = viewModel::onCardReopen,
             onTokenUsageToggle = viewModel::onTokenUsageToggle,
+            onTokenUsagePopupDismiss = viewModel::onTokenUsagePopupDismiss,
             onTokenUsageRetry = viewModel::onTokenUsageRetry
         )
     }
@@ -273,6 +274,7 @@ private data class ChatRoomActions(
     val onEndClick: () -> Unit,
     val onCardReopenClick: () -> Unit,
     val onTokenUsageToggle: () -> Unit,
+    val onTokenUsagePopupDismiss: () -> Unit,
     val onTokenUsageRetry: () -> Unit,
 )
 
@@ -423,7 +425,11 @@ private fun ChatRoomTopBar(
                 isLoading = state.isTokenUsageLoading,
                 onDismissRequest = actions.onTokenUsageToggle,
                 onRetryClick = actions.onTokenUsageRetry,
-                onPurchaseClick = onNavigateToStore,
+                onPurchaseClick = {
+                    // 팝업을 닫고 이동해야 대화방으로 돌아왔을 때 열린 채로 남지 않는다.
+                    actions.onTokenUsagePopupDismiss()
+                    onNavigateToStore()
+                },
             )
         }
     }
@@ -661,6 +667,7 @@ private fun ChatRoomPreviewContent() {
         onEndClick = {},
         onCardReopenClick = {},
         onTokenUsageToggle = {},
+        onTokenUsagePopupDismiss = {},
         onTokenUsageRetry = {}
     )
     ChatRoomContent(

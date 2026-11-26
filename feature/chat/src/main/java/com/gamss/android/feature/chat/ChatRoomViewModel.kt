@@ -34,6 +34,9 @@ import javax.inject.Inject
 
 private typealias ChatRoomSyntax = Syntax<ChatRoomState, ChatRoomSideEffect>
 
+// 화면 이벤트마다 intent 함수를 하나씩 두는 구조라 함수 수가 기준(30)에 닿는다. 상점 이동 전 팝업 닫기
+// (onTokenUsagePopupDismiss)를 추가하며 넘었고, 책임 분리 없이 함수만 쪼개는 것을 피하려고 이 클래스에서만 제외한다.
+@Suppress("TooManyFunctions")
 @HiltViewModel
 class ChatRoomViewModel @Inject constructor(
     private val session: ConversationSession,
@@ -169,6 +172,11 @@ class ChatRoomViewModel @Inject constructor(
             state.copy(isTokenUsagePopupExpanded = opened)
         }
         if (needsFetch) refreshTokenUsage()
+    }
+
+    /** 팝업을 열린 상태로 남기지 않고 닫는다. 상점으로 이동한 뒤 대화방에 돌아왔을 때 팝업이 다시 보이지 않게 한다. */
+    fun onTokenUsagePopupDismiss() = intent {
+        reduce { state.copy(isTokenUsagePopupExpanded = false) }
     }
 
     fun onTokenUsageRetry() = intent {
