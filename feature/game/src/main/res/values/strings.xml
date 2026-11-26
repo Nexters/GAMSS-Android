@@ -11,4 +11,7 @@
     <string name="game_clicker_score_description">%1$d점</string>
     <string name="game_clicker_replay">다시하기</string>
     <string name="game_clicker_key_description">누르기</string>
+    <string name="game_clicker_countdown_description">%1$d초 뒤 시작</string>
+    <string name="game_clicker_score_title">내 점수</string>
+    <string name="game_clicker_score_exit">종료</string>
 </resources>

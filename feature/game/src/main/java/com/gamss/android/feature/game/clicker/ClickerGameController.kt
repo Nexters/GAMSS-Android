@@ -22,7 +22,8 @@ internal class ClickerGameController(initial: ClickerGameState = ClickerGameStat
     var state by mutableStateOf(initial)
         private set
 
-    val isPlaying by derivedStateOf { state.phase == ClickerGamePhase.Playing }
+    val isFinished by derivedStateOf { state.phase == ClickerGamePhase.Finished }
+    val countdownSecond by derivedStateOf { state.countdownSecond }
     val score by derivedStateOf { state.score }
     val remainingTenths by derivedStateOf { state.remainingTenths }
 
@@ -42,27 +43,25 @@ internal class ClickerGameController(initial: ClickerGameState = ClickerGameStat
         state = ClickerGameState()
     }
 
-    suspend fun runClock(): Nothing {
+    suspend fun runClock(onFinished: (score: Int) -> Unit) {
         var lastFrameMs = withFrameMillis { it }
-        while (true) {
+        while (!isFinished) {
             val frameMs = withFrameMillis { it }
-            state = state.advance((frameMs - lastFrameMs).coerceAtMost(MAX_FRAME_DELTA_MS))
+            advance((frameMs - lastFrameMs).coerceAtMost(MAX_FRAME_DELTA_MS), onFinished)
             lastFrameMs = frameMs
         }
     }
 
+    fun advance(deltaMs: Long, onFinished: (score: Int) -> Unit) {
+        val wasFinished = isFinished
+        state = state.advance(deltaMs)
+        if (!wasFinished && isFinished) onFinished(state.score)
+    }
+
     companion object {
-        val Saver = listSaver<ClickerGameController, Any>(
-            save = { with(it.state) { listOf(phase.name, score, elapsedMs) } },
-            restore = {
-                ClickerGameController(
-                    ClickerGameState(
-                        phase = ClickerGamePhase.valueOf(it[0] as String),
-                        score = it[1] as Int,
-                        elapsedMs = it[2] as Long,
-                    ),
-                )
-            },
+        val Saver = listSaver<ClickerGameController, Long>(
+            save = { with(it.state) { listOf(score.toLong(), elapsedMs) } },
+            restore = { ClickerGameController(ClickerGameState(score = it[0].toInt(), elapsedMs = it[1])) },
         )
     }
 }

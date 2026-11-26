@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -23,19 +24,25 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.progressBarRangeInfo
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.gamss.android.core.designsystem.theme.GamssTheme
 import com.gamss.android.core.designsystem.topnavigation.GamssTopNavigation
 import com.gamss.android.core.designsystem.topnavigation.GamssTopNavigationContent
+import com.gamss.android.domain.game.ClickerScoreRecord
 import com.gamss.android.feature.game.R
+import com.gamss.android.feature.game.clicker.component.ClickerCountdownOverlay
 import com.gamss.android.feature.game.clicker.component.ClickerGaugeNote
 import com.gamss.android.feature.game.clicker.component.ClickerGaugeNoteSize
 import com.gamss.android.feature.game.clicker.component.ClickerKeyCap
 import com.gamss.android.feature.game.clicker.component.ClickerScoreBoard
+import com.gamss.android.feature.game.clicker.component.ClickerScoreDialog
 import com.gamss.android.feature.game.clicker.component.rememberClickerKeySound
+import org.orbitmvi.orbit.compose.collectAsState
 
 private const val KEY_COUNT = 2
 
@@ -43,17 +50,20 @@ private const val KEY_COUNT = 2
 fun ClickerGameScreen(
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier,
+    viewModel: ClickerGameViewModel = hiltViewModel(),
 ) {
     val game = rememberClickerGameController()
+    val scoreState by viewModel.collectAsState()
     val keySound = rememberClickerKeySound()
     val haptic = LocalHapticFeedback.current
 
-    LaunchedEffect(game.isPlaying) {
-        if (game.isPlaying) game.runClock()
+    LaunchedEffect(game.isFinished) {
+        if (!game.isFinished) game.runClock(onFinished = viewModel::onGameFinished)
     }
 
     ClickerGameContent(
         game = game,
+        topScores = scoreState.topScores,
         onBackClick = onBackClick,
         // 소리와 진동은 점수에 반영된 입력에만 낸다.
         onKeyPress = {
@@ -66,9 +76,32 @@ fun ClickerGameScreen(
     )
 }
 
-/** 자주 바뀌는 값은 람다로 넘겨 실제로 쓰는 곳에서만 읽는다. */
 @Composable
 private fun ClickerGameContent(
+    game: ClickerGameController,
+    topScores: List<ClickerScoreRecord>,
+    onBackClick: () -> Unit,
+    onKeyPress: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Box(modifier = modifier.fillMaxSize()) {
+        // 팝업이 떠 있으면 TalkBack 포커스가 뒤의 게임 화면으로 넘어가지 않게 한다.
+        ClickerGamePlayArea(
+            game = game,
+            onBackClick = onBackClick,
+            onKeyPress = onKeyPress,
+            modifier = if (game.isFinished) Modifier.clearAndSetSemantics {} else Modifier,
+        )
+        game.countdownSecond?.let { second -> ClickerCountdownOverlay(second = second) }
+        if (game.isFinished) {
+            ClickerScoreDialog(topScores = topScores, onReplayClick = game::replay, onExitClick = onBackClick)
+        }
+    }
+}
+
+/** 자주 바뀌는 값은 람다로 넘겨 실제로 쓰는 곳에서만 읽는다. */
+@Composable
+private fun ClickerGamePlayArea(
     game: ClickerGameController,
     onBackClick: () -> Unit,
     onKeyPress: () -> Unit,
@@ -175,16 +208,21 @@ private val KeyGap = 32.dp
 private const val KEY_ASPECT_RATIO = 167f / 179f
 
 @Composable
-private fun ClickerGamePreview(state: ClickerGameState) {
+private fun ClickerGamePreview(state: ClickerGameState, topScores: List<ClickerScoreRecord> = emptyList()) {
     GamssTheme(darkTheme = false) {
-        ClickerGameContent(game = ClickerGameController(state), onBackClick = {}, onKeyPress = {})
+        ClickerGameContent(
+            game = ClickerGameController(state),
+            topScores = topScores,
+            onBackClick = {},
+            onKeyPress = {},
+        )
     }
 }
 
-@Preview(name = "Ready", showBackground = true, widthDp = 402, heightDp = 874)
+@Preview(name = "Countdown", showBackground = true, widthDp = 402, heightDp = 874)
 @Composable
 @Suppress("UnusedPrivateMember")
-private fun ClickerGameReadyPreview() {
+private fun ClickerGameCountdownPreview() {
     ClickerGamePreview(ClickerGameState())
 }
 
@@ -192,8 +230,16 @@ private fun ClickerGameReadyPreview() {
 @Composable
 @Suppress("UnusedPrivateMember")
 private fun ClickerGamePlayingPreview() {
+    ClickerGamePreview(ClickerGameState.playing(score = 232, playedMs = 12_300L))
+}
+
+@Preview(name = "Finished", showBackground = true, widthDp = 402, heightDp = 874)
+@Composable
+@Suppress("UnusedPrivateMember")
+private fun ClickerGameFinishedPreview() {
     ClickerGamePreview(
-        ClickerGameState(phase = ClickerGamePhase.Playing, score = 232, elapsedMs = 12_300L),
+        ClickerGameState.finished(score = 232),
+        topScores = listOf(ClickerScoreRecord(score = 232, playedAtMillis = 1_764_000_000_000L)),
     )
 }
 
@@ -201,5 +247,5 @@ private fun ClickerGamePlayingPreview() {
 @Composable
 @Suppress("UnusedPrivateMember")
 private fun ClickerGameSmallPreview() {
-    ClickerGamePreview(ClickerGameState(phase = ClickerGamePhase.Playing, score = 80))
+    ClickerGamePreview(ClickerGameState.playing(score = 80))
 }
