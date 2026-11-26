@@ -3,6 +3,9 @@ package com.gamss.android.core.billing
 import com.android.billingclient.api.BillingClient.BillingResponseCode
 import com.android.billingclient.api.BillingResult
 import com.android.billingclient.api.Purchase
+import com.gamss.android.domain.payment.BillingErrorSource
+import com.gamss.android.domain.payment.BillingPurchaseOutcome
+import com.gamss.android.domain.payment.BillingResultStatus
 
 /**
  * 구매 콜백(`PurchasesUpdatedListener.onPurchasesUpdated`)과 미처리 구매 복구 조회
@@ -15,19 +18,30 @@ internal fun mapToPurchaseOutcomes(
     billingResult: BillingResult,
     purchases: List<Purchase>?,
     errorSource: BillingErrorSource = BillingErrorSource.PURCHASE_UPDATE,
-): List<BillingPurchaseOutcome> = when (billingResult.responseCode) {
-    BillingResponseCode.OK -> purchases.orEmpty().map { it.toOutcome(errorSource) }
-    BillingResponseCode.USER_CANCELED -> listOf(BillingPurchaseOutcome.UserCanceled)
+): List<BillingPurchaseOutcome> = when (billingResult.responseCode.toBillingResultStatus()) {
+    BillingResultStatus.OK -> purchases.orEmpty().map { it.toOutcome(errorSource) }
+    BillingResultStatus.USER_CANCELED -> listOf(BillingPurchaseOutcome.UserCanceled)
     // ITEM_ALREADY_OWNED는 구매 자체가 아니라 launchBillingFlow 실패 코드라 purchases가 비어
     // 온다 — 미처리 구매가 무엇인지는 호출부가 queryUnfinishedPurchases()로 다시 조회해야 한다.
-    BillingResponseCode.ITEM_ALREADY_OWNED -> listOf(BillingPurchaseOutcome.AlreadyOwned)
-    else -> listOf(
+    BillingResultStatus.ITEM_ALREADY_OWNED -> listOf(BillingPurchaseOutcome.AlreadyOwned)
+    BillingResultStatus.ERROR -> listOf(
         BillingPurchaseOutcome.Error(
             responseCode = billingResult.responseCode,
             message = billingResult.debugMessage,
             source = errorSource,
         ),
     )
+}
+
+/**
+ * 구매 콜백·복구 조회(위 [mapToPurchaseOutcomes])와 결제창 즉시 실행 결과([PlayBillingRepository])가
+ * 응답 코드를 분기하는 기준을 공유하기 위한 단일 분류 함수.
+ */
+internal fun Int.toBillingResultStatus(): BillingResultStatus = when (this) {
+    BillingResponseCode.OK -> BillingResultStatus.OK
+    BillingResponseCode.USER_CANCELED -> BillingResultStatus.USER_CANCELED
+    BillingResponseCode.ITEM_ALREADY_OWNED -> BillingResultStatus.ITEM_ALREADY_OWNED
+    else -> BillingResultStatus.ERROR
 }
 
 private fun Purchase.toOutcome(errorSource: BillingErrorSource): BillingPurchaseOutcome = when (purchaseState) {

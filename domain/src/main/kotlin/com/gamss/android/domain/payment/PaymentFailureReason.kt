@@ -1,4 +1,4 @@
-package com.gamss.android.core.billing
+package com.gamss.android.domain.payment
 
 import com.gamss.android.core.common.network.ApiException
 import com.gamss.android.domain.auth.SessionExpiredException
@@ -48,13 +48,4 @@ fun Throwable.paymentFailureReason(): PaymentFailureReason = when (this) {
         else -> PaymentFailureReason.RETRYABLE
     }
     else -> PaymentFailureReason.RETRYABLE
-}
-
-fun BillingPurchaseOutcome.Error.paymentMessage(): String {
-    val operation = when (source) {
-        BillingErrorSource.PURCHASE_UPDATE -> "Google Play 결제 실패"
-        BillingErrorSource.RESTORE_QUERY -> "Google Play 미처리 구매 조회 실패"
-    }
-    val detail = message.takeIf { it.isNotBlank() }?.let { "\n$it" }.orEmpty()
-    return "$operation (코드: $responseCode)$detail"
 }

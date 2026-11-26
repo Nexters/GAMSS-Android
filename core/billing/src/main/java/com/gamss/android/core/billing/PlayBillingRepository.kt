@@ -4,6 +4,9 @@ import android.app.Activity
 import com.android.billingclient.api.BillingClient.BillingResponseCode
 import com.android.billingclient.api.BillingResult
 import com.gamss.android.core.billing.di.BillingCoroutineScope
+import com.gamss.android.domain.payment.BillingErrorSource
+import com.gamss.android.domain.payment.BillingOperationResult
+import com.gamss.android.domain.payment.BillingPurchaseOutcome
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.Channel
@@ -96,12 +99,7 @@ internal class PlayBillingRepository @Inject constructor(
     private fun BillingResult.toOperationResult() = BillingOperationResult(
         isSuccess = responseCode == BillingResponseCode.OK,
         responseCode = responseCode,
-        status = when (responseCode) {
-            BillingResponseCode.OK -> BillingResultStatus.OK
-            BillingResponseCode.USER_CANCELED -> BillingResultStatus.USER_CANCELED
-            BillingResponseCode.ITEM_ALREADY_OWNED -> BillingResultStatus.ITEM_ALREADY_OWNED
-            else -> BillingResultStatus.ERROR
-        },
+        status = responseCode.toBillingResultStatus(),
     )
 
     private fun handleConnectionEvent(event: BillingConnectionEvent) {
