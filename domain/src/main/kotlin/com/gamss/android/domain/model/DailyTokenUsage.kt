@@ -5,4 +5,5 @@ data class DailyTokenUsage(
     val dailyLimit: Long?,
     val exceeded: Boolean,
     val usagePercent: Int? = null,
+    val paidBalance: Long? = null
 )

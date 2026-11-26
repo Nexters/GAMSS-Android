@@ -8,10 +8,12 @@ internal data class DailyTokenUsageDataResponse(
     val usedTokens: Long,
     val dailyLimit: Long? = null,
     val exceeded: Boolean,
+    val paidBalance: Long? = null,
 ) {
     fun toDomain() = DailyTokenUsage(
         usedTokens = usedTokens,
         dailyLimit = dailyLimit,
         exceeded = exceeded,
+        paidBalance = paidBalance
     )
 }
