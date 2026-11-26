@@ -109,7 +109,8 @@ internal class PlayBillingRepository @Inject constructor(
                     _connectionState.value = BillingConnectionState.DISCONNECTED
                 }
             }
-            // 자동 재연결은 호출부가 책임진다(앱 시작·화면 진입·포그라운드 복귀 시 connect() 재호출).
+            // SDK 자동 재연결은 API 호출 시점에만 동작하고 이 상태를 갱신하지 않는다. 상태 복구는 호출부가
+            // 책임진다(앱 시작·화면 진입·포그라운드 복귀 시 connect() 재호출).
             BillingConnectionEvent.ServiceDisconnected -> _connectionState.value = BillingConnectionState.DISCONNECTED
         }
     }

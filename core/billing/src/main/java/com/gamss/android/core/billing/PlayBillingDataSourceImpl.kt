@@ -42,6 +42,9 @@ internal class PlayBillingDataSourceImpl @Inject constructor(
     private val billingClient: BillingClient = BillingClient.newBuilder(context)
         .setListener(this)
         .enablePendingPurchases(PendingPurchasesParams.newBuilder().enableOneTimeProducts().build())
+        // 연결이 끊긴 상태에서 API를 호출하면 SDK가 호출 전에 다시 연결한다. 끊김 직후 즉시 재연결하는
+        // 것은 아니므로, 앱 시작·화면 진입·포그라운드 복귀 시 connect() 호출은 그대로 유지한다.
+        .enableAutoServiceReconnection()
         .build()
 
     override fun startConnection() {

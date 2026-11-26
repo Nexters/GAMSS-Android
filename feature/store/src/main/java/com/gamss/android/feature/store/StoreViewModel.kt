@@ -1,5 +1,6 @@
 package com.gamss.android.feature.store
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import com.gamss.android.core.billing.BillingOperationResult
 import com.gamss.android.core.billing.BillingResultStatus
@@ -110,7 +111,11 @@ constructor(
     }
 
     fun purchase(productId: String) = intent {
-        if (!isLicensedPackage) return@intent
+        if (!isLicensedPackage) {
+            // Play Console에 등록되지 않은 패키지(예: .dev)는 결제할 수 없다. 개발 확인용이라 화면 안내 없이 로그만 남긴다.
+            Log.w(TAG, "라이선스 테스트 패키지가 아니라 구매를 진행하지 않습니다: productId=$productId")
+            return@intent
+        }
         if (state.isPreparing || state.isLoading || paymentState.value.isVerifying) return@intent
         reduce { state.copy(isPreparing = true, error = null) }
         preparePurchase(productId)
@@ -155,5 +160,9 @@ constructor(
                 postSideEffect(StoreSideEffect.ShowToast(R.string.store_billing_launch_fail_toast))
             }
         }
+    }
+
+    private companion object {
+        const val TAG = "StoreViewModel"
     }
 }

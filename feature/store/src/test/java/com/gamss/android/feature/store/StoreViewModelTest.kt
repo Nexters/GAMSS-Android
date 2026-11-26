@@ -1,5 +1,6 @@
 package com.gamss.android.feature.store
 
+import android.util.Log
 import com.gamss.android.core.billing.BillingOperationResult
 import com.gamss.android.core.billing.BillingResultStatus
 import com.gamss.android.core.billing.PaymentEvent
@@ -21,6 +22,8 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.mockkStatic
+import io.mockk.unmockkStatic
 import io.mockk.verify
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -73,13 +76,21 @@ class StoreViewModelTest {
     }
 
     @Test
-    fun `라이선스 테스트 패키지가 아니면 구매를 진행하지 않는다`() = runTest {
-        viewModel(isLicensedPackage = false).test(this) {
-            containerHost.purchase("token_300000")
-            runCurrent()
-            expectNoItems()
+    fun `라이선스 테스트 패키지가 아니면 화면 안내 없이 로그만 남기고 구매를 진행하지 않는다`() = runTest {
+        // unit test 환경(android.jar 스텁)에서 Log.w가 "not mocked" 예외를 던지지 않도록 스텁 처리한다.
+        mockkStatic(Log::class)
+        every { Log.w(any<String>(), any<String>()) } returns 0
+        try {
+            viewModel(isLicensedPackage = false).test(this) {
+                containerHost.purchase("token_300000")
+                runCurrent()
+                expectNoItems()
+            }
+            coVerify(exactly = 0) { getPaymentAccountToken() }
+            verify(exactly = 1) { Log.w(any<String>(), any<String>()) }
+        } finally {
+            unmockkStatic(Log::class)
         }
-        coVerify(exactly = 0) { getPaymentAccountToken() }
     }
 
     @Test
