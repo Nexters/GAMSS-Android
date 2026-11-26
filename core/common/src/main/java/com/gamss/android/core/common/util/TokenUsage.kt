@@ -3,21 +3,6 @@ package com.gamss.android.core.common.util
 import kotlin.math.roundToInt
 
 /**
- * 오늘 사용한 토큰량을 오늘 하루 총 한도 대비 백분율로 환산한다.
- *
- * @param usedTokens 오늘 사용한 토큰 수.
- * @param dailyLimit 오늘 하루 총 한도. 서버가 "한도 없음"을 null 로 내려줄 수 있어 nullable 이다.
- * @return 0~100 사이로 clamp 된 정수 퍼센트. [dailyLimit] 이 null 이거나 0 이하라 나눌 수 없으면
- *  "0%"로 거짓 표시하지 않도록 null 을 반환한다 — 호출부가 무제한 상태를 구분해서 다뤄야 한다.
- */
-fun calculateTokenUsagePercent(usedTokens: Long, dailyLimit: Long?): Int? {
-    if (dailyLimit == null || dailyLimit <= 0) return null
-
-    val percent = (usedTokens.toDouble() / dailyLimit.toDouble() * PERCENT_SCALE).roundToInt()
-    return percent.coerceIn(0, 100)
-}
-
-/**
  * 무료 한도 소진 후 유료 토큰으로 넘어간 사용량까지 하나의 막대에 이어서 보여주기 위한 퍼센트.
  *
  * [paidBalance]는 오늘 이미 차감된 뒤의 값이라 분모에 그대로 더하면, 유료 토큰을 쓸수록 분모가
