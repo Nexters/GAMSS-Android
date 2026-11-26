@@ -91,6 +91,12 @@ internal class PlayBillingRepository @Inject constructor(
     private fun BillingResult.toOperationResult() = BillingOperationResult(
         isSuccess = responseCode == BillingResponseCode.OK,
         responseCode = responseCode,
+        status = when (responseCode) {
+            BillingResponseCode.OK -> BillingResultStatus.OK
+            BillingResponseCode.USER_CANCELED -> BillingResultStatus.USER_CANCELED
+            BillingResponseCode.ITEM_ALREADY_OWNED -> BillingResultStatus.ITEM_ALREADY_OWNED
+            else -> BillingResultStatus.ERROR
+        },
     )
 
     private fun handleConnectionEvent(event: BillingConnectionEvent) {

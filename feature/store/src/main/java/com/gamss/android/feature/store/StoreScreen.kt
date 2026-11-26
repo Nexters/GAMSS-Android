@@ -144,8 +144,8 @@ private fun StoreTokenCard(
                 .padding(top = PinOverlapHeight)
                 .fillMaxWidth()
                 .height(CardHeight + ShadowPeekHeight)
-                .background(GamssTheme.colors.gray950.copy(alpha = ShadowAlpha))
-                .border(CardBorderWidth, GamssTheme.colors.gray950.copy(alpha = ShadowAlpha)),
+                .background(GamssTheme.colors.gray950.copy(alpha = SHADOW_ALPHA))
+                .border(CardBorderWidth, GamssTheme.colors.gray950.copy(alpha = SHADOW_ALPHA)),
         )
 
         Box(
@@ -188,12 +188,13 @@ private val CardsHorizontalPadding = 24.dp
 private val CardsGap = 12.dp
 private val CardHeight = 120.dp
 private val ShadowPeekHeight = 5.dp
-private const val ShadowAlpha = 0.2f
+private const val SHADOW_ALPHA = 0.2f
 private val CardBorderWidth = 1.5.dp
 private val PinOverlapHeight = 8.dp
 private val PinWidth = 16.dp
 private val PinHeight = 7.dp
 private val CardLabelGap = 8.dp
+
 // 둘째·셋째가 같은 방향으로 누우면 뻣뻣해 보여서 서로 반대로 기울여 자연스러운 배치처럼 보이게 한다.
 private val PinRotations = listOf(45f, -75f, 75f)
 

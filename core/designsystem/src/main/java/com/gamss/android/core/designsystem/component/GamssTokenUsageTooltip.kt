@@ -100,23 +100,11 @@ fun GamssTokenUsageTooltip(
 
             TokenUsageProgressBar(percent = usagePercent)
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                GamssText(
-                    text = resetTimeLabel,
-                    style = GamssTheme.typography.body6Regular,
-                    color = GamssTheme.colors.gray500,
-                )
-                Text(
-                    modifier = Modifier.noRippleClickableIfNotNull(onPurchaseClick),
-                    text = purchaseLable,
-                    style = GamssTheme.typography.body5Medium.copy(color = GamssTheme.colors.gray900),
-                    textDecoration = TextDecoration.Underline,
-                )
-            }
+            TokenUsageFooter(
+                resetTimeLabel = resetTimeLabel,
+                purchaseLabel = purchaseLable,
+                onPurchaseClick = onPurchaseClick,
+            )
         } else {
             Text(
                 text = title,
@@ -138,6 +126,31 @@ fun GamssTokenUsageTooltip(
                     .noRippleClickableIfNotNull(onRetryClick),
             )
         }
+    }
+}
+
+@Composable
+private fun TokenUsageFooter(
+    resetTimeLabel: String,
+    purchaseLabel: String,
+    onPurchaseClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        GamssText(
+            text = resetTimeLabel,
+            style = GamssTheme.typography.body6Regular,
+            color = GamssTheme.colors.gray500,
+        )
+        Text(
+            modifier = Modifier.noRippleClickableIfNotNull(onPurchaseClick),
+            text = purchaseLabel,
+            style = GamssTheme.typography.body5Medium.copy(color = GamssTheme.colors.gray900),
+            textDecoration = TextDecoration.Underline,
+        )
     }
 }
 

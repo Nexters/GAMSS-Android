@@ -2,6 +2,7 @@ package com.gamss.android.feature.store
 
 import androidx.lifecycle.ViewModel
 import com.gamss.android.core.billing.BillingOperationResult
+import com.gamss.android.core.billing.BillingResultStatus
 import com.gamss.android.core.billing.LicensedPackage
 import com.gamss.android.core.billing.PaymentEvent
 import com.gamss.android.core.billing.PendingPurchaseVerifier
@@ -148,18 +149,21 @@ constructor(
         }
     }
 
+    /** 즉시 반환된 결과다. OK는 결제 완료가 아니라 결제창 실행 성공이며, 실제 결과는 구매 콜백으로 들어온다. */
     fun onBillingFlowResult(result: BillingOperationResult?) = intent {
-        val launched = result?.isSuccess == true
-        reduce {
-            state.copy(
-                isPreparing = false,
-                error = when {
-                    launched -> null
-                    result == null -> "결제창을 열 수 없습니다."
-                    else -> "결제창을 열 수 없습니다. (코드: ${result.responseCode})"
-                },
-            )
+        when (result?.status) {
+            BillingResultStatus.OK, BillingResultStatus.USER_CANCELED ->
+                reduce { state.copy(isPreparing = false, error = null) }
+            BillingResultStatus.ITEM_ALREADY_OWNED -> {
+                reduce { state.copy(isPreparing = false, error = null) }
+                // 미소비 구매가 하나뿐이라고 단정하지 않고 복구 조회로 전부 다시 찾는다.
+                paymentVerifier.requestRecovery()
+            }
+            BillingResultStatus.ERROR, null -> {
+                val code = result?.let { " (코드: ${it.responseCode})" }.orEmpty()
+                reduce { state.copy(isPreparing = false, error = "결제창을 열 수 없습니다.$code") }
+                postSideEffect(StoreSideEffect.ShowToast(R.string.store_billing_launch_fail_toast))
+            }
         }
-        if (!launched) postSideEffect(StoreSideEffect.ShowToast(R.string.store_billing_launch_fail_toast))
     }
 }

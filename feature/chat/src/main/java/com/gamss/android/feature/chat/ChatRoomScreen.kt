@@ -238,6 +238,32 @@ private data class TokenUsageSnackbarVisuals(
     override val duration: SnackbarDuration = SnackbarDuration.Short
 }
 
+@Composable
+private fun TokenUsageSnackbarHost(snackbarHostState: SnackbarHostState) {
+    SnackbarHost(snackbarHostState) { data ->
+        val visuals = data.visuals as? TokenUsageSnackbarVisuals
+        GamssSnackBar(
+            message = data.visuals.message,
+            actionLabel = data.visuals.actionLabel,
+            onActionClick = { data.performAction() },
+            snackBarIcon = if (visuals?.showIcon == true) {
+                {
+                    Icon(
+                        painter = painterResource(GamssIcons.InfoFilled),
+                        contentDescription = null,
+                        tint = GamssTheme.colors.red,
+                    )
+                }
+            } else {
+                null
+            },
+            modifier = Modifier
+                .windowInsetsPadding(WindowInsets.navigationBars)
+                .padding(horizontal = GamssTheme.spacing.spacing300, vertical = GamssTheme.spacing.spacing200),
+        )
+    }
+}
+
 @Immutable
 private data class ChatRoomActions(
     val onInputChange: (String) -> Unit,
@@ -318,30 +344,7 @@ private fun ChatRoomContent(
         },
         // 상위 Scaffold 가 인셋을 이미 적용해, imePadding 을 그대로 쓰면 이중 적용된다.
         contentWindowInsets = WindowInsets(0),
-        snackbarHost = {
-            SnackbarHost(snackbarHostState) { data ->
-                val visuals = data.visuals as? TokenUsageSnackbarVisuals
-                GamssSnackBar(
-                    message = data.visuals.message,
-                    actionLabel = data.visuals.actionLabel,
-                    onActionClick = { data.performAction() },
-                    snackBarIcon = if (visuals?.showIcon == true) {
-                        {
-                            Icon(
-                                painter = painterResource(GamssIcons.InfoFilled),
-                                contentDescription = null,
-                                tint = GamssTheme.colors.red,
-                            )
-                        }
-                    } else {
-                        null
-                    },
-                    modifier = Modifier
-                        .windowInsetsPadding(WindowInsets.navigationBars)
-                        .padding(horizontal = GamssTheme.spacing.spacing300, vertical = GamssTheme.spacing.spacing200),
-                )
-            }
-        },
+        snackbarHost = { TokenUsageSnackbarHost(snackbarHostState) },
     ) { innerPadding ->
         Column(
             modifier = Modifier

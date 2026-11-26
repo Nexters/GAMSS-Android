@@ -1,6 +1,7 @@
 package com.gamss.android.feature.store
 
 import com.gamss.android.core.billing.BillingOperationResult
+import com.gamss.android.core.billing.BillingResultStatus
 import com.gamss.android.core.billing.PaymentEvent
 import com.gamss.android.core.billing.PaymentState
 import com.gamss.android.core.billing.PendingPurchaseVerifier
@@ -61,8 +62,13 @@ class StoreViewModelTest {
     ): StoreViewModel {
         every { observeBillingConnection() } returns connectionState
         return StoreViewModel(
-            getPaymentProducts, getPaymentAccountToken, observeBillingConnection, connectBilling, getBillingProducts,
-            paymentVerifier, isLicensedPackage,
+            getPaymentProducts,
+            getPaymentAccountToken,
+            observeBillingConnection,
+            connectBilling,
+            getBillingProducts,
+            paymentVerifier,
+            isLicensedPackage,
         )
     }
 
@@ -233,6 +239,37 @@ class StoreViewModelTest {
             expectState { copy(isPreparing = false, error = null) }
             expectNoItems()
         }
+    }
+
+    @Test
+    fun `사용자가 결제창을 취소하면 오류 안내 없이 구매 중 상태만 해제한다`() = runTest {
+        viewModel().test(this) {
+            containerHost.onBillingFlowResult(
+                BillingOperationResult(
+                    isSuccess = false,
+                    responseCode = 1,
+                    status = BillingResultStatus.USER_CANCELED,
+                ),
+            )
+            expectNoItems()
+        }
+        verify(exactly = 0) { paymentVerifier.requestRecovery() }
+    }
+
+    @Test
+    fun `이미 보유한 상품이면 오류 안내 없이 미처리 구매 복구를 요청한다`() = runTest {
+        viewModel().test(this) {
+            containerHost.onBillingFlowResult(
+                BillingOperationResult(
+                    isSuccess = false,
+                    responseCode = 7,
+                    status = BillingResultStatus.ITEM_ALREADY_OWNED,
+                ),
+            )
+            runCurrent()
+            expectNoItems()
+        }
+        verify(exactly = 1) { paymentVerifier.requestRecovery() }
     }
 
     @Test

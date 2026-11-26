@@ -136,6 +136,8 @@ fun MainScreen(
     }
 }
 
+// 화면 entry를 한곳에서 보이도록 나열하기 위해 이 함수에만 길이 제한을 제외한다.
+@Suppress("LongMethod")
 private fun mainEntryProvider(navigator: Navigator) = entryProvider {
     entry<StoreKey> {
         val launcher = LocalActivity.current as? BillingFlowLauncher

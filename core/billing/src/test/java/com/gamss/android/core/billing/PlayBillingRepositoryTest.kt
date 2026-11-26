@@ -158,6 +158,24 @@ class PlayBillingRepositoryTest {
         job.cancel()
     }
 
+    @Test
+    fun `결제창 실행 즉시 결과의 응답 코드를 호출부가 분기할 상태로 분류한다`() {
+        val product = BillingProduct(mockk(), productId = "p1", offerToken = null, formattedPrice = "")
+        val expected = mapOf(
+            BillingResponseCode.OK to BillingResultStatus.OK,
+            BillingResponseCode.USER_CANCELED to BillingResultStatus.USER_CANCELED,
+            BillingResponseCode.ITEM_ALREADY_OWNED to BillingResultStatus.ITEM_ALREADY_OWNED,
+            BillingResponseCode.DEVELOPER_ERROR to BillingResultStatus.ERROR,
+        )
+
+        expected.forEach { (responseCode, status) ->
+            fakeDataSource.launchBillingFlowResult = billingResult(responseCode)
+            val result = repository.launchPurchaseFlow(mockk(), product, "account-token")
+            assertEquals(status, result.status)
+            assertEquals(responseCode == BillingResponseCode.OK, result.isSuccess)
+        }
+    }
+
     private fun billingResult(responseCode: Int, debugMessage: String = ""): BillingResult =
         BillingResult.newBuilder()
             .setResponseCode(responseCode)
