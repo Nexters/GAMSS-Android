@@ -1,6 +1,8 @@
 package com.gamss.android.core.billing
 
 import android.app.Activity
+import com.gamss.android.domain.payment.BillingOperationResult
+import com.gamss.android.domain.payment.BillingPurchaseOutcome
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 

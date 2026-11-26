@@ -1,5 +1,6 @@
 package com.gamss.android.core.billing
 
+import com.gamss.android.domain.payment.BillingOperationResult
 import com.gamss.android.domain.payment.StoreConnectionState
 import io.mockk.coEvery
 import io.mockk.every

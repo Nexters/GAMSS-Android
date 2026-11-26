@@ -1,6 +1,7 @@
 package com.gamss.android.core.billing
 
 import com.android.billingclient.api.ProductDetails
+import com.gamss.android.domain.payment.BillingOperationResult
 import com.gamss.android.domain.payment.StoreConnectionState
 import com.gamss.android.domain.payment.StoreProduct
 
@@ -20,44 +21,8 @@ data class BillingProduct(
     override val formattedPrice: String,
 ) : StoreProduct
 
-/**
- * 성공 여부와 분기에 필요한 응답 종류는 [core:billing] 안에서 이미 판정해서 담아준다 — 호출부는
- * [isSuccess]·[status]만 보고 분기하면 되고, SDK 응답 코드 상수를 몰라도 된다. [responseCode]는
- * 해석하지 않고 로그 등 참고용으로만 쓴다.
- */
-data class BillingOperationResult(
-    val isSuccess: Boolean,
-    val responseCode: Int,
-    val status: BillingResultStatus = if (isSuccess) BillingResultStatus.OK else BillingResultStatus.ERROR,
-)
-
-/** 호출부가 다르게 처리해야 하는 응답만 구분한다. 나머지 실패는 모두 [ERROR]다. */
-enum class BillingResultStatus {
-    OK,
-    USER_CANCELED,
-    ITEM_ALREADY_OWNED,
-    ERROR,
-}
-
 data class BillingProductQueryResult(
     val callResult: BillingOperationResult,
     val products: List<BillingProduct>,
     val unfetchedProductIds: List<String>,
 )
-
-sealed interface BillingPurchaseOutcome {
-    data class Purchased(val purchaseToken: String, val productIds: List<String>) : BillingPurchaseOutcome
-    data class Pending(val productIds: List<String>) : BillingPurchaseOutcome
-    data object UserCanceled : BillingPurchaseOutcome
-    data object AlreadyOwned : BillingPurchaseOutcome
-    data class Error(
-        val responseCode: Int,
-        val message: String,
-        val source: BillingErrorSource = BillingErrorSource.PURCHASE_UPDATE,
-    ) : BillingPurchaseOutcome
-}
-
-enum class BillingErrorSource {
-    PURCHASE_UPDATE,
-    RESTORE_QUERY,
-}

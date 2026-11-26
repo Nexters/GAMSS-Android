@@ -5,6 +5,9 @@ import com.android.billingclient.api.BillingResult
 import com.android.billingclient.api.Purchase
 import com.android.billingclient.api.PurchasesResult
 import com.android.billingclient.api.QueryProductDetailsResult
+import com.gamss.android.domain.payment.BillingErrorSource
+import com.gamss.android.domain.payment.BillingPurchaseOutcome
+import com.gamss.android.domain.payment.BillingResultStatus
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.CoroutineScope
