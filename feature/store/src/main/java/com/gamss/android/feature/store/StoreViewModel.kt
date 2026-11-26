@@ -1,13 +1,17 @@
 package com.gamss.android.feature.store
 
 import android.util.Log
+import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import com.gamss.android.core.billing.BillingOperationResult
 import com.gamss.android.core.billing.BillingResultStatus
 import com.gamss.android.core.billing.LicensedPackage
+import com.gamss.android.core.billing.PaymentFailureReason
 import com.gamss.android.core.billing.PendingPurchaseVerifier
+import com.gamss.android.core.billing.paymentFailureReason
 import com.gamss.android.core.billing.paymentMessage
 import com.gamss.android.core.common.AppResult
+import com.gamss.android.core.common.network.ApiException
 import com.gamss.android.domain.payment.ConnectBillingUseCase
 import com.gamss.android.domain.payment.GetBillingProductsUseCase
 import com.gamss.android.domain.payment.GetPaymentAccountTokenUseCase
@@ -75,10 +79,20 @@ constructor(
             connectBilling()
             return@intent
         }
-        reduce { state.copy(isLoading = true, error = null) }
+        reduce { state.copy(isLoading = true, loadFailure = null, isEmpty = false, error = null) }
         when (val result = getPaymentProducts()) {
             is AppResult.Success -> loadPrices(result.data)
-            is AppResult.Failure -> reduce { state.copy(isLoading = false, error = result.throwable.paymentMessage()) }
+            is AppResult.Failure -> reduce {
+                state.copy(
+                    isLoading = false,
+                    loadFailure = if (result.throwable is ApiException.Network) {
+                        StoreLoadFailure.NETWORK
+                    } else {
+                        StoreLoadFailure.UNKNOWN
+                    },
+                    error = result.throwable.paymentMessage(),
+                )
+            }
         }
     }
 
@@ -86,7 +100,7 @@ constructor(
         serverProducts: List<TokenProduct>,
     ) {
         if (serverProducts.isEmpty()) {
-            reduce { state.copy(isLoading = false, tokenProducts = emptyList(), error = "판매 중인 상품이 없습니다.") }
+            reduce { state.copy(isLoading = false, tokenProducts = emptyList(), isEmpty = true) }
             return
         }
         val result = getBillingProducts(serverProducts.map { it.productId })
@@ -108,6 +122,8 @@ constructor(
                 error = if (result.isSuccess) null else "Google Play 상품 조회에 실패했습니다.",
             )
         }
+        // 카드는 비활성으로 남고, 왜 누를 수 없는지 한 번 안내한다.
+        if (!result.isSuccess) postSideEffect(StoreSideEffect.ShowToast(R.string.store_product_info_unavailable_toast))
     }
 
     fun purchase(productId: String) = intent {
@@ -125,11 +141,9 @@ constructor(
         productId: String,
     ) {
         when (val account = getPaymentAccountToken()) {
-            is AppResult.Failure -> reduce {
-                state.copy(
-                    isPreparing = false,
-                    error = account.throwable.paymentMessage(),
-                )
+            is AppResult.Failure -> {
+                reduce { state.copy(isPreparing = false, error = account.throwable.paymentMessage()) }
+                postSideEffect(StoreSideEffect.ShowToast(account.throwable.prepareFailureMessageRes()))
             }
             is AppResult.Success -> {
                 // 결제 직전 새 ProductDetails를 조회한다. 화면에 저장한 오래된 참조를 사용하지 않는다.
@@ -137,6 +151,7 @@ constructor(
                 val product = query.products.firstOrNull { it.productId == productId }
                 if (!query.isSuccess || product == null) {
                     reduce { state.copy(isPreparing = false, error = "구매 가능한 상품 정보를 찾지 못했습니다.") }
+                    postSideEffect(StoreSideEffect.ShowToast(R.string.store_product_info_unavailable_toast))
                 } else {
                     postSideEffect(StoreSideEffect.LaunchBillingFlow(product, account.data))
                 }
@@ -160,6 +175,14 @@ constructor(
                 postSideEffect(StoreSideEffect.ShowToast(R.string.store_billing_launch_fail_toast))
             }
         }
+    }
+
+    /** 결제 직전 계정 토큰 조회 실패 안내. 다시 시도로 해결되지 않는 원인만 따로 안내한다. */
+    @StringRes
+    private fun Throwable.prepareFailureMessageRes(): Int = when (paymentFailureReason()) {
+        PaymentFailureReason.LOGIN_REQUIRED -> R.string.store_purchase_login_required_toast
+        PaymentFailureReason.WITHDRAWN_MEMBER -> R.string.store_purchase_withdrawn_member_toast
+        else -> R.string.store_purchase_prepare_fail_toast
     }
 
     private companion object {

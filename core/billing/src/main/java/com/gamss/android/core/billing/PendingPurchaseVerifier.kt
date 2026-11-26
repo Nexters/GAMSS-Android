@@ -115,7 +115,13 @@ internal class PendingPurchaseVerifierImpl @Inject constructor(
             }
             BillingPurchaseOutcome.AlreadyOwned -> showMessage("미처리 구매를 확인하고 있습니다.")
             is BillingPurchaseOutcome.Error -> {
-                mutableState.value = state.value.copy(message = null, billingError = outcome)
+                val updated = state.value.copy(message = null, billingError = outcome)
+                // 사용자가 진행한 결제의 실패만 안내한다. 백그라운드 복구 조회 실패는 다음 복구 때 다시 조회한다.
+                mutableState.value = if (outcome.source == BillingErrorSource.PURCHASE_UPDATE) {
+                    updated.withNotice(PaymentEvent.PurchaseFailed)
+                } else {
+                    updated
+                }
             }
         }
     }
@@ -168,6 +174,9 @@ internal class PendingPurchaseVerifierImpl @Inject constructor(
 sealed interface PaymentEvent {
     data class Granted(val grantedTokens: Long) : PaymentEvent
     data class VerificationFailed(val reason: PaymentFailureReason) : PaymentEvent
+
+    /** Play 결제 자체가 실패했다(구매 콜백의 오류 응답). 사용자 취소는 포함하지 않는다. */
+    data object PurchaseFailed : PaymentEvent
 }
 
 /**

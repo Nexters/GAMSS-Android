@@ -49,7 +49,6 @@ internal class PlayBillingRepository @Inject constructor(
     }
 
     override fun connect() {
-        
         // 상태 확인과 변경만 락 안에서 하고, SDK 호출은 락 밖에서 한다.
         val shouldStart = synchronized(connectLock) {
             if (_connectionState.value != BillingConnectionState.DISCONNECTED) {

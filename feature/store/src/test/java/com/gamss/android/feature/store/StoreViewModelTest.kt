@@ -9,6 +9,8 @@ import com.gamss.android.core.billing.PaymentNotice
 import com.gamss.android.core.billing.PaymentState
 import com.gamss.android.core.billing.PendingPurchaseVerifier
 import com.gamss.android.core.common.AppResult
+import com.gamss.android.core.common.network.ApiException
+import com.gamss.android.domain.auth.SessionExpiredException
 import com.gamss.android.domain.payment.ConnectBillingUseCase
 import com.gamss.android.domain.payment.GetBillingProductsUseCase
 import com.gamss.android.domain.payment.GetPaymentAccountTokenUseCase
@@ -167,16 +169,44 @@ class StoreViewModelTest {
     }
 
     @Test
-    fun `서버 상품 조회가 실패하면 에러 메시지를 표시한다`() = runTest {
+    fun `네트워크가 아닌 이유로 서버 상품 조회가 실패하면 상점 전용 재시도 안내를 표시한다`() = runTest {
         coEvery { getPaymentProducts() } returns AppResult.Failure(IllegalStateException())
         val connectionState = MutableStateFlow(StoreConnectionState.DISCONNECTED)
 
         viewModel(connectionState).test(this) {
             connectionState.value = StoreConnectionState.CONNECTED
 
-            expectState { copy(isLoading = true, error = null) }
-            expectState { copy(isLoading = false, error = "구매 정보를 불러오지 못했습니다. 잠시 후 다시 확인해 주세요.") }
+            expectState { copy(isLoading = true) }
+            expectState {
+                copy(
+                    isLoading = false,
+                    loadFailure = StoreLoadFailure.UNKNOWN,
+                    error = "구매 정보를 불러오지 못했습니다. 잠시 후 다시 확인해 주세요.",
+                )
+            }
         }
+    }
+
+    @Test
+    fun `네트워크 오류로 서버 상품 조회가 실패하면 네트워크 오류 화면을 표시하고 재시도하면 다시 조회한다`() = runTest {
+        coEvery { getPaymentProducts() } returnsMany listOf(
+            AppResult.Failure(ApiException.Network(IllegalStateException())),
+            AppResult.Success(emptyList()),
+        )
+        val connectionState = MutableStateFlow(StoreConnectionState.DISCONNECTED)
+
+        viewModel(connectionState).test(this) {
+            connectionState.value = StoreConnectionState.CONNECTED
+
+            expectState { copy(isLoading = true) }
+            val failed = awaitState()
+            assertEquals(StoreLoadFailure.NETWORK, failed.loadFailure)
+
+            containerHost.loadProducts()
+            expectState { copy(isLoading = true, loadFailure = null, error = null) }
+            expectState { copy(isLoading = false, isEmpty = true) }
+        }
+        coVerify(exactly = 2) { getPaymentProducts() }
     }
 
     @Test
@@ -187,8 +217,8 @@ class StoreViewModelTest {
         viewModel(connectionState).test(this) {
             connectionState.value = StoreConnectionState.CONNECTED
 
-            expectState { copy(isLoading = true, error = null) }
-            expectState { copy(isLoading = false, tokenProducts = emptyList(), error = "판매 중인 상품이 없습니다.") }
+            expectState { copy(isLoading = true) }
+            expectState { copy(isLoading = false, isEmpty = true) }
         }
         coVerify(exactly = 0) { getBillingProducts(any()) }
     }
@@ -217,6 +247,7 @@ class StoreViewModelTest {
                     error = "Google Play 상품 조회에 실패했습니다.",
                 )
             }
+            expectSideEffect(StoreSideEffect.ShowToast(R.string.store_product_info_unavailable_toast))
         }
     }
 
@@ -229,8 +260,27 @@ class StoreViewModelTest {
 
             expectState { copy(isPreparing = true, error = null) }
             expectState { copy(isPreparing = false, error = "구매 정보를 불러오지 못했습니다. 잠시 후 다시 확인해 주세요.") }
+            expectSideEffect(StoreSideEffect.ShowToast(R.string.store_purchase_prepare_fail_toast))
         }
         coVerify(exactly = 0) { getBillingProducts(any()) }
+    }
+
+    @Test
+    fun `계정 토큰 조회 실패 중 다시 시도로 해결되지 않는 원인은 원인을 안내한다`() = runTest {
+        val expected = listOf(
+            SessionExpiredException() to R.string.store_purchase_login_required_toast,
+            ApiException.Http(403, "WITHDRAWN_MEMBER", "") to R.string.store_purchase_withdrawn_member_toast,
+            ApiException.Network(IllegalStateException()) to R.string.store_purchase_prepare_fail_toast,
+        )
+        expected.forEach { (throwable, messageRes) ->
+            coEvery { getPaymentAccountToken() } returns AppResult.Failure(throwable)
+            viewModel().test(this) {
+                containerHost.purchase("token_300k")
+                expectState { copy(isPreparing = true, error = null) }
+                awaitState()
+                expectSideEffect(StoreSideEffect.ShowToast(messageRes))
+            }
+        }
     }
 
     @Test
@@ -246,6 +296,7 @@ class StoreViewModelTest {
 
             expectState { copy(isPreparing = true, error = null) }
             expectState { copy(isPreparing = false, error = "구매 가능한 상품 정보를 찾지 못했습니다.") }
+            expectSideEffect(StoreSideEffect.ShowToast(R.string.store_product_info_unavailable_toast))
         }
     }
 
@@ -342,6 +393,7 @@ class StoreViewModelTest {
     fun `결제 결과 안내는 원인별 문구를 쓰고 일시적 실패만 다시 시도하라고 안내한다`() {
         val expected = mapOf(
             PaymentEvent.Granted(300_000) to R.string.store_purchase_complete_toast,
+            PaymentEvent.PurchaseFailed to R.string.store_purchase_failed_toast,
             PaymentEvent.VerificationFailed(PaymentFailureReason.RETRYABLE) to
                 R.string.store_purchase_verify_fail_toast,
             PaymentEvent.VerificationFailed(PaymentFailureReason.LOGIN_REQUIRED) to

@@ -37,6 +37,7 @@ import com.gamss.android.core.billing.BillingOperationResult
 import com.gamss.android.core.designsystem.component.GamssIconButton
 import com.gamss.android.core.designsystem.component.GamssIcons
 import com.gamss.android.core.designsystem.component.GamssLogo
+import com.gamss.android.core.designsystem.component.GamssNetworkErrorContent
 import com.gamss.android.core.designsystem.component.GamssTopBar
 import com.gamss.android.core.designsystem.theme.GamssTheme
 import com.gamss.android.domain.payment.StoreConnectionState
@@ -89,6 +90,7 @@ fun StoreScreen(
             purchaseEnabled = purchaseEnabled,
             onSettingClick = viewModel::navigateToSetting,
             onPurchaseClick = viewModel::purchase,
+            onRetryClick = viewModel::loadProducts,
         )
         if (busy) {
             CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
@@ -102,6 +104,7 @@ private fun StoreContent(
     purchaseEnabled: Boolean,
     onSettingClick: () -> Unit,
     onPurchaseClick: (String) -> Unit,
+    onRetryClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.fillMaxSize()) {
@@ -117,21 +120,52 @@ private fun StoreContent(
             },
         )
 
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = CardsHorizontalPadding),
-            horizontalArrangement = Arrangement.spacedBy(CardsGap),
-        ) {
-            state.tokenProducts.forEachIndexed { index, product ->
-                StoreTokenCard(
-                    product = product,
-                    pinRotation = PinRotations[index % PinRotations.size],
-                    enabled = purchaseEnabled && product.billingProduct != null,
-                    onClick = { onPurchaseClick(product.product.productId) },
-                    modifier = Modifier.weight(1f),
-                )
-            }
+        val messageModifier = Modifier
+            .fillMaxWidth()
+            .weight(1f)
+        when {
+            state.loadFailure == StoreLoadFailure.NETWORK ->
+                GamssNetworkErrorContent(onRefresh = onRetryClick, modifier = messageModifier)
+            state.loadFailure == StoreLoadFailure.UNKNOWN -> StoreMessageContent(
+                title = stringResource(R.string.store_load_fail_title),
+                description = stringResource(R.string.store_load_fail_description),
+                actionLabel = stringResource(R.string.store_load_fail_retry),
+                onAction = onRetryClick,
+                modifier = messageModifier,
+            )
+            state.isEmpty -> StoreMessageContent(
+                title = stringResource(R.string.store_empty_products),
+                modifier = messageModifier,
+            )
+            else -> StoreTokenCards(
+                products = state.tokenProducts,
+                purchaseEnabled = purchaseEnabled,
+                onPurchaseClick = onPurchaseClick,
+            )
+        }
+    }
+}
+
+@Composable
+private fun StoreTokenCards(
+    products: List<StoreTokenProduct>,
+    purchaseEnabled: Boolean,
+    onPurchaseClick: (String) -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = CardsHorizontalPadding),
+        horizontalArrangement = Arrangement.spacedBy(CardsGap),
+    ) {
+        products.forEachIndexed { index, product ->
+            StoreTokenCard(
+                product = product,
+                pinRotation = PinRotations[index % PinRotations.size],
+                enabled = purchaseEnabled && product.billingProduct != null,
+                onClick = { onPurchaseClick(product.product.productId) },
+                modifier = Modifier.weight(1f),
+            )
         }
     }
 }
@@ -213,7 +247,13 @@ private val PinRotations = listOf(45f, -75f, 75f)
 @Suppress("UnusedPrivateMember")
 private fun StoreContentLightPreview() {
     GamssTheme(darkTheme = false) {
-        StoreContent(state = StoreState(), purchaseEnabled = true, onSettingClick = {}, onPurchaseClick = {})
+        StoreContent(
+            state = StoreState(),
+            purchaseEnabled = true,
+            onSettingClick = {},
+            onPurchaseClick = {},
+            onRetryClick = {},
+        )
     }
 }
 
@@ -222,6 +262,12 @@ private fun StoreContentLightPreview() {
 @Suppress("UnusedPrivateMember")
 private fun StoreContentDarkPreview() {
     GamssTheme(darkTheme = true) {
-        StoreContent(state = StoreState(), purchaseEnabled = true, onSettingClick = {}, onPurchaseClick = {})
+        StoreContent(
+            state = StoreState(),
+            purchaseEnabled = true,
+            onSettingClick = {},
+            onPurchaseClick = {},
+            onRetryClick = {},
+        )
     }
 }

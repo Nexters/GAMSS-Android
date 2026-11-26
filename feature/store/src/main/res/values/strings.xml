@@ -15,4 +15,13 @@
     <string name="store_purchase_cancelled_toast">취소되었거나 환불된 구매예요.</string>
     <string name="store_purchase_product_unavailable_toast">현재 판매 중인 상품이 아니에요.</string>
     <string name="store_purchase_invalid_toast">구매 정보를 확인할 수 없어요.</string>
+    <string name="store_purchase_failed_toast">결제를 완료하지 못했어요. 잠시 후 다시 시도해 주세요.</string>
+    <string name="store_purchase_prepare_fail_toast">구매를 준비하지 못했어요. 잠시 후 다시 시도해 주세요.</string>
+    <string name="store_product_info_unavailable_toast">상품 정보를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.</string>
+
+    <!-- 상품 목록 대신 보여주는 안내 -->
+    <string name="store_empty_products">구매할 수 있는 토큰이 없습니다.</string>
+    <string name="store_load_fail_title">상품을 불러오지 못했어요.</string>
+    <string name="store_load_fail_description">잠시 후 다시 시도해 주세요.</string>
+    <string name="store_load_fail_retry">재시도</string>
 </resources>

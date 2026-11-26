@@ -8,6 +8,7 @@ import com.gamss.android.core.billing.PaymentFailureReason
 @StringRes
 fun PaymentEvent.messageRes(): Int = when (this) {
     is PaymentEvent.Granted -> R.string.store_purchase_complete_toast
+    PaymentEvent.PurchaseFailed -> R.string.store_purchase_failed_toast
     is PaymentEvent.VerificationFailed -> when (reason) {
         PaymentFailureReason.RETRYABLE -> R.string.store_purchase_verify_fail_toast
         PaymentFailureReason.LOGIN_REQUIRED -> R.string.store_purchase_login_required_toast

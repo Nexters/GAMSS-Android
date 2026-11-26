@@ -7,13 +7,22 @@ import com.gamss.android.core.billing.PaymentState
 import com.gamss.android.domain.payment.StoreProduct
 import com.gamss.android.domain.payment.TokenProduct
 
+/**
+ * [loadFailure]·[isEmpty]는 상품 목록 영역 대신 보여줄 화면을 정한다. [error]는 응답 코드 등이 담긴 진단용
+ * 문구라 디버그 화면에서만 쓰고, 배포 화면의 사용자 안내는 리소스와 Toast로 한다.
+ */
 data class StoreState(
     val tokenProducts: List<StoreTokenProduct> = emptyList(),
     val isLoading: Boolean = false,
     val isPreparing: Boolean = false,
     val payment: PaymentState = PaymentState(),
+    val loadFailure: StoreLoadFailure? = null,
+    val isEmpty: Boolean = false,
     val error: String? = null,
 )
+
+/** 서버 상품 조회 실패 종류. 네트워크 오류는 공용 네트워크 오류 화면을, 그 외에는 상점 전용 안내를 보여준다. */
+enum class StoreLoadFailure { NETWORK, UNKNOWN }
 
 /**
  * [labelAmountInTenThousands]는 카드 라벨("30만 토큰")에 쓰는 만 단위 수량이다. 서버가 내려준 실제 지급량

@@ -231,6 +231,19 @@ class PendingPurchaseVerifierTest {
     }
 
     @Test
+    fun `사용자가 진행한 Play 결제 실패만 안내하고 백그라운드 복구 조회 실패는 안내하지 않는다`() = runTest {
+        val verifier = verifier()
+        runCurrent()
+        outcomes.send(BillingPurchaseOutcome.Error(3, "unavailable", BillingErrorSource.RESTORE_QUERY))
+        runCurrent()
+        assertEquals(emptyList<PaymentNotice>(), verifier.state.value.notices)
+
+        outcomes.send(BillingPurchaseOutcome.Error(3, "unavailable", BillingErrorSource.PURCHASE_UPDATE))
+        runCurrent()
+        assertEquals(listOf(PaymentEvent.PurchaseFailed), verifier.state.value.notices.map { it.event })
+    }
+
+    @Test
     fun `서버 PENDING 응답은 완료나 실패 안내를 쌓지 않는다`() = runTest {
         coEvery { verifyGooglePurchase(any()) } returns AppResult.Success(
             PaymentGrant(PaymentStatus.PENDING, "token_300k", 0, 0),
