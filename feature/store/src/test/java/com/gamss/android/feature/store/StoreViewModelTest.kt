@@ -3,6 +3,8 @@ package com.gamss.android.feature.store
 import com.gamss.android.core.billing.BillingOperationResult
 import com.gamss.android.core.billing.BillingResultStatus
 import com.gamss.android.core.billing.PaymentEvent
+import com.gamss.android.core.billing.PaymentFailureReason
+import com.gamss.android.core.billing.PaymentNotice
 import com.gamss.android.core.billing.PaymentState
 import com.gamss.android.core.billing.PendingPurchaseVerifier
 import com.gamss.android.core.common.AppResult
@@ -21,10 +23,10 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.orbitmvi.orbit.test.test
 
@@ -38,11 +40,9 @@ class StoreViewModelTest {
     private val getBillingProducts: GetBillingProductsUseCase = mockk()
     private val paymentVerifier: PendingPurchaseVerifier = mockk(relaxed = true)
     private val paymentState = MutableStateFlow(PaymentState())
-    private val paymentEvents = MutableSharedFlow<PaymentEvent>(extraBufferCapacity = 1)
 
     init {
         every { paymentVerifier.state } returns paymentState
-        every { paymentVerifier.events } returns paymentEvents
     }
 
     @Test
@@ -273,25 +273,45 @@ class StoreViewModelTest {
     }
 
     @Test
-    fun `서버 지급이 완료되면 구매 완료를 안내한다`() = runTest {
+    fun `상점 진입 전에 쌓인 결제 결과 안내도 진입 시 화면 상태로 전달한다`() = runTest {
+        val notice = PaymentNotice(id = 0, event = PaymentEvent.Granted(grantedTokens = 300_000))
+        paymentState.value = PaymentState(notices = listOf(notice))
+
         viewModel().test(this) {
             containerHost.requestRecovery()
-            runCurrent()
-            paymentEvents.emit(PaymentEvent.Granted(grantedTokens = 300_000))
-            expectSideEffect(StoreSideEffect.ShowToast(R.string.store_purchase_complete_toast))
+            expectState { copy(payment = PaymentState(notices = listOf(notice))) }
             containerHost.stopObservingPayment()
         }
     }
 
     @Test
-    fun `서버 검증에 실패하면 다시 시도하라고 안내한다`() = runTest {
+    fun `안내를 표시하면 결제 상태에서 제거하도록 전달한다`() = runTest {
         viewModel().test(this) {
-            containerHost.requestRecovery()
-            runCurrent()
-            paymentEvents.emit(PaymentEvent.VerificationFailed)
-            expectSideEffect(StoreSideEffect.ShowToast(R.string.store_purchase_verify_fail_toast))
-            containerHost.stopObservingPayment()
+            containerHost.onPaymentNoticeShown(3)
         }
+        verify(exactly = 1) { paymentVerifier.onNoticeShown(3) }
+    }
+
+    @Test
+    fun `결제 결과 안내는 원인별 문구를 쓰고 일시적 실패만 다시 시도하라고 안내한다`() {
+        val expected = mapOf(
+            PaymentEvent.Granted(300_000) to R.string.store_purchase_complete_toast,
+            PaymentEvent.VerificationFailed(PaymentFailureReason.RETRYABLE) to
+                R.string.store_purchase_verify_fail_toast,
+            PaymentEvent.VerificationFailed(PaymentFailureReason.LOGIN_REQUIRED) to
+                R.string.store_purchase_login_required_toast,
+            PaymentEvent.VerificationFailed(PaymentFailureReason.ACCOUNT_MISMATCH) to
+                R.string.store_purchase_account_mismatch_toast,
+            PaymentEvent.VerificationFailed(PaymentFailureReason.WITHDRAWN_MEMBER) to
+                R.string.store_purchase_withdrawn_member_toast,
+            PaymentEvent.VerificationFailed(PaymentFailureReason.PURCHASE_CANCELLED) to
+                R.string.store_purchase_cancelled_toast,
+            PaymentEvent.VerificationFailed(PaymentFailureReason.PRODUCT_UNAVAILABLE) to
+                R.string.store_purchase_product_unavailable_toast,
+            PaymentEvent.VerificationFailed(PaymentFailureReason.INVALID_PURCHASE) to
+                R.string.store_purchase_invalid_toast,
+        )
+        expected.forEach { (event, messageRes) -> assertEquals(messageRes, event.messageRes()) }
     }
 
     private fun billingProduct(productId: String): StoreProduct = mockk {

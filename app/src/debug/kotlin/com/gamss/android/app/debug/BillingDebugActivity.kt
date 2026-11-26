@@ -1,6 +1,7 @@
 package com.gamss.android.app.debug
 
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -19,9 +20,11 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -45,6 +48,7 @@ import com.gamss.android.feature.login.LoginScreen
 import com.gamss.android.feature.store.StoreSideEffect
 import com.gamss.android.feature.store.StoreTokenProduct
 import com.gamss.android.feature.store.StoreViewModel
+import com.gamss.android.feature.store.messageRes
 import dagger.Lazy
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
@@ -108,10 +112,20 @@ private fun BillingDebugScreen(
     val state by viewModel.collectAsState()
     val connection by viewModel.connectionState.collectAsStateWithLifecycle()
     val busy = state.isLoading || state.isPreparing || state.payment.isVerifying
+    val context = LocalContext.current
 
     DisposableEffect(viewModel) {
         viewModel.requestRecovery()
         onDispose { viewModel.stopObservingPayment() }
+    }
+
+    // 여기서 처리하지 않으면 디버그 화면에서 발생한 안내가 남아 있다가 상점 진입 시 표시된다.
+    state.payment.notices.firstOrNull()?.let { notice ->
+        val message = stringResource(notice.event.messageRes())
+        LaunchedEffect(notice.id) {
+            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+            viewModel.onPaymentNoticeShown(notice.id)
+        }
     }
 
     viewModel.collectSideEffect { effect ->

@@ -4,7 +4,6 @@ import androidx.lifecycle.ViewModel
 import com.gamss.android.core.billing.BillingOperationResult
 import com.gamss.android.core.billing.BillingResultStatus
 import com.gamss.android.core.billing.LicensedPackage
-import com.gamss.android.core.billing.PaymentEvent
 import com.gamss.android.core.billing.PendingPurchaseVerifier
 import com.gamss.android.core.billing.paymentMessage
 import com.gamss.android.core.common.AppResult
@@ -17,8 +16,6 @@ import com.gamss.android.domain.payment.StoreConnectionState
 import com.gamss.android.domain.payment.TokenProduct
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.launch
 import org.orbitmvi.orbit.ContainerHost
 import org.orbitmvi.orbit.syntax.Syntax
 import org.orbitmvi.orbit.viewmodel.container
@@ -57,21 +54,14 @@ constructor(
     fun requestRecovery() {
         if (paymentObserver?.isActive != true) {
             paymentObserver = intent {
-                coroutineScope {
-                    launch { paymentState.collect { payment -> reduce { state.copy(payment = payment) } } }
-                    launch { paymentVerifier.events.collect { event -> postSideEffect(event.toToast()) } }
-                }
+                paymentState.collect { payment -> reduce { state.copy(payment = payment) } }
             }
         }
         paymentVerifier.requestRecovery()
     }
 
-    private fun PaymentEvent.toToast() = StoreSideEffect.ShowToast(
-        when (this) {
-            is PaymentEvent.Granted -> R.string.store_purchase_complete_toast
-            PaymentEvent.VerificationFailed -> R.string.store_purchase_verify_fail_toast
-        },
-    )
+    /** 결제 결과 안내([com.gamss.android.core.billing.PaymentState.notices])를 화면에 표시한 뒤 호출한다. */
+    fun onPaymentNoticeShown(noticeId: Long) = paymentVerifier.onNoticeShown(noticeId)
 
     fun stopObservingPayment() {
         paymentObserver?.cancel()

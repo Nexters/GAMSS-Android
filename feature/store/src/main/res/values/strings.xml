@@ -10,4 +10,10 @@
     <string name="store_purchase_complete_toast">토큰 구매가 완료됐어요.</string>
     <string name="store_billing_launch_fail_toast">결제창을 열지 못했어요. 잠시 후 다시 시도해 주세요.</string>
     <string name="store_purchase_verify_fail_toast">구매를 확인하지 못했어요. 잠시 후 다시 시도해 주세요.</string>
+    <string name="store_purchase_login_required_toast">로그인이 필요해요. 다시 로그인해 주세요.</string>
+    <string name="store_purchase_account_mismatch_toast">구매한 계정과 현재 계정이 달라요. 구매한 계정으로 로그인해 주세요.</string>
+    <string name="store_purchase_withdrawn_member_toast">탈퇴한 계정으로는 구매할 수 없어요.</string>
+    <string name="store_purchase_cancelled_toast">취소되었거나 환불된 구매예요.</string>
+    <string name="store_purchase_product_unavailable_toast">현재 판매 중인 상품이 아니에요.</string>
+    <string name="store_purchase_invalid_toast">구매 정보를 확인할 수 없어요.</string>
 </resources>

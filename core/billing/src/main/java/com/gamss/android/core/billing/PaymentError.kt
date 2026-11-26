@@ -19,6 +19,37 @@ fun Throwable.paymentMessage(): String = when (this) {
     else -> "구매 정보를 불러오지 못했습니다. 잠시 후 다시 확인해 주세요."
 }
 
+/**
+ * 서버 구매 검증 실패를 사용자 안내가 달라지는 단위로 묶는다. [RETRYABLE]만 다시 시도로 해결될 수
+ * 있고, 나머지는 다시 시도해도 같은 결과라 원인을 그대로 안내해야 한다.
+ */
+enum class PaymentFailureReason {
+    RETRYABLE,
+    LOGIN_REQUIRED,
+    ACCOUNT_MISMATCH,
+    WITHDRAWN_MEMBER,
+    PURCHASE_CANCELLED,
+    PRODUCT_UNAVAILABLE,
+    INVALID_PURCHASE,
+}
+
+fun Throwable.paymentFailureReason(): PaymentFailureReason = when (this) {
+    is SessionExpiredException -> PaymentFailureReason.LOGIN_REQUIRED
+    is ApiException.Http -> when (code) {
+        "PURCHASE_ACCESS_DENIED" -> PaymentFailureReason.ACCOUNT_MISMATCH
+        "WITHDRAWN_MEMBER" -> PaymentFailureReason.WITHDRAWN_MEMBER
+        "PURCHASE_CANCELLED" -> PaymentFailureReason.PURCHASE_CANCELLED
+        "PAYMENT_PRODUCT_UNAVAILABLE" -> PaymentFailureReason.PRODUCT_UNAVAILABLE
+        "INVALID_INPUT",
+        "PURCHASE_INVALID",
+        "PURCHASE_PRODUCT_MISMATCH",
+        "PURCHASE_QUANTITY_UNSUPPORTED",
+        -> PaymentFailureReason.INVALID_PURCHASE
+        else -> PaymentFailureReason.RETRYABLE
+    }
+    else -> PaymentFailureReason.RETRYABLE
+}
+
 fun BillingPurchaseOutcome.Error.paymentMessage(): String {
     val operation = when (source) {
         BillingErrorSource.PURCHASE_UPDATE -> "Google Play 결제 실패"

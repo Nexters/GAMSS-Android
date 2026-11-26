@@ -21,6 +21,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -67,6 +68,15 @@ fun StoreScreen(
                 viewModel.onBillingFlowResult(launchBillingFlow(sideEffect.product, sideEffect.accountToken))
             is StoreSideEffect.ShowToast ->
                 Toast.makeText(context, sideEffect.messageRes, Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    // 결제 결과 안내는 상태로 남아 있다가 하나씩 표시되고, 표시한 뒤에 상태에서 제거된다.
+    state.payment.notices.firstOrNull()?.let { notice ->
+        val message = stringResource(notice.event.messageRes())
+        LaunchedEffect(notice.id) {
+            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+            viewModel.onPaymentNoticeShown(notice.id)
         }
     }
 

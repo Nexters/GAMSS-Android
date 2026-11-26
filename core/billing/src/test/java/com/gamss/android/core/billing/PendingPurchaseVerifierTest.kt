@@ -17,8 +17,6 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
-import kotlinx.coroutines.flow.toList
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
@@ -156,33 +154,91 @@ class PendingPurchaseVerifierTest {
     }
 
     @Test
-    fun `서버 지급 완료와 검증 실패를 일회성 이벤트로 알린다`() = runTest {
+    fun `서버 지급 완료와 검증 실패를 표시 전까지 유지되는 안내로 쌓는다`() = runTest {
         coEvery { verifyGooglePurchase(any()) } returnsMany listOf(
             AppResult.Success(PaymentGrant(PaymentStatus.GRANTED, "token_300000", 300000, 600000)),
             AppResult.Failure(IllegalStateException()),
         )
         val verifier = verifier()
-        val events = mutableListOf<PaymentEvent>()
-        backgroundScope.launch { verifier.events.toList(events) }
         runCurrent()
         outcomes.send(BillingPurchaseOutcome.Purchased("receipt-1", listOf("token_300000")))
         outcomes.send(BillingPurchaseOutcome.Purchased("receipt-2", listOf("token_300000")))
         runCurrent()
-        assertEquals(listOf(PaymentEvent.Granted(300000), PaymentEvent.VerificationFailed), events)
+
+        assertEquals(
+            listOf(
+                PaymentEvent.Granted(300000),
+                PaymentEvent.VerificationFailed(PaymentFailureReason.RETRYABLE),
+            ),
+            verifier.state.value.notices.map { it.event },
+        )
     }
 
     @Test
-    fun `서버 PENDING 응답은 완료나 실패 이벤트를 보내지 않는다`() = runTest {
+    fun `표시한 안내만 제거하고 나머지는 유지한다`() = runTest {
+        coEvery { verifyGooglePurchase(any()) } returnsMany listOf(
+            AppResult.Success(PaymentGrant(PaymentStatus.GRANTED, "token_300000", 300000, 600000)),
+            AppResult.Failure(IllegalStateException()),
+        )
+        val verifier = verifier()
+        runCurrent()
+        outcomes.send(BillingPurchaseOutcome.Purchased("receipt-1", listOf("token_300000")))
+        outcomes.send(BillingPurchaseOutcome.Purchased("receipt-2", listOf("token_300000")))
+        runCurrent()
+
+        verifier.onNoticeShown(verifier.state.value.notices.first().id)
+
+        assertEquals(
+            listOf(PaymentEvent.VerificationFailed(PaymentFailureReason.RETRYABLE)),
+            verifier.state.value.notices.map { it.event },
+        )
+    }
+
+    @Test
+    fun `세션이 바뀌면 이전 계정의 안내는 표시하지 않고 비운다`() = runTest {
+        coEvery { verifyGooglePurchase(any()) } returns AppResult.Success(
+            PaymentGrant(PaymentStatus.GRANTED, "token_300000", 300000, 600000),
+        )
+        val verifier = verifier()
+        runCurrent()
+        outcomes.send(purchased())
+        runCurrent()
+        assertEquals(1, verifier.state.value.notices.size)
+
+        session.value = SessionState.Unauthenticated
+        runCurrent()
+        session.value = SessionState.Authenticated
+        runCurrent()
+
+        assertEquals(emptyList<PaymentNotice>(), verifier.state.value.notices)
+    }
+
+    @Test
+    fun `서버 PENDING 응답은 완료나 실패 안내를 쌓지 않는다`() = runTest {
         coEvery { verifyGooglePurchase(any()) } returns AppResult.Success(
             PaymentGrant(PaymentStatus.PENDING, "token_300000", 0, 0),
         )
         val verifier = verifier()
-        val events = mutableListOf<PaymentEvent>()
-        backgroundScope.launch { verifier.events.toList(events) }
         runCurrent()
         outcomes.send(purchased())
         runCurrent()
-        assertEquals(emptyList<PaymentEvent>(), events)
+        assertEquals(emptyList<PaymentNotice>(), verifier.state.value.notices)
+    }
+
+    @Test
+    fun `서버 오류 코드를 다시 시도로 해결되는지 기준으로 분류한다`() {
+        val expected = mapOf(
+            ApiException.Network(IllegalStateException()) to PaymentFailureReason.RETRYABLE,
+            ApiException.Http(503, "PAYMENT_STORE_UNAVAILABLE", "") to PaymentFailureReason.RETRYABLE,
+            ApiException.Http(500, "UNKNOWN", "") to PaymentFailureReason.RETRYABLE,
+            ApiException.Http(403, "PURCHASE_ACCESS_DENIED", "") to PaymentFailureReason.ACCOUNT_MISMATCH,
+            ApiException.Http(403, "WITHDRAWN_MEMBER", "") to PaymentFailureReason.WITHDRAWN_MEMBER,
+            ApiException.Http(409, "PURCHASE_CANCELLED", "") to PaymentFailureReason.PURCHASE_CANCELLED,
+            ApiException.Http(409, "PAYMENT_PRODUCT_UNAVAILABLE", "") to PaymentFailureReason.PRODUCT_UNAVAILABLE,
+            ApiException.Http(400, "PURCHASE_QUANTITY_UNSUPPORTED", "") to PaymentFailureReason.INVALID_PURCHASE,
+            ApiException.Http(400, "PURCHASE_INVALID", "") to PaymentFailureReason.INVALID_PURCHASE,
+        )
+        expected.forEach { (throwable, reason) -> assertEquals(reason, throwable.paymentFailureReason()) }
     }
 
     private fun purchased() = BillingPurchaseOutcome.Purchased("receipt", listOf("token_300000"))
