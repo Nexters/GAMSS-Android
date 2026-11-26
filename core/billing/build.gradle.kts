@@ -11,7 +11,6 @@ dependencies {
     api(projects.domain)
     implementation(libs.billing.ktx)
     implementation(libs.kotlinx.coroutines.android)
-    implementation(libs.androidx.lifecycle.process)
 
     testImplementation(libs.junit)
     testImplementation(libs.mockk)

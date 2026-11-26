@@ -6,8 +6,11 @@ import android.app.NotificationManager
 import android.os.Build
 import android.util.Log
 import androidx.core.content.getSystemService
-import com.gamss.android.core.billing.PendingPurchaseVerifier
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.ProcessLifecycleOwner
 import com.gamss.android.domain.config.InitializeRemoteConfigUseCase
+import com.gamss.android.domain.payment.PendingPurchaseVerifier
 import com.gamss.android.domain.safety.RefreshRiskLexiconUseCase
 import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.CoroutineExceptionHandler
@@ -40,7 +43,10 @@ class GamssApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
-        pendingPurchaseVerifier.start()
+        // 최초 onStart와 이후 포그라운드 복귀 시 미처리 구매 복구를 요청한다.
+        ProcessLifecycleOwner.get().lifecycle.addObserver(object : DefaultLifecycleObserver {
+            override fun onStart(owner: LifecycleOwner) = pendingPurchaseVerifier.requestRecovery()
+        })
         createNotificationChannel()
         applicationScope.launch { refreshRiskLexicon() }
         applicationScope.launch { initializeRemoteConfig() }

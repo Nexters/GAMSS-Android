@@ -1,7 +1,7 @@
 package com.gamss.android.app.payment
 
 import com.gamss.android.app.BuildConfig
-import com.gamss.android.core.billing.LicensedPackage
+import com.gamss.android.domain.payment.LicensedPackage
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
