@@ -1,4 +1,4 @@
-package com.gamss.android.core.billing
+package com.gamss.android.domain.payment
 
 import javax.inject.Qualifier
 

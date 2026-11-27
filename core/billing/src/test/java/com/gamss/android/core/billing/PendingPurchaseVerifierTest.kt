@@ -4,9 +4,17 @@ import com.gamss.android.core.common.AppResult
 import com.gamss.android.core.common.network.ApiException
 import com.gamss.android.domain.auth.AuthRepository
 import com.gamss.android.domain.auth.SessionState
+import com.gamss.android.domain.payment.BillingErrorSource
+import com.gamss.android.domain.payment.BillingPurchaseOutcome
+import com.gamss.android.domain.payment.PaymentEvent
+import com.gamss.android.domain.payment.PaymentFailureReason
 import com.gamss.android.domain.payment.PaymentGrant
+import com.gamss.android.domain.payment.PaymentNotice
+import com.gamss.android.domain.payment.PaymentRepository
 import com.gamss.android.domain.payment.PaymentStatus
-import com.gamss.android.domain.payment.VerifyGooglePurchaseUseCase
+import com.gamss.android.domain.payment.PendingPurchaseVerifier
+import com.gamss.android.domain.payment.paymentFailureReason
+import com.gamss.android.domain.payment.paymentMessage
 import com.gamss.android.domain.repository.TokenUsageRefreshNotifier
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -28,7 +36,7 @@ import org.junit.Test
 @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 class PendingPurchaseVerifierTest {
     private val billing = mockk<BillingRepository>(relaxed = true)
-    private val verifyGooglePurchase = mockk<VerifyGooglePurchaseUseCase>()
+    private val paymentRepository = mockk<PaymentRepository>()
     private val auth = mockk<AuthRepository>()
     private val notifier = mockk<TokenUsageRefreshNotifier>(relaxed = true)
     private val session = MutableStateFlow<SessionState>(SessionState.Authenticated)
@@ -38,13 +46,13 @@ class PendingPurchaseVerifierTest {
         every { auth.sessionState } returns session
         every { billing.purchaseResults } returns outcomes.receiveAsFlow()
         every { billing.connectionState } returns MutableStateFlow(BillingConnectionState.CONNECTED)
-        return PendingPurchaseVerifierImpl(billing, verifyGooglePurchase, auth, notifier, backgroundScope)
+        return PendingPurchaseVerifierImpl(billing, paymentRepository, auth, notifier, backgroundScope)
     }
 
     @Test
     fun `서버 지급 완료만 잔액에 반영한다`() = runTest {
         coEvery {
-            verifyGooglePurchase(VerifyGooglePurchaseUseCase.Params("token_300k", "receipt"))
+            paymentRepository.verifyGooglePurchase("token_300k", "receipt")
         } returns AppResult.Success(PaymentGrant(PaymentStatus.GRANTED, "token_300k", 300000, 600000))
         val verifier = verifier()
         runCurrent()
@@ -57,7 +65,7 @@ class PendingPurchaseVerifierTest {
 
     @Test
     fun `서버 PENDING 응답은 지급 완료나 잔액으로 표시하지 않는다`() = runTest {
-        coEvery { verifyGooglePurchase(any()) } returns AppResult.Success(
+        coEvery { paymentRepository.verifyGooglePurchase(any(), any()) } returns AppResult.Success(
             PaymentGrant(PaymentStatus.PENDING, "token_300k", 0, 0),
         )
         val verifier = verifier()
@@ -71,7 +79,7 @@ class PendingPurchaseVerifierTest {
 
     @Test
     fun `다시 시도해도 같은 실패는 세션 안에서 재검증하지 않고 세션이 바뀌면 다시 검증한다`() = runTest {
-        coEvery { verifyGooglePurchase(any()) } returns AppResult.Failure(
+        coEvery { paymentRepository.verifyGooglePurchase(any(), any()) } returns AppResult.Failure(
             ApiException.Http(403, "PURCHASE_ACCESS_DENIED", "denied"),
         )
         val verifier = verifier()
@@ -79,7 +87,7 @@ class PendingPurchaseVerifierTest {
         outcomes.send(purchased())
         outcomes.send(purchased())
         runCurrent()
-        coVerify(exactly = 1) { verifyGooglePurchase(any()) }
+        coVerify(exactly = 1) { paymentRepository.verifyGooglePurchase(any(), any()) }
 
         // 포그라운드 복귀가 반복돼도 서버에 다시 보내지 않고 안내도 한 번뿐이다.
         repeat(3) {
@@ -88,7 +96,7 @@ class PendingPurchaseVerifierTest {
             outcomes.send(purchased())
             runCurrent()
         }
-        coVerify(exactly = 1) { verifyGooglePurchase(any()) }
+        coVerify(exactly = 1) { paymentRepository.verifyGooglePurchase(any(), any()) }
         assertEquals(
             listOf(PaymentEvent.VerificationFailed(PaymentFailureReason.ACCOUNT_MISMATCH)),
             verifier.state.value.notices.map { it.event },
@@ -101,12 +109,12 @@ class PendingPurchaseVerifierTest {
         runCurrent()
         outcomes.send(purchased())
         runCurrent()
-        coVerify(exactly = 2) { verifyGooglePurchase(any()) }
+        coVerify(exactly = 2) { paymentRepository.verifyGooglePurchase(any(), any()) }
     }
 
     @Test
     fun `일시적 실패는 복구 때마다 다시 검증하되 같은 실패 안내는 한 번만 쌓는다`() = runTest {
-        coEvery { verifyGooglePurchase(any()) } returns AppResult.Failure(
+        coEvery { paymentRepository.verifyGooglePurchase(any(), any()) } returns AppResult.Failure(
             ApiException.Network(IllegalStateException()),
         )
         val verifier = verifier()
@@ -117,7 +125,7 @@ class PendingPurchaseVerifierTest {
             outcomes.send(purchased())
             runCurrent()
         }
-        coVerify(exactly = 3) { verifyGooglePurchase(any()) }
+        coVerify(exactly = 3) { paymentRepository.verifyGooglePurchase(any(), any()) }
         assertEquals(
             listOf(PaymentEvent.VerificationFailed(PaymentFailureReason.RETRYABLE)),
             verifier.state.value.notices.map { it.event },
@@ -126,7 +134,7 @@ class PendingPurchaseVerifierTest {
 
     @Test
     fun `같은 구매에 지급 완료 응답이 반복돼도 완료 안내는 한 번이고 사용량은 매번 갱신한다`() = runTest {
-        coEvery { verifyGooglePurchase(any()) } returns AppResult.Success(
+        coEvery { paymentRepository.verifyGooglePurchase(any(), any()) } returns AppResult.Success(
             PaymentGrant(PaymentStatus.GRANTED, "token_300k", 300000, 600000),
         )
         val verifier = verifier()
@@ -137,7 +145,7 @@ class PendingPurchaseVerifierTest {
             outcomes.send(purchased())
             runCurrent()
         }
-        coVerify(exactly = 2) { verifyGooglePurchase(any()) }
+        coVerify(exactly = 2) { paymentRepository.verifyGooglePurchase(any(), any()) }
         verify(exactly = 2) { notifier.requestRefresh() }
         assertEquals(listOf(PaymentEvent.Granted(300000)), verifier.state.value.notices.map { it.event })
     }
@@ -148,13 +156,13 @@ class PendingPurchaseVerifierTest {
         runCurrent()
         outcomes.send(BillingPurchaseOutcome.Pending(listOf("token_300k")))
         runCurrent()
-        coVerify(exactly = 0) { verifyGooglePurchase(any()) }
+        coVerify(exactly = 0) { paymentRepository.verifyGooglePurchase(any(), any()) }
     }
 
     @Test
     fun `검증 중 복귀는 같은 구매를 즉시 재검증하지 않고 다음 복귀에서 재시도한다`() = runTest {
         val pending = CompletableDeferred<AppResult<PaymentGrant>>()
-        coEvery { verifyGooglePurchase(any()) } coAnswers { pending.await() }
+        coEvery { paymentRepository.verifyGooglePurchase(any(), any()) } coAnswers { pending.await() }
         val verifier = verifier()
         runCurrent()
         outcomes.send(purchased())
@@ -164,12 +172,12 @@ class PendingPurchaseVerifierTest {
         outcomes.send(purchased())
         pending.complete(AppResult.Failure(IllegalStateException()))
         runCurrent()
-        coVerify(exactly = 1) { verifyGooglePurchase(any()) }
+        coVerify(exactly = 1) { paymentRepository.verifyGooglePurchase(any(), any()) }
         verifier.requestRecovery()
         runCurrent()
         outcomes.send(purchased())
         runCurrent()
-        coVerify(exactly = 2) { verifyGooglePurchase(any()) }
+        coVerify(exactly = 2) { paymentRepository.verifyGooglePurchase(any(), any()) }
     }
 
     @Test
@@ -182,7 +190,7 @@ class PendingPurchaseVerifierTest {
         outcomes.send(purchased())
         runCurrent()
         coVerify(exactly = 1) { billing.queryUnfinishedPurchases() }
-        coVerify(exactly = 0) { verifyGooglePurchase(any()) }
+        coVerify(exactly = 0) { paymentRepository.verifyGooglePurchase(any(), any()) }
     }
 
     @Test
@@ -204,12 +212,12 @@ class PendingPurchaseVerifierTest {
         assertEquals(recoveryError, verifier.state.value.billingError)
         assertEquals("Google Play 미처리 구매 조회 실패 (코드: 5)\nrestore error", recoveryError.paymentMessage())
         assertNull(verifier.state.value.paidBalance)
-        coVerify(exactly = 0) { verifyGooglePurchase(any()) }
+        coVerify(exactly = 0) { paymentRepository.verifyGooglePurchase(any(), any()) }
     }
 
     @Test
     fun `서버 지급 완료와 검증 실패를 표시 전까지 유지되는 안내로 쌓는다`() = runTest {
-        coEvery { verifyGooglePurchase(any()) } returnsMany listOf(
+        coEvery { paymentRepository.verifyGooglePurchase(any(), any()) } returnsMany listOf(
             AppResult.Success(PaymentGrant(PaymentStatus.GRANTED, "token_300k", 300000, 600000)),
             AppResult.Failure(IllegalStateException()),
         )
@@ -230,7 +238,7 @@ class PendingPurchaseVerifierTest {
 
     @Test
     fun `표시한 안내만 제거하고 나머지는 유지한다`() = runTest {
-        coEvery { verifyGooglePurchase(any()) } returnsMany listOf(
+        coEvery { paymentRepository.verifyGooglePurchase(any(), any()) } returnsMany listOf(
             AppResult.Success(PaymentGrant(PaymentStatus.GRANTED, "token_300k", 300000, 600000)),
             AppResult.Failure(IllegalStateException()),
         )
@@ -251,7 +259,7 @@ class PendingPurchaseVerifierTest {
 
     @Test
     fun `세션이 바뀌면 이전 계정의 안내는 표시하지 않고 비운다`() = runTest {
-        coEvery { verifyGooglePurchase(any()) } returns AppResult.Success(
+        coEvery { paymentRepository.verifyGooglePurchase(any(), any()) } returns AppResult.Success(
             PaymentGrant(PaymentStatus.GRANTED, "token_300k", 300000, 600000),
         )
         val verifier = verifier()
@@ -299,7 +307,7 @@ class PendingPurchaseVerifierTest {
 
     @Test
     fun `서버가 모르는 상태값을 주면 실패로 안내하지 않고 사용량만 갱신한 뒤 다음 복구 때 다시 검증한다`() = runTest {
-        coEvery { verifyGooglePurchase(any()) } returns AppResult.Success(
+        coEvery { paymentRepository.verifyGooglePurchase(any(), any()) } returns AppResult.Success(
             PaymentGrant(PaymentStatus.UNKNOWN, "token_300k", 0, 0),
         )
         val verifier = verifier()
@@ -314,12 +322,12 @@ class PendingPurchaseVerifierTest {
         runCurrent()
         outcomes.send(purchased())
         runCurrent()
-        coVerify(exactly = 2) { verifyGooglePurchase(any()) }
+        coVerify(exactly = 2) { paymentRepository.verifyGooglePurchase(any(), any()) }
     }
 
     @Test
     fun `서버 PENDING 응답은 완료나 실패 안내를 쌓지 않는다`() = runTest {
-        coEvery { verifyGooglePurchase(any()) } returns AppResult.Success(
+        coEvery { paymentRepository.verifyGooglePurchase(any(), any()) } returns AppResult.Success(
             PaymentGrant(PaymentStatus.PENDING, "token_300k", 0, 0),
         )
         val verifier = verifier()

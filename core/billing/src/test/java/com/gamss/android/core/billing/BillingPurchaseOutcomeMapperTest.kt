@@ -3,6 +3,7 @@ package com.gamss.android.core.billing
 import com.android.billingclient.api.BillingClient.BillingResponseCode
 import com.android.billingclient.api.BillingResult
 import com.android.billingclient.api.Purchase
+import com.gamss.android.domain.payment.BillingPurchaseOutcome
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.Assert.assertEquals

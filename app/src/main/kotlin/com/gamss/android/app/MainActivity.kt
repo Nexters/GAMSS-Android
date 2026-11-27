@@ -11,11 +11,11 @@ import androidx.activity.enableEdgeToEdge
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.lifecycleScope
 import com.gamss.android.app.navigation.GamssRootNavHost
-import com.gamss.android.core.billing.BillingFlowLauncher
 import com.gamss.android.core.billing.BillingProduct
 import com.gamss.android.core.billing.BillingRepository
 import com.gamss.android.core.designsystem.theme.GamssTheme
 import com.gamss.android.core.ui.share.clearStaleInstagramStoryShareCache
+import com.gamss.android.domain.payment.BillingFlowLauncher
 import com.gamss.android.domain.payment.StoreProduct
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers

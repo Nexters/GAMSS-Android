@@ -1,13 +1,19 @@
 package com.gamss.android.core.billing
 
-import androidx.lifecycle.DefaultLifecycleObserver
-import androidx.lifecycle.LifecycleOwner
-import androidx.lifecycle.ProcessLifecycleOwner
 import com.gamss.android.core.common.AppResult
 import com.gamss.android.domain.auth.AuthRepository
 import com.gamss.android.domain.auth.SessionState
+import com.gamss.android.domain.payment.BillingErrorSource
+import com.gamss.android.domain.payment.BillingPurchaseOutcome
+import com.gamss.android.domain.payment.PaymentEvent
+import com.gamss.android.domain.payment.PaymentFailureReason
+import com.gamss.android.domain.payment.PaymentNotice
+import com.gamss.android.domain.payment.PaymentRepository
+import com.gamss.android.domain.payment.PaymentState
 import com.gamss.android.domain.payment.PaymentStatus
-import com.gamss.android.domain.payment.VerifyGooglePurchaseUseCase
+import com.gamss.android.domain.payment.PendingPurchaseVerifier
+import com.gamss.android.domain.payment.paymentFailureReason
+import com.gamss.android.domain.payment.paymentMessage
 import com.gamss.android.domain.repository.TokenUsageRefreshNotifier
 import dagger.Binds
 import dagger.Module
@@ -18,7 +24,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.update
@@ -27,26 +32,10 @@ import javax.inject.Inject
 import javax.inject.Qualifier
 import javax.inject.Singleton
 
-/**
- * 앱 프로세스에서 구매 결과를 수신하고 서버 검증과 복구를 담당한다. 모든 메서드는 어느 스레드에서 호출해도
- * 된다 — 내부 상태 변경은 항상 [PaymentScope](메인 스레드) 안에서만 일어난다.
- */
-interface PendingPurchaseVerifier {
-    val state: StateFlow<PaymentState>
-
-    /** Application에서 한 번 호출한다. 최초 onStart와 이후 포그라운드 복귀를 처리한다. */
-    fun start()
-
-    fun requestRecovery()
-
-    /** UI가 [PaymentState.notices]의 안내를 표시한 뒤 호출한다. 호출 전까지 안내는 상태에 남는다. */
-    fun onNoticeShown(noticeId: Long)
-}
-
 @Singleton
 internal class PendingPurchaseVerifierImpl @Inject constructor(
     private val billing: BillingRepository,
-    private val verifyGooglePurchase: VerifyGooglePurchaseUseCase,
+    private val paymentRepository: PaymentRepository,
     private val auth: AuthRepository,
     private val tokenUsageRefreshNotifier: TokenUsageRefreshNotifier,
     @PaymentScope private val scope: CoroutineScope,
@@ -80,12 +69,6 @@ internal class PendingPurchaseVerifierImpl @Inject constructor(
                 }
             }
         }
-    }
-
-    override fun start() {
-        ProcessLifecycleOwner.get().lifecycle.addObserver(object : DefaultLifecycleObserver {
-            override fun onStart(owner: LifecycleOwner) = requestRecovery()
-        })
     }
 
     override fun requestRecovery() {
@@ -143,8 +126,7 @@ internal class PendingPurchaseVerifierImpl @Inject constructor(
             message = "구매를 검증하고 있습니다.",
             billingError = null,
         )
-        val params = VerifyGooglePurchaseUseCase.Params(productId, purchaseToken)
-        when (val result = verifyGooglePurchase(params)) {
+        when (val result = paymentRepository.verifyGooglePurchase(productId, purchaseToken)) {
             is AppResult.Success -> {
                 val grant = result.data
                 mutableState.value = when (grant.status) {
@@ -194,28 +176,6 @@ internal class PendingPurchaseVerifierImpl @Inject constructor(
     private fun PaymentState.withNotice(event: PaymentEvent) =
         copy(notices = notices + PaymentNotice(id = nextNoticeId++, event = event))
 }
-
-sealed interface PaymentEvent {
-    data class Granted(val grantedTokens: Long) : PaymentEvent
-    data class VerificationFailed(val reason: PaymentFailureReason) : PaymentEvent
-
-    /** Play 결제 자체가 실패했다(구매 콜백의 오류 응답). 사용자 취소는 포함하지 않는다. */
-    data object PurchaseFailed : PaymentEvent
-}
-
-/**
- * [notices]는 UI가 한 번씩 안내해야 할 결과 목록이다. 일회성 이벤트 대신 상태로 두어, 화면이 없을 때
- * 발생한 안내도 남아 있다가 표시되고, 세션이 바뀌면 상태와 함께 초기화되어 다른 계정에 노출되지 않는다.
- */
-data class PaymentState(
-    val isVerifying: Boolean = false,
-    val paidBalance: Long? = null,
-    val message: String? = null,
-    val billingError: BillingPurchaseOutcome.Error? = null,
-    val notices: List<PaymentNotice> = emptyList(),
-)
-
-data class PaymentNotice(val id: Long, val event: PaymentEvent)
 
 @Qualifier
 @Retention(AnnotationRetention.BINARY)

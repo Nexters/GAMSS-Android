@@ -33,13 +33,13 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.gamss.android.core.billing.BillingOperationResult
 import com.gamss.android.core.designsystem.component.GamssIconButton
 import com.gamss.android.core.designsystem.component.GamssIcons
 import com.gamss.android.core.designsystem.component.GamssLogo
 import com.gamss.android.core.designsystem.component.GamssNetworkErrorContent
 import com.gamss.android.core.designsystem.component.GamssTopBar
 import com.gamss.android.core.designsystem.theme.GamssTheme
+import com.gamss.android.domain.payment.BillingOperationResult
 import com.gamss.android.domain.payment.StoreConnectionState
 import com.gamss.android.domain.payment.StoreProduct
 import org.orbitmvi.orbit.compose.collectAsState
