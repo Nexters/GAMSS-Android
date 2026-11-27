@@ -3,6 +3,10 @@ package com.gamss.android.domain.payment
 import com.gamss.android.core.common.network.ApiException
 import com.gamss.android.domain.auth.SessionExpiredException
 
+/**
+ * 결제 실패 원인을 설명하는 진단용 문구. [PaymentState.message]와 상점 화면의 진단 정보처럼 디버그 화면에서만
+ * 쓴다. 사용자에게 보여주는 안내는 [PaymentFailureReason]을 기준으로 feature의 string 리소스로 만든다.
+ */
 fun Throwable.paymentMessage(): String = when (this) {
     is SessionExpiredException -> "로그인이 필요합니다. 다시 로그인해 주세요."
     is ApiException.Network -> "서버에 연결할 수 없습니다. 잠시 후 다시 확인해 주세요."

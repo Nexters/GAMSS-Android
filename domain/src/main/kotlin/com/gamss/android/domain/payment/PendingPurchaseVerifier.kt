@@ -9,7 +9,11 @@ import kotlinx.coroutines.flow.StateFlow
 interface PendingPurchaseVerifier {
     val state: StateFlow<PaymentState>
 
-    /** 앱이 포그라운드로 돌아올 때(ProcessLifecycleOwner onStart 등) 호출한다. */
+    /**
+     * 미처리 구매(INAPP)를 다시 조회해 남은 구매를 서버 검증으로 보낸다. 앱 시작과 포그라운드 복귀(app의
+     * ProcessLifecycleOwner), 상점 진입, 결제창의 ITEM_ALREADY_OWNED 응답 때 호출한다. Billing이 연결되지 않았으면
+     * 연결부터 시작하고, 연결에 성공하면 조회한다.
+     */
     fun requestRecovery()
 
     /** UI가 [PaymentState.notices]의 안내를 표시한 뒤 호출한다. 호출 전까지 안내는 상태에 남는다. */
